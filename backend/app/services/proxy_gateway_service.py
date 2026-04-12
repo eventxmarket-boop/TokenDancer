@@ -246,6 +246,7 @@ class ProxyGatewayService:
         failure_chain: list[dict] = []
         fallback_triggered = False
         last_failed_provider_key_id: int | None = None
+        last_proxy_exception: Exception | None = None
 
         for candidate_index, candidate in enumerate(candidates):
             if candidate.is_fallback:
@@ -436,6 +437,7 @@ class ProxyGatewayService:
                     InvalidUpstreamModelError,
                     KeyDecryptionError,
                 ) as exc:
+                    last_proxy_exception = exc
                     error_message = self._sanitize_error_message(exc.internal_detail)
                     self._update_provider_key_stats(key_rec, db, error=error_message)
                     failure_chain.append(
@@ -446,6 +448,7 @@ class ProxyGatewayService:
                         }
                     )
                 except Exception as exc:
+                    last_proxy_exception = exc
                     error_message = self._sanitize_error_message(str(exc))
                     self._update_provider_key_stats(key_rec, db, error=error_message)
                     failure_chain.append(
@@ -473,7 +476,7 @@ class ProxyGatewayService:
                     output_tokens=0,
                     cost=0.0,
                     latency_ms=0,
-                    error_message=f"fixed policy provider unavailable: {last_failure}",
+                    error_message=last_failure,
                     request_id=None,
                     request_origin=request_origin,
                     request_tag=request_tag,
@@ -483,6 +486,8 @@ class ProxyGatewayService:
                     key_switch_count=max(0, key_attempt_count - 1),
                     failure_chain_summary=self._summarize_failures(failure_chain),
                 )
+                if isinstance(last_proxy_exception, (UpstreamTimeoutError, UpstreamAuthError, UpstreamServerError, UpstreamBadRequestError, InvalidUpstreamModelError, KeyDecryptionError)):
+                    raise last_proxy_exception
                 raise ProviderUnavailableError(candidate.provider.name, reason=last_failure)
 
         last_error = failure_chain[-1]["error"] if failure_chain else "all providers exhausted"
