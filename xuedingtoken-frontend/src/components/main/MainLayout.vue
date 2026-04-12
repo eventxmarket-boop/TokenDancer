@@ -115,6 +115,7 @@ const openAnnouncementsModal = () => {
   display: flex;
   min-height: 100vh;
   background: var(--color-bg-secondary);
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -310,29 +311,76 @@ const openAnnouncementsModal = () => {
 
 @media (max-width: 960px) {
   .sidebar {
-    width: 68px;
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+  .sidebar.collapsed { width: 100%; }
+  .sidebar-header {
+    padding: 14px 16px;
+  }
+  .collapse-btn {
+    display: none;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .sidebar-link {
+    flex-shrink: 0;
+    min-height: 42px;
+    padding: 10px 14px;
+  }
+  .sidebar-footer {
+    display: none;
   }
   .main-content {
-    margin-left: 68px;
+    margin-left: 0;
   }
   .topbar {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    padding: 16px;
+  }
+  .topbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .user-info {
+    max-width: 100%;
+  }
+  .page-content {
+    padding: 16px;
   }
 }
 
 @media (max-width: 720px) {
-  .main-layout {
-    display: block;
+  .sidebar-logo {
+    font-size: 16px;
   }
-  .sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
+  .topbar-title {
+    font-size: 20px;
   }
-  .main-content {
-    margin-left: 0;
+  .topbar-sub {
+    font-size: 12px;
+  }
+  .topbar-btn,
+  .lang-btn {
+    min-height: 40px;
+  }
+  .modal-mask {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .modal-box {
+    padding: 18px;
+    border-radius: 18px 18px 0 0;
+    max-height: 86vh;
   }
 }
 </style>

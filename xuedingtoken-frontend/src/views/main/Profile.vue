@@ -266,4 +266,28 @@ onMounted(fetchProfile)
 .auth2-hint { font-size: 13px; color: var(--color-text-secondary); }
 .inline-link { color: #aa3bff; text-decoration: none; }
 .inline-link:hover { text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .balance-card,
+  .balance-actions,
+  .info-header,
+  .auth2-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .balance-card {
+    padding: 20px;
+  }
+  .balance-amount {
+    font-size: 28px;
+  }
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  .quick-nav-item {
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
 </style>

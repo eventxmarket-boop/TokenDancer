@@ -262,4 +262,39 @@ onMounted(fetchProducts)
   align-items: center;
   justify-content: center;
 }
+
+@media (max-width: 900px) {
+  .page-content {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+  .page-header,
+  .filter-bar {
+    margin-bottom: 20px;
+  }
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    margin-bottom: 16px;
+  }
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  .cat-tag {
+    min-height: 38px;
+    padding: 7px 14px;
+  }
+  .floating-cart {
+    right: 16px;
+    bottom: 24px;
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+}
 </style>

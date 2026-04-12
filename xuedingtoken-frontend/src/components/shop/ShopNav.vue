@@ -68,7 +68,10 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleString('zh-CN', { month:'
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  min-height: 56px;
+  gap: 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 .shop-nav-left {
   display: flex;
@@ -180,4 +183,69 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleString('zh-CN', { month:'
 .ann-item-content { font-size:13px; color:#666; }
 .modal-footer { display:flex; justify-content:flex-end; margin-top:16px; }
 .btn-outline { padding:8px 18px; background:#fff; color:#666; border:1px solid #d9d9d9; border-radius:8px; cursor:pointer; }
+
+@media (max-width: 860px) {
+  .shop-nav-inner {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .shop-nav-left,
+  .shop-nav-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .shop-nav-left {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .shop-nav-links {
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .nav-link {
+    white-space: nowrap;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .shop-nav-right {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .main-station-btn,
+  .lang-btn,
+  .user-btn,
+  .cart-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .shop-logo {
+    font-size: 18px;
+  }
+  .shop-nav-left,
+  .shop-nav-right {
+    flex-direction: row;
+    align-items: center;
+  }
+  .main-station-btn {
+    flex: 1;
+  }
+  .modal-mask {
+    padding: 12px;
+  }
+  .ann-modal {
+    width: 100%;
+    max-width: none;
+    max-height: 82vh;
+  }
+}
 </style>

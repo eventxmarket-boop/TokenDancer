@@ -236,4 +236,22 @@ onMounted(async () => {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+@media (max-width: 900px) {
+  .stats-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .table-card {
+    overflow-x: auto;
+  }
+  .table {
+    min-width: 760px;
+  }
+}
 </style>

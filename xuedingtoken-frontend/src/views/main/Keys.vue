@@ -508,4 +508,27 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .toolbar {
+    justify-content: stretch;
+  }
+  .toolbar .btn {
+    width: 100%;
+  }
+  .filter-search,
+  .filter-select {
+    max-width: none;
+    width: 100%;
+  }
+  .table-card {
+    overflow-x: auto;
+  }
+  .table {
+    min-width: 720px;
+  }
+  .endpoint-card {
+    padding: 16px;
+  }
+}
 </style>

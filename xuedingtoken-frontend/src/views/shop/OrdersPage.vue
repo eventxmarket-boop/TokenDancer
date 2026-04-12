@@ -80,4 +80,31 @@ onMounted(fetchOrders)
 .btn-detail, .btn-pay { padding: 6px 14px; border-radius: 6px; font-size: 13px; text-decoration: none; }
 .btn-detail { background: #fff; color: #666; border: 1px solid #d9d9d9; }
 .btn-pay { background: #aa3bff; color: #fff; border: none; }
+
+@media (max-width: 640px) {
+  .page-header,
+  .order-header,
+  .order-meta,
+  .order-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-title {
+    font-size: 20px;
+  }
+  .btn-refresh,
+  .btn-detail,
+  .btn-pay {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+  .state-page {
+    padding: 48px 20px;
+  }
+  .order-card {
+    padding: 16px;
+  }
+}
 </style>

@@ -259,4 +259,39 @@ const handleLogin = async () => {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+@media (max-width: 640px) {
+  .auth-topbar {
+    padding: 0 14px;
+    gap: 10px;
+  }
+  .auth-card-wrapper {
+    padding: 24px 14px 40px;
+  }
+  .auth-card {
+    max-width: none;
+    padding: 24px 18px;
+  }
+  .auth-title {
+    font-size: 22px;
+  }
+  .auth-sub {
+    margin-bottom: 24px;
+  }
+  .form-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .modal-mask {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .modal-box {
+    width: 100%;
+    max-width: none;
+    padding: 20px;
+    border-radius: 18px 18px 0 0;
+  }
+}
 </style>

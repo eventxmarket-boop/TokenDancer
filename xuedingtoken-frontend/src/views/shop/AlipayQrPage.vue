@@ -151,7 +151,26 @@ onUnmounted(() => {
 .btn-secondary { flex: 1; background: #fff; color: #666; border: 1px solid #ddd; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
 .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (max-width: 640px) {
-  .qr-card { padding: 24px; }
-  .action-row { flex-direction: column; }
+  .qr-wrapper {
+    padding: 20px 12px 32px;
+    align-items: flex-start;
+  }
+  .qr-card {
+    padding: 20px 16px;
+  }
+  .qr-card h2 {
+    font-size: 18px;
+  }
+  .qr-image {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+  }
+  .action-row {
+    flex-direction: column;
+  }
+  .btn-secondary {
+    min-height: 42px;
+  }
 }
 </style>

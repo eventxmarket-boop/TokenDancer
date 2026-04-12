@@ -219,4 +219,30 @@ onMounted(fetchAll)
     grid-template-columns:1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .page-container {
+    padding: 24px 14px;
+  }
+  .page-title-row,
+  .balance-card,
+  .grant-top,
+  .grant-bottom,
+  .ledger-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .balance-card {
+    padding: 18px;
+  }
+  .balance-amount {
+    font-size: 30px;
+  }
+  .btn-buy,
+  .btn-outline-sm,
+  .billing-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
 </style>

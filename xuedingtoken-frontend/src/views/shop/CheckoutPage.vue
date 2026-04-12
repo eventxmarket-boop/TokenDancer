@@ -266,4 +266,40 @@ onMounted(async () => {
   .checkout-layout { grid-template-columns: 1fr; }
   .checkout-summary { position: static; }
 }
+
+@media (max-width: 640px) {
+  .status-banner,
+  .order-info-card,
+  .items-list,
+  .summary-card,
+  .pay-section,
+  .processing-notice,
+  .cancel-notice,
+  .fulfillment-notice {
+    padding: 16px;
+  }
+  .status-banner {
+    align-items: flex-start;
+  }
+  .info-row,
+  .item-row,
+  .summary-row,
+  .action-row,
+  .order-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .item-type,
+  .item-qty {
+    margin: 0;
+  }
+  .btn-refresh-inline,
+  .btn-refresh,
+  .btn-orders,
+  .btn-back {
+    width: 100%;
+    min-height: 40px;
+  }
+}
 </style>

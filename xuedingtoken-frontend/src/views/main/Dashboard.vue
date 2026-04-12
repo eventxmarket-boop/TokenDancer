@@ -491,4 +491,30 @@ canvas {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+@media (max-width: 900px) {
+  .stats-grid,
+  .charts-grid,
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+  .perf-section,
+  .perf-metrics,
+  .perf-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .chart-card {
+    min-height: 280px;
+  }
+  .chart-canvas-wrap {
+    height: 220px;
+  }
+  .recent-section .table {
+    min-width: 720px;
+  }
+}
 </style>

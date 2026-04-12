@@ -63,4 +63,22 @@ const handleClose = () => emit('update:modelValue', false)
 
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }
+
+@media (max-width: 720px) {
+  .drawer-panel {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+  }
+  .drawer-header {
+    padding: 16px 18px;
+  }
+  .drawer-body {
+    padding: 18px;
+  }
+  .drawer-footer {
+    padding: 14px 18px;
+    flex-direction: column;
+  }
+}
 </style>

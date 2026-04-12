@@ -170,4 +170,27 @@ const handleRegister = async () => {
   color: var(--color-text-secondary);
   margin-top: 24px;
 }
+
+@media (max-width: 640px) {
+  .auth-topbar {
+    padding: 0 14px;
+  }
+  .auth-card-wrapper {
+    padding: 24px 14px 40px;
+  }
+  .auth-card {
+    max-width: none;
+    padding: 24px 18px;
+  }
+  .auth-title {
+    font-size: 22px;
+  }
+  .auth-sub {
+    margin-bottom: 24px;
+  }
+  .terms-label {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
 </style>

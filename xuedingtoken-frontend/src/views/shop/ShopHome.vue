@@ -574,5 +574,75 @@ const guideSteps = [
   color: var(--color-text-muted);
   font-size: 13px;
 }
+
+@media (max-width: 900px) {
+  .hero {
+    padding: 56px 0;
+  }
+  .hero-title {
+    font-size: 32px;
+    margin-bottom: 20px;
+  }
+  .hero-actions,
+  .guide-actions,
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .news-grid,
+  .qr-sections,
+  .popup-qr-grid {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 44px 0;
+  }
+  .hero-title {
+    font-size: 26px;
+    line-height: 1.35;
+  }
+  .hero-actions .btn,
+  .guide-actions .btn {
+    width: 100%;
+  }
+  .guide-step,
+  .guide-detail-item {
+    width: 100%;
+  }
+  .guide-arrow {
+    display: none;
+  }
+  .guide-detail-item {
+    flex-direction: column;
+  }
+  .guide-detail-num {
+    width: 100%;
+    min-width: 0;
+    height: 52px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .guide-detail-body {
+    padding: 16px;
+  }
+  .products-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .qr-placeholder-img {
+    height: 132px;
+  }
+  .welcome-popup {
+    padding: 20px 16px;
+  }
+}
 </style>
 >

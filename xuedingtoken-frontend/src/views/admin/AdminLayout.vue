@@ -300,4 +300,81 @@ const handleLogout = () => {
   overflow-y: auto;
   padding: 24px;
 }
+
+@media (max-width: 960px) {
+  .admin-layout {
+    display: block;
+  }
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 16px;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 12px 14px;
+    gap: 12px;
+  }
+  .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .nav-group-label {
+    padding: 0;
+    margin-top: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+  .nav-item.sub {
+    padding-left: 14px;
+  }
+  .nav-divider {
+    display: none;
+  }
+  .admin-right {
+    height: auto;
+  }
+  .admin-topbar {
+    height: auto;
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .topbar-user {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .admin-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar-header h2 {
+    font-size: 13px;
+  }
+  .version-badge {
+    font-size: 10px;
+  }
+  .user-info {
+    flex-wrap: wrap;
+  }
+  .btn-logout {
+    width: 100%;
+    min-height: 40px;
+  }
+}
 </style>

@@ -28,6 +28,7 @@ defineEmits(['update:modelValue'])
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 .modal-box {
   background: #fff;
@@ -47,4 +48,30 @@ defineEmits(['update:modelValue'])
 .modal-header h3 { font-size: 18px; font-weight: 600; }
 .modal-header button { background: none; border: none; font-size: 20px; cursor: pointer; color: #6B7280; }
 .modal-body { padding: 24px; }
+
+@media (max-width: 720px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 12px;
+  }
+  .modal-box {
+    width: 100%;
+    max-width: none;
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0;
+  }
+  .modal-header {
+    padding: 16px 18px;
+  }
+  .modal-header h3 {
+    font-size: 16px;
+  }
+  .modal-header button {
+    width: 36px;
+    height: 36px;
+  }
+  .modal-body {
+    padding: 18px;
+  }
+}
 </style>
