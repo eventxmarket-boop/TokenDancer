@@ -13,7 +13,7 @@ def list_model_routes(
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    return model_route_service.list(db)
+    return model_route_service.list_routes(db)
 
 
 @router.post("", response_model=ModelRouteRead)

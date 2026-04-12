@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.core.crypto import encrypt_api_key, mask_api_key
@@ -7,7 +9,7 @@ from app.schemas.provider_key import ProviderKeyCreate, ProviderKeyUpdate
 
 
 class ProviderKeyService:
-    def list(self, db: Session, provider_id: int | None = None) -> list[ProviderKey]:
+    def list_keys(self, db: Session, provider_id: int | None = None) -> List[ProviderKey]:
         query = db.query(ProviderKey)
         if provider_id:
             query = query.filter(ProviderKey.provider_id == provider_id)
@@ -80,7 +82,7 @@ class ProviderKeyService:
 
         return True, ""
 
-    def get_available_keys_for_model(self, provider_id: int, model_name: str, db: Session) -> list[ProviderKey]:
+    def get_available_keys_for_model(self, provider_id: int, model_name: str, db: Session) -> List[ProviderKey]:
         keys = (
             db.query(ProviderKey)
             .filter(ProviderKey.provider_id == provider_id)

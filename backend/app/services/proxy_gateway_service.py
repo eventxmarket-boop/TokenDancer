@@ -84,7 +84,7 @@ class ProxyGatewayService:
         return model_route_service.resolve(public_model, db)
 
     def list_available_models(self, db: Session, allowed_models: set[str] | None = None) -> list[dict]:
-        routes = [route for route in model_route_service.list(db) if route.is_active]
+        routes = [route for route in model_route_service.list_routes(db) if route.is_active]
         seen: set[str] = set()
         models: list[dict] = []
         for route in routes:
@@ -151,7 +151,7 @@ class ProxyGatewayService:
             }
 
         headers = {"Content-Type": "application/json"}
-        available_keys = provider_key_service.list(db, provider_id=provider.id)
+        available_keys = provider_key_service.list_keys(db, provider_id=provider.id)
         raw_key = None
         for key in available_keys:
             if key.status != "active":

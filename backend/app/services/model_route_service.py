@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.models.model_route import ModelRoute
@@ -7,13 +9,13 @@ from app.schemas.model_route import ModelRouteCreate, ModelRouteUpdate
 
 
 class ModelRouteService:
-    def list(self, db: Session) -> list[ModelRoute]:
+    def list_routes(self, db: Session) -> List[ModelRoute]:
         return db.query(ModelRoute).order_by(ModelRoute.priority.asc()).all()
 
     def get(self, route_id: int, db: Session) -> ModelRoute | None:
         return db.query(ModelRoute).filter(ModelRoute.id == route_id).first()
 
-    def get_by_public_model(self, public_model: str, db: Session) -> list[ModelRoute]:
+    def get_by_public_model(self, public_model: str, db: Session) -> List[ModelRoute]:
         return (
             db.query(ModelRoute)
             .filter(

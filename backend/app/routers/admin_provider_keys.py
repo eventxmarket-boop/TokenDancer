@@ -20,7 +20,7 @@ def list_provider_keys(
     - provider_id 可选，不传则返回全部。
     - 不返回真实 key_encrypted，仅返回 key_masked。
     """
-    return provider_key_service.list(db, provider_id=provider_id)
+    return provider_key_service.list_keys(db, provider_id=provider_id)
 
 
 @router.get("/{key_id}", response_model=ProviderKeyRead)
