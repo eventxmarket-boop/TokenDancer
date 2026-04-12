@@ -3,6 +3,7 @@
     <aside class="admin-sidebar">
       <div class="sidebar-header">
         <h2>⚙️ 学代管理后台</h2>
+        <span class="version-badge">{{ APP_VERSION }}</span>
       </div>
 
       <nav class="sidebar-nav">
@@ -97,6 +98,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { APP_VERSION } from '@/constants/appVersion'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -161,12 +163,28 @@ const handleLogout = () => {
 .sidebar-header {
   padding: 20px 20px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .sidebar-header h2 {
   font-size: 14px;
   font-weight: 700;
   color: #fff;
   margin: 0;
+}
+.version-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #f8fafc;
+  background: linear-gradient(135deg, rgba(22,119,255,0.9), rgba(56,189,248,0.85));
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
 }
 .sidebar-nav {
   flex: 1;
