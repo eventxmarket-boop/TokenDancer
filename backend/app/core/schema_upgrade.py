@@ -20,6 +20,11 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
         "request_status": "VARCHAR(20) DEFAULT 'success'",
         "cost_amount": "NUMERIC(10, 6) DEFAULT 0",
     },
+    "proxy_request_logs": {
+        "provider_switch_count": "INTEGER DEFAULT 0",
+        "key_switch_count": "INTEGER DEFAULT 0",
+        "failure_chain_summary": "TEXT NULL",
+    },
 }
 
 
