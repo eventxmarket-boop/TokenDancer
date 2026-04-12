@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import List
 
 from sqlalchemy.orm import Session
 
@@ -10,11 +11,11 @@ from app.schemas.provider import ProviderCreate, ProviderUpdate
 
 
 class ProviderService:
-    def list(self, db: Session) -> list[Provider]:
+    def list_providers(self, db: Session) -> List[Provider]:
         return db.query(Provider).order_by(Provider.priority.asc(), Provider.id.asc()).all()
 
     def list_enriched(self, db: Session) -> list[dict]:
-        return [self.serialize(provider, db) for provider in self.list(db)]
+        return [self.serialize(provider, db) for provider in self.list_providers(db)]
 
     def get(self, provider_id: int, db: Session) -> Provider | None:
         return db.query(Provider).filter(Provider.id == provider_id).first()

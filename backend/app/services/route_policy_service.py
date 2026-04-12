@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.core.constants import VALID_ROUTE_POLICY_TYPES
@@ -9,11 +11,11 @@ from app.schemas.route_policy import RoutePolicyCreate, RoutePolicyUpdate
 
 
 class RoutePolicyService:
-    def list(self, db: Session) -> list[RoutePolicy]:
+    def list_policies(self, db: Session) -> List[RoutePolicy]:
         return db.query(RoutePolicy).order_by(RoutePolicy.created_at.desc()).all()
 
     def list_enriched(self, db: Session) -> list[dict]:
-        return [self.serialize(policy, db) for policy in self.list(db)]
+        return [self.serialize(policy, db) for policy in self.list_policies(db)]
 
     def get(self, policy_id: int, db: Session) -> RoutePolicy | None:
         return db.query(RoutePolicy).filter(RoutePolicy.id == policy_id).first()
