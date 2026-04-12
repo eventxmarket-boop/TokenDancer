@@ -1,6 +1,6 @@
-# Demo Platform Frontend
+# TokenDancer Frontend
 
-Vue 3 + TypeScript + Vite 前端，管理后台与商城界面。
+TokenDancer 的 Vue 3 + TypeScript + Vite 前端，包含商城、用户控制台与管理员后台。
 
 ## 环境要求
 

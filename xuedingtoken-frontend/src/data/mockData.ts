@@ -1,4 +1,4 @@
-// Mock Data - DemoPlatform 商城 + 主站
+// Mock Data - TokenDancer 商城 + 控制台
 
 // ============ 主站 Mock 数据 ============
 
@@ -20,7 +20,7 @@ export const dashMockData = {
 
 // Keys mock 数据
 export const keysMockData = {
-  endpoint: 'https://api.demo-platform.com',
+  endpoint: 'https://api.tokendancer.xyz',
   keys: [] as {
     id: number; name: string; key: string; group: string;
     usage: string; rateLimit: string; expires: string;
@@ -73,8 +73,8 @@ export const clientInstallMockData = {
   available: false,
   keys: [] as { id: number; name: string; group: string }[],
   deployTypes: [
-    { label: 'Claude Code', command: 'export ANTHROPIC_API_KEY="your-key-here"\nexport ANTHROPIC_BASE_URL="https://api.demo-platform.com"\nclaude' },
-    { label: 'OpenClaw', command: 'export OPENCLAW_API_KEY="your-key-here"\nexport OPENCLAW_BASE_URL="https://api.demo-platform.com"\nopenclaw' },
+    { label: 'Claude Code', command: 'export ANTHROPIC_API_KEY="your-key-here"\nexport ANTHROPIC_BASE_URL="https://api.tokendancer.xyz"\nclaude' },
+    { label: 'OpenClaw', command: 'export OPENCLAW_API_KEY="your-key-here"\nexport OPENCLAW_BASE_URL="https://api.tokendancer.xyz"\nopenclaw' },
   ],
 }
 
@@ -203,7 +203,7 @@ export interface Notice {
 }
 
 export const notices: Notice[] = [
-  { id: 1, title: '欢迎使用DemoPlatform的算力', date: '2026年3月21日' },
+  { id: 1, title: '欢迎使用 TokenDancer', date: '2026年3月21日' },
 ]
 
 // ============ 订单数据 ============

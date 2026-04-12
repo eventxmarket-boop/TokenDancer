@@ -4,7 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    APP_NAME: str = "Demo Platform Backend"
+    APP_NAME: str = "TokenDancer Backend"
+    APP_DESCRIPTION: str = "TokenDancer backend APIs for storefront, user console, admin operations, payments, and API proxy routing."
     APP_ENV: str = "dev"
     DEBUG: bool = True
 

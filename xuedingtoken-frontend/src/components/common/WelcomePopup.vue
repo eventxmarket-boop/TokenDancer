@@ -3,7 +3,7 @@
     <div v-if="show" class="popup-overlay" @click.self="close">
       <div class="popup-box card">
         <div class="popup-header">
-          <h2>欢迎使用 DemoPlatform 算力</h2>
+          <h2>欢迎使用 {{ APP_BRAND_NAME }}</h2>
           <button class="btn btn-ghost" @click="close">✕</button>
         </div>
         <div class="popup-body">
@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { APP_BRAND_NAME } from '@/constants/branding'
 const show = ref(false)
 const close = () => {
   show.value = false

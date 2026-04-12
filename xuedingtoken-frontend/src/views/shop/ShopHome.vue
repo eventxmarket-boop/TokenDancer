@@ -145,6 +145,7 @@ import ProductCard from '@/components/shop/ProductCard.vue'
 import WelcomePopup from '@/components/common/WelcomePopup.vue'
 import { productsApi } from '@/api/products'
 import { contentApi } from '@/api/content'
+import { REGISTER_URL } from '@/constants/branding'
 
 const featuredProducts = ref<any[]>([])
 const showGuide = ref(false)
@@ -176,8 +177,8 @@ const guideSteps = [
     title: '主站注册',
     detail: '先去主站注册账号',
     desc: '先在主站注册一个账号。没有主站账号，你买完以后也不知道去哪里兑换和使用。',
-    link: 'https://xuedingtoken.com/register',
-    linkText: 'xuedingtoken.com/register',
+    link: REGISTER_URL,
+    linkText: 'app.tokendancer.xyz/auth/register',
   },
   {
     num: 2,

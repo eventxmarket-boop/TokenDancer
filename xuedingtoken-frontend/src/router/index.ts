@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ADMIN_PANEL_NAME, APP_BRAND_NAME, CONSOLE_BRAND_NAME } from '@/constants/branding'
 
 import ShopHome from '../views/shop/ShopHome.vue'
 import ProductList from '../views/shop/ProductList.vue'
@@ -110,6 +111,50 @@ const router = createRouter({
   scrollBehavior() { return { top: 0 } },
 })
 
+const routeTitleMap: Record<string, string> = {
+  'shop-home': APP_BRAND_NAME,
+  products: '商品中心',
+  'product-detail': '商品详情',
+  cart: '购物车',
+  checkout: '结算',
+  orders: '我的订单',
+  login: '登录',
+  register: '注册',
+  'forgot-password': '找回密码',
+  dashboard: '控制台总览',
+  redeem: '兑换中心',
+  keys: 'API 密钥',
+  usage: '用量记录',
+  profile: '账户中心',
+  'client-install': '一键部署',
+  subscriptions: '订阅中心',
+  billing: '账务中心',
+  ProxyPlayground: 'API Playground',
+  'admin-dashboard': '后台总览',
+  'admin-users': '用户管理',
+  'admin-orders': '订单管理',
+  'admin-redeem-codes': '兑换码管理',
+  'admin-products': '商品管理',
+  'admin-finance-overview': '财务总览',
+  'admin-finance-ledger': '余额账本',
+  'admin-finance-usage': 'Usage 明细',
+  'admin-providers': '渠道管理',
+  'admin-provider-keys': '源 Key 池',
+  'admin-model-routes': '模型映射',
+  'admin-route-policies': '路由策略',
+  'admin-proxy-tester': 'API 测试工作台',
+  'admin-proxy-monitor': 'API 中转监控',
+  'admin-proxy-logs': '请求日志',
+  'admin-system-overview': '系统总览',
+  'admin-system-provider-health': 'Provider 健康',
+  'admin-system-key-status': 'Source Key 状态',
+  'admin-system-routing-status': '路由配置状态',
+  'admin-system-payment-events': '支付事件',
+  'admin-system-proxy-runtime': 'Proxy 运行状态',
+  'admin-audit-logs': '审计日志',
+  'admin-payment-config': '支付配置',
+}
+
 router.beforeEach(async (to: any) => {
   const { useAuthStore } = await import('@/stores/auth')
   const auth = useAuthStore()
@@ -138,6 +183,29 @@ router.beforeEach(async (to: any) => {
   }
 
   return true
+})
+
+router.afterEach((to: any) => {
+  const name = String(to.name || '')
+  const pageTitle = routeTitleMap[name]
+
+  if (!pageTitle) {
+    document.title = APP_BRAND_NAME
+    return
+  }
+
+  if (pageTitle === APP_BRAND_NAME) {
+    document.title = APP_BRAND_NAME
+    return
+  }
+
+  const scope = name.startsWith('admin-')
+    ? ADMIN_PANEL_NAME
+    : ['dashboard', 'redeem', 'keys', 'usage', 'profile', 'client-install', 'subscriptions', 'billing', 'ProxyPlayground'].includes(name)
+      ? CONSOLE_BRAND_NAME
+      : APP_BRAND_NAME
+
+  document.title = `${pageTitle} - ${scope}`
 })
 
 export default router

@@ -41,6 +41,7 @@ logger = get_logger(__name__)
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
+        description=settings.APP_DESCRIPTION,
         docs_url="/docs",
         redoc_url="/redoc",
     )

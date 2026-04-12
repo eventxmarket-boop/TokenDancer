@@ -3,7 +3,7 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <div class="footer-logo">DemoPlatform</div>
+          <div class="footer-logo">{{ APP_BRAND_NAME }}</div>
           <p class="footer-tagline">让每一个人都能<br>享受到这个世界上最顶级模型的智能</p>
         </div>
         <div class="footer-col">
@@ -15,7 +15,7 @@
         </div>
         <div class="footer-col">
           <div class="footer-col-title">联系我们</div>
-          <p class="footer-contact">邮箱: support@demo-platform.com</p>
+          <p class="footer-contact">邮箱: {{ SUPPORT_EMAIL }}</p>
         </div>
         <div class="footer-col">
           <div class="footer-col-title">法律信息</div>
@@ -24,11 +24,15 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p class="copyright">© 2026 DemoPlatform. All rights reserved.</p>
+        <p class="copyright">© 2026 {{ APP_BRAND_NAME }}. All rights reserved.</p>
       </div>
     </div>
   </footer>
 </template>
+
+<script setup lang="ts">
+import { APP_BRAND_NAME, SUPPORT_EMAIL } from '@/constants/branding'
+</script>
 
 <style scoped>
 .shop-footer {

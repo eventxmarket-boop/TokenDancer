@@ -2,7 +2,7 @@
   <div class="admin-layout">
     <aside class="admin-sidebar">
       <div class="sidebar-header">
-        <h2>⚙️ 学代管理后台</h2>
+        <h2>⚙️ {{ ADMIN_PANEL_NAME }}</h2>
         <span class="version-badge">{{ APP_VERSION }}</span>
       </div>
 
@@ -73,7 +73,7 @@
     <div class="admin-right">
       <header class="admin-topbar">
         <div class="topbar-breadcrumb">
-          <span class="breadcrumb-root">后台管理</span>
+          <span class="breadcrumb-root">{{ ADMIN_PANEL_NAME }}</span>
           <span v-if="currentTitle" class="breadcrumb-sep"> / </span>
           <span v-if="currentTitle" class="breadcrumb-current">{{ currentTitle }}</span>
         </div>
@@ -100,6 +100,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { APP_VERSION } from '@/constants/appVersion'
+import { ADMIN_PANEL_NAME } from '@/constants/branding'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()

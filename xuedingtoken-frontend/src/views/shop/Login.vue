@@ -7,7 +7,7 @@
 
     <div class="auth-card-wrapper">
       <div class="auth-card card">
-        <div class="auth-logo">DemoPlatform</div>
+        <div class="auth-logo">{{ APP_BRAND_NAME }}</div>
         <h2 class="auth-title">用户登录</h2>
         <p class="auth-sub">欢迎回来，继续你的订单流程</p>
 
@@ -66,6 +66,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedbackStore } from '@/stores/feedback'
+import { APP_BRAND_NAME } from '@/constants/branding'
 
 const router = useRouter()
 const auth = useAuthStore()

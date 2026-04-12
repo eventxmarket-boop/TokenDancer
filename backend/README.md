@@ -1,6 +1,6 @@
-# Demo Platform Backend
+# TokenDancer Backend
 
-FastAPI 后端服务，提供商城、主站 API 及管理接口。
+TokenDancer 的 FastAPI 后端服务，提供商城、用户控制台、管理员后台、支付与 API 中转接口。
 
 ## 快速启动
 

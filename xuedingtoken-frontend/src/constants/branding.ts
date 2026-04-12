@@ -1,0 +1,6 @@
+export const APP_BRAND_NAME = 'TokenDancer'
+export const ADMIN_PANEL_NAME = 'TokenDancer 管理后台'
+export const CONSOLE_BRAND_NAME = 'TokenDancer 控制台'
+export const PUBLIC_SITE_URL = 'https://app.tokendancer.xyz'
+export const REGISTER_URL = 'https://app.tokendancer.xyz/auth/register'
+export const SUPPORT_EMAIL = 'support@tokendancer.xyz'

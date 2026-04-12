@@ -2,7 +2,7 @@
   <nav class="shop-nav">
     <div class="container shop-nav-inner">
       <div class="shop-nav-left">
-        <router-link to="/" class="shop-logo">DemoPlatform</router-link>
+        <router-link to="/" class="shop-logo">{{ APP_BRAND_NAME }}</router-link>
         <div class="shop-nav-links">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/products" class="nav-link">商品</router-link>
@@ -40,6 +40,7 @@
 import { ref } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { contentApi } from '@/api/content'
+import { APP_BRAND_NAME } from '@/constants/branding'
 
 const cartStore = useCartStore()
 const cartCount = cartStore.totalItems

@@ -1,4 +1,4 @@
-# CURRENT_STATUS.md — 系统状态快照
+# TokenDancer CURRENT_STATUS.md — 系统状态快照
 
 > 更新时间：2026-04-11 v5.0.0
 > 维护范围：Token API 中转（v1-v4）+ 支付链

@@ -2,7 +2,7 @@
   <div class="main-layout">
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
-        <router-link to="/" class="sidebar-logo">DemoPlatform</router-link>
+        <router-link to="/" class="sidebar-logo">{{ APP_BRAND_NAME }}</router-link>
         <button class="collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed">
           {{ sidebarCollapsed ? '→' : '←' }}
         </button>
@@ -70,6 +70,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { contentApi } from '@/api/content'
+import { APP_BRAND_NAME } from '@/constants/branding'
 
 defineProps<{
   title: string

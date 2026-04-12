@@ -64,9 +64,9 @@ class EmailService:
         return plain, html
 
     def send_welcome(self, email: str, username: str) -> bool:
-        subject = "欢迎注册学代Token平台"
+        subject = "欢迎注册 TokenDancer"
         body, html = self._render(
-            "欢迎 {{username}}！\n感谢您注册学代Token平台。\n\n您可以登录后购买算力或兑换余额，开始使用 API 服务。",
+            "欢迎 {{username}}！\n感谢您注册 TokenDancer。\n\n您可以登录后购买算力或兑换余额，开始使用 API 服务。",
             username=username,
         )
         return self._send(email, subject, body, html)
