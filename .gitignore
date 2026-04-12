@@ -1,0 +1,9 @@
+backend/.venv/
+xuedingtoken-frontend/node_modules/
+xuedingtoken-frontend/dist/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+!.env.example
