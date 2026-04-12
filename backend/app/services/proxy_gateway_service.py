@@ -21,10 +21,13 @@ from sqlalchemy.orm import Session
 from app.core.proxy_errors import (
     AllProvidersFailedError,
     InsufficientBalanceError,
+    InvalidUpstreamModelError,
     KeyDecryptionError,
     ModelRouteNotFoundError,
     NoAvailableProviderError,
+    NoAvailableProviderKeyError,
     ProviderUnavailableError,
+    UpstreamBadRequestError,
     UpstreamAuthError,
     UpstreamServerError,
     UpstreamTimeoutError,
@@ -242,6 +245,7 @@ class ProxyGatewayService:
         key_attempt_count = 0
         failure_chain: list[dict] = []
         fallback_triggered = False
+        last_failed_provider_key_id: int | None = None
 
         for candidate_index, candidate in enumerate(candidates):
             if candidate.is_fallback:
@@ -257,17 +261,45 @@ class ProxyGatewayService:
             if forced_provider_key_id is not None:
                 available_keys = [item for item in available_keys if item.id == forced_provider_key_id]
             if not available_keys:
+                missing_key_error = "provider key unavailable" if forced_provider_key_id else "no active provider key found"
                 failure_chain.append(
                     {
                         "provider_id": candidate.provider.id,
                         "key_id": forced_provider_key_id,
-                        "error": "forced provider key unavailable" if forced_provider_key_id else "no available provider key",
+                        "error": missing_key_error,
                     }
                 )
+                if policy_type == "fixed":
+                    self._write_proxy_log(
+                        db=db,
+                        user_id=user_id,
+                        user_api_key_id=user_api_key_id,
+                        public_model=public_model,
+                        provider_id=candidate.provider.id,
+                        provider_name=candidate.provider.name,
+                        provider_key_id=forced_provider_key_id,
+                        upstream_model=candidate.upstream_model_name,
+                        status="error",
+                        input_tokens=0,
+                        output_tokens=0,
+                        cost=0.0,
+                        latency_ms=0,
+                        error_message=missing_key_error,
+                        request_id=None,
+                        request_origin=request_origin,
+                        request_tag=request_tag,
+                        policy_type=policy_type,
+                        fallback_triggered=False,
+                        provider_switch_count=provider_switch_count,
+                        key_switch_count=max(0, key_attempt_count - 1),
+                        failure_chain_summary=self._summarize_failures(failure_chain),
+                    )
+                    raise NoAvailableProviderKeyError(candidate.provider.name, reason=missing_key_error)
                 continue
 
             for key_rec in available_keys:
                 key_attempt_count += 1
+                last_failed_provider_key_id = key_rec.id
                 raw_key = provider_key_service.get_decrypted(key_rec.id, db)
                 if not raw_key:
                     self._update_provider_key_stats(key_rec, db, error="key decryption failed")
@@ -396,7 +428,14 @@ class ProxyGatewayService:
 
                 except InsufficientBalanceError:
                     raise
-                except (UpstreamTimeoutError, UpstreamAuthError, UpstreamServerError, KeyDecryptionError) as exc:
+                except (
+                    UpstreamTimeoutError,
+                    UpstreamAuthError,
+                    UpstreamServerError,
+                    UpstreamBadRequestError,
+                    InvalidUpstreamModelError,
+                    KeyDecryptionError,
+                ) as exc:
                     error_message = self._sanitize_error_message(exc.internal_detail)
                     self._update_provider_key_stats(key_rec, db, error=error_message)
                     failure_chain.append(
@@ -427,7 +466,7 @@ class ProxyGatewayService:
                     public_model=public_model,
                     provider_id=candidate.provider.id,
                     provider_name=candidate.provider.name,
-                    provider_key_id=None,
+                    provider_key_id=last_failed_provider_key_id,
                     upstream_model=candidate.upstream_model_name,
                     status="error",
                     input_tokens=0,
@@ -455,7 +494,7 @@ class ProxyGatewayService:
             public_model=public_model,
             provider_id=final_candidate.provider.id if final_candidate else None,
             provider_name=final_candidate.provider.name if final_candidate else None,
-            provider_key_id=None,
+            provider_key_id=last_failed_provider_key_id,
             upstream_model=final_candidate.upstream_model_name if final_candidate else public_model,
             status="error",
             input_tokens=0,
@@ -665,22 +704,33 @@ class ProxyGatewayService:
             raise UpstreamAuthError(provider.name)
         if resp.status_code >= 500:
             raise UpstreamServerError(provider.name, resp.status_code)
-        if resp.status_code >= 400:
-            raise UpstreamServerError(provider.name, resp.status_code)
+        try:
+            data = resp.json()
+        except Exception as exc:
+            raise UpstreamBadRequestError(provider.name, f"invalid JSON response: {type(exc).__name__}") from exc
+        if not isinstance(data, dict):
+            raise UpstreamBadRequestError(provider.name, "upstream returned non-object JSON")
 
-        data: dict = resp.json()
+        if resp.status_code >= 400:
+            detail = str(data.get("error") or data.get("message") or resp.text[:240] or f"HTTP {resp.status_code}")
+            raise UpstreamBadRequestError(provider.name, detail)
 
         from app.services.providers.base import NormalizedUsage, UpstreamResponse
 
-        raw_usage: dict = data.get("usage", {})
+        raw_usage = data.get("usage") or {}
+        if not isinstance(raw_usage, dict):
+            raw_usage = {}
         prompt = int(raw_usage.get("prompt_tokens", 0) or 0)
         completion = int(raw_usage.get("completion_tokens", 0) or 0)
         total = int(raw_usage.get("total_tokens", 0) or 0) or prompt + completion
+        choices = data.get("choices") or []
+        if not isinstance(choices, list):
+            choices = []
 
         return UpstreamResponse(
             id=data.get("id", "chatcmpl"),
             model=data.get("model", model_name),
-            choices=data.get("choices", []),
+            choices=choices,
             usage=NormalizedUsage(prompt, completion, total),
             raw=data,
         )

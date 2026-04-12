@@ -62,14 +62,43 @@ class NoAvailableProviderError(ProxyBaseException):
 class NoAvailableProviderKeyError(ProxyBaseException):
     """409 - 该 provider 没有可用的（active）key。"""
 
-    def __init__(self, provider_name: str):
+    def __init__(self, provider_name: str, reason: str = "no active provider key found"):
         super().__init__(
-            message="No available API key for provider",
-            internal_detail=f"No active ProviderKey for provider={provider_name}",
+            message=f"No active provider key found: {provider_name}",
+            internal_detail=f"No active ProviderKey for provider={provider_name}: {reason}",
         )
 
     def to_http(self):
         return super().to_http(409)
+
+
+class UpstreamBadRequestError(ProxyBaseException):
+    """400 - 上游返回明确的无效请求。"""
+
+    def __init__(self, provider_name: str, reason: str):
+        super().__init__(
+            message=f"Invalid upstream request: {reason}",
+            internal_detail=f"UpstreamBadRequestError provider={provider_name}: {reason}",
+        )
+
+    def to_http(self):
+        return super().to_http(400)
+
+
+class InvalidUpstreamModelError(ProxyBaseException):
+    """400 - 当前模型映射到的上游模型名无效。"""
+
+    def __init__(self, provider_name: str, model_name: str, reason: str = ""):
+        detail = f"InvalidUpstreamModel provider={provider_name}, model={model_name}"
+        if reason:
+            detail = f"{detail}, reason={reason}"
+        super().__init__(
+            message=f"Invalid upstream model: {model_name}",
+            internal_detail=detail,
+        )
+
+    def to_http(self):
+        return super().to_http(400)
 
 
 class UpstreamTimeoutError(ProxyBaseException):

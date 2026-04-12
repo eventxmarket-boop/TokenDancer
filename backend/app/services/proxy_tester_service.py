@@ -123,11 +123,17 @@ class ProxyTesterService:
         if log_record and log_record.provider_key_id:
             provider_key = db.query(ProviderKey).filter(ProviderKey.id == log_record.provider_key_id).first()
 
-        debug = gateway_response.get("debug") if gateway_response else {}
+        debug = gateway_response.get("debug") if gateway_response and isinstance(gateway_response.get("debug"), dict) else {}
         usage = gateway_response.get("usage") if gateway_response else None
         assistant_message = None
-        if gateway_response and gateway_response.get("choices"):
-            assistant_message = gateway_response["choices"][0].get("message", {}).get("content")
+        if gateway_response and isinstance(gateway_response.get("choices"), list) and gateway_response["choices"]:
+            first_choice = gateway_response["choices"][0] or {}
+            if not isinstance(first_choice, dict):
+                first_choice = {}
+            message = first_choice.get("message") or {}
+            if not isinstance(message, dict):
+                message = {}
+            assistant_message = message.get("content")
 
         source_key_usage_updated = False
         source_key_last_used_at = None

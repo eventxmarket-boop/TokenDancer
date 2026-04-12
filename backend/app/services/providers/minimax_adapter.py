@@ -14,6 +14,8 @@ from app.services.providers.base import (
     UpstreamError,
 )
 from app.core.proxy_errors import (
+    InvalidUpstreamModelError,
+    UpstreamBadRequestError,
     UpstreamTimeoutError,
     UpstreamAuthError,
     UpstreamServerError,
@@ -80,21 +82,60 @@ class MinimaxAdapter(BaseAdapter):
                 raise UpstreamAuthError("minimax")
             if resp.status_code >= 500:
                 raise UpstreamServerError("minimax", resp.status_code)
+            if resp.status_code >= 400:
+                raise UpstreamBadRequestError("minimax", self._summarize_http_error(resp))
 
-            resp.raise_for_status()
-            data: dict = resp.json()
+            data = self._safe_json_dict(resp)
+            self._raise_if_minimax_error(data, request.model)
 
         # ── 解析 usage ─────────────────────────────────────────
-        raw_usage: dict = data.get("usage", {})
+        raw_usage = data.get("usage") or {}
+        if not isinstance(raw_usage, dict):
+            raw_usage = {}
         usage = self._normalize_usage(raw_usage)
+        choices = data.get("choices") or []
+        if not isinstance(choices, list):
+            choices = []
 
         return UpstreamResponse(
             id=data.get("id", "chatcmpl-minimax"),
             model=data.get("model", request.model),
-            choices=data.get("choices", []),
+            choices=choices,
             usage=usage,
             raw=data,
         )
+
+    def _safe_json_dict(self, resp: httpx.Response) -> dict[str, Any]:
+        try:
+            data = resp.json()
+        except Exception as exc:
+            raise UpstreamBadRequestError("minimax", f"invalid JSON response: {type(exc).__name__}") from exc
+        if not isinstance(data, dict):
+            raise UpstreamBadRequestError("minimax", "upstream returned non-object JSON")
+        return data
+
+    def _summarize_http_error(self, resp: httpx.Response) -> str:
+        text = (resp.text or "").strip()
+        if not text:
+            return f"HTTP {resp.status_code}"
+        return f"HTTP {resp.status_code}: {text[:240]}"
+
+    def _raise_if_minimax_error(self, data: dict[str, Any], model_name: str) -> None:
+        base_resp = data.get("base_resp")
+        if not isinstance(base_resp, dict):
+            return
+
+        status_code = base_resp.get("status_code")
+        if status_code in (None, 0, "0"):
+            return
+
+        status_msg = str(base_resp.get("status_msg") or "").strip() or f"status_code={status_code}"
+        lowered = status_msg.lower()
+        if "unknown model" in lowered or "invalid model" in lowered:
+            raise InvalidUpstreamModelError("minimax", model_name, status_msg)
+        if "api key" in lowered or "token" in lowered or "auth" in lowered or "unauthorized" in lowered:
+            raise UpstreamAuthError("minimax")
+        raise UpstreamBadRequestError("minimax", status_msg)
 
     def _normalize_usage(self, raw_usage: dict) -> NormalizedUsage:
         """
