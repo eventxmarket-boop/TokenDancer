@@ -3,7 +3,7 @@
     <div class="page-title-row">
       <div>
         <h1 class="page-title">源 Key 池</h1>
-        <p class="page-subtitle">先选择已创建的 Provider，再录入真实上游 Key。</p>
+        <p class="page-subtitle">所有上游真实 Key 都从这里进入系统，并绑定到已创建的 Provider。</p>
       </div>
       <div class="title-actions">
         <button class="btn-outline-sm" @click="fetchAll">🔄 刷新</button>
@@ -16,6 +16,25 @@
       当前还没有 Provider。请先到“渠道管理”创建 Provider，再回来添加源 Key。
     </div>
 
+    <div class="overview-grid">
+      <div class="overview-card">
+        <span class="overview-label">总 Key 数</span>
+        <strong class="overview-value">{{ items.length }}</strong>
+      </div>
+      <div class="overview-card">
+        <span class="overview-label">启用中的 Key</span>
+        <strong class="overview-value">{{ activeKeyCount }}</strong>
+      </div>
+      <div class="overview-card">
+        <span class="overview-label">24h 有流量</span>
+        <strong class="overview-value">{{ activeTrafficCount }}</strong>
+      </div>
+      <div class="overview-card">
+        <span class="overview-label">24h 有错误</span>
+        <strong class="overview-value">{{ errorKeyCount }}</strong>
+      </div>
+    </div>
+
     <div v-if="showForm" class="modal-mask">
       <div class="modal-box">
         <h3 class="modal-title">{{ editingId ? '编辑源 Key' : '新增源 Key' }}</h3>
@@ -23,7 +42,9 @@
           <label>所属渠道 <span class="req">*</span></label>
           <select v-model="form.provider_id" class="form-select" :disabled="!hasProviders">
             <option value="">{{ hasProviders ? '— 选择渠道 —' : '请先创建 Provider' }}</option>
-            <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }} ({{ provider.provider_type }})</option>
+            <option v-for="provider in providers" :key="provider.id" :value="provider.id">
+              {{ provider.name }} ({{ provider.provider_type }}) / 活跃 Key {{ provider.active_key_count }}
+            </option>
           </select>
           <div v-if="!hasProviders" class="field-help">没有可选 Provider，当前无法创建源 Key。</div>
         </div>
@@ -60,6 +81,7 @@
           <select v-model="form.status" class="form-select">
             <option value="active">启用</option>
             <option value="disabled">停用</option>
+            <option value="invalid">无效</option>
           </select>
         </div>
         <div class="modal-actions">
@@ -72,7 +94,7 @@
     <AdminSectionCard>
       <AdminTableToolbar>
         <AdminFilterBar>
-          <input class="filter-input" placeholder="搜索名称 / 脱敏 Key" v-model="filters.search" @input="debouncedFetch" />
+          <input class="filter-input" placeholder="搜索名称 / 脱敏 Key / 模型" v-model="filters.search" />
           <select class="filter-select" v-model="filters.provider_id" @change="fetchItems">
             <option value="">全部渠道</option>
             <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
@@ -81,6 +103,7 @@
             <option value="">全部状态</option>
             <option value="active">启用</option>
             <option value="disabled">停用</option>
+            <option value="invalid">无效</option>
           </select>
         </AdminFilterBar>
       </AdminTableToolbar>
@@ -95,30 +118,39 @@
               <th>Key（脱敏）</th>
               <th>支持模型</th>
               <th>状态</th>
-              <th>权重</th>
-              <th>今日用量</th>
-              <th>最后使用</th>
+              <th>配额 / 权重</th>
+              <th>24h 使用态</th>
               <th>最后错误</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="loading"><td colspan="11" class="td-center td-pad">加载中…</td></tr>
-            <tr v-else-if="error"><td colspan="11" class="td-center td-pad td-error">{{ error }}</td></tr>
-            <tr v-else-if="items.length === 0"><td colspan="11" class="td-center td-pad"><AdminEmptyState icon="🔑" title="暂无 Key" desc="先创建 Provider，再录入真实上游 Key。" /></td></tr>
-            <tr v-else v-for="item in items" :key="item.id" class="tr-body">
+            <tr v-if="loading"><td colspan="10" class="td-center td-pad">加载中…</td></tr>
+            <tr v-else-if="error"><td colspan="10" class="td-center td-pad td-error">{{ error }}</td></tr>
+            <tr v-else-if="displayItems.length === 0"><td colspan="10" class="td-center td-pad"><AdminEmptyState icon="🔑" title="暂无 Key" desc="先创建 Provider，再录入真实上游 Key。" /></td></tr>
+            <tr v-else v-for="item in displayItems" :key="item.id" class="tr-body">
               <td>{{ item.id }}</td>
-              <td><strong>{{ item.name }}</strong></td>
-              <td>{{ providerMap[item.provider_id] || `Provider #${item.provider_id}` }}</td>
-              <td><code class="key-masked">{{ item.key_masked || '—' }}</code></td>
-              <td>{{ item.supported_models || '全部模型' }}</td>
-              <td><AdminStatusBadge :value="item.status" /></td>
-              <td>{{ item.weight }}</td>
               <td>
-                <span v-if="item.daily_limit">{{ item.used_count_today || 0 }} / {{ item.daily_limit }}</span>
-                <span v-else>—</span>
+                <strong>{{ item.name }}</strong>
+                <div class="sub-line">{{ item.provider_type || '—' }} / 创建于 {{ fmtDate(item.created_at) }}</div>
               </td>
-              <td>{{ item.last_used_at ? fmtDate(item.last_used_at) : '—' }}</td>
+              <td>
+                <div>{{ item.provider_name || `Provider #${item.provider_id}` }}</div>
+                <div class="sub-line">健康 {{ item.provider_health_status || 'unknown' }}</div>
+              </td>
+              <td><code class="key-masked">{{ item.key_masked || '—' }}</code></td>
+              <td><div class="model-preview">{{ item.supported_models || '全部模型' }}</div></td>
+              <td><AdminStatusBadge :value="item.status" /></td>
+              <td>
+                <div class="metric-line">权重 {{ item.weight }}</div>
+                <div class="metric-line">RPM {{ item.rpm_limit || '—' }}</div>
+                <div class="metric-line">日限额 {{ item.daily_limit || '—' }}</div>
+              </td>
+              <td>
+                <div class="metric-line">请求 {{ item.request_count_24h }}</div>
+                <div class="metric-line">成功 {{ item.success_count_24h }}</div>
+                <div class="metric-line">最后使用 {{ item.last_used_at ? fmtDate(item.last_used_at) : '—' }}</div>
+              </td>
               <td class="td-error">{{ item.last_error || '—' }}</td>
               <td>
                 <div class="td-actions">
@@ -133,7 +165,7 @@
       </div>
 
       <div class="pagination-bar">
-        <span class="page-info">共 {{ items.length }} 条</span>
+        <span class="page-info">共 {{ displayItems.length }} 条</span>
       </div>
     </AdminSectionCard>
 
@@ -151,19 +183,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
 import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
 import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
 import AdminEmptyState from '@/components/admin/AdminEmptyState.vue'
-import { adminProviderKeysApi } from '@/api/adminProviderKeys'
-import { adminProvidersApi } from '@/api/adminProviders'
+import { adminProviderKeysApi, type AdminProviderKey } from '@/api/adminProviderKeys'
+import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 import { useFeedbackStore } from '@/stores/feedback'
 
 const feedback = useFeedbackStore()
-const items = ref<any[]>([])
-const providers = ref<any[]>([])
+const items = ref<AdminProviderKey[]>([])
+const providers = ref<AdminProvider[]>([])
 const providersLoading = ref(false)
 const providerError = ref('')
 const loading = ref(false)
@@ -173,12 +205,21 @@ const editingId = ref<number | null>(null)
 const saving = ref(false)
 const filters = reactive({ search: '', provider_id: '', status: '' })
 
-const providerMap = computed(() => {
-  const map: Record<number, string> = {}
-  for (const provider of providers.value) map[provider.id] = provider.name
-  return map
-})
 const hasProviders = computed(() => providers.value.length > 0)
+const displayItems = computed(() => {
+  const keyword = filters.search.trim().toLowerCase()
+  return items.value.filter((item) => {
+    if (filters.provider_id && String(item.provider_id) !== filters.provider_id) return false
+    if (filters.status && item.status !== filters.status) return false
+    if (!keyword) return true
+    return [item.name, item.key_masked, item.supported_models, item.provider_name]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword))
+  })
+})
+const activeKeyCount = computed(() => displayItems.value.filter((item) => item.status === 'active').length)
+const activeTrafficCount = computed(() => displayItems.value.filter((item) => Number(item.request_count_24h || 0) > 0).length)
+const errorKeyCount = computed(() => displayItems.value.filter((item) => Number(item.failure_count_24h || 0) > 0 || item.last_error).length)
 
 const defaultForm = () => ({
   provider_id: '',
@@ -193,12 +234,6 @@ const defaultForm = () => ({
 const form = reactive(defaultForm())
 
 const confirm = reactive({ show: false, title: '', msg: '', danger: false, action: null as null | (() => Promise<void>) })
-
-let debounceTimer: ReturnType<typeof setTimeout>
-const debouncedFetch = () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(fetchItems, 350)
-}
 
 const fmtDate = (value: string) => value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
 
@@ -246,7 +281,7 @@ const openCreate = () => {
   showForm.value = true
 }
 
-const openEdit = (key: any) => {
+const openEdit = (key: AdminProviderKey) => {
   editingId.value = key.id
   Object.assign(form, {
     provider_id: String(key.provider_id),
@@ -282,6 +317,7 @@ const handleSave = async () => {
   }
 
   saving.value = true
+  const currentEditing = editingId.value
   try {
     const payload: any = {
       ...form,
@@ -289,16 +325,16 @@ const handleSave = async () => {
       name: form.name.trim(),
       supported_models: form.supported_models.trim() || null,
     }
-    if (editingId.value && !form.api_key) {
+    if (currentEditing && !form.api_key) {
       delete payload.api_key
     }
-    if (editingId.value) {
-      await adminProviderKeysApi.update(editingId.value, payload)
+    if (currentEditing) {
+      await adminProviderKeysApi.update(currentEditing, payload)
     } else {
       await adminProviderKeysApi.create(payload)
     }
     closeForm()
-    feedback.success(editingId.value ? 'Key 已更新' : 'Key 已添加')
+    feedback.success(currentEditing ? 'Key 已更新' : 'Key 已添加')
     await fetchItems()
   } catch (e: any) {
     feedback.error(e.message || '保存失败')
@@ -307,7 +343,7 @@ const handleSave = async () => {
   }
 }
 
-const confirmToggle = (key: any) => {
+const confirmToggle = (key: AdminProviderKey) => {
   const nextStatus = key.status === 'active' ? 'disabled' : 'active'
   confirm.title = key.status === 'active' ? '停用 Key' : '启用 Key'
   confirm.msg = `确定要${key.status === 'active' ? '停用' : '启用'}「${key.name}」吗？`
@@ -329,7 +365,7 @@ const doConfirm = async () => {
   }
 }
 
-fetchAll()
+onMounted(fetchAll)
 </script>
 
 <style scoped>
@@ -337,6 +373,10 @@ fetchAll()
 .page-title { font-size:20px; font-weight:700; color:#1a1a2e; margin:0; }
 .page-subtitle { margin:6px 0 0; color:#667085; font-size:13px; }
 .title-actions { display:flex; gap:10px; }
+.overview-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:16px; }
+.overview-card { background:#fff; border:1px solid #eef1f4; border-radius:12px; padding:14px 16px; }
+.overview-label { display:block; font-size:12px; color:#7b8794; margin-bottom:8px; }
+.overview-value { font-size:22px; color:#111827; }
 .alert-card { padding:12px 16px; border-radius:12px; margin-bottom:16px; font-size:13px; }
 .alert-warning { background:#fffbe6; color:#ad6800; border:1px solid #ffe58f; }
 .alert-danger { background:#fff1f0; color:#cf1322; border:1px solid #ffccc7; }
@@ -359,21 +399,19 @@ fetchAll()
 .table-wrap { overflow-x:auto; }
 .admin-table { width:100%; border-collapse:collapse; font-size:13px; }
 .admin-table th { text-align:left; padding:10px 14px; font-size:11px; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:0.5px; background:#fafafa; border-bottom:1px solid #f0f0f0; white-space:nowrap; }
-.admin-table td { padding:10px 14px; border-bottom:1px solid #f5f5f5; color:#333; }
+.admin-table td { padding:10px 14px; border-bottom:1px solid #f5f5f5; color:#333; vertical-align:top; }
 .tr-body:hover td { background:#fafafa; }
 .tr-body:last-child td { border-bottom:none; }
 .td-center { text-align:center; }
 .td-pad { padding:32px !important; }
-.td-error { max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#ff4d4f; font-size:12px; }
-.key-masked { font-family:monospace; font-size:11px; background:#f5f5f5; padding:2px 6px; border-radius:3px; color:#555; }
-.td-actions { display:flex; gap:6px; }
+.td-error { color:#b42318; max-width:220px; white-space:normal; word-break:break-word; }
+.key-masked { font-size:12px; color:#888; background:#f5f5f5; padding:2px 6px; border-radius:4px; }
+.model-preview { max-width:220px; white-space:normal; word-break:break-word; line-height:1.45; }
+.sub-line, .metric-line { margin-top:4px; font-size:12px; color:#667085; }
+.td-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .btn-action-sm { font-size:11px; padding:3px 8px; color:#1677ff; background:none; border:1px solid #1677ff; border-radius:4px; cursor:pointer; }
-.btn-action-sm:hover { background:#e6f7ff; }
 .btn-danger-sm { font-size:11px; padding:3px 8px; color:#ff4d4f; background:none; border:1px solid #ff4d4f; border-radius:4px; cursor:pointer; }
-.btn-danger-sm:hover { background:#fff1f0; }
 .btn-success-sm { font-size:11px; padding:3px 8px; color:#52c41a; background:none; border:1px solid #52c41a; border-radius:4px; cursor:pointer; }
-.btn-success-sm:hover { background:#f6ffed; }
-.filter-input { min-width:180px; }
 .pagination-bar { display:flex; align-items:center; justify-content:flex-end; padding:12px 20px; border-top:1px solid #f0f0f0; }
 .page-info { font-size:13px; color:#888; }
 .confirm-box { background:#fff; border-radius:12px; padding:28px; width:420px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
@@ -381,7 +419,13 @@ fetchAll()
 .confirm-msg { font-size:13px; color:#555; margin:0 0 20px; }
 .btn-confirm { font-size:13px; padding:8px 18px; border:none; border-radius:6px; cursor:pointer; }
 .btn-danger { background:#ff4d4f; color:#fff; }
+
+@media (max-width: 980px) {
+  .overview-grid { grid-template-columns:repeat(2, 1fr); }
+}
+
 @media (max-width: 720px) {
-  .page-title-row, .form-row { flex-direction:column; }
+  .page-title-row, .title-actions, .form-row { flex-direction:column; }
+  .overview-grid { grid-template-columns:1fr; }
 }
 </style>

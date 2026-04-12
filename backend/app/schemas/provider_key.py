@@ -16,7 +16,7 @@ class ProviderKeyBase(BaseModel):
 class ProviderKeyCreate(BaseModel):
     provider_id: int
     name: str
-    api_key: str  # the real key, will be encrypted and masked
+    api_key: str
     supported_models: str | None = None
     status: str = "active"
     weight: int = 1
@@ -26,8 +26,9 @@ class ProviderKeyCreate(BaseModel):
 
 
 class ProviderKeyUpdate(BaseModel):
+    provider_id: int | None = None
     name: str | None = None
-    api_key: str | None = None  # optional update
+    api_key: str | None = None
     supported_models: str | None = None
     status: str | None = None
     weight: int | None = None
@@ -38,10 +39,16 @@ class ProviderKeyUpdate(BaseModel):
 
 class ProviderKeyRead(ProviderKeyBase):
     id: int
-    key_masked: str  # NEVER the real key
+    key_masked: str
     used_count_today: int
     last_used_at: datetime | None
     last_error: str | None
     created_at: datetime
+    provider_name: str | None = None
+    provider_type: str | None = None
+    provider_health_status: str | None = None
+    request_count_24h: int = 0
+    success_count_24h: int = 0
+    failure_count_24h: int = 0
 
     model_config = {"from_attributes": True}

@@ -3,6 +3,9 @@ import { api } from '@/api/client'
 export interface AdminProviderKey {
   id: number
   provider_id: number
+  provider_name?: string | null
+  provider_type?: string | null
+  provider_health_status?: string | null
   name: string
   key_masked: string
   supported_models?: string | null
@@ -14,6 +17,10 @@ export interface AdminProviderKey {
   last_used_at?: string | null
   last_error?: string | null
   notes?: string | null
+  request_count_24h: number
+  success_count_24h: number
+  failure_count_24h: number
+  created_at: string
 }
 
 export interface AdminProviderKeyPayload {

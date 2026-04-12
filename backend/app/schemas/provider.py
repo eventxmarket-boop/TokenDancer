@@ -53,5 +53,13 @@ class ProviderRead(ProviderBase):
     health_status: str
     last_health_check_at: datetime | None
     created_at: datetime
+    active_key_count: int = 0
+    request_count_24h: int = 0
+    success_rate_24h: float = 0.0
+    avg_latency_ms_24h: float = 0.0
+    recent_failures_24h: int = 0
+    last_error: str | None = None
+    cooldown_active: bool = False
+    cooldown_remaining_seconds: int = 0
 
     model_config = {"from_attributes": True}

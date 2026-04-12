@@ -1,7 +1,10 @@
 <template>
   <div class="page-container">
     <div class="page-title-row">
-      <h1 class="page-title">Source Key 状态</h1>
+      <div>
+        <h1 class="page-title">Source Key 状态</h1>
+        <p class="page-subtitle">核对源 Key 是否成功绑定到 Provider，并观察最近使用、错误与 24h 请求情况。</p>
+      </div>
       <div class="title-actions">
         <button class="btn-outline-sm" @click="fetchKeys">🔄 刷新</button>
       </div>
@@ -21,7 +24,7 @@
           <AdminFilterBar>
             <select class="filter-select" v-model="filters.provider_id" @change="fetchKeys">
               <option value="">全部渠道</option>
-              <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.name }}</option>
+              <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
             </select>
             <select class="filter-select" v-model="filters.status" @change="fetchKeys">
               <option value="">全部状态</option>
@@ -35,19 +38,29 @@
         <div class="table-wrap">
           <table class="admin-table">
             <thead><tr>
-              <th>ID</th><th>名称</th><th>所属渠道</th><th>Key（掩码）</th><th>状态</th><th>权重</th><th>最后使用</th><th>最后错误</th>
+              <th>ID</th><th>名称</th><th>所属渠道</th><th>Key（掩码）</th><th>状态</th><th>权重</th><th>24h 请求</th><th>最后使用</th><th>最后错误</th>
             </tr></thead>
             <tbody>
-              <tr v-if="filteredKeys.length === 0"><td colspan="8" class="td-center td-pad">暂无 Key</td></tr>
-              <tr v-else v-for="k in filteredKeys" :key="k.id">
-                <td>{{ k.id }}</td>
-                <td><strong>{{ k.name || '—' }}</strong></td>
-                <td>{{ providerMap[k.provider_id] || k.provider_id }}</td>
-                <td><code class="key-masked">{{ k.key_masked || '—' }}</code></td>
-                <td><AdminStatusBadge :value="k.status" /></td>
-                <td>{{ k.weight ?? '—' }}</td>
-                <td>{{ fmtTime(k.last_used_at) }}</td>
-                <td class="td-error">{{ k.last_error || '—' }}</td>
+              <tr v-if="keys.length === 0"><td colspan="9" class="td-center td-pad">暂无 Key</td></tr>
+              <tr v-else v-for="key in keys" :key="key.id">
+                <td>{{ key.id }}</td>
+                <td>
+                  <strong>{{ key.name || '—' }}</strong>
+                  <div class="sub-line">支持模型 {{ key.supported_models || '全部模型' }}</div>
+                </td>
+                <td>
+                  <div>{{ key.provider_name || key.provider_id }}</div>
+                  <div class="sub-line">{{ key.provider_type || '—' }} / 健康 {{ key.provider_health_status || 'unknown' }}</div>
+                </td>
+                <td><code class="key-masked">{{ key.key_masked || '—' }}</code></td>
+                <td><AdminStatusBadge :value="key.status" /></td>
+                <td>{{ key.weight ?? '—' }}</td>
+                <td>
+                  <div class="sub-line">总请求 {{ key.request_count_24h }}</div>
+                  <div class="sub-line">成功 {{ key.success_count_24h }} / 失败 {{ key.failure_count_24h }}</div>
+                </td>
+                <td>{{ fmtTime(key.last_used_at) }}</td>
+                <td class="td-error">{{ key.last_error || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -58,40 +71,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { adminProviderKeysApi } from '@/api/adminProviderKeys'
-import { adminProvidersApi } from '@/api/adminProviders'
+import { ref, reactive } from 'vue'
+import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
+import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
+import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
+import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
+import { adminProviderKeysApi, type AdminProviderKey } from '@/api/adminProviderKeys'
+import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 
 const loading = ref(true)
 const error = ref('')
-const keys = ref<any[]>([])
-const providers = ref<any[]>([])
+const keys = ref<AdminProviderKey[]>([])
+const providers = ref<AdminProvider[]>([])
 const filters = reactive({ provider_id: '', status: '' })
-
-const providerMap = computed(() => {
-  const m: Record<number, string> = {}
-  providers.value.forEach((p: any) => { m[p.id] = p.name })
-  return m
-})
-
-const filteredKeys = computed(() => {
-  return keys.value.filter((k: any) => {
-    if (filters.provider_id && k.provider_id !== Number(filters.provider_id)) return false
-    if (filters.status && k.status !== filters.status) return false
-    return true
-  })
-})
 
 async function fetchKeys() {
   loading.value = true
   error.value = ''
   try {
-    const [keyList, prov] = await Promise.all([
-      adminProviderKeysApi.list() as Promise<any[]>,
-      adminProvidersApi.list() as Promise<any[]>,
+    const [keyList, providerList] = await Promise.all([
+      adminProviderKeysApi.list({ provider_id: filters.provider_id || undefined, status: filters.status || undefined }),
+      adminProvidersApi.list(),
     ])
     keys.value = keyList
-    providers.value = prov
+    providers.value = providerList
   } catch (e: any) {
     error.value = e?.message || '加载失败'
   } finally {
@@ -99,7 +102,7 @@ async function fetchKeys() {
   }
 }
 
-function fmtTime(ts: string | null) {
+function fmtTime(ts?: string | null) {
   if (!ts) return '—'
   return new Date(ts).toLocaleString('zh-CN')
 }
@@ -109,8 +112,9 @@ fetchKeys()
 
 <style scoped>
 .page-container { display: flex; flex-direction: column; gap: 20px; }
-.page-title-row { display: flex; align-items: center; justify-content: space-between; }
+.page-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .page-title { font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0; }
+.page-subtitle { margin: 6px 0 0; color: #667085; font-size: 13px; }
 .title-actions { display: flex; gap: 8px; }
 .loading-state, .error-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; color: #888; }
 .error-msg { color: #ff4d4f; }
@@ -119,10 +123,11 @@ fetchKeys()
 .table-wrap { overflow-x: auto; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table th { background: #fafafa; padding: 10px 12px; text-align: left; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
-.admin-table td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; }
+.admin-table td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; color: #333; vertical-align: top; }
 .admin-table tr:last-child td { border-bottom: none; }
 .td-center { text-align: center; }
 .td-pad { padding: 20px; color: #999; }
-.td-error { color: #ff4d4f; font-size: 12px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-line { margin-top: 4px; font-size: 12px; color: #667085; }
+.td-error { color: #b42318; font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .key-masked { font-size: 12px; color: #888; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
 </style>

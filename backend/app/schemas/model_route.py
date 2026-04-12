@@ -35,5 +35,20 @@ class ModelRouteUpdate(BaseModel):
 class ModelRouteRead(ModelRouteBase):
     id: int
     created_at: datetime
+    provider_name: str | None = None
+    provider_type: str | None = None
+    fallback_provider_name: str | None = None
+    fallback_provider_type: str | None = None
+    policy_name: str | None = None
+    policy_type: str = "fixed"
+    retry_count: int = 1
+    cooldown_seconds: int = 60
+    timeout_seconds: int = 60
+    request_count_24h: int = 0
+    success_rate_24h: float = 0.0
+    avg_latency_ms_24h: float = 0.0
+    failure_count_24h: int = 0
+    last_request_at: datetime | None = None
+    last_error: str | None = None
 
     model_config = {"from_attributes": True}

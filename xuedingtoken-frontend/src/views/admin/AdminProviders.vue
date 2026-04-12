@@ -3,7 +3,7 @@
     <div class="page-title-row">
       <div>
         <h1 class="page-title">渠道管理</h1>
-        <p class="page-subtitle">先创建可用 Provider，再继续创建源 Key 和模型映射。</p>
+        <p class="page-subtitle">统一维护 Provider 类型、Base URL、健康状态和可用 Key 数量，作为整条中转配置链的起点。</p>
       </div>
       <div class="title-actions">
         <button class="btn-outline-sm" @click="fetchItems">🔄 刷新</button>
@@ -21,8 +21,8 @@
         <strong class="overview-value">{{ healthyCount }}</strong>
       </div>
       <div class="overview-card">
-        <span class="overview-label">Cooldown 中</span>
-        <strong class="overview-value">{{ cooldownCount }}</strong>
+        <span class="overview-label">可用源 Key</span>
+        <strong class="overview-value">{{ totalActiveKeyCount }}</strong>
       </div>
       <div class="overview-card">
         <span class="overview-label">24h 高成功率</span>
@@ -113,22 +113,21 @@
               <th>渠道</th>
               <th>类型 / Endpoint</th>
               <th>状态</th>
+              <th>可用性</th>
               <th>24h 运行态</th>
-              <th>Cooldown</th>
-              <th>最后检查</th>
               <th>最近错误</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="loading"><td colspan="9" class="td-center td-pad">加载中…</td></tr>
-            <tr v-else-if="error"><td colspan="9" class="td-center td-pad td-error">{{ error }}</td></tr>
-            <tr v-else-if="displayItems.length === 0"><td colspan="9" class="td-center td-pad"><AdminEmptyState icon="🌐" title="暂无渠道" desc="先创建一个可用 Provider，后续源 Key 才能绑定。" /></td></tr>
+            <tr v-if="loading"><td colspan="8" class="td-center td-pad">加载中…</td></tr>
+            <tr v-else-if="error"><td colspan="8" class="td-center td-pad td-error">{{ error }}</td></tr>
+            <tr v-else-if="displayItems.length === 0"><td colspan="8" class="td-center td-pad"><AdminEmptyState icon="🌐" title="暂无渠道" desc="先创建一个可用 Provider，后续源 Key、模型映射和路由策略才能完整联动。" /></td></tr>
             <tr v-else v-for="provider in displayItems" :key="provider.id" class="tr-body">
               <td>{{ provider.id }}</td>
               <td>
                 <strong>{{ provider.name }}</strong>
-                <div class="sub-line">优先级 {{ provider.priority }}</div>
+                <div class="sub-line">优先级 {{ provider.priority }} / 超时 {{ provider.timeout_seconds }}s</div>
               </td>
               <td>
                 <div class="badge-type">{{ provider.provider_type }}</div>
@@ -139,15 +138,15 @@
                 <div class="sub-line"><AdminStatusBadge :value="provider.health_status || 'unknown'" type="info" /></div>
               </td>
               <td>
-                <div class="metric-line">成功率 {{ provider.success_rate_24h ?? 0 }}%</div>
-                <div class="metric-line">延迟 {{ provider.avg_latency_ms_24h ? provider.avg_latency_ms_24h + 'ms' : '—' }}</div>
-                <div class="metric-line">活跃 Key {{ provider.active_key_count ?? 0 }}</div>
+                <div class="metric-line">活跃 Key {{ provider.active_key_count }}</div>
+                <div class="metric-line">Cooldown {{ provider.cooldown_active ? provider.cooldown_remaining_seconds + 's' : '—' }}</div>
+                <div class="metric-line">最后检查 {{ provider.last_health_check_at ? fmtDate(provider.last_health_check_at) : '—' }}</div>
               </td>
               <td>
-                <span v-if="provider.cooldown_active" class="warn-text">{{ provider.cooldown_remaining_seconds }}s</span>
-                <span v-else>—</span>
+                <div class="metric-line">请求 {{ provider.request_count_24h }}</div>
+                <div class="metric-line">成功率 {{ provider.success_rate_24h }}%</div>
+                <div class="metric-line">延迟 {{ provider.avg_latency_ms_24h ? provider.avg_latency_ms_24h + 'ms' : '—' }}</div>
               </td>
-              <td>{{ provider.last_health_check_at ? fmtDate(provider.last_health_check_at) : '—' }}</td>
               <td><div class="error-preview">{{ provider.last_error || '—' }}</div></td>
               <td>
                 <div class="td-actions">
@@ -179,21 +178,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
 import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
 import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
 import AdminEmptyState from '@/components/admin/AdminEmptyState.vue'
-import { adminProvidersApi } from '@/api/adminProviders'
-import { adminProxyMonitorApi } from '@/api/adminProxyMonitor'
+import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 import { PROVIDER_TYPE_MAP, PROVIDER_TYPE_OPTIONS, type ProviderType } from '@/constants/providerTypes'
 import { useFeedbackStore } from '@/stores/feedback'
 
 const feedback = useFeedbackStore()
 const providerTypeOptions = PROVIDER_TYPE_OPTIONS
-const items = ref<any[]>([])
-const runtimeRows = ref<Record<number, any>>({})
+const items = ref<AdminProvider[]>([])
 const loading = ref(false)
 const error = ref('')
 const showForm = ref(false)
@@ -227,11 +224,10 @@ const selectedProviderType = computed(() => PROVIDER_TYPE_MAP[form.provider_type
 const displayItems = computed(() => {
   const keyword = filters.search.trim().toLowerCase()
   return items.value
-    .map((item) => ({ ...item, ...(runtimeRows.value[item.id] || {}) }))
     .filter((item) => {
       const matchKeyword = !keyword || [item.name, item.base_url, item.last_error]
         .filter(Boolean)
-        .some((value: string) => value.toLowerCase().includes(keyword))
+        .some((value) => String(value).toLowerCase().includes(keyword))
       const matchType = !filters.provider_type || item.provider_type === filters.provider_type
       const matchStatus = !filters.is_active || String(item.is_active) === filters.is_active
       return matchKeyword && matchType && matchStatus
@@ -240,8 +236,8 @@ const displayItems = computed(() => {
 })
 
 const healthyCount = computed(() => displayItems.value.filter((item) => item.health_status === 'healthy').length)
-const cooldownCount = computed(() => displayItems.value.filter((item) => item.cooldown_active).length)
 const highSuccessCount = computed(() => displayItems.value.filter((item) => Number(item.success_rate_24h || 0) >= 95).length)
+const totalActiveKeyCount = computed(() => displayItems.value.reduce((sum, item) => sum + Number(item.active_key_count || 0), 0))
 
 const fmtDate = (value: string) => value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
 
@@ -249,16 +245,10 @@ const fetchItems = async () => {
   loading.value = true
   error.value = ''
   try {
-    const [providers, monitorProviders] = await Promise.all([
-      adminProvidersApi.list(),
-      adminProxyMonitorApi.providers(),
-    ])
-    items.value = providers
-    runtimeRows.value = Object.fromEntries(monitorProviders.map((row) => [row.id, row]))
+    items.value = await adminProvidersApi.list()
   } catch (e: any) {
     error.value = `加载失败：${e.message || ''}`
     items.value = []
-    runtimeRows.value = {}
   } finally {
     loading.value = false
   }
@@ -283,7 +273,7 @@ const openCreate = () => {
   showForm.value = true
 }
 
-const openEdit = (provider: any) => {
+const openEdit = (provider: AdminProvider) => {
   editingId.value = provider.id
   Object.assign(form, {
     name: provider.name,
@@ -309,6 +299,7 @@ const handleSave = async () => {
     return
   }
   saving.value = true
+  const currentEditing = editingId.value
   try {
     const payload = {
       ...form,
@@ -316,13 +307,13 @@ const handleSave = async () => {
       base_url: form.base_url.trim(),
       notes: form.notes.trim(),
     }
-    if (editingId.value) {
-      await adminProvidersApi.update(editingId.value, payload)
+    if (currentEditing) {
+      await adminProvidersApi.update(currentEditing, payload)
     } else {
       await adminProvidersApi.create(payload)
     }
     closeForm()
-    feedback.success(editingId.value ? '渠道已更新' : '渠道已创建')
+    feedback.success(currentEditing ? '渠道已更新' : '渠道已创建')
     await fetchItems()
   } catch (e: any) {
     feedback.error(e.message || '保存失败')
@@ -334,8 +325,8 @@ const handleSave = async () => {
 const handleProbe = async (providerId: number) => {
   probingIds.value = new Set([...probingIds.value, providerId])
   try {
-    const result = await adminProxyMonitorApi.probeProvider(providerId)
-    feedback.success(`探测完成：${result.status}`)
+    const result = await adminProvidersApi.healthCheck(providerId)
+    feedback.success(`探测完成：${result.new_status}`)
     await fetchItems()
   } catch (e: any) {
     feedback.error(e.message || '探测失败')
@@ -346,7 +337,7 @@ const handleProbe = async (providerId: number) => {
   }
 }
 
-const confirmToggle = (provider: any) => {
+const confirmToggle = (provider: AdminProvider) => {
   confirm.title = provider.is_active ? '停用渠道' : '启用渠道'
   confirm.msg = `确定要${provider.is_active ? '停用' : '启用'}渠道「${provider.name}」吗？`
   confirm.danger = provider.is_active
@@ -367,37 +358,36 @@ const doConfirm = async () => {
   }
 }
 
-fetchItems()
+onMounted(fetchItems)
 </script>
 
 <style scoped>
 .page-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; }
 .page-title { font-size:20px; font-weight:700; color:#1a1a2e; margin:0; }
 .page-subtitle { margin:6px 0 0; color:#667085; font-size:13px; }
-.title-actions { display:flex; gap:10px; align-items:center; }
+.title-actions { display:flex; gap:10px; }
 .overview-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px; }
-.overview-card, .catalog-card { background:#fff; border:1px solid #eef1f4; border-radius:12px; padding:14px 16px; }
+.overview-card { background:#fff; border:1px solid #eef1f4; border-radius:12px; padding:14px 16px; }
 .overview-label { display:block; font-size:12px; color:#7b8794; margin-bottom:8px; }
 .overview-value { font-size:22px; color:#111827; }
-.catalog-card { margin-bottom:20px; }
-.catalog-title { font-size:14px; font-weight:700; color:#1f2937; margin-bottom:12px; }
-.catalog-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
-.catalog-item { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:12px; }
-.catalog-name { font-size:13px; font-weight:700; color:#111827; margin-bottom:4px; }
-.catalog-hint { font-size:12px; color:#667085; line-height:1.5; min-height:36px; }
-.catalog-url { display:block; margin-top:8px; font-size:11px; color:#2563eb; background:#eef4ff; padding:4px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; }
+.catalog-card { background:#fff; border:1px solid #eef1f4; border-radius:12px; padding:16px 18px; margin-bottom:20px; }
+.catalog-title { font-size:14px; font-weight:700; color:#1a1a2e; margin-bottom:12px; }
+.catalog-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+.catalog-item { border:1px solid #eef1f4; border-radius:10px; padding:12px; background:#fafcff; }
+.catalog-name { font-size:13px; font-weight:700; color:#1a1a2e; margin-bottom:6px; }
+.catalog-hint { font-size:12px; color:#667085; line-height:1.5; }
+.catalog-url { display:block; margin-top:8px; font-size:11px; color:#475467; word-break:break-all; }
 .btn-outline-sm { font-size:12px; padding:6px 14px; background:#fff; color:#666; border:1px solid #d9d9d9; border-radius:6px; cursor:pointer; }
 .btn-primary { font-size:13px; padding:8px 18px; background:#1677ff; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-.btn-primary:hover { background:#4096ff; }
 .btn-primary:disabled { opacity:0.6; cursor:not-allowed; }
 .modal-mask { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:1000; overflow-y:auto; padding:20px; }
-.modal-box { background:#fff; border-radius:12px; padding:28px; width:520px; max-width:100%; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
+.modal-box { background:#fff; border-radius:12px; padding:28px; width:560px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
 .modal-title { font-size:16px; font-weight:700; margin:0 0 20px; color:#1a1a2e; }
-.form-row { display:flex; gap:14px; }
 .form-group { flex:1; margin-bottom:14px; }
+.form-row { display:flex; gap:12px; }
 .form-group label { display:block; font-size:12px; color:#666; margin-bottom:4px; font-weight:600; }
-.field-help { margin-top:6px; font-size:12px; color:#667085; line-height:1.5; }
 .req { color:#ff4d4f; }
+.field-help { margin-top:6px; font-size:12px; color:#667085; }
 .form-input, .form-select, .filter-input, .filter-select { width:100%; font-size:13px; padding:8px 10px; border:1px solid #e8e8e8; border-radius:6px; outline:none; color:#333; box-sizing:border-box; background:#fff; }
 .form-input:focus, .form-select:focus, .filter-input:focus, .filter-select:focus { border-color:#1677ff; }
 .modal-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:20px; }
@@ -411,29 +401,26 @@ fetchItems()
 .td-center { text-align:center; }
 .td-pad { padding:32px !important; }
 .td-error { color:#ff4d4f; }
-.badge-type { font-size:11px; background:#f0f5ff; color:#3b5bdb; padding:2px 8px; border-radius:10px; font-weight:600; display:inline-block; margin-bottom:6px; }
-.url-text { font-size:11px; background:#f5f5f5; padding:2px 6px; border-radius:4px; display:inline-block; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.metric-line, .sub-line { font-size:12px; color:#667085; margin-top:4px; }
-.warn-text { color:#ff4d4f; font-weight:700; }
-.error-preview { max-width:220px; white-space:normal; word-break:break-word; line-height:1.45; color:#c1121f; }
+.badge-type { font-size:11px; background:#f0f0ff; color:#5b53ff; padding:2px 8px; border-radius:10px; font-weight:600; display:inline-block; margin-bottom:6px; }
+.url-text { display:block; font-size:11px; color:#475467; word-break:break-all; }
+.sub-line, .metric-line { margin-top:4px; font-size:12px; color:#667085; }
+.error-preview { max-width:220px; white-space:normal; word-break:break-word; line-height:1.45; color:#b42318; }
 .td-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .btn-action-sm { font-size:11px; padding:3px 8px; color:#1677ff; background:none; border:1px solid #1677ff; border-radius:4px; cursor:pointer; }
-.btn-action-sm:hover { background:#e6f7ff; }
 .btn-danger-sm { font-size:11px; padding:3px 8px; color:#ff4d4f; background:none; border:1px solid #ff4d4f; border-radius:4px; cursor:pointer; }
-.btn-danger-sm:hover { background:#fff1f0; }
 .btn-success-sm { font-size:11px; padding:3px 8px; color:#52c41a; background:none; border:1px solid #52c41a; border-radius:4px; cursor:pointer; }
-.btn-success-sm:hover { background:#f6ffed; }
 .confirm-box { background:#fff; border-radius:12px; padding:28px; width:420px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
 .confirm-title { font-size:16px; font-weight:700; margin:0 0 12px; color:#1a1a2e; }
 .confirm-msg { font-size:13px; color:#555; margin:0 0 20px; }
 .btn-confirm { font-size:13px; padding:8px 18px; border:none; border-radius:6px; cursor:pointer; }
 .btn-danger { background:#ff4d4f; color:#fff; }
-@media (max-width: 1100px) {
+
+@media (max-width: 980px) {
   .overview-grid { grid-template-columns:repeat(2, 1fr); }
-  .catalog-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }
+
 @media (max-width: 720px) {
-  .page-title-row, .form-row { flex-direction:column; }
-  .catalog-grid { grid-template-columns:1fr; }
+  .page-title-row, .title-actions, .form-row { flex-direction:column; }
+  .overview-grid { grid-template-columns:1fr; }
 }
 </style>

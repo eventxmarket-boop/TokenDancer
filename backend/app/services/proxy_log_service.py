@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Optional
-from sqlalchemy.orm import Session
+
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
+from app.models.provider import Provider
+from app.models.provider_key import ProviderKey
 from app.models.proxy_request_log import ProxyRequestLog
 
 
@@ -119,7 +121,7 @@ class ProxyLogService:
         date_to: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[ProxyRequestLog]:
+    ) -> list[dict]:
         q = db.query(ProxyRequestLog)
         if provider_id:
             q = q.filter(ProxyRequestLog.provider_id == provider_id)
@@ -131,12 +133,54 @@ class ProxyLogService:
             q = q.filter(ProxyRequestLog.requested_at >= date_from)
         if date_to:
             q = q.filter(ProxyRequestLog.requested_at <= date_to)
-        return (
+        records = (
             q.order_by(desc(ProxyRequestLog.requested_at))
             .offset(offset)
             .limit(limit)
             .all()
         )
+        provider_ids = {record.provider_id for record in records if record.provider_id is not None}
+        provider_key_ids = {record.provider_key_id for record in records if record.provider_key_id is not None}
+        providers = {
+            item.id: item
+            for item in db.query(Provider).filter(Provider.id.in_(provider_ids)).all()
+        } if provider_ids else {}
+        provider_keys = {
+            item.id: item
+            for item in db.query(ProviderKey).filter(ProviderKey.id.in_(provider_key_ids)).all()
+        } if provider_key_ids else {}
+        return [
+            {
+                "id": record.id,
+                "request_id": record.request_id,
+                "user_id": record.user_id,
+                "user_api_key_id": record.user_api_key_id,
+                "public_model_name": record.public_model_name,
+                "provider_id": record.provider_id,
+                "provider_name": providers.get(record.provider_id).name if providers.get(record.provider_id) else None,
+                "provider_type": providers.get(record.provider_id).provider_type if providers.get(record.provider_id) else None,
+                "provider_key_id": record.provider_key_id,
+                "provider_key_name": provider_keys.get(record.provider_key_id).name if provider_keys.get(record.provider_key_id) else None,
+                "provider_model_name": record.provider_model_name,
+                "request_status": record.request_status,
+                "input_tokens": record.input_tokens,
+                "output_tokens": record.output_tokens,
+                "total_tokens": record.total_tokens,
+                "cost": float(record.cost or 0),
+                "latency_ms": record.latency_ms,
+                "error_message": record.error_message,
+                "requested_at": record.requested_at,
+                "upstream_provider_id": record.upstream_provider_id,
+                "upstream_key_id": record.upstream_key_id,
+                "policy_type": record.policy_type,
+                "fallback_triggered": record.fallback_triggered,
+                "retry_attempt": record.retry_attempt,
+                "provider_switch_count": record.provider_switch_count,
+                "key_switch_count": record.key_switch_count,
+                "failure_chain_summary": record.failure_chain_summary,
+            }
+            for record in records
+        ]
 
 
 proxy_log_service = ProxyLogService()

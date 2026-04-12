@@ -1,17 +1,20 @@
 <template>
   <div class="page-container">
     <div class="page-title-row">
-      <h1 class="page-title">API 中转监控</h1>
+      <div>
+        <h1 class="page-title">API 中转监控</h1>
+        <p class="page-subtitle">把 Provider、Model Route、失败链和最近运行态放在同一块面板里，直接观察后台配置是否真的驱动了请求。</p>
+      </div>
       <button class="btn-outline-sm" @click="loadAll">🔄 刷新</button>
     </div>
 
     <div class="stat-grid">
       <AdminStatCard label="24h 请求数" :value="overview.total_requests_24h" icon="📡" />
       <AdminStatCard label="健康 Provider" :value="overview.healthy_provider_count" icon="🌐" />
+      <AdminStatCard label="活跃源 Key" :value="overview.active_provider_key_count" icon="🔑" />
       <AdminStatCard label="24h 成功率" :value="successRateLabel" icon="✅" />
       <AdminStatCard label="24h 平均延迟" :value="latencyLabel" icon="⏱️" />
       <AdminStatCard label="24h 失败数" :value="overview.failed_requests_24h" icon="⚠️" />
-      <AdminStatCard label="活跃模型数" :value="overview.active_model_count" icon="🧠" />
     </div>
 
     <div class="monitor-grid">
@@ -23,15 +26,14 @@
               <th>类型</th>
               <th>健康</th>
               <th>Key 数</th>
-              <th>24h 成功率</th>
-              <th>24h 延迟</th>
+              <th>24h 运行态</th>
               <th>Cooldown</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="providerLoading"><td colspan="8" class="td-empty">加载中…</td></tr>
-            <tr v-else-if="providers.length === 0"><td colspan="8" class="td-empty">暂无 Provider</td></tr>
+            <tr v-if="providerLoading"><td colspan="7" class="td-empty">加载中…</td></tr>
+            <tr v-else-if="providers.length === 0"><td colspan="7" class="td-empty">暂无 Provider</td></tr>
             <tr v-for="provider in providers" :key="provider.id">
               <td>
                 <div class="cell-title">{{ provider.name }}</div>
@@ -40,8 +42,11 @@
               <td>{{ provider.provider_type }}</td>
               <td><AdminStatusBadge :value="provider.health_status" /></td>
               <td>{{ provider.active_key_count }}</td>
-              <td>{{ provider.success_rate_24h }}%</td>
-              <td>{{ provider.avg_latency_ms_24h ? provider.avg_latency_ms_24h + 'ms' : '—' }}</td>
+              <td>
+                <div class="cell-sub">请求 {{ provider.request_count_24h }}</div>
+                <div class="cell-sub">成功率 {{ provider.success_rate_24h }}%</div>
+                <div class="cell-sub">延迟 {{ provider.avg_latency_ms_24h ? provider.avg_latency_ms_24h + 'ms' : '—' }}</div>
+              </td>
               <td>
                 <span v-if="provider.cooldown_active" class="warn-text">{{ provider.cooldown_remaining_seconds }}s</span>
                 <span v-else>—</span>
@@ -64,14 +69,13 @@
               <th>主路由</th>
               <th>备用路由</th>
               <th>策略</th>
-              <th>24h 成功率</th>
-              <th>24h 失败</th>
+              <th>24h 运行态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="modelLoading"><td colspan="7" class="td-empty">加载中…</td></tr>
-            <tr v-else-if="models.length === 0"><td colspan="7" class="td-empty">暂无模型路由</td></tr>
+            <tr v-if="modelLoading"><td colspan="6" class="td-empty">加载中…</td></tr>
+            <tr v-else-if="models.length === 0"><td colspan="6" class="td-empty">暂无模型路由</td></tr>
             <tr v-for="route in models" :key="route.id">
               <td>
                 <div class="cell-title">{{ route.public_model_name }}</div>
@@ -79,9 +83,15 @@
               </td>
               <td>{{ route.provider_name || route.provider_id || '—' }}</td>
               <td>{{ route.fallback_provider_name || '—' }}</td>
-              <td>{{ route.policy_type }}</td>
-              <td>{{ route.success_rate_24h }}%</td>
-              <td>{{ route.failure_count_24h }}</td>
+              <td>
+                <div class="cell-sub">{{ route.policy_type }}</div>
+                <div class="cell-sub">重试 {{ route.retry_count }} / 冷却 {{ route.cooldown_seconds }}s</div>
+              </td>
+              <td>
+                <div class="cell-sub">请求 {{ route.request_count_24h }}</div>
+                <div class="cell-sub">成功率 {{ route.success_rate_24h }}%</div>
+                <div class="cell-sub">失败 {{ route.failure_count_24h }}</div>
+              </td>
               <td>
                 <button class="btn-action-sm" :disabled="!route.fallback_provider_id || switchingIds.has(route.id)" @click="handleSwitch(route.id)">
                   {{ switchingIds.has(route.id) ? '切换中…' : '切主备' }}
@@ -99,20 +109,25 @@
           <tr>
             <th>时间</th>
             <th>模型</th>
-            <th>Provider</th>
+            <th>Provider / Key</th>
             <th>状态</th>
+            <th>策略</th>
             <th>延迟</th>
             <th>错误</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="failureLoading"><td colspan="6" class="td-empty">加载中…</td></tr>
-          <tr v-else-if="failures.length === 0"><td colspan="6" class="td-empty">暂无失败记录</td></tr>
+          <tr v-if="failureLoading"><td colspan="7" class="td-empty">加载中…</td></tr>
+          <tr v-else-if="failures.length === 0"><td colspan="7" class="td-empty">暂无失败记录</td></tr>
           <tr v-for="item in failures" :key="item.id">
-            <td>{{ fmtDate(item.requested_at) }}</td>
+            <td>{{ fmtDate(item.requested_at || '') }}</td>
             <td>{{ item.public_model_name }}</td>
-            <td>{{ item.provider_name || item.provider_id || '—' }}</td>
+            <td>
+              <div>{{ item.provider_name || item.provider_id || '—' }}</div>
+              <div class="cell-sub">{{ item.provider_key_name || item.provider_key_id || '—' }}</div>
+            </td>
             <td><AdminStatusBadge :value="item.request_status" /></td>
+            <td>{{ item.policy_type || 'fixed' }}</td>
             <td>{{ item.latency_ms ? item.latency_ms + 'ms' : '—' }}</td>
             <td class="error-text">{{ item.error_message || item.failure_chain_summary || '—' }}</td>
           </tr>
@@ -127,21 +142,25 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminStatCard from '@/components/admin/AdminStatCard.vue'
 import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
-import { adminProxyMonitorApi } from '@/api/adminProxyMonitor'
+import { adminProxyMonitorApi, type AdminProxyFailureLog, type AdminProxyOverview } from '@/api/adminProxyMonitor'
+import type { AdminModelRoute } from '@/api/adminModelRoutes'
+import type { AdminProvider } from '@/api/adminProviders'
 import { useFeedbackStore } from '@/stores/feedback'
 
 const feedback = useFeedbackStore()
-const overview = reactive({
+const overview = reactive<AdminProxyOverview>({
   total_requests_24h: 0,
-  healthy_provider_count: 0,
   success_rate_24h: 0,
-  avg_latency_ms_24h: 0,
   failed_requests_24h: 0,
+  avg_latency_ms_24h: 0,
+  healthy_provider_count: 0,
+  active_provider_count: 0,
   active_model_count: 0,
+  active_provider_key_count: 0,
 })
-const providers = ref<any[]>([])
-const models = ref<any[]>([])
-const failures = ref<any[]>([])
+const providers = ref<AdminProvider[]>([])
+const models = ref<AdminModelRoute[]>([])
+const failures = ref<AdminProxyFailureLog[]>([])
 const providerLoading = ref(false)
 const modelLoading = ref(false)
 const failureLoading = ref(false)
@@ -156,7 +175,6 @@ const fmtDate = (value: string) => value ? new Date(value).toLocaleString('zh-CN
 const loadOverview = async () => {
   Object.assign(overview, await adminProxyMonitorApi.overview())
 }
-
 const loadProviders = async () => {
   providerLoading.value = true
   try {
@@ -165,7 +183,6 @@ const loadProviders = async () => {
     providerLoading.value = false
   }
 }
-
 const loadModels = async () => {
   modelLoading.value = true
   try {
@@ -174,7 +191,6 @@ const loadModels = async () => {
     modelLoading.value = false
   }
 }
-
 const loadFailures = async () => {
   failureLoading.value = true
   try {
@@ -226,8 +242,9 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
-.page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.page-title { font-size:20px; font-weight:700; color:#1a1a2e; }
+.page-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.page-title { font-size:20px; font-weight:700; color:#1a1a2e; margin:0; }
+.page-subtitle { margin:6px 0 0; color:#667085; font-size:13px; }
 .btn-outline-sm { font-size:12px; padding:6px 14px; background:#fff; color:#666; border:1px solid #d9d9d9; border-radius:6px; cursor:pointer; }
 .stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:16px; margin-bottom:24px; }
 .monitor-grid { display:grid; grid-template-columns:1fr; gap:20px; margin-bottom:24px; }
@@ -239,7 +256,7 @@ onMounted(loadAll)
 .cell-title { font-weight:600; color:#1a1a2e; }
 .cell-sub { font-size:12px; color:#888; margin-top:4px; word-break:break-all; }
 .warn-text { color:#ff4d4f; font-weight:600; }
-.error-text { color:#ff4d4f; max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.error-text { color:#ff4d4f; max-width:320px; white-space:normal; word-break:break-word; line-height:1.45; }
 .btn-action-sm { font-size:12px; padding:6px 10px; background:#fff; color:#1677ff; border:1px solid #91caff; border-radius:6px; cursor:pointer; }
 .btn-action-sm:disabled { cursor:not-allowed; opacity:.6; }
 </style>

@@ -1,7 +1,10 @@
 <template>
   <div class="page-container">
     <div class="page-title-row">
-      <h1 class="page-title">模型映射</h1>
+      <div>
+        <h1 class="page-title">模型映射</h1>
+        <p class="page-subtitle">把公版模型绑定到可用 Provider，并为路由策略和真实中转提供候选链路。</p>
+      </div>
       <div class="title-actions">
         <button class="btn-outline-sm" @click="fetchAll">🔄 刷新</button>
         <button class="btn-primary" @click="openCreate">+ 新增映射</button>
@@ -18,12 +21,12 @@
         <strong class="overview-value">{{ fallbackRouteCount }}</strong>
       </div>
       <div class="overview-card">
-        <span class="overview-label">可手动切换</span>
-        <strong class="overview-value">{{ switchableRouteCount }}</strong>
+        <span class="overview-label">已绑定策略</span>
+        <strong class="overview-value">{{ policyBoundCount }}</strong>
       </div>
       <div class="overview-card">
-        <span class="overview-label">高成功率路由</span>
-        <strong class="overview-value">{{ stableRouteCount }}</strong>
+        <span class="overview-label">24h 有请求</span>
+        <strong class="overview-value">{{ activeTrafficRouteCount }}</strong>
       </div>
     </div>
 
@@ -45,14 +48,15 @@
             <label>主渠道 <span class="req">*</span></label>
             <select v-model="form.provider_id" class="form-select">
               <option value="">— 选择渠道 —</option>
-              <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
+              <option v-for="provider in providerOptions" :key="provider.id" :value="provider.id">{{ provider.name }} / {{ provider.provider_type }} / 活跃 Key {{ provider.active_key_count }}</option>
             </select>
+            <div class="field-help">仅展示已有活跃源 Key 的 Provider。</div>
           </div>
           <div class="form-group">
             <label>备渠道（可选）</label>
             <select v-model="form.fallback_provider_id" class="form-select">
               <option value="">无</option>
-              <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
+              <option v-for="provider in fallbackOptions" :key="provider.id" :value="provider.id">{{ provider.name }} / {{ provider.provider_type }}</option>
             </select>
           </div>
         </div>
@@ -78,7 +82,7 @@
         </div>
         <div class="form-group">
           <label>备注</label>
-          <input v-model="form.notes" class="form-input" placeholder="如：主 OpenAI，备 Azure" />
+          <input v-model="form.notes" class="form-input" placeholder="如：主 OpenAI，备 Minimax" />
         </div>
         <div class="form-group">
           <label>是否启用</label>
@@ -97,7 +101,7 @@
     <AdminSectionCard>
       <AdminTableToolbar>
         <AdminFilterBar>
-          <input class="filter-input" placeholder="搜索公版模型 / 上游模型" v-model="filters.search" />
+          <input class="filter-input" placeholder="搜索公版模型 / 上游模型 / 策略" v-model="filters.search" />
           <select class="filter-select" v-model="filters.provider_id">
             <option value="">全部渠道</option>
             <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
@@ -126,28 +130,31 @@
           <tbody>
             <tr v-if="loading"><td colspan="7" class="td-center td-pad">加载中…</td></tr>
             <tr v-else-if="error"><td colspan="7" class="td-center td-pad td-error">{{ error }}</td></tr>
-            <tr v-else-if="displayItems.length === 0"><td colspan="7" class="td-center td-pad"><AdminEmptyState icon="🔀" title="暂无映射" /></td></tr>
+            <tr v-else-if="displayItems.length === 0"><td colspan="7" class="td-center td-pad"><AdminEmptyState icon="🔀" title="暂无映射" desc="先配置 Provider 和源 Key，再建立公版模型映射。" /></td></tr>
             <tr v-else v-for="route in displayItems" :key="route.id" class="tr-body">
               <td>
                 <strong>{{ route.public_model_name }}</strong>
                 <div class="sub-line">最大上下文 {{ route.max_context ? route.max_context.toLocaleString() : '—' }}</div>
               </td>
               <td>
-                <div>{{ providerMap[route.provider_id] || route.provider_name || route.provider_id || '—' }}</div>
+                <div>{{ route.provider_name || route.provider_id || '—' }}</div>
+                <div class="sub-line">{{ route.provider_type || '—' }}</div>
                 <code>{{ route.provider_model_name }}</code>
               </td>
               <td>
-                <div>{{ route.fallback_provider_id ? (providerMap[route.fallback_provider_id] || route.fallback_provider_name || route.fallback_provider_id) : '—' }}</div>
+                <div>{{ route.fallback_provider_id ? (route.fallback_provider_name || route.fallback_provider_id) : '—' }}</div>
+                <div class="sub-line">{{ route.fallback_provider_type || '—' }}</div>
                 <code>{{ route.fallback_model_name || '—' }}</code>
               </td>
               <td>
-                <div class="metric-line">{{ route.policy_type || 'fixed' }}</div>
-                <div class="metric-line">倍率 {{ route.cost_multiplier }}x</div>
+                <div class="metric-line">策略 {{ route.policy_type || 'fixed' }}</div>
+                <div class="metric-line">{{ route.policy_name || '未配置策略' }}</div>
+                <div class="metric-line">倍率 {{ route.cost_multiplier }}x / 重试 {{ route.retry_count }}</div>
               </td>
               <td>
-                <div class="metric-line">成功率 {{ route.success_rate_24h ?? 0 }}%</div>
-                <div class="metric-line">失败 {{ route.failure_count_24h ?? 0 }}</div>
-                <div class="metric-line">延迟 {{ route.avg_latency_ms_24h ? route.avg_latency_ms_24h + 'ms' : '—' }}</div>
+                <div class="metric-line">请求 {{ route.request_count_24h }}</div>
+                <div class="metric-line">成功率 {{ route.success_rate_24h }}%</div>
+                <div class="metric-line">失败 {{ route.failure_count_24h }} / 延迟 {{ route.avg_latency_ms_24h ? route.avg_latency_ms_24h + 'ms' : '—' }}</div>
               </td>
               <td><AdminStatusBadge :value="route.is_active ? 'active' : 'disabled'" /></td>
               <td>
@@ -180,20 +187,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
 import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
 import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
 import AdminEmptyState from '@/components/admin/AdminEmptyState.vue'
-import { adminModelRoutesApi, adminProvidersApi } from '@/api/admin'
+import { adminModelRoutesApi, type AdminModelRoute } from '@/api/adminModelRoutes'
+import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 import { adminProxyMonitorApi } from '@/api/adminProxyMonitor'
 import { useFeedbackStore } from '@/stores/feedback'
 
 const feedback = useFeedbackStore()
-const items = ref<any[]>([])
-const providers = ref<any[]>([])
-const metricsRows = ref<Record<number, any>>({})
+const items = ref<AdminModelRoute[]>([])
+const providers = ref<AdminProvider[]>([])
 const loading = ref(false)
 const error = ref('')
 const showForm = ref(false)
@@ -217,48 +224,39 @@ const defaultForm = () => ({
 const form = reactive(defaultForm())
 const confirm = reactive({ show: false, title: '', msg: '', danger: false, action: null as null | (() => Promise<void>) })
 
-const providerMap = computed(() => {
-  const map: Record<number, string> = {}
-  for (const provider of providers.value) map[provider.id] = provider.name
-  return map
-})
-
+const providerOptions = computed(() => providers.value.filter((provider) => provider.active_key_count > 0 || String(provider.id) === String(form.provider_id)))
+const fallbackOptions = computed(() => providerOptions.value.filter((provider) => String(provider.id) !== String(form.provider_id)))
 const displayItems = computed(() => {
   const keyword = filters.search.trim().toLowerCase()
   return items.value
-    .map(item => ({ ...item, ...(metricsRows.value[item.id] || {}) }))
-    .filter(item => {
-      const matchKeyword = !keyword || [item.public_model_name, item.provider_model_name, item.fallback_model_name]
+    .filter((item) => {
+      const matchKeyword = !keyword || [item.public_model_name, item.provider_model_name, item.fallback_model_name, item.policy_name]
         .filter(Boolean)
-        .some((value: string) => value.toLowerCase().includes(keyword))
+        .some((value) => String(value).toLowerCase().includes(keyword))
       const matchProvider = !filters.provider_id || String(item.provider_id) === filters.provider_id
       const matchStatus = !filters.is_active || String(item.is_active) === filters.is_active
       return matchKeyword && matchProvider && matchStatus
     })
     .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
 })
-
-const activeRouteCount = computed(() => displayItems.value.filter(item => item.is_active).length)
-const fallbackRouteCount = computed(() => displayItems.value.filter(item => item.fallback_provider_id).length)
-const switchableRouteCount = computed(() => displayItems.value.filter(item => item.fallback_provider_id).length)
-const stableRouteCount = computed(() => displayItems.value.filter(item => Number(item.success_rate_24h || 0) >= 95).length)
+const activeRouteCount = computed(() => displayItems.value.filter((item) => item.is_active).length)
+const fallbackRouteCount = computed(() => displayItems.value.filter((item) => item.fallback_provider_id).length)
+const policyBoundCount = computed(() => displayItems.value.filter((item) => item.policy_name).length)
+const activeTrafficRouteCount = computed(() => displayItems.value.filter((item) => Number(item.request_count_24h || 0) > 0).length)
 
 const fetchAll = async () => {
   loading.value = true
   error.value = ''
   try {
-    const [routes, providerRows, monitorRoutes] = await Promise.all([
+    const [routes, providerRows] = await Promise.all([
       adminModelRoutesApi.list(),
       adminProvidersApi.list(),
-      adminProxyMonitorApi.models(),
     ])
     items.value = routes
     providers.value = providerRows
-    metricsRows.value = Object.fromEntries(monitorRoutes.map(row => [row.id, row]))
   } catch (e: any) {
     error.value = e.message || '加载失败'
     items.value = []
-    metricsRows.value = {}
   } finally {
     loading.value = false
   }
@@ -270,13 +268,13 @@ const openCreate = () => {
   showForm.value = true
 }
 
-const openEdit = (route: any) => {
+const openEdit = (route: AdminModelRoute) => {
   editingId.value = route.id
   Object.assign(form, {
     public_model_name: route.public_model_name,
-    provider_id: route.provider_id,
+    provider_id: String(route.provider_id),
     provider_model_name: route.provider_model_name,
-    fallback_provider_id: route.fallback_provider_id || '',
+    fallback_provider_id: route.fallback_provider_id ? String(route.fallback_provider_id) : '',
     fallback_model_name: route.fallback_model_name || '',
     priority: route.priority,
     cost_multiplier: route.cost_multiplier,
@@ -299,17 +297,24 @@ const handleSave = async () => {
     return
   }
   saving.value = true
+  const currentEditing = editingId.value
   try {
-    const payload: any = { ...form }
-    if (!payload.fallback_provider_id) delete payload.fallback_provider_id
-    if (!payload.fallback_model_name) delete payload.fallback_model_name
-    if (editingId.value) {
-      await adminModelRoutesApi.update(editingId.value, payload)
+    const payload: any = {
+      ...form,
+      public_model_name: form.public_model_name.trim(),
+      provider_model_name: form.provider_model_name.trim(),
+      provider_id: Number(form.provider_id),
+      fallback_provider_id: form.fallback_provider_id ? Number(form.fallback_provider_id) : null,
+      fallback_model_name: form.fallback_model_name.trim() || null,
+      notes: form.notes.trim() || null,
+    }
+    if (currentEditing) {
+      await adminModelRoutesApi.update(currentEditing, payload)
     } else {
       await adminModelRoutesApi.create(payload)
     }
     closeForm()
-    feedback.success(editingId.value ? '映射已更新' : '映射已创建')
+    feedback.success(currentEditing ? '映射已更新' : '映射已创建')
     await fetchAll()
   } catch (e: any) {
     feedback.error(e.message || '保存失败')
@@ -333,7 +338,7 @@ const handleSwitch = async (routeId: number) => {
   }
 }
 
-const confirmToggle = (route: any) => {
+const confirmToggle = (route: AdminModelRoute) => {
   confirm.title = route.is_active ? '停用映射' : '启用映射'
   confirm.msg = `确定要${route.is_active ? '停用' : '启用'}「${route.public_model_name}」吗？`
   confirm.danger = route.is_active
@@ -354,12 +359,13 @@ const doConfirm = async () => {
   }
 }
 
-fetchAll()
+onMounted(fetchAll)
 </script>
 
 <style scoped>
-.page-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.page-title { font-size:20px; font-weight:700; color:#1a1a2e; }
+.page-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.page-title { font-size:20px; font-weight:700; color:#1a1a2e; margin:0; }
+.page-subtitle { margin:6px 0 0; color:#667085; font-size:13px; }
 .title-actions { display:flex; gap:10px; }
 .overview-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px; }
 .overview-card { background:#fff; border:1px solid #eef1f4; border-radius:12px; padding:14px 16px; }
@@ -375,6 +381,7 @@ fetchAll()
 .form-group { flex:1; margin-bottom:14px; }
 .form-group label { display:block; font-size:12px; color:#666; margin-bottom:4px; font-weight:600; }
 .req { color:#ff4d4f; }
+.field-help { margin-top:6px; font-size:12px; color:#667085; }
 .form-input, .form-select, .filter-input, .filter-select { width:100%; font-size:13px; padding:8px 10px; border:1px solid #e8e8e8; border-radius:6px; outline:none; color:#333; box-sizing:border-box; background:#fff; }
 .form-input:focus, .form-select:focus, .filter-input:focus, .filter-select:focus { border-color:#1677ff; }
 .modal-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:20px; }
@@ -388,22 +395,24 @@ fetchAll()
 .td-center { text-align:center; }
 .td-pad { padding:32px !important; }
 .td-error { color:#ff4d4f; }
-.metric-line, .sub-line { font-size:12px; color:#667085; margin-top:4px; }
-code { font-size:11px; background:#f5f5f5; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:6px; }
+.sub-line, .metric-line { margin-top:4px; font-size:12px; color:#667085; }
+code { display:block; margin-top:6px; font-size:11px; color:#475467; background:#f8fafc; padding:4px 6px; border-radius:6px; word-break:break-all; }
 .td-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .btn-action-sm { font-size:11px; padding:3px 8px; color:#1677ff; background:none; border:1px solid #1677ff; border-radius:4px; cursor:pointer; }
-.btn-action-sm:hover { background:#e6f7ff; }
 .btn-danger-sm { font-size:11px; padding:3px 8px; color:#ff4d4f; background:none; border:1px solid #ff4d4f; border-radius:4px; cursor:pointer; }
-.btn-danger-sm:hover { background:#fff1f0; }
 .btn-success-sm { font-size:11px; padding:3px 8px; color:#52c41a; background:none; border:1px solid #52c41a; border-radius:4px; cursor:pointer; }
-.btn-success-sm:hover { background:#f6ffed; }
 .confirm-box { background:#fff; border-radius:12px; padding:28px; width:420px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
 .confirm-title { font-size:16px; font-weight:700; margin:0 0 12px; color:#1a1a2e; }
 .confirm-msg { font-size:13px; color:#555; margin:0 0 20px; }
 .btn-confirm { font-size:13px; padding:8px 18px; border:none; border-radius:6px; cursor:pointer; }
 .btn-danger { background:#ff4d4f; color:#fff; }
 
-@media (max-width: 1100px) {
+@media (max-width: 980px) {
   .overview-grid { grid-template-columns:repeat(2, 1fr); }
+}
+
+@media (max-width: 720px) {
+  .page-title-row, .title-actions, .form-row { flex-direction:column; }
+  .overview-grid { grid-template-columns:1fr; }
 }
 </style>

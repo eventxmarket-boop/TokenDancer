@@ -1,18 +1,29 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core.constants import PROVIDER_DEFAULT_BASE_URLS, VALID_PROVIDER_TYPES
 from app.models.provider import Provider
+from app.models.provider_key import ProviderKey
+from app.models.proxy_request_log import ProxyRequestLog
 from app.schemas.provider import ProviderCreate, ProviderUpdate
 
 
 class ProviderService:
     def list(self, db: Session) -> list[Provider]:
-        return db.query(Provider).order_by(Provider.priority.asc()).all()
+        return db.query(Provider).order_by(Provider.priority.asc(), Provider.id.asc()).all()
+
+    def list_enriched(self, db: Session) -> list[dict]:
+        return [self.serialize(provider, db) for provider in self.list(db)]
 
     def get(self, provider_id: int, db: Session) -> Provider | None:
         return db.query(Provider).filter(Provider.id == provider_id).first()
+
+    def get_enriched(self, provider_id: int, db: Session) -> dict | None:
+        provider = self.get(provider_id, db)
+        if not provider:
+            return None
+        return self.serialize(provider, db)
 
     def _normalize_payload(self, payload: dict) -> dict:
         normalized = dict(payload)
@@ -59,6 +70,49 @@ class ProviderService:
         db.commit()
         db.refresh(provider)
         return provider
+
+    def serialize(self, provider: Provider, db: Session) -> dict:
+        from app.services.proxy_gateway_service import proxy_gateway_service
+
+        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        logs = (
+            db.query(ProxyRequestLog)
+            .filter(
+                ProxyRequestLog.provider_id == provider.id,
+                ProxyRequestLog.requested_at >= since,
+            )
+            .all()
+        )
+        success_logs = [log for log in logs if log.request_status == "success"]
+        failed_logs = [log for log in logs if log.request_status != "success"]
+        runtime = proxy_gateway_service.get_provider_runtime_snapshot(provider.id)
+        active_key_count = (
+            db.query(ProviderKey)
+            .filter(ProviderKey.provider_id == provider.id, ProviderKey.status == "active")
+            .count()
+        )
+        last_failed_log = next((log for log in logs if log.request_status != "success"), None)
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "provider_type": provider.provider_type,
+            "base_url": provider.base_url,
+            "is_active": provider.is_active,
+            "priority": provider.priority,
+            "timeout_seconds": provider.timeout_seconds,
+            "notes": provider.notes,
+            "health_status": provider.health_status,
+            "last_health_check_at": provider.last_health_check_at,
+            "created_at": provider.created_at,
+            "active_key_count": active_key_count,
+            "request_count_24h": len(logs),
+            "success_rate_24h": round(len(success_logs) / len(logs) * 100, 2) if logs else 0.0,
+            "avg_latency_ms_24h": round(sum(log.latency_ms or 0 for log in success_logs) / len(success_logs), 2) if success_logs else 0.0,
+            "recent_failures_24h": len(failed_logs),
+            "last_error": last_failed_log.error_message if last_failed_log else runtime.get("last_error"),
+            "cooldown_active": runtime["cooldown_active"],
+            "cooldown_remaining_seconds": runtime["cooldown_remaining_seconds"],
+        }
 
 
 provider_service = ProviderService()

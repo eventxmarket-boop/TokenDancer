@@ -9,7 +9,10 @@ class ProxyRequestLogRead(BaseModel):
     user_api_key_id: int | None
     public_model_name: str
     provider_id: int | None
+    provider_name: str | None = None
+    provider_type: str | None = None
     provider_key_id: int | None
+    provider_key_name: str | None = None
     provider_model_name: str
     request_status: str
     input_tokens: int
@@ -19,7 +22,6 @@ class ProxyRequestLogRead(BaseModel):
     latency_ms: int
     error_message: str | None
     requested_at: datetime
-    # v4.0.0 扩展字段
     upstream_provider_id: int | None = None
     upstream_key_id: int | None = None
     policy_type: str = "fixed"

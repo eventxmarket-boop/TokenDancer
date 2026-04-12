@@ -1,5 +1,35 @@
 import { api } from '@/api/client'
 
+export interface AdminProxyLog {
+  id: number
+  request_id?: string | null
+  user_id?: number | null
+  user_api_key_id?: number | null
+  public_model_name: string
+  provider_id?: number | null
+  provider_name?: string | null
+  provider_type?: string | null
+  provider_key_id?: number | null
+  provider_key_name?: string | null
+  provider_model_name: string
+  request_status: string
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  cost: number
+  latency_ms: number
+  error_message?: string | null
+  requested_at: string
+  upstream_provider_id?: number | null
+  upstream_key_id?: number | null
+  policy_type?: string
+  fallback_triggered?: boolean
+  retry_attempt?: number
+  provider_switch_count?: number
+  key_switch_count?: number
+  failure_chain_summary?: string | null
+}
+
 export const adminProxyLogsApi = {
   list: (params?: {
     provider_id?: number | string
@@ -9,16 +39,5 @@ export const adminProxyLogsApi = {
     date_to?: string
     limit?: number
     offset?: number
-  }) => {
-    // 过滤掉空值，避免传空字符串导致后端 422
-    const clean: Record<string, string | number> = {}
-    if (params) {
-      Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && v !== '') {
-          clean[k] = v as number | string
-        }
-      })
-    }
-    return api.get<any[]>('/admin/proxy-logs', Object.keys(clean).length ? clean : undefined)
-  },
+  }) => api.get<AdminProxyLog[]>('/admin/proxy-logs', params),
 }

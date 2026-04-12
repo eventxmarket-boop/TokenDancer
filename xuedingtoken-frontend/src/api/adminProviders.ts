@@ -9,9 +9,17 @@ export interface AdminProvider {
   is_active: boolean
   priority: number
   timeout_seconds: number
-  health_status?: string
+  health_status: string
   last_health_check_at?: string | null
   notes?: string | null
+  active_key_count: number
+  request_count_24h: number
+  success_rate_24h: number
+  avg_latency_ms_24h: number
+  recent_failures_24h: number
+  last_error?: string | null
+  cooldown_active: boolean
+  cooldown_remaining_seconds: number
 }
 
 export interface AdminProviderPayload {
@@ -29,4 +37,5 @@ export const adminProvidersApi = {
   get: (id: number) => api.get<AdminProvider>(`/admin/providers/${id}`),
   create: (data: AdminProviderPayload) => api.post<AdminProvider>('/admin/providers', data),
   update: (id: number, data: Partial<AdminProviderPayload>) => api.patch<AdminProvider>(`/admin/providers/${id}`, data),
+  healthCheck: (id: number) => api.post<{ id: number; name: string; old_status: string; new_status: string }>(`/admin/providers/${id}/health-check`),
 }

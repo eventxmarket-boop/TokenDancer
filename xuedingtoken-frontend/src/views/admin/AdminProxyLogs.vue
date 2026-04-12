@@ -5,20 +5,20 @@
     <AdminSectionCard>
       <AdminTableToolbar>
         <AdminFilterBar>
-          <input class="filter-input" placeholder="公版模型名" v-model="filters.public_model_name" @input="debouncedFetch" />
-          <select class="filter-select" v-model="filters.request_status" @change="fetchLogs">
+          <input class="filter-input" placeholder="公版模型名" v-model="filters.public_model_name" />
+          <select class="filter-select" v-model="filters.request_status">
             <option value="">全部状态</option>
             <option value="success">success</option>
             <option value="error">error</option>
             <option value="timeout">timeout</option>
             <option value="rate_limited">rate_limited</option>
           </select>
-          <select class="filter-select" v-model="filters.provider_id" @change="fetchLogs">
+          <select class="filter-select" v-model="filters.provider_id">
             <option value="">全部渠道</option>
             <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.name }}</option>
           </select>
-          <input class="filter-input" type="date" v-model="filters.date_from" @change="fetchLogs" />
-          <input class="filter-input" type="date" v-model="filters.date_to" @change="fetchLogs" />
+          <input class="filter-input" type="date" v-model="filters.date_from" />
+          <input class="filter-input" type="date" v-model="filters.date_to" />
           <button class="btn-outline-sm" @click="resetFilters">重置</button>
           <button class="btn-outline-sm" @click="fetchLogs">🔄 刷新</button>
         </AdminFilterBar>
@@ -53,36 +53,31 @@
             <tr>
               <th>时间</th>
               <th>请求</th>
-              <th>用户</th>
               <th>模型</th>
-              <th>路由</th>
+              <th>命中链路</th>
               <th>状态</th>
               <th>用量 / 成本</th>
               <th>错误 / 失败链</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="loading"><td colspan="8" class="td-center td-pad">加载中…</td></tr>
-            <tr v-else-if="error"><td colspan="8" class="td-center td-pad td-error">{{ error }}</td></tr>
-            <tr v-else-if="logs.length === 0"><td colspan="8" class="td-center td-pad"><AdminEmptyState icon="📋" title="暂无日志" /></td></tr>
+            <tr v-if="loading"><td colspan="7" class="td-center td-pad">加载中…</td></tr>
+            <tr v-else-if="error"><td colspan="7" class="td-center td-pad td-error">{{ error }}</td></tr>
+            <tr v-else-if="logs.length === 0"><td colspan="7" class="td-center td-pad"><AdminEmptyState icon="📋" title="暂无日志" /></td></tr>
             <tr v-else v-for="log in logs" :key="log.id" class="tr-body" @click="openDetail(log)">
               <td class="td-time">{{ fmtTime(log.requested_at) }}</td>
               <td>
                 <code class="req-id">{{ (log.request_id || '-').slice(0, 18) }}</code>
-                <div class="sub-line">API Key {{ log.user_api_key_id || '—' }}</div>
-              </td>
-              <td>
-                <div>{{ log.user_id || '—' }}</div>
-                <div class="sub-line">Provider Key {{ log.provider_key_id || '—' }}</div>
+                <div class="sub-line">用户 {{ log.user_id || '—' }} / API Key {{ log.user_api_key_id || '—' }}</div>
               </td>
               <td>
                 <strong>{{ log.public_model_name }}</strong>
                 <div class="sub-line">上游 {{ log.provider_model_name || '—' }}</div>
               </td>
               <td>
-                <div>{{ providerMap[log.provider_id] || log.provider_id || '—' }}</div>
+                <div>{{ log.provider_name || log.provider_id || '—' }}</div>
+                <div class="sub-line">{{ log.provider_type || '—' }} / 源 Key {{ log.provider_key_name || log.provider_key_id || '—' }}</div>
                 <div class="sub-line">{{ log.policy_type || 'fixed' }} / fallback {{ log.fallback_triggered ? 'yes' : 'no' }}</div>
-                <div class="sub-line">provider切换 {{ log.provider_switch_count ?? 0 }}，key切换 {{ log.key_switch_count ?? 0 }}</div>
               </td>
               <td><AdminStatusBadge :value="log.request_status" /></td>
               <td>
@@ -116,8 +111,9 @@
           <div class="detail-row"><span class="detail-label">Request ID</span><code>{{ selectedLog.request_id || '—' }}</code></div>
           <div class="detail-row"><span class="detail-label">用户ID</span><span>{{ selectedLog.user_id || '—' }}</span></div>
           <div class="detail-row"><span class="detail-label">API Key ID</span><span>{{ selectedLog.user_api_key_id || '—' }}</span></div>
-          <div class="detail-row"><span class="detail-label">Provider</span><span>{{ providerMap[selectedLog.provider_id] || selectedLog.provider_id || '—' }}</span></div>
-          <div class="detail-row"><span class="detail-label">Provider Key ID</span><span>{{ selectedLog.provider_key_id || '—' }}</span></div>
+          <div class="detail-row"><span class="detail-label">Provider</span><span>{{ selectedLog.provider_name || selectedLog.provider_id || '—' }}</span></div>
+          <div class="detail-row"><span class="detail-label">Provider Type</span><span>{{ selectedLog.provider_type || '—' }}</span></div>
+          <div class="detail-row"><span class="detail-label">Provider Key</span><span>{{ selectedLog.provider_key_name || selectedLog.provider_key_id || '—' }}</span></div>
         </div>
 
         <div class="detail-section-title detail-gap">模型信息</div>
@@ -164,33 +160,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
 import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
 import AdminStatusBadge from '@/components/admin/AdminStatusBadge.vue'
 import AdminEmptyState from '@/components/admin/AdminEmptyState.vue'
 import AdminDetailDrawer from '@/components/admin/AdminDetailDrawer.vue'
-import { adminProxyLogsApi, adminProvidersApi } from '@/api/admin'
+import { adminProxyLogsApi, type AdminProxyLog } from '@/api/adminProxyLogs'
+import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 
-const logs = ref<any[]>([])
-const providers = ref<any[]>([])
+const logs = ref<AdminProxyLog[]>([])
+const providers = ref<AdminProvider[]>([])
 const loading = ref(false)
 const error = ref('')
 const showDetail = ref(false)
-const selectedLog = ref<any>(null)
+const selectedLog = ref<AdminProxyLog | null>(null)
 const stats = ref<{ total: number; failed: number; successRate: number; total_cost: number; total_tokens: number } | null>(null)
 const filters = reactive({ public_model_name: '', request_status: '', provider_id: '', date_from: '', date_to: '' })
 const limit = 100
 const offset = ref(0)
-
-const providerMap = computed(() => Object.fromEntries(providers.value.map(provider => [provider.id, provider.name])))
-
-let debounceTimer: ReturnType<typeof setTimeout>
-const debouncedFetch = () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(fetchLogs, 350)
-}
 
 const fmtTime = (value: string) => value ? new Date(value).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—'
 
@@ -220,14 +209,14 @@ const computeStats = () => {
     stats.value = null
     return
   }
-  const success = logs.value.filter((item: any) => item.request_status === 'success').length
+  const success = logs.value.filter((item) => item.request_status === 'success').length
   const failed = logs.value.length - success
   stats.value = {
     total: logs.value.length,
     failed,
     successRate: Number(((success / logs.value.length) * 100).toFixed(2)),
-    total_cost: logs.value.reduce((sum: number, item: any) => sum + Number(item.cost || 0), 0),
-    total_tokens: logs.value.reduce((sum: number, item: any) => sum + Number(item.total_tokens || 0), 0),
+    total_cost: logs.value.reduce((sum, item) => sum + Number(item.cost || 0), 0),
+    total_tokens: logs.value.reduce((sum, item) => sum + Number(item.total_tokens || 0), 0),
   }
 }
 
@@ -242,13 +231,13 @@ const resetFilters = () => {
   fetchLogs()
 }
 
-const openDetail = (log: any) => {
+const openDetail = (log: AdminProxyLog) => {
   selectedLog.value = log
   showDetail.value = true
 }
 
 fetchLogs()
-adminProvidersApi.list().then(rows => { providers.value = rows }).catch(() => {})
+adminProvidersApi.list().then((rows) => { providers.value = rows }).catch(() => {})
 </script>
 
 <style scoped>

@@ -461,34 +461,45 @@ class ProxyGatewayService:
         policy_type = policy.policy_type if policy else "fixed"
         self._clear_expired_cooldowns()
 
-        candidates: list[ProviderCandidate] = []
+        route_provider_specs: dict[int, tuple[Provider, str]] = {}
         primary = db.query(Provider).filter(Provider.id == route.provider_id).first()
-        fallback = None
+        if primary:
+            route_provider_specs[primary.id] = (primary, route.provider_model_name)
+
         if route.fallback_provider_id:
             fallback = db.query(Provider).filter(Provider.id == route.fallback_provider_id).first()
-
-        if self._check_provider_usable(primary):
-            candidates.append(
-                ProviderCandidate(
-                    provider=primary,
-                    upstream_model_name=route.provider_model_name,
-                    is_primary=True,
-                    is_fallback=False,
-                    weight=max(1, 100 - int(primary.priority or 0)),
-                    estimated_cost=self._estimate_candidate_cost(route, primary),
+            if fallback:
+                route_provider_specs[fallback.id] = (
+                    fallback,
+                    route.fallback_model_name or route.provider_model_name,
                 )
-            )
 
-        if self._check_provider_usable(fallback):
-            fallback_weight = max(1, 100 - int((fallback.priority or 0) + 10))
+        preferred_provider_ids: list[int] = []
+        if policy:
+            for provider_id in [policy.primary_provider_id, policy.secondary_provider_id]:
+                if provider_id and provider_id in route_provider_specs and provider_id not in preferred_provider_ids:
+                    preferred_provider_ids.append(provider_id)
+
+        for provider_id in [route.provider_id, route.fallback_provider_id]:
+            if provider_id and provider_id in route_provider_specs and provider_id not in preferred_provider_ids:
+                preferred_provider_ids.append(provider_id)
+
+        candidates: list[ProviderCandidate] = []
+        primary_provider_id = preferred_provider_ids[0] if preferred_provider_ids else None
+        for provider_id in preferred_provider_ids:
+            provider, upstream_model_name = route_provider_specs[provider_id]
+            if not self._check_provider_usable(provider):
+                continue
+            is_primary = provider_id == primary_provider_id
+            weight_penalty = 0 if is_primary else 10
             candidates.append(
                 ProviderCandidate(
-                    provider=fallback,
-                    upstream_model_name=route.fallback_model_name or route.provider_model_name,
-                    is_primary=False,
-                    is_fallback=True,
-                    weight=fallback_weight,
-                    estimated_cost=self._estimate_candidate_cost(route, fallback),
+                    provider=provider,
+                    upstream_model_name=upstream_model_name,
+                    is_primary=is_primary,
+                    is_fallback=not is_primary,
+                    weight=max(1, 100 - int((provider.priority or 0) + weight_penalty)),
+                    estimated_cost=self._estimate_candidate_cost(route, provider),
                 )
             )
 
