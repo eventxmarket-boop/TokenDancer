@@ -40,6 +40,7 @@ const adminRoutes = [
   { path: 'api-proxy/provider-keys', component: AdminProviderKeys, name: 'admin-provider-keys' },
   { path: 'api-proxy/model-routes', component: AdminModelRoutes, name: 'admin-model-routes' },
   { path: 'api-proxy/route-policies', component: AdminRoutePolicies, name: 'admin-route-policies' },
+  { path: 'api-proxy/tester', component: () => import('@/views/admin/AdminProxyTester.vue'), name: 'admin-proxy-tester' },
   { path: 'api-proxy/monitor', component: () => import('@/views/admin/AdminProxyMonitor.vue'), name: 'admin-proxy-monitor' },
   { path: 'api-proxy/proxy-logs', component: AdminProxyLogs, name: 'admin-proxy-logs' },
   { path: 'content/announcements', component: () => import('@/views/admin/AdminAnnouncements.vue') },

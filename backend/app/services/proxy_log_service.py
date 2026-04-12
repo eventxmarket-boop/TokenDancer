@@ -74,6 +74,8 @@ class ProxyLogService:
         db: Session,
         upstream_provider_id: int | None = None,
         upstream_key_id: int | None = None,
+        request_origin: str = "proxy",
+        request_tag: str | None = None,
         policy_type: str = "fixed",
         fallback_triggered: bool = False,
         retry_attempt: int = 0,
@@ -99,6 +101,8 @@ class ProxyLogService:
             requested_at=datetime.now(timezone.utc),
             upstream_provider_id=upstream_provider_id,
             upstream_key_id=upstream_key_id,
+            request_origin=request_origin,
+            request_tag=request_tag,
             policy_type=policy_type,
             fallback_triggered=fallback_triggered,
             retry_attempt=retry_attempt,
@@ -110,6 +114,14 @@ class ProxyLogService:
         db.commit()
         db.refresh(log)
         return log
+
+    def get_latest_by_request_tag(self, db: Session, request_tag: str) -> ProxyRequestLog | None:
+        return (
+            db.query(ProxyRequestLog)
+            .filter(ProxyRequestLog.request_tag == request_tag)
+            .order_by(desc(ProxyRequestLog.requested_at), desc(ProxyRequestLog.id))
+            .first()
+        )
 
     def query(
         self,
@@ -161,6 +173,8 @@ class ProxyLogService:
                 "provider_type": providers.get(record.provider_id).provider_type if providers.get(record.provider_id) else None,
                 "provider_key_id": record.provider_key_id,
                 "provider_key_name": provider_keys.get(record.provider_key_id).name if provider_keys.get(record.provider_key_id) else None,
+                "request_origin": record.request_origin,
+                "request_tag": record.request_tag,
                 "provider_model_name": record.provider_model_name,
                 "request_status": record.request_status,
                 "input_tokens": record.input_tokens,

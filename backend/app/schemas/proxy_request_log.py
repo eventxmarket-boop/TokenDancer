@@ -13,6 +13,8 @@ class ProxyRequestLogRead(BaseModel):
     provider_type: str | None = None
     provider_key_id: int | None
     provider_key_name: str | None = None
+    request_origin: str = "proxy"
+    request_tag: str | None = None
     provider_model_name: str
     request_status: str
     input_tokens: int

@@ -213,6 +213,10 @@ class ProxyGatewayService:
         max_tokens: int | None = None,
         stream: bool = False,
         include_debug: bool = False,
+        forced_provider_id: int | None = None,
+        forced_provider_key_id: int | None = None,
+        request_origin: str = "proxy",
+        request_tag: str | None = None,
     ) -> dict:
         route = self.resolve_route(public_model, db)
         if not route:
@@ -222,7 +226,12 @@ class ProxyGatewayService:
         policy_type = policy.policy_type if policy else "fixed"
         cooldown_seconds = policy.cooldown_seconds if policy else 60
 
-        candidates = self._build_provider_candidates(route, policy, db)
+        candidates = self._build_provider_candidates(
+            route,
+            policy,
+            db,
+            forced_provider_id=forced_provider_id,
+        )
         if not candidates:
             raise NoAvailableProviderError(
                 public_model,
@@ -245,12 +254,14 @@ class ProxyGatewayService:
                 candidate.upstream_model_name,
                 db,
             )
+            if forced_provider_key_id is not None:
+                available_keys = [item for item in available_keys if item.id == forced_provider_key_id]
             if not available_keys:
                 failure_chain.append(
                     {
                         "provider_id": candidate.provider.id,
-                        "key_id": None,
-                        "error": "no available provider key",
+                        "key_id": forced_provider_key_id,
+                        "error": "forced provider key unavailable" if forced_provider_key_id else "no available provider key",
                     }
                 )
                 continue
@@ -324,7 +335,7 @@ class ProxyGatewayService:
                             billing_info=billing_info,
                         )
 
-                    self._write_proxy_log(
+                    log_record = self._write_proxy_log(
                         db=db,
                         user_id=user_id,
                         user_api_key_id=user_api_key_id,
@@ -340,6 +351,8 @@ class ProxyGatewayService:
                         latency_ms=latency_ms,
                         error_message=None,
                         request_id=upstream_resp.id,
+                        request_origin=request_origin,
+                        request_tag=request_tag,
                         policy_type=policy_type,
                         fallback_triggered=fallback_triggered,
                         provider_switch_count=provider_switch_count,
@@ -354,10 +367,15 @@ class ProxyGatewayService:
                     if include_debug:
                         debug_data = {
                             "public_model": public_model,
+                            "policy_name": policy.name if policy else None,
                             "provider_name": candidate.provider.name,
                             "provider_type": candidate.provider.provider_type,
                             "provider_id": candidate.provider.id,
                             "provider_key_id": key_rec.id,
+                            "provider_key_name": key_rec.name,
+                            "request_log_id": log_record.id if log_record else None,
+                            "request_origin": request_origin,
+                            "request_tag": request_tag,
                             "policy_type": policy_type,
                             "fallback_used": fallback_triggered,
                             "fallback_triggered": fallback_triggered,
@@ -418,6 +436,8 @@ class ProxyGatewayService:
                     latency_ms=0,
                     error_message=f"fixed policy provider unavailable: {last_failure}",
                     request_id=None,
+                    request_origin=request_origin,
+                    request_tag=request_tag,
                     policy_type=policy_type,
                     fallback_triggered=False,
                     provider_switch_count=provider_switch_count,
@@ -444,6 +464,8 @@ class ProxyGatewayService:
             latency_ms=0,
             error_message=last_error,
             request_id=None,
+            request_origin=request_origin,
+            request_tag=request_tag,
             policy_type=policy_type,
             fallback_triggered=fallback_triggered,
             provider_switch_count=provider_switch_count,
@@ -457,6 +479,7 @@ class ProxyGatewayService:
         route: ModelRoute,
         policy: Optional[RoutePolicy],
         db: Session,
+        forced_provider_id: int | None = None,
     ) -> list[ProviderCandidate]:
         policy_type = policy.policy_type if policy else "fixed"
         self._clear_expired_cooldowns()
@@ -475,14 +498,22 @@ class ProxyGatewayService:
                 )
 
         preferred_provider_ids: list[int] = []
-        if policy:
-            for provider_id in [policy.primary_provider_id, policy.secondary_provider_id]:
+        if forced_provider_id is not None:
+            if forced_provider_id not in route_provider_specs:
+                raise ProviderUnavailableError(
+                    f"provider#{forced_provider_id}",
+                    reason="forced provider is not bound to selected model route",
+                )
+            preferred_provider_ids = [forced_provider_id]
+        else:
+            if policy:
+                for provider_id in [policy.primary_provider_id, policy.secondary_provider_id]:
+                    if provider_id and provider_id in route_provider_specs and provider_id not in preferred_provider_ids:
+                        preferred_provider_ids.append(provider_id)
+
+            for provider_id in [route.provider_id, route.fallback_provider_id]:
                 if provider_id and provider_id in route_provider_specs and provider_id not in preferred_provider_ids:
                     preferred_provider_ids.append(provider_id)
-
-        for provider_id in [route.provider_id, route.fallback_provider_id]:
-            if provider_id and provider_id in route_provider_specs and provider_id not in preferred_provider_ids:
-                preferred_provider_ids.append(provider_id)
 
         candidates: list[ProviderCandidate] = []
         primary_provider_id = preferred_provider_ids[0] if preferred_provider_ids else None
@@ -502,6 +533,9 @@ class ProxyGatewayService:
                     estimated_cost=self._estimate_candidate_cost(route, provider),
                 )
             )
+
+        if forced_provider_id is not None:
+            return candidates
 
         if policy_type == "fixed":
             return [candidate for candidate in candidates if candidate.is_primary]
@@ -834,13 +868,15 @@ class ProxyGatewayService:
         latency_ms: int,
         error_message: str | None,
         request_id: str | None,
+        request_origin: str,
+        request_tag: str | None,
         policy_type: str,
         fallback_triggered: bool,
         provider_switch_count: int,
         key_switch_count: int,
         failure_chain_summary: str,
-    ) -> None:
-        proxy_log_service.write(
+    ):
+        return proxy_log_service.write(
             user_id=user_id,
             user_api_key_id=user_api_key_id,
             public_model=public_model,
@@ -857,6 +893,8 @@ class ProxyGatewayService:
             db=db,
             upstream_provider_id=provider_id,
             upstream_key_id=provider_key_id,
+            request_origin=request_origin,
+            request_tag=request_tag,
             policy_type=policy_type,
             fallback_triggered=fallback_triggered,
             retry_attempt=0,

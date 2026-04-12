@@ -19,6 +19,7 @@ from app.routers.admin_model_routes import router as admin_model_routes_router
 from app.routers.admin_route_policies import router as admin_route_policies_router
 from app.routers.admin_proxy_logs import router as admin_proxy_logs_router
 from app.routers.admin_proxy_monitor import router as admin_proxy_monitor_router
+from app.routers.admin_proxy_tester import router as admin_proxy_tester_router
 from app.routers.admin_payment_events import router as admin_payment_events_router
 from app.routers.proxy import router as proxy_router
 from app.routers.admin_products import router as admin_products_router
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_route_policies_router)
     app.include_router(admin_proxy_logs_router)
     app.include_router(admin_proxy_monitor_router)
+    app.include_router(admin_proxy_tester_router)
     app.include_router(admin_payment_events_router)
     app.include_router(admin_finance_router)
     app.include_router(admin_audit_router)

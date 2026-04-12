@@ -11,6 +11,8 @@ export interface AdminProxyLog {
   provider_type?: string | null
   provider_key_id?: number | null
   provider_key_name?: string | null
+  request_origin?: string
+  request_tag?: string | null
   provider_model_name: string
   request_status: string
   input_tokens: number

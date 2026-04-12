@@ -21,6 +21,8 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
         "cost_amount": "NUMERIC(10, 6) DEFAULT 0",
     },
     "proxy_request_logs": {
+        "request_origin": "VARCHAR(30) DEFAULT 'proxy'",
+        "request_tag": "VARCHAR(100) NULL",
         "provider_switch_count": "INTEGER DEFAULT 0",
         "key_switch_count": "INTEGER DEFAULT 0",
         "failure_chain_summary": "TEXT NULL",

@@ -18,10 +18,15 @@ class ChatCompletionRequest(BaseModel):
 
 class DebugInfo(BaseModel):
     public_model: Optional[str] = None
+    policy_name: Optional[str] = None
     provider_name: Optional[str] = None
     provider_type: Optional[str] = None
     provider_id: Optional[int] = None
     provider_key_id: Optional[int] = None
+    provider_key_name: Optional[str] = None
+    request_log_id: Optional[int] = None
+    request_origin: Optional[str] = None
+    request_tag: Optional[str] = None
     policy_type: Optional[str] = None
     fallback_used: Optional[bool] = None
     fallback_triggered: Optional[bool] = None

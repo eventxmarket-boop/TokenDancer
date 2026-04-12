@@ -44,6 +44,7 @@
           <router-link to="/admin/api-proxy/provider-keys" class="nav-item sub" active-class="nav-item-active">🔑 源 Key 池</router-link>
           <router-link to="/admin/api-proxy/model-routes" class="nav-item sub" active-class="nav-item-active">🔀 模型映射</router-link>
           <router-link to="/admin/api-proxy/route-policies" class="nav-item sub" active-class="nav-item-active">⚙️ 路由策略</router-link>
+          <router-link to="/admin/api-proxy/tester" class="nav-item sub" active-class="nav-item-active">🧪 测试工作台</router-link>
           <router-link to="/admin/api-proxy/monitor" class="nav-item sub" active-class="nav-item-active">📡 中转监控</router-link>
           <router-link to="/admin/api-proxy/proxy-logs" class="nav-item sub" active-class="nav-item-active">📋 请求日志</router-link>
         </div>
@@ -115,6 +116,7 @@ const routeTitleMap: Record<string, string> = {
   'admin-provider-keys': '源 Key 池',
   'admin-model-routes': '模型映射',
   'admin-route-policies': '路由策略',
+  'admin-proxy-tester': 'API 测试工作台',
   'admin-proxy-monitor': 'API 中转监控',
   'admin-proxy-logs': '请求日志',
   'admin-finance-overview': '财务总览',

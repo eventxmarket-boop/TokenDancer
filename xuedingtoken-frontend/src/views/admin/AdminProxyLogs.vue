@@ -69,6 +69,7 @@
               <td>
                 <code class="req-id">{{ (log.request_id || '-').slice(0, 18) }}</code>
                 <div class="sub-line">用户 {{ log.user_id || '—' }} / API Key {{ log.user_api_key_id || '—' }}</div>
+                <div class="sub-line">来源 {{ log.request_origin || 'proxy' }}</div>
               </td>
               <td>
                 <strong>{{ log.public_model_name }}</strong>
@@ -111,6 +112,7 @@
           <div class="detail-row"><span class="detail-label">Request ID</span><code>{{ selectedLog.request_id || '—' }}</code></div>
           <div class="detail-row"><span class="detail-label">用户ID</span><span>{{ selectedLog.user_id || '—' }}</span></div>
           <div class="detail-row"><span class="detail-label">API Key ID</span><span>{{ selectedLog.user_api_key_id || '—' }}</span></div>
+          <div class="detail-row"><span class="detail-label">请求来源</span><span>{{ selectedLog.request_origin || 'proxy' }}</span></div>
           <div class="detail-row"><span class="detail-label">Provider</span><span>{{ selectedLog.provider_name || selectedLog.provider_id || '—' }}</span></div>
           <div class="detail-row"><span class="detail-label">Provider Type</span><span>{{ selectedLog.provider_type || '—' }}</span></div>
           <div class="detail-row"><span class="detail-label">Provider Key</span><span>{{ selectedLog.provider_key_name || selectedLog.provider_key_id || '—' }}</span></div>
@@ -161,6 +163,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import AdminSectionCard from '@/components/admin/AdminSectionCard.vue'
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar.vue'
 import AdminFilterBar from '@/components/admin/AdminFilterBar.vue'
@@ -172,12 +175,19 @@ import { adminProvidersApi, type AdminProvider } from '@/api/adminProviders'
 
 const logs = ref<AdminProxyLog[]>([])
 const providers = ref<AdminProvider[]>([])
+const route = useRoute()
 const loading = ref(false)
 const error = ref('')
 const showDetail = ref(false)
 const selectedLog = ref<AdminProxyLog | null>(null)
 const stats = ref<{ total: number; failed: number; successRate: number; total_cost: number; total_tokens: number } | null>(null)
-const filters = reactive({ public_model_name: '', request_status: '', provider_id: '', date_from: '', date_to: '' })
+const filters = reactive({
+  public_model_name: String(route.query.public_model_name || ''),
+  request_status: '',
+  provider_id: String(route.query.provider_id || ''),
+  date_from: '',
+  date_to: '',
+})
 const limit = 100
 const offset = ref(0)
 
