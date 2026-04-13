@@ -126,10 +126,12 @@
             <td>{{ formatDateTime(key.created_at) }}</td>
             <td>
               <div class="action-btns">
-                <button class="btn btn-ghost btn-xs" @click="handleToggle(key.id, key.status)">
-                  {{ key.status === 'active' ? '停用' : '启用' }}
+                <button class="btn btn-ghost btn-xs" :disabled="togglingKeyId === key.id || deletingKeyId === key.id" @click="handleToggle(key.id, key.status)">
+                  {{ togglingKeyId === key.id ? '处理中...' : (key.status === 'active' ? '停用' : '启用') }}
                 </button>
-                <button class="btn btn-ghost btn-xs text-danger" @click="handleDelete(key.id)">删除</button>
+                <button class="btn btn-ghost btn-xs text-danger" :disabled="deletingKeyId === key.id || togglingKeyId === key.id" @click="handleDelete(key.id)">
+                  {{ deletingKeyId === key.id ? '删除中...' : '删除' }}
+                </button>
               </div>
             </td>
           </tr>
@@ -189,6 +191,8 @@ const showFullKey = ref<number | null>(null)
 const availableModels = ref<string[]>([])
 const modelsLoading = ref(false)
 const modelsError = ref('')
+const deletingKeyId = ref<number | null>(null)
+const togglingKeyId = ref<number | null>(null)
 
 const chatEndpoint = `${API_BASE_URL}/v1/chat/completions`
 const modelsEndpoint = `${API_BASE_URL}/v1/models`
@@ -298,20 +302,26 @@ const handleDelete = async (id: number) => {
   if (!ok) return
 
   try {
+    deletingKeyId.value = id
     await keyStore.deleteKey(id)
     feedback.success('Key 已删除')
   } catch (e: any) {
     feedback.error(e.message)
+  } finally {
+    deletingKeyId.value = null
   }
 }
 
 const handleToggle = async (id: number, currentStatus: string) => {
   const newStatus = currentStatus === 'active' ? 'disabled' : 'active'
   try {
+    togglingKeyId.value = id
     await keyStore.updateKey(id, { status: newStatus })
     feedback.info(`密钥已${newStatus === 'active' ? '启用' : '停用'}`)
   } catch (e: any) {
     feedback.error(e.message)
+  } finally {
+    togglingKeyId.value = null
   }
 }
 

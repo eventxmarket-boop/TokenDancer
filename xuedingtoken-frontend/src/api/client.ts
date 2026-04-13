@@ -1,9 +1,19 @@
 const CONFIGURED_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || ''
 const ABSOLUTE_URL_RE = /^https?:\/\//i
+const TOKENDANCER_HOST_RE = /(^|\.)tokendancer\.xyz$/i
 
-export const API_BASE_URL = ABSOLUTE_URL_RE.test(CONFIGURED_BASE_URL)
-  ? CONFIGURED_BASE_URL.replace(/\/$/, '')
-  : '/api'
+function getRuntimeApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && TOKENDANCER_HOST_RE.test(window.location.hostname)) {
+    // Prefer same-origin API gateway on the production site to avoid cross-origin and stale env issues.
+    return '/api'
+  }
+  if (ABSOLUTE_URL_RE.test(CONFIGURED_BASE_URL)) {
+    return CONFIGURED_BASE_URL.replace(/\/$/, '')
+  }
+  return '/api'
+}
+
+export const API_BASE_URL = getRuntimeApiBaseUrl()
 
 export interface ApiError {
   detail: string
@@ -11,6 +21,12 @@ export interface ApiError {
 }
 
 type QueryParamValue = string | number | boolean | undefined
+
+type RequestError = Error & {
+  status?: number
+  code?: string
+  path?: string
+}
 
 function normalizePath(path: string): string {
   return path.startsWith('/') ? path : `/${path}`
@@ -55,6 +71,9 @@ class ApiClient {
     params?: Record<string, QueryParamValue>
   ): Promise<T> {
     const url = resolveUrl(path, params)
+    const pathLabel = normalizePath(path)
+    const buildError = (message: string, extra: Partial<RequestError> = {}): RequestError =>
+      Object.assign(new Error(message), { path: pathLabel, ...extra })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     const token = this.getToken()
@@ -72,28 +91,31 @@ class ApiClient {
     } catch (err: any) {
       const msg = err?.message || ''
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Network request failed')) {
-        throw new Error(`无法连接后端服务（${API_BASE_URL}），请确认后端已在运行`)
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          throw buildError('网络不可用，请检查当前连接后重试', { code: 'NETWORK_OFFLINE' })
+        }
+        throw buildError(`接口请求失败：${pathLabel}，当前无法连接 ${API_BASE_URL === '/api' ? '站点 API 网关' : API_BASE_URL}`, { code: 'NETWORK_ERROR' })
       }
       if (msg.includes('timeout') || msg.includes('Timeout')) {
-        throw new Error('请求超时，请检查网络连接')
+        throw buildError(`请求超时：${pathLabel}`, { code: 'TIMEOUT' })
       }
       console.error(`[Network Error] ${method} ${path}`, err)
-      throw new Error('网络异常，请检查网络连接后重试')
+      throw buildError(`网络异常：${pathLabel}，请稍后重试`, { code: 'NETWORK_ERROR' })
     }
 
     if (res.status === 401) {
       this.setToken(null)
       window.location.href = '/auth/login'
-      throw new Error('未登录或登录已过期，请重新登录')
+      throw buildError('未登录或登录已过期，请重新登录', { status: 401, code: 'UNAUTHORIZED' })
     }
 
     if (res.status === 403) {
       const err = await res.json().catch(() => ({ detail: '权限不足或账户状态异常' }))
-      throw new Error(err.detail || '权限不足，账户可能已被禁用')
+      throw buildError(err.detail || '权限不足，账户可能已被禁用', { status: 403, code: 'FORBIDDEN' })
     }
 
     if (res.status === 404) {
-      throw new Error(`接口不存在（${res.status}），请更新前端版本`)
+      throw buildError(`接口不存在（404）：${pathLabel}`, { status: 404, code: 'NOT_FOUND' })
     }
 
     if (res.status === 422) {
@@ -101,15 +123,15 @@ class ApiClient {
       const msgs = Array.isArray(err.detail)
         ? err.detail.map((e: any) => e.msg || e.loc?.join('.') || '字段错误').join('；')
         : (err.detail || '数据验证失败')
-      throw new Error(msgs)
+      throw buildError(msgs, { status: 422, code: 'VALIDATION_ERROR' })
     }
 
     if (res.status === 429) {
-      throw new Error('请求过于频繁，请稍后再试')
+      throw buildError('请求过于频繁，请稍后再试', { status: 429, code: 'RATE_LIMIT' })
     }
 
     if (res.status >= 500) {
-      throw new Error('服务异常，请稍后重试')
+      throw buildError('服务异常，请稍后重试', { status: res.status, code: 'SERVER_ERROR' })
     }
 
     if (!res.ok) {
@@ -126,7 +148,7 @@ class ApiClient {
         statusText: res.statusText,
         detail,
       })
-      throw new Error(detail)
+      throw buildError(detail, { status: res.status, code: 'API_ERROR' })
     }
 
     if (res.status === 204) return undefined as T

@@ -60,7 +60,9 @@
               <QuantityStepper :modelValue="item.quantity" @update:modelValue="handleUpdateQuantity(item.id, $event)" />
             </div>
             <div class="cart-item-subtotal">¥{{ (item.unit_price * item.quantity).toFixed(2) }}</div>
-            <button class="delete-btn" @click="removeItem(item.id)">🗑️</button>
+            <button class="delete-btn" :disabled="deletingItemId === item.id" @click="removeItem(item.id)">
+              {{ deletingItemId === item.id ? '…' : '🗑️' }}
+            </button>
           </div>
         </div>
 
@@ -117,6 +119,7 @@ const feedback = useFeedbackStore()
 const couponInput = ref('')
 const couponMsg = ref('')
 const checkoutLoading = ref(false)
+const deletingItemId = ref<number | null>(null)
 
 const colors = ['#EDE9FE', '#DBEAFE', '#D1FAE5', '#FEF3C7', '#FCE7F3', '#E0E7FF']
 const imgColor = (id: number) => colors[id % colors.length]
@@ -129,10 +132,13 @@ const removeItem = async (itemId: number) => {
   })
   if (ok) {
     try {
+      deletingItemId.value = itemId
       await cartStore.deleteItem(itemId)
       feedback.success('商品已删除')
     } catch (e: any) {
       feedback.error(e.message)
+    } finally {
+      deletingItemId.value = null
     }
   }
 }
@@ -282,8 +288,9 @@ onMounted(async () => {
 .cart-item-price { font-size: 15px; font-weight: 600; color: var(--color-text); }
 .cart-item-qty { display: flex; align-items: center; }
 .cart-item-subtotal { font-size: 15px; font-weight: 700; color: var(--color-danger); }
-.delete-btn { background: none; border: none; font-size: 16px; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
+.delete-btn { background: none; border: none; font-size: 16px; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; min-width: 28px; min-height: 28px; }
 .delete-btn:hover { opacity: 1; }
+.delete-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .cart-summary {
   background: #F9FAFB;

@@ -5,14 +5,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import BaseToast from '@/components/common/BaseToast.vue'
 import GlobalConfirm from '@/components/common/GlobalConfirm.vue'
-import { CONFIRM_KEY } from '@/stores/feedback'
+import { setGlobalConfirmInstance } from '@/stores/feedback'
 import { useAuthStore } from '@/stores/auth'
 
 const confirmRef = ref<InstanceType<typeof GlobalConfirm> | null>(null)
-provide(CONFIRM_KEY, confirmRef)
+watch(confirmRef, (value) => {
+  setGlobalConfirmInstance(value)
+}, { immediate: true })
 
 const auth = useAuthStore()
 onMounted(async () => {

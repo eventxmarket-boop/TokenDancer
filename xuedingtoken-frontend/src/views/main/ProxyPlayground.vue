@@ -1,12 +1,19 @@
 <template>
-  <MainLayout title="API 测试" subtitle="直接测试 /proxy/chat/completions 接口">
+  <MainLayout title="API 测试" subtitle="直接测试当前账号可用的正式 API 中转入口">
     <div class="playground">
       <div class="params-card card">
         <h3 class="section-title">模型参数</h3>
         <div class="params-row">
           <div class="param-group">
             <label class="label">模型</label>
-            <input class="input" v-model="model" placeholder="如 minimax-chat" />
+            <select class="select" v-model="model" :disabled="loading || modelsLoading || availableModels.length === 0">
+              <option value="">{{ modelsLoading ? '加载模型中...' : '请选择可用模型' }}</option>
+              <option v-for="item in availableModels" :key="item.id" :value="item.id">
+                {{ item.id }}
+              </option>
+            </select>
+            <div class="param-help" v-if="modelsError">{{ modelsError }}</div>
+            <div class="param-help" v-else-if="availableModels.length === 0">当前没有可用模型，请先联系管理员完成中转配置。</div>
           </div>
           <div class="param-group">
             <label class="label">Temperature</label>
@@ -41,7 +48,7 @@
           <span class="char-count">{{ userMessage.length }} 字符</span>
           <button
             class="btn btn-primary"
-            :disabled="loading || !userMessage.trim()"
+            :disabled="loading || !userMessage.trim() || !model"
             @click="handleSend"
           >
             {{ loading ? '⏳ 发送中...' : '▶ 发送请求' }}
@@ -51,6 +58,12 @@
 
       <div class="response-card card">
         <h3 class="section-title">回复内容</h3>
+
+        <div v-if="responseMeta" class="response-meta">
+          <span class="meta-chip">状态码 {{ responseMeta.statusCode }}</span>
+          <span class="meta-chip">{{ responseMeta.statusText }}</span>
+          <span class="meta-chip">{{ responseMeta.latencyMs != null ? `${responseMeta.latencyMs}ms` : '耗时待返回' }}</span>
+        </div>
 
         <div v-if="status === 'empty'" class="empty-state">
           <div class="empty-icon">💬</div>
@@ -70,63 +83,24 @@
         </div>
 
         <div v-else class="success-state">
-          <div v-if="streamActive" class="stream-indicator">
-            <span class="dot"></span> 流式输出中
-          </div>
           <div class="response-content" v-html="renderedContent"></div>
         </div>
       </div>
 
-      <div class="debug-card card" v-if="debugInfo">
-        <h3 class="section-title">调试信息 <span class="debug-subtitle">以下字段来自后端本次实际执行结果</span></h3>
-        <div class="debug-grid">
-          <div class="debug-item">
-            <span class="debug-label">public_model</span>
-            <span class="debug-value">{{ debugInfo.public_model ?? '-' }}</span>
+      <div class="usage-card card" v-if="usageInfo">
+        <h3 class="section-title">本次用量</h3>
+        <div class="usage-grid">
+          <div class="usage-item">
+            <span class="usage-label">Prompt Tokens</span>
+            <strong class="usage-value">{{ usageInfo.prompt_tokens ?? 0 }}</strong>
           </div>
-          <div class="debug-item">
-            <span class="debug-label">upstream_model_name</span>
-            <span class="debug-value">{{ debugInfo.upstream_model_name ?? '-' }}</span>
+          <div class="usage-item">
+            <span class="usage-label">Completion Tokens</span>
+            <strong class="usage-value">{{ usageInfo.completion_tokens ?? 0 }}</strong>
           </div>
-          <div class="debug-item">
-            <span class="debug-label">provider_type</span>
-            <span class="debug-value">{{ debugInfo.provider_type ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">provider_id</span>
-            <span class="debug-value">{{ debugInfo.provider_id ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">provider_key_id</span>
-            <span class="debug-value">{{ debugInfo.provider_key_id ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">policy_type</span>
-            <span class="debug-value">{{ debugInfo.policy_type ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">fallback_used</span>
-            <span class="debug-value">{{ debugInfo.fallback_used ? '是' : '否' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">provider_switch_count</span>
-            <span class="debug-value">{{ debugInfo.provider_switch_count ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">key_switch_count</span>
-            <span class="debug-value">{{ debugInfo.key_switch_count ?? '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">latency_ms</span>
-            <span class="debug-value">{{ debugInfo.latency_ms != null ? debugInfo.latency_ms + 'ms' : '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">cost</span>
-            <span class="debug-value">{{ debugInfo.cost != null ? '$' + Number(debugInfo.cost).toFixed(6) : '-' }}</span>
-          </div>
-          <div class="debug-item">
-            <span class="debug-label">total_tokens</span>
-            <span class="debug-value">{{ debugInfo.total_tokens ?? '-' }}</span>
+          <div class="usage-item">
+            <span class="usage-label">Total Tokens</span>
+            <strong class="usage-value">{{ usageInfo.total_tokens ?? 0 }}</strong>
           </div>
         </div>
       </div>
@@ -135,13 +109,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import MainLayout from '@/components/main/MainLayout.vue'
-import { chatCompletions, type ChatCompletionsPayload } from '@/api/proxy'
+import { chatCompletions, listProxyModels, type ChatCompletionsPayload } from '@/api/proxy'
 
 type Status = 'empty' | 'loading' | 'error' | 'success'
+type ProxyModel = { id: string }
 
-const model = ref('minimax-chat')
+const model = ref('')
 const temperature = ref(0.7)
 const maxTokens = ref(1024)
 const stream = ref(false)
@@ -149,8 +124,11 @@ const userMessage = ref('')
 const status = ref<Status>('empty')
 const errorMessage = ref('')
 const responseText = ref('')
-const streamActive = ref(false)
-const debugInfo = ref<Record<string, any> | null>(null)
+const responseMeta = ref<{ statusCode: number; statusText: string; latencyMs: number | null } | null>(null)
+const usageInfo = ref<{ prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null>(null)
+const availableModels = ref<ProxyModel[]>([])
+const modelsLoading = ref(false)
+const modelsError = ref('')
 const loading = computed(() => status.value === 'loading')
 
 const renderedContent = computed(() => {
@@ -161,14 +139,31 @@ const renderedContent = computed(() => {
     .replace(/\n/g, '<br>')
 })
 
+const loadModels = async () => {
+  modelsLoading.value = true
+  modelsError.value = ''
+  try {
+    const result = await listProxyModels()
+    availableModels.value = Array.isArray(result.data) ? result.data : []
+    if (!model.value && availableModels.value.length > 0) {
+      model.value = availableModels.value[0].id
+    }
+  } catch (e: any) {
+    availableModels.value = []
+    modelsError.value = e.message || '可用模型加载失败'
+  } finally {
+    modelsLoading.value = false
+  }
+}
+
 const handleSend = async () => {
-  if (!userMessage.value.trim() || loading.value) return
+  if (!userMessage.value.trim() || loading.value || !model.value) return
 
   status.value = 'loading'
   errorMessage.value = ''
   responseText.value = ''
-  debugInfo.value = null
-  streamActive.value = false
+  responseMeta.value = null
+  usageInfo.value = null
 
   const payload: ChatCompletionsPayload = {
     model: model.value,
@@ -179,15 +174,28 @@ const handleSend = async () => {
   }
 
   try {
+    const startedAt = performance.now()
     const res = await chatCompletions(payload)
     responseText.value = res.choices?.[0]?.message?.content || ''
-    debugInfo.value = res.debug || null
+    usageInfo.value = res.usage || null
+    responseMeta.value = {
+      statusCode: 200,
+      statusText: '请求成功',
+      latencyMs: res.debug?.latency_ms ?? Math.round(performance.now() - startedAt),
+    }
     status.value = 'success'
   } catch (e: any) {
     status.value = 'error'
     errorMessage.value = e.message || '未知错误'
+    responseMeta.value = {
+      statusCode: Number(e?.status) || 0,
+      statusText: '请求失败',
+      latencyMs: null,
+    }
   }
 }
+
+onMounted(loadModels)
 </script>
 
 <style scoped>
@@ -222,6 +230,11 @@ const handleSend = async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.param-help {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
 }
 
 .input-card {
@@ -258,145 +271,157 @@ const handleSend = async () => {
 }
 .char-count {
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
-.input,
-.select {
-  height: 42px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0 12px;
-  background: var(--color-bg-secondary);
-  color: var(--color-text);
-}
-.label {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.stream-disabled {
+.response-meta {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
-.stream-hint {
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
-
 .empty-state,
 .loading-state,
 .error-state,
 .success-state {
-  min-height: 160px;
+  min-height: 180px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  text-align: center;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  padding: 24px;
 }
 .empty-state,
 .loading-state {
-  align-items: center;
-  color: var(--color-text-muted);
+  flex-direction: column;
+  gap: 10px;
+  color: var(--color-text-secondary);
 }
 .empty-icon {
   font-size: 32px;
-  margin-bottom: 8px;
 }
 .loading-dots {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
 }
 .loading-dots span {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--color-primary);
-  animation: pulse 1s infinite ease-in-out;
+  animation: bounce 0.8s infinite alternate;
 }
-.loading-dots span:nth-child(2) { animation-delay: 0.15s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.3s; }
-@keyframes pulse {
-  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-  40% { opacity: 1; transform: scale(1); }
+.loading-dots span:nth-child(2) { animation-delay: 0.1s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.2s; }
+@keyframes bounce {
+  from { transform: translateY(0); opacity: 0.5; }
+  to { transform: translateY(-6px); opacity: 1; }
+}
+.error-state {
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  background: #fff5f5;
+  border-color: #fecaca;
 }
 .error-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #cf1322;
-  background: #fff1f0;
-  border: 1px solid #ffccc7;
-  border-radius: 999px;
   padding: 6px 10px;
-  width: fit-content;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
   margin-bottom: 12px;
 }
-.error-text,
-.response-content {
+.error-text {
+  margin: 0;
   white-space: pre-wrap;
+  word-break: break-word;
+  color: #7f1d1d;
+  font-family: var(--font-mono);
+  font-size: 13px;
   line-height: 1.7;
+}
+.success-state {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+.response-content {
   color: var(--color-text);
   font-size: 14px;
-  margin: 0;
-}
-.stream-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-  font-size: 12px;
-  color: var(--color-primary);
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse 1s infinite ease-in-out;
+  line-height: 1.8;
+  width: 100%;
+  word-break: break-word;
 }
 
-.debug-subtitle {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  font-weight: 400;
-  margin-left: 6px;
-}
-.debug-grid {
+.usage-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
-.debug-item {
-  border: 1px solid var(--color-border);
+.usage-item {
+  padding: 14px 16px;
   border-radius: var(--radius-md);
-  padding: 12px;
   background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
 }
-.debug-label {
+.usage-label {
   display: block;
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
 }
-.debug-value {
+.usage-value {
   display: block;
-  font-size: 13px;
+  margin-top: 8px;
+  font-size: 20px;
   color: var(--color-text);
-  word-break: break-all;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .params-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .usage-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .playground {
+    gap: 16px;
+  }
+  .card {
+    padding: 18px;
+  }
   .params-row {
     grid-template-columns: 1fr;
   }
-
+  .usage-grid {
+    grid-template-columns: 1fr;
+  }
   .input-footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
   }
 }
 </style>

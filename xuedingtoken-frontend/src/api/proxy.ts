@@ -51,12 +51,12 @@ export interface ChatCompletionsResponse {
 }
 
 /**
- * 调用 /proxy/chat/completions，复用 client.ts 的统一错误处理
+ * 调用用户侧正式 OpenAI 兼容入口 /v1/chat/completions。
  */
 export async function chatCompletions(
   payload: ChatCompletionsPayload
 ): Promise<ChatCompletionsResponse> {
-  return api.post<ChatCompletionsResponse>('/proxy/chat/completions', payload)
+  return api.post<ChatCompletionsResponse>('/v1/chat/completions', payload)
 }
 
 export async function listProxyModels(): Promise<{ object: string; data: any[] }> {

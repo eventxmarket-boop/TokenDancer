@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, inject, type Ref, type InjectionKey } from 'vue'
+import { ref } from 'vue'
 import type { GlobalConfirmInstance } from '@/components/common/GlobalConfirm.types'
 
 export interface Toast {
@@ -8,9 +8,11 @@ export interface Toast {
   type: 'success' | 'error' | 'info' | 'warning'
 }
 
-const CONFIRM_KEY: InjectionKey<Ref<GlobalConfirmInstance | null>> = Symbol('GlobalConfirm')
+const globalConfirmRef = ref<GlobalConfirmInstance | null>(null)
 
-export { CONFIRM_KEY }
+export function setGlobalConfirmInstance(instance: GlobalConfirmInstance | null) {
+  globalConfirmRef.value = instance
+}
 
 export const useFeedbackStore = defineStore('feedback', () => {
   const toasts = ref<Toast[]>([])
@@ -28,7 +30,6 @@ export const useFeedbackStore = defineStore('feedback', () => {
   const info = (msg: string) => push(msg, 'info')
   const warning = (msg: string) => push(msg, 'warning')
 
-  // inject at call-time (not store creation time) so confirmRef is resolved after App.vue mounts
   const confirm = async (opts: {
     title?: string
     message?: string
@@ -36,9 +37,8 @@ export const useFeedbackStore = defineStore('feedback', () => {
     cancelText?: string
     danger?: boolean
   }): Promise<boolean> => {
-    const confirmRef = inject(CONFIRM_KEY)
-    if (confirmRef?.value) {
-      return confirmRef.value.open(opts)
+    if (globalConfirmRef.value) {
+      return globalConfirmRef.value.open(opts)
     }
     return Promise.resolve(false)
   }
