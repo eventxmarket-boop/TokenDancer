@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.16 - 2026-04-16
+
+- Added an internal rolling summary for chat sessions so long conversations can retain earlier context without exposing it in the frontend.
+- Injected session summary into the model prompt before recent turns, while keeping recent messages intact.
+- Reserved a future retrieval hook for older message snippets without enabling any user-facing summary UI.
+
 ## V1.4.15 - 2026-04-16
 
 - Switched the `zhang_xue_feng` research provider to a Baidu-first flow for Chinese education scenarios.

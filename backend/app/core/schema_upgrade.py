@@ -29,6 +29,8 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
     },
     "chat_sessions": {
         "title": "VARCHAR(120) NULL",
+        "summary_text": "TEXT NULL",
+        "summary_updated_at": "TIMESTAMP NULL",
     },
 }
 

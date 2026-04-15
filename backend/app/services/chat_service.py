@@ -10,6 +10,11 @@ from sqlalchemy.orm import Session
 from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.base_mixins import utcnow
+from app.services.chat_summary_service import (
+    generate_session_summary,
+    retrieve_relevant_older_messages,
+    should_refresh_summary,
+)
 from app.services.created_persona_service import (
     load_created_persona_skill,
     load_created_persona_summary,
@@ -24,6 +29,7 @@ from app.services.zhangxuefeng_research import (
 
 
 CONTEXT_HISTORY_LIMIT = 20
+SUMMARY_REFRESH_BATCH = 8
 
 
 class ChatServiceError(RuntimeError):
@@ -176,19 +182,79 @@ def _get_or_create_session(db: Session, persona_slug: str, session_id: str | Non
     return session
 
 
-def _load_recent_history(db: Session, session_id: str, limit: int = CONTEXT_HISTORY_LIMIT) -> list[dict[str, str]]:
+def _load_session_history(db: Session, session_id: str) -> list[dict[str, str]]:
     rows = (
         db.query(ChatMessage)
         .filter(ChatMessage.session_id == session_id)
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         .all()
     )
-    recent_rows = rows[-limit:] if limit > 0 else rows
-    return [{"role": row.role, "content": row.content} for row in recent_rows]
+    return [{"role": row.role, "content": row.content} for row in rows]
+
+
+def _load_recent_history(db: Session, session_id: str, limit: int = CONTEXT_HISTORY_LIMIT) -> list[dict[str, str]]:
+    history = _load_session_history(db, session_id)
+    return history[-limit:] if limit > 0 else history
+
+
+def _count_messages_since_summary(db: Session, session: ChatSession) -> int:
+    if not session.summary_updated_at:
+        return (
+            db.query(ChatMessage.id)
+            .filter(ChatMessage.session_id == session.session_id)
+            .count()
+        )
+
+    return (
+        db.query(ChatMessage.id)
+        .filter(
+            ChatMessage.session_id == session.session_id,
+            ChatMessage.created_at > session.summary_updated_at,
+        )
+        .count()
+    )
+
+
+def _sync_session_summary(db: Session, session: ChatSession, history: list[dict[str, str]]) -> str | None:
+    summary_text = (session.summary_text or "").strip() or None
+    message_count = len(history)
+    messages_since_summary = _count_messages_since_summary(db, session)
+    should_refresh = should_refresh_summary(
+        message_count,
+        session.summary_updated_at,
+        messages_since_summary,
+    )
+
+    if summary_text and not should_refresh:
+        return summary_text
+
+    if not summary_text and message_count <= CONTEXT_HISTORY_LIMIT:
+        return None
+
+    older_messages = history[:-CONTEXT_HISTORY_LIMIT] if message_count > CONTEXT_HISTORY_LIMIT else history
+    if not older_messages and not summary_text:
+        return None
+
+    refreshed = generate_session_summary(older_messages, previous_summary=summary_text)
+    refreshed = (refreshed or "").strip()
+    if not refreshed:
+        return summary_text
+
+    session.summary_text = refreshed
+    session.summary_updated_at = utcnow()
+    db.flush()
+    return refreshed
+
+
+def build_context_for_chat(db: Session, session: ChatSession) -> tuple[str | None, list[dict[str, str]]]:
+    history = _load_session_history(db, session.session_id)
+    summary_text = _sync_session_summary(db, session, history)
+    recent_history = history[-CONTEXT_HISTORY_LIMIT:] if CONTEXT_HISTORY_LIMIT > 0 else history
+    return summary_text, recent_history
 
 
 def summarize_older_messages(messages: list[dict[str, str]]) -> str | None:
-    # Reserved for a future summary layer; the current release still relies on recent-turn context.
+    # Reserved for a future retrieval layer; the current release still relies on rolling summary + recent turns.
     if not messages:
         return None
     return None
@@ -199,11 +265,18 @@ def build_context_messages(
     history: list[dict[str, str]],
     user_message: str,
     *,
+    session_summary: str | None = None,
     facts_context: str | None = None,
 ) -> list[dict[str, str]]:
     recent_history = history[-CONTEXT_HISTORY_LIMIT:] if CONTEXT_HISTORY_LIMIT > 0 else history
     _ = summarize_older_messages(history[:-CONTEXT_HISTORY_LIMIT]) if len(history) > CONTEXT_HISTORY_LIMIT else None
-    return build_chat_messages(persona, recent_history, user_message, facts_context=facts_context)
+    return build_chat_messages(
+        persona,
+        recent_history,
+        user_message,
+        session_summary=session_summary,
+        facts_context=facts_context,
+    )
 
 
 def _format_research_context(research: dict[str, object]) -> str:
@@ -396,10 +469,14 @@ async def chat_with_persona(
         raise ChatServiceError("消息内容不能为空")
 
     session = _get_or_create_session(db, persona_slug, session_id)
-    history = _load_recent_history(db, session.session_id, limit=CONTEXT_HISTORY_LIMIT)
+    session_summary, history = build_context_for_chat(db, session)
     if not (session.title or "").strip():
         first_user_message = next(
-            (message["content"] for message in history if message.get("role") == "user" and str(message.get("content", "")).strip()),
+            (
+                message["content"]
+                for message in history
+                if message.get("role") == "user" and str(message.get("content", "")).strip()
+            ),
             normalized_message,
         )
         session.title = _build_session_title(persona_name, first_user_message)
@@ -415,12 +492,28 @@ async def chat_with_persona(
         persona,
         history,
         normalized_message,
+        session_summary=session_summary,
         facts_context=facts_context,
     )
 
     try:
         reply = await generate_reply(messages, db=db)
         _persist_messages(db, session.session_id, normalized_message, reply)
+        db.flush()
+        refreshed_history = _load_session_history(db, session.session_id)
+        if should_refresh_summary(
+            len(refreshed_history),
+            session.summary_updated_at,
+            _count_messages_since_summary(db, session),
+        ):
+            refreshed_summary = generate_session_summary(
+                refreshed_history[:-CONTEXT_HISTORY_LIMIT] if len(refreshed_history) > CONTEXT_HISTORY_LIMIT else refreshed_history,
+                previous_summary=session.summary_text,
+            )
+            refreshed_summary = (refreshed_summary or "").strip()
+            if refreshed_summary:
+                session.summary_text = refreshed_summary
+                session.summary_updated_at = utcnow()
         session.updated_at = utcnow()
         db.commit()
     except Exception:

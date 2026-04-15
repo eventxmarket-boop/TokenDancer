@@ -31,6 +31,7 @@ def build_persona_system_prompt(persona: dict[str, Any]) -> str:
 
 def build_persona_system_prompt_with_context(
     persona: dict[str, Any],
+    session_summary: str | None = None,
     facts_context: str | None = None,
 ) -> str:
     meta = persona.get("meta") or {}
@@ -48,6 +49,8 @@ def build_persona_system_prompt_with_context(
     _append_section(parts, "示例风格", persona.get("persona_examples", ""))
     _append_section(parts, "当前状态", persona.get("state", ""))
     _append_section(parts, "边界规则", persona.get("guardrails", ""))
+    if session_summary:
+        _append_section(parts, "会话摘要（仅供内部理解上下文）", session_summary)
     if facts_context:
         _append_section(parts, "研究事实摘要", facts_context)
         parts.append(
@@ -64,12 +67,13 @@ def build_chat_messages(
     history: list[dict[str, str]],
     user_message: str,
     *,
+    session_summary: str | None = None,
     facts_context: str | None = None,
 ) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = [
         {
             "role": "system",
-            "content": build_persona_system_prompt_with_context(persona, facts_context=facts_context),
+            "content": build_persona_system_prompt_with_context(persona, session_summary=session_summary, facts_context=facts_context),
         },
     ]
 
