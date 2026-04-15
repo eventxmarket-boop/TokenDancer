@@ -1,5 +1,9 @@
 # Changelog
 
+## V1.0.4 - 2026-04-15
+
+- Added a systemd service unit for the persona backend and updated deployment to install it so the server runs `backend/main.py` instead of the legacy app entrypoint.
+
 ## V1.0.3 - 2026-04-15
 
 - Updated the backend deployment script to restart the actual server unit `tokendancer-backend.service`.
