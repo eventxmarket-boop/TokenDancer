@@ -5,6 +5,7 @@ class CreateCatalogItem(BaseModel):
     slug: str
     name: str
     group: str
+    create_type: str = ""
     source_repo: str
     repo_url: str
     description: str

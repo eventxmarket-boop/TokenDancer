@@ -189,6 +189,13 @@
 - Kept Seed limited to ready-made personas while routing creation templates into Create only.
 - Added endpoint coverage for the Create catalog response.
 
+## V1.4.17
+- 合并父母人格与妈妈人格为统一的家人陪伴路径
+- 吸收 MamaSkill 的 Persona + Memory Base 双层结构
+- 新增家庭陪伴专属运行逻辑：情绪判断、记忆提取、温度回复
+- 将 darwin 风格的评估与回滚思路纳入家庭人格优化骨架
+- 收口家庭关系类 Create 路径，避免重复入口
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.

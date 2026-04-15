@@ -6,6 +6,8 @@ import {
   saveDraftLocally,
   saveLatestDraft,
   type CreateWizardDraft,
+  type FamilyCompanionMemoryBase,
+  type FamilyCompanionPersonaProfile,
 } from '@/services/createWizardService'
 import {
   loadMySeed,
@@ -33,6 +35,8 @@ const inputModeLabels: Record<string, string> = {
   supervisor: '导师',
   parents: '父母',
   partner: '伴侣',
+  mother: '妈妈',
+  other_family: '其他家人',
 }
 
 const editableDraft = reactive<CreateWizardDraft>({
@@ -61,6 +65,9 @@ const editableDraft = reactive<CreateWizardDraft>({
   heuristics: '',
   expression: '',
   guardrails: '',
+  relationship_type: '',
+  persona_profile: null,
+  memory_base: null,
 })
 
 const typeLabel = computed(() => {
@@ -74,6 +81,9 @@ const typeLabel = computed(() => {
   }
   if (type === 'source_persona') {
     return '从资料创建'
+  }
+  if (type === 'family_companion') {
+    return '家人陪伴'
   }
   return '关系人格'
 })
@@ -94,28 +104,61 @@ const savedSeedLabel = computed(() => {
   return '先保存到“我创建的 Seed”'
 })
 
+const familyPersonaProfile = computed<FamilyCompanionPersonaProfile | null>(() => {
+  const payload = draft.value?.persona_profile || editableDraft.persona_profile
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
+  const payload = draft.value?.memory_base || editableDraft.memory_base
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const familyProfileLines = computed(() => {
+  const profile = familyPersonaProfile.value
+  if (!profile) {
+    return []
+  }
+
+  return [
+    { label: '关系类型', value: profile.relationship_type || '未填写' },
+    { label: '称呼', value: profile.name || '未填写' },
+    { label: '说话风格', value: profile.tone || '未填写' },
+    { label: '常见口头禅', value: profile.catchphrases?.join(' / ') || '未填写' },
+    { label: '难过时', value: profile.comfort_style || '未填写' },
+    { label: '好消息时', value: profile.celebration_style || '未填写' },
+    { label: '边界', value: profile.boundaries || '未填写' },
+  ]
+})
+
+const familyMemoryLines = computed(() => {
+  const memory = familyMemoryBase.value
+  if (!memory) {
+    return []
+  }
+
+  return [
+    { label: '关键共同经历', value: memory.shared_events?.join(' / ') || '未填写' },
+    { label: '最常提起的往事', value: memory.daily_habits?.join(' / ') || '未填写' },
+    { label: '反复说过的话', value: memory.important_advice?.join(' / ') || '未填写' },
+    { label: '在意的事', value: memory.emotional_triggers?.join(' / ') || '未填写' },
+  ]
+})
+
 function applyDraft(nextDraft: CreateWizardDraft) {
-  draft.value = nextDraft
-  editableDraft.meta = { ...nextDraft.meta }
-  editableDraft.profile = nextDraft.profile
-  editableDraft.mindset = nextDraft.mindset
-  editableDraft.heuristics = nextDraft.heuristics
-  editableDraft.expression = nextDraft.expression
-  editableDraft.guardrails = nextDraft.guardrails
+  const snapshot = cloneDraft(nextDraft)
+  draft.value = snapshot
+  Object.assign(editableDraft, snapshot)
 }
 
 function cloneDraft(source: CreateWizardDraft): CreateWizardDraft {
-  return {
-    meta: {
-      ...source.meta,
-      source_repos: [...source.meta.source_repos],
-    },
-    profile: source.profile,
-    mindset: source.mindset,
-    heuristics: source.heuristics,
-    expression: source.expression,
-    guardrails: source.guardrails,
-  }
+  return JSON.parse(JSON.stringify(source)) as CreateWizardDraft
 }
 
 async function ensureSeedSaved() {
@@ -293,7 +336,7 @@ onMounted(() => {
       <h3>正在读取最新结果…</h3>
     </div>
 
-    <div v-else class="draft-layout">
+      <div v-else class="draft-layout">
       <div class="draft-main">
         <article class="draft-card draft-card--header">
           <div class="draft-card__head">
@@ -304,6 +347,26 @@ onMounted(() => {
             <span class="status-pill">{{ typeLabel }}</span>
           </div>
           <p class="state-copy">{{ inputModeLabel }} · {{ editableDraft.meta.generated_at }}</p>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
+          <p class="eyebrow">人格层</p>
+          <div class="family-grid">
+            <div v-for="line in familyProfileLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
+          <p class="eyebrow">记忆层</p>
+          <div class="family-grid">
+            <div v-for="line in familyMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
         </article>
 
         <article class="draft-card">

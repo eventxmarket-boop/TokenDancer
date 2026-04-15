@@ -22,6 +22,7 @@ from app.services.created_persona_service import (
 from app.services.llm_gateway import generate_reply
 from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
+from app.services.family_companion_service import build_family_companion_context
 from app.services.zhangxuefeng_research import (
     classify_zhangxuefeng_question,
     research_education_question,
@@ -267,6 +268,7 @@ def build_context_messages(
     *,
     session_summary: str | None = None,
     facts_context: str | None = None,
+    aux_context: str | None = None,
 ) -> list[dict[str, str]]:
     recent_history = history[-CONTEXT_HISTORY_LIMIT:] if CONTEXT_HISTORY_LIMIT > 0 else history
     _ = summarize_older_messages(history[:-CONTEXT_HISTORY_LIMIT]) if len(history) > CONTEXT_HISTORY_LIMIT else None
@@ -276,6 +278,7 @@ def build_context_messages(
         user_message,
         session_summary=session_summary,
         facts_context=facts_context,
+        aux_context=aux_context,
     )
 
 
@@ -463,6 +466,11 @@ async def chat_with_persona(
 
     persona_meta = persona.get("meta") or {}
     persona_name = str(persona_meta.get("name") or persona_slug).strip()
+    create_type = str(persona_meta.get("create_type") or "").strip()
+    is_family_companion = create_type == "family_companion"
+    if not is_family_companion:
+        family_source_repo = str(persona_meta.get("source_repo") or "").strip()
+        is_family_companion = family_source_repo in {"MamaSkill", "parents-skills", "MamaSkill+parents-skills+darwin-skill"}
 
     normalized_message = user_message.strip()
     if not normalized_message:
@@ -482,11 +490,14 @@ async def chat_with_persona(
         session.title = _build_session_title(persona_name, first_user_message)
 
     facts_context: str | None = None
+    aux_context: str | None = None
     if persona_slug.strip() == "zhang_xue_feng":
         question_class = classify_zhangxuefeng_question(normalized_message, history)
         if question_class in {"fact_required", "hybrid"}:
             research = await research_education_question(normalized_message, classification=question_class)
             facts_context = _format_research_context(research)
+    elif is_family_companion:
+        aux_context = build_family_companion_context(persona, history, normalized_message)
 
     messages = build_context_messages(
         persona,
@@ -494,6 +505,7 @@ async def chat_with_persona(
         normalized_message,
         session_summary=session_summary,
         facts_context=facts_context,
+        aux_context=aux_context,
     )
 
     try:

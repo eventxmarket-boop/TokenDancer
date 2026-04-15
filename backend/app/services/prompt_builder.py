@@ -33,6 +33,7 @@ def build_persona_system_prompt_with_context(
     persona: dict[str, Any],
     session_summary: str | None = None,
     facts_context: str | None = None,
+    aux_context: str | None = None,
 ) -> str:
     meta = persona.get("meta") or {}
     parts: list[str] = [
@@ -57,6 +58,8 @@ def build_persona_system_prompt_with_context(
             "研究后回答约束：当问题涉及具体院校、专业、录取线、保研率、就业率、薪资或政策变化时，"
             "先基于已获取的事实摘要判断，再给结论。不要跳过事实层直接拍脑袋回答。纯框架问题才允许直接基于判断模型回答。"
         )
+    if aux_context:
+        _append_section(parts, "运行上下文（仅供内部理解）", aux_context)
 
     parts.append(f"平台统一约束：{PLATFORM_CONSTRAINT}")
     return "\n\n".join(parts).strip()
@@ -69,11 +72,17 @@ def build_chat_messages(
     *,
     session_summary: str | None = None,
     facts_context: str | None = None,
+    aux_context: str | None = None,
 ) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = [
         {
             "role": "system",
-            "content": build_persona_system_prompt_with_context(persona, session_summary=session_summary, facts_context=facts_context),
+            "content": build_persona_system_prompt_with_context(
+                persona,
+                session_summary=session_summary,
+                facts_context=facts_context,
+                aux_context=aux_context,
+            ),
         },
     ]
 

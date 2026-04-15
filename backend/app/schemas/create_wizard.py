@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+
 
 class CreateWizardDraftRequest(BaseModel):
     create_type: str
@@ -43,6 +45,9 @@ class CreateWizardDraft(BaseModel):
     heuristics: str
     expression: str
     guardrails: str
+    relationship_type: str = ""
+    persona_profile: FamilyCompanionPersonaProfile | None = None
+    memory_base: FamilyCompanionMemoryBase | None = None
 
 
 class CreateWizardDraftResponse(BaseModel):

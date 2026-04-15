@@ -35,6 +35,23 @@ export type CreateWizardDraftMeta = {
   generated_at: string
 }
 
+export type FamilyCompanionPersonaProfile = {
+  relationship_type: string
+  name: string
+  tone: string
+  catchphrases: string[]
+  comfort_style: string
+  celebration_style: string
+  boundaries: string
+}
+
+export type FamilyCompanionMemoryBase = {
+  shared_events: string[]
+  important_advice: string[]
+  daily_habits: string[]
+  emotional_triggers: string[]
+}
+
 export type CreateWizardDraft = {
   meta: CreateWizardDraftMeta
   profile: string
@@ -42,6 +59,9 @@ export type CreateWizardDraft = {
   heuristics: string
   expression: string
   guardrails: string
+  relationship_type?: string
+  persona_profile?: FamilyCompanionPersonaProfile | null
+  memory_base?: FamilyCompanionMemoryBase | null
 }
 
 export type CreateWizardDraftResponse = {

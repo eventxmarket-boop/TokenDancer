@@ -1851,6 +1851,39 @@ html[data-theme='night'] .my-entry-card {
   font-family: var(--font-sans);
 }
 
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.family-grid__item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 250, 247, 0.92);
+  border: 1px solid rgba(220, 180, 161, 0.14);
+}
+
+.family-grid__item span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.family-grid__item strong {
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 0.96rem;
+  font-weight: 650;
+}
+
+.wizard-review--family {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .create-module {
   display: grid;
   gap: 12px;

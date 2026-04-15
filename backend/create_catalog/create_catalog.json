@@ -315,19 +315,20 @@
     },
     {
       "group": "relationship_family",
-      "label": "家庭关系",
-      "description": "把父母、妈妈和重逢场景整理成更细腻的关系人格模板。",
-      "source_hint": "家庭关系模板",
+      "label": "家人陪伴",
+      "description": "从家人的说话方式、共同记忆和关心方式中创建更有温度的陪伴人格。",
+      "source_hint": "家人陪伴模板",
       "sort_order": 6,
       "items": [
         {
-          "slug": "parents_persona",
-          "name": "父母人格",
+          "slug": "family_companion",
+          "name": "家人陪伴",
           "group": "relationship_family",
-          "source_repo": "parents-skills",
-          "repo_url": "https://github.com/xiaoheizi8/parents-skills",
-          "description": "用父母的口头禅与关心方式，生成更像他们的人格。",
-          "input_modes": ["chat_history", "documents"],
+          "create_type": "family_companion",
+          "source_repo": "MamaSkill+parents-skills+darwin-skill",
+          "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
+          "description": "从家人的说话方式、共同记忆和关心方式中，创建一个更有温度的陪伴人格。",
+          "input_modes": ["mother", "parents", "other_family"],
           "stage": "entry_only",
           "entry_type": "create",
           "ui_mode": "card",
@@ -347,20 +348,6 @@
           "ui_mode": "card",
           "status": "available",
           "sort_order": 2
-        },
-        {
-          "slug": "mama_persona",
-          "name": "妈妈人格",
-          "group": "relationship_family",
-          "source_repo": "MamaSkill",
-          "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
-          "description": "从与母亲有关的记忆与资料中提炼妈妈人格。",
-          "input_modes": ["chat_history", "documents", "memory_notes"],
-          "stage": "entry_only",
-          "entry_type": "create",
-          "ui_mode": "card",
-          "status": "available",
-          "sort_order": 3
         }
       ]
     },

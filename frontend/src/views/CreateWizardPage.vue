@@ -9,7 +9,7 @@ import {
   submitCreateDraft,
 } from '@/services/createWizardService'
 
-type CreateType = 'self_persona' | 'source_persona' | 'relationship_persona'
+type CreateType = 'self_persona' | 'source_persona' | 'relationship_persona' | 'family_companion'
 
 const router = useRouter()
 const route = useRoute()
@@ -43,6 +43,13 @@ const formState = reactive({
   decision_logic: '',
   purpose: '',
   relation_boundaries: '',
+  catchphrases: '',
+  comfort_style: '',
+  celebration_style: '',
+  shared_events: '',
+  important_advice: '',
+  daily_habits: '',
+  emotional_triggers: '',
 })
 
 const typeCards = [
@@ -97,6 +104,11 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     reunion: '重逢人格',
     mama: '妈妈',
   },
+  family_companion: {
+    mother: '妈妈',
+    parents: '父母',
+    other_family: '其他家人',
+  },
 }
 
 const inputModeBySourceRepo: Record<string, string> = {
@@ -122,6 +134,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'parents-skills': 'parents',
   'reunion-skill': 'reunion',
   MamaSkill: 'mama',
+  'MamaSkill+parents-skills+darwin-skill': 'mother',
   'digital-twin-skill': 'multi_source',
   'immortal-skill': 'multi_source',
   'anti-distill': 'documents',
@@ -150,6 +163,8 @@ const sourceRepoByInputMode: Record<string, string> = {
   parents: 'parents-skills',
   reunion: 'reunion-skill',
   mama: 'MamaSkill',
+  mother: 'MamaSkill+parents-skills+darwin-skill',
+  other_family: 'MamaSkill+parents-skills+darwin-skill',
 }
 
 const schemaKeyBySourceRepo: Record<string, string> = {
@@ -175,14 +190,21 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'parents-skills': 'relationship_family_parents',
   'reunion-skill': 'relationship_family_reunion',
   MamaSkill: 'relationship_family_mama',
+  'MamaSkill+parents-skills+darwin-skill': 'family_companion_mother',
   'digital-twin-skill': 'digital_twin_high_fidelity',
   'immortal-skill': 'digital_twin_immortal',
   'anti-distill': 'protection_anti_distill',
 }
 
-const stepLabels = ['选择类型', '选择方式', '填写信息', '生成结果']
+const isFamilyCompanion = computed(() => createType.value === 'family_companion')
 
-const currentInputs = computed(() => Object.entries(inputModeLabels[createType.value]))
+const stepLabels = computed(() =>
+  isFamilyCompanion.value
+    ? ['选择关系类型', '填写信息', '确认结果', '生成结果']
+    : ['选择类型', '选择方式', '填写信息', '生成结果'],
+)
+
+const currentInputs = computed(() => Object.entries(inputModeLabels[createType.value] || {}))
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_persona') {
@@ -191,11 +213,14 @@ const currentTypeLabel = computed(() => {
   if (createType.value === 'source_persona') {
     return '从资料创建'
   }
+  if (createType.value === 'family_companion') {
+    return '家人陪伴'
+  }
   return '关系人格'
 })
 
 const selectedInputLabel = computed(() => {
-  return inputModeLabels[createType.value][inputMode.value] || inputMode.value || '未选择'
+  return inputModeLabels[createType.value]?.[inputMode.value] || inputMode.value || '未选择'
 })
 
 function readQueryValue(key: string) {
@@ -208,7 +233,12 @@ function readQueryValue(key: string) {
 
 function inferCreateTypeFromQuery() {
   const explicit = readQueryValue('create_type') || readQueryValue('type')
-  if (explicit === 'self_persona' || explicit === 'source_persona' || explicit === 'relationship_persona') {
+  if (
+    explicit === 'self_persona' ||
+    explicit === 'source_persona' ||
+    explicit === 'relationship_persona' ||
+    explicit === 'family_companion'
+  ) {
     return explicit as CreateType
   }
 
@@ -216,11 +246,14 @@ function inferCreateTypeFromQuery() {
   if (group === 'source') {
     return 'source_persona'
   }
+  if (group === 'relationship_family') {
+    return 'family_companion'
+  }
   if (
     group === 'relationship_workplace' ||
     group === 'relationship_academia' ||
     group === 'relationship_intimate' ||
-    group === 'relationship_family'
+    group === 'relationship'
   ) {
     return 'relationship_persona'
   }
@@ -244,11 +277,17 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
   if (createTypeValue === 'source_persona') {
     return 'documents'
   }
+  if (createTypeValue === 'family_companion') {
+    return 'mother'
+  }
 
   return 'colleague'
 }
 
 function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, inputModeValue: string, displayName: string) {
+  if (createTypeValue === 'family_companion') {
+    return `family_companion_${inputModeValue || 'mother'}`
+  }
   if (sourceRepo && schemaKeyBySourceRepo[sourceRepo]) {
     return schemaKeyBySourceRepo[sourceRepo]
   }
@@ -264,6 +303,9 @@ function getDefaultGroupForType(type: CreateType) {
   if (type === 'source_persona') {
     return 'source'
   }
+  if (type === 'family_companion') {
+    return 'relationship_family'
+  }
   return 'relationship_workplace'
 }
 
@@ -273,6 +315,9 @@ function getDefaultSourceRepoForType(type: CreateType) {
   }
   if (type === 'source_persona') {
     return 'anyone-to-skill'
+  }
+  if (type === 'family_companion') {
+    return 'MamaSkill+parents-skills+darwin-skill'
   }
   return 'colleague-skill'
 }
@@ -284,6 +329,9 @@ function getDefaultDisplayNameForType(type: CreateType) {
   if (type === 'source_persona') {
     return '资料人格'
   }
+  if (type === 'family_companion') {
+    return '家人陪伴'
+  }
   return '关系人格'
 }
 
@@ -293,6 +341,9 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   }
   if (type === 'source_persona') {
     return 'source'
+  }
+  if (type === 'family_companion') {
+    return 'relationship_family'
   }
 
   if (mode === 'colleague' || mode === 'boss') {
@@ -313,7 +364,7 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   ) {
     return 'relationship_intimate'
   }
-  if (mode === 'parents' || mode === 'reunion' || mode === 'mama') {
+  if (mode === 'parents' || mode === 'reunion' || mode === 'mama' || mode === 'mother' || mode === 'other_family') {
     return 'relationship_family'
   }
 
@@ -353,11 +404,17 @@ function getInputModeNote(type: CreateType, mode: string) {
     if (mode === 'mama') return '适合妈妈视角。'
   }
 
+  if (type === 'family_companion') {
+    if (mode === 'mother') return '适合妈妈视角。'
+    if (mode === 'parents') return '适合父母视角。'
+    if (mode === 'other_family') return '适合其他家人视角。'
+  }
+
   return '适合继续完善。'
 }
 
 function getRelationshipLabel(mode: string) {
-  return inputModeLabels.relationship_persona[mode] || '关系人格'
+  return inputModeLabels.relationship_persona[mode] || inputModeLabels.family_companion[mode] || '关系人格'
 }
 
 function clearFormState() {
@@ -393,6 +450,20 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
     formState.decision_logic = '先看现实条件，再给建议。'
     formState.purpose = '帮助理解这段关系。'
     formState.relation_boundaries = '不越界，不伪造确定事实。'
+  }
+
+  if (type === 'family_companion') {
+    formState.relationship_type = getRelationshipLabel(mode) || displayName || '家人陪伴'
+    formState.persona_name = displayName || getRelationshipLabel(mode) || '家人陪伴'
+    formState.speech_style = '温和、熟悉、带一点家里的感觉。'
+    formState.catchphrases = '先别急\n慢慢来\n我在呢'
+    formState.comfort_style = '先接住情绪，再慢慢安慰。'
+    formState.celebration_style = '先替你高兴，再顺着把好消息讲完。'
+    formState.shared_events = '小时候一起吃饭\n你难过时被安慰'
+    formState.important_advice = '先照顾好自己\n遇事先稳住'
+    formState.daily_habits = '会问你吃饭没\n会提醒你休息'
+    formState.emotional_triggers = '考试压力\n工作烦心\n好消息分享'
+    formState.relation_boundaries = '不越界，不替你做决定，不伪造没发生过的事。'
   }
 }
 
@@ -537,7 +608,13 @@ function selectType(type: CreateType) {
   selectedSourceRepo.value = getDefaultSourceRepoForType(type)
   selectedName.value = getDefaultDisplayNameForType(type)
   inputMode.value =
-    type === 'self_persona' ? 'manual_profile' : type === 'source_persona' ? 'documents' : 'colleague'
+    type === 'self_persona'
+      ? 'manual_profile'
+      : type === 'source_persona'
+        ? 'documents'
+        : type === 'family_companion'
+          ? 'mother'
+          : 'colleague'
   selectedSchemaKey.value = resolveSchemaKey(type, selectedSourceRepo.value, inputMode.value, selectedName.value)
   resetFormForType(type, selectedName.value, inputMode.value)
   step.value = 2
@@ -546,12 +623,13 @@ function selectType(type: CreateType) {
 function selectInputMode(mode: string) {
   inputMode.value = mode
   selectedGroup.value = resolveGroupForTypeAndMode(createType.value, mode)
-  if (createType.value === 'relationship_persona') {
+  if (createType.value === 'relationship_persona' || createType.value === 'family_companion') {
     selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
+    selectedName.value = getRelationshipLabel(mode) || selectedName.value
   }
   selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, mode, selectedName.value)
   resetFormForType(createType.value, selectedName.value, mode)
-  step.value = 3
+  step.value = createType.value === 'family_companion' ? 2 : 3
 }
 
 function goStep(nextStep: number) {
@@ -667,12 +745,26 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 1 步</p>
-              <h3>选择创建类型</h3>
+              <h3>{{ isFamilyCompanion ? '选择关系类型' : '选择创建类型' }}</h3>
             </div>
-            <p class="section-note">先确认你要从哪里开始创建。</p>
+            <p class="section-note">{{ isFamilyCompanion ? '先选妈妈、父母或其他家人。' : '先确认你要从哪里开始创建。' }}</p>
           </div>
 
-          <div class="wizard-card-grid wizard-card-grid--three">
+          <div v-if="isFamilyCompanion" class="wizard-card-grid wizard-card-grid--three">
+            <button
+              v-for="[mode, label] in currentInputs"
+              :key="mode"
+              type="button"
+              class="wizard-option-card"
+              :class="{ active: inputMode === mode }"
+              @click="selectInputMode(mode)"
+            >
+              <h4>{{ label }}</h4>
+              <p>{{ getInputModeNote(createType, mode) }}</p>
+            </button>
+          </div>
+
+          <div v-else class="wizard-card-grid wizard-card-grid--three">
             <button
               v-for="card in typeCards"
               :key="card.type"
@@ -692,12 +784,71 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 2 步</p>
-              <h3>选择创建方式</h3>
+              <h3>{{ isFamilyCompanion ? '填写人物资料' : '选择创建方式' }}</h3>
             </div>
-            <p class="section-note">不同类型会显示不同的方式选择。</p>
+            <p class="section-note">{{ isFamilyCompanion ? '把人物层和记忆层先写清楚。' : '不同类型会显示不同的方式选择。' }}</p>
           </div>
 
-          <div class="wizard-card-grid">
+          <template v-if="isFamilyCompanion">
+            <div class="wizard-form">
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>你怎么称呼他 / 她</span>
+                  <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 爸爸" />
+                </label>
+                <label class="form-field">
+                  <span>说话风格</span>
+                  <input v-model="formState.speech_style" class="field-input" type="text" placeholder="温和、直接、唠叨一点..." />
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>常见口头禅</span>
+                  <textarea v-model="formState.catchphrases" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>难过时会怎么说</span>
+                  <textarea v-model="formState.comfort_style" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>好消息时会怎么回应</span>
+                  <textarea v-model="formState.celebration_style" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>有哪些边界或禁忌话题</span>
+                  <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>关键共同经历</span>
+                  <textarea v-model="formState.shared_events" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>最常提起的往事</span>
+                  <textarea v-model="formState.daily_habits" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>反复说过的话</span>
+                  <textarea v-model="formState.important_advice" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>她 / 他们最在意你的什么</span>
+                  <textarea v-model="formState.emotional_triggers" class="field-input wizard-textarea" rows="4"></textarea>
+                </label>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="wizard-card-grid">
             <button
               v-for="[mode, label] in currentInputs"
               :key="mode"
@@ -716,9 +867,9 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 3 步</p>
-              <h3>填写信息</h3>
+              <h3>{{ isFamilyCompanion ? '确认人物层与记忆层' : '填写信息' }}</h3>
             </div>
-            <p class="section-note">先把关键变量写清楚，后面才更容易继续完善。</p>
+            <p class="section-note">{{ isFamilyCompanion ? '先看一眼，再继续生成。' : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
           </div>
 
           <div v-if="createType === 'self_persona'" class="wizard-form">
@@ -785,6 +936,28 @@ watch(
             </div>
           </div>
 
+          <div v-else-if="createType === 'family_companion'" class="wizard-review wizard-review--family">
+            <div class="summary-panel">
+              <p class="eyebrow">人物层</p>
+              <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
+              <ul class="summary-panel__list">
+                <li><span>关系类型</span><strong>{{ getRelationshipLabel(inputMode) }}</strong></li>
+                <li><span>说话风格</span><strong>{{ formState.speech_style || '未填写' }}</strong></li>
+                <li><span>口头禅</span><strong>{{ formState.catchphrases || '未填写' }}</strong></li>
+              </ul>
+            </div>
+
+            <div class="summary-panel">
+              <p class="eyebrow">记忆层</p>
+              <h3>共同记忆</h3>
+              <ul class="summary-panel__list">
+                <li><span>关键经历</span><strong>{{ formState.shared_events || '未填写' }}</strong></li>
+                <li><span>常见安慰</span><strong>{{ formState.comfort_style || '未填写' }}</strong></li>
+                <li><span>重要建议</span><strong>{{ formState.important_advice || '未填写' }}</strong></li>
+              </ul>
+            </div>
+          </div>
+
           <div v-else class="wizard-form">
             <div class="form-grid">
               <label class="form-field">
@@ -825,9 +998,9 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 4 步</p>
-              <h3>确认并生成结果</h3>
+              <h3>{{ isFamilyCompanion ? '生成结果' : '确认并生成结果' }}</h3>
             </div>
-            <p class="section-note">先看一眼，再生成第一版结果。</p>
+            <p class="section-note">{{ isFamilyCompanion ? '把这一版保存成可继续完善的结果。' : '先看一眼，再生成第一版结果。' }}</p>
           </div>
 
           <div class="wizard-review">
@@ -850,6 +1023,10 @@ watch(
               <template v-else-if="createType === 'source_persona'">
                 <h3>{{ formState.target_name || '未填写目标名称' }}</h3>
                 <p class="state-copy">{{ formState.material_description || '还没有描述材料。' }}</p>
+              </template>
+              <template v-else-if="createType === 'family_companion'">
+                <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
+                <p class="state-copy">{{ formState.comfort_style || '还没有填写安慰方式。' }}</p>
               </template>
               <template v-else>
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>

@@ -50,7 +50,7 @@ const mainPathSections: MainPathSection[] = [
   },
   {
     key: 'family',
-    title: '家庭关系',
+    title: '家人陪伴',
     description: '从熟悉的关心方式、说话方式和记忆片段中开始。',
     groupKeys: ['relationship_family'],
   },
@@ -93,6 +93,7 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'parents-skills': 'relationship_family_parents',
   'reunion-skill': 'relationship_family_reunion',
   MamaSkill: 'relationship_family_mama',
+  'MamaSkill+parents-skills+darwin-skill': 'family_companion_mother',
   'digital-twin-skill': 'digital_twin_high_fidelity',
   'immortal-skill': 'digital_twin_immortal',
   'anti-distill': 'protection_anti_distill',
@@ -121,6 +122,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'parents-skills': 'parents',
   'reunion-skill': 'reunion',
   MamaSkill: 'mama',
+  'MamaSkill+parents-skills+darwin-skill': 'mother',
   'digital-twin-skill': 'multi_source',
   'immortal-skill': 'multi_source',
   'anti-distill': 'documents',
@@ -131,7 +133,14 @@ function getDefaultInputMode(item: CreateCatalogItem) {
 }
 
 function getSchemaKeyForItem(item: CreateCatalogItem) {
+  if (item.create_type === 'family_companion') {
+    return `family_companion_${getDefaultInputMode(item)}`
+  }
   return schemaKeyBySourceRepo[item.source_repo] || `${item.group}_${item.slug}`
+}
+
+function getWizardCreateTypeForItem(item: CreateCatalogItem) {
+  return item.create_type || getWizardTypeForGroup(item.group)
 }
 
 const groups = computed(() => {
@@ -159,7 +168,14 @@ const sectionViews = computed(() => {
       .map((groupKey) => map.get(groupKey))
       .filter((group): group is CreateCatalogGroup => Boolean(group))
 
-    const items = matchedGroups.flatMap((group) => group.items)
+    const items = matchedGroups
+      .flatMap((group) => group.items)
+      .filter((item) => {
+        if (section.key !== 'family') {
+          return true
+        }
+        return item.create_type === 'family_companion' || item.slug === 'family_companion'
+      })
 
     return {
       ...section,
@@ -190,7 +206,7 @@ function getWizardTypeForGroup(group: string) {
 
 function buildWizardQuery(item: CreateCatalogItem) {
   return {
-    create_type: getWizardTypeForGroup(item.group),
+    create_type: getWizardCreateTypeForItem(item),
     group: item.group,
     source_repo: item.source_repo,
     display_name: item.name,
@@ -201,7 +217,7 @@ function buildWizardQuery(item: CreateCatalogItem) {
 }
 
 function canOpenWizard(item: CreateCatalogItem) {
-  return Boolean(getWizardTypeForGroup(item.group))
+  return Boolean(getWizardCreateTypeForItem(item))
 }
 
 function toggleSection(sectionKey: MainPathKey) {
@@ -209,7 +225,7 @@ function toggleSection(sectionKey: MainPathKey) {
 }
 
 function startCreation(item: CreateCatalogItem) {
-  const type = getWizardTypeForGroup(item.group)
+  const type = getWizardCreateTypeForItem(item)
   if (!type) {
     return
   }

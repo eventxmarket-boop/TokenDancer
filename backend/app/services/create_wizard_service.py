@@ -6,18 +6,22 @@ from typing import Any
 from uuid import uuid4
 
 from app.schemas.create_wizard import CreateWizardDraftMeta
+from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
 
 
 class CreateWizardError(RuntimeError):
     pass
 
 
-SUPPORTED_CREATE_TYPES = {"self_persona", "source_persona", "relationship_persona"}
+SUPPORTED_CREATE_TYPES = {"self_persona", "source_persona", "relationship_persona", "family_companion"}
+
+FAMILY_COMPANION_SOURCE_REPO = "MamaSkill+parents-skills+darwin-skill"
 
 CREATE_TYPE_LABELS = {
     "self_persona": "自我人格",
     "source_persona": "从资料创建人格",
     "relationship_persona": "关系人格",
+    "family_companion": "家人陪伴",
 }
 
 CREATE_TYPE_CONFIG = {
@@ -47,6 +51,13 @@ CREATE_TYPE_CONFIG = {
         ],
         "source_hint": "关系人格模板",
     },
+    "family_companion": {
+        "group": "relationship_family",
+        "source_repo": FAMILY_COMPANION_SOURCE_REPO,
+        "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
+        "source_repos": ["MamaSkill", "parents-skills", "darwin-skill"],
+        "source_hint": "家人陪伴模板",
+    },
 }
 
 INPUT_MODE_BY_SOURCE_REPO = {
@@ -70,6 +81,7 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "shuixian-skill": "self_mirror",
     "xinyi": "relationship_interpreter",
     "parents-skills": "parents",
+    FAMILY_COMPANION_SOURCE_REPO: "mother",
     "reunion-skill": "reunion",
     "MamaSkill": "mama",
     "digital-twin-skill": "multi_source",
@@ -98,6 +110,7 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     "shuixian-skill": "relationship_intimate_self_mirror",
     "xinyi": "relationship_intimate_relationship_interpreter",
     "parents-skills": "relationship_family_parents",
+    FAMILY_COMPANION_SOURCE_REPO: "family_companion_mother",
     "reunion-skill": "relationship_family_reunion",
     "MamaSkill": "relationship_family_mama",
     "digital-twin-skill": "digital_twin_high_fidelity",
@@ -128,6 +141,7 @@ REPO_URL_BY_SOURCE_REPO = {
     "parents-skills": "https://github.com/xiaoheizi8/parents-skills",
     "reunion-skill": "https://github.com/yangdongchen66-boop/reunion-skill",
     "MamaSkill": "https://github.com/jiangziyan-693/MamaSkill",
+    FAMILY_COMPANION_SOURCE_REPO: "https://github.com/jiangziyan-693/MamaSkill",
     "digital-twin-skill": "https://github.com/FredHJC/digital-twin-skill",
     "immortal-skill": "https://github.com/agenmod/immortal-skill",
     "anti-distill": "https://github.com/leilei926524-tech/anti-distill",
@@ -149,6 +163,8 @@ RELATIONSHIP_LABELS = {
     "self_mirror": "自我镜像伴侣",
     "relationship_interpreter": "关系理解辅助",
     "parents": "父母",
+    "mother": "妈妈",
+    "other_family": "其他家人",
     "reunion": "重逢人格",
     "mama": "妈妈",
 }
@@ -170,6 +186,11 @@ INPUT_MODE_LABELS = {
         "supervisor": "导师",
         "parents": "父母",
         "partner": "伴侣",
+    },
+    "family_companion": {
+        "mother": "妈妈",
+        "parents": "父母",
+        "other_family": "其他家人",
     },
 }
 
@@ -215,10 +236,14 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
         return "manual_profile"
     if create_type == "source_persona":
         return "documents"
+    if create_type == "family_companion":
+        return "mother"
     return "colleague"
 
 
 def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, display_name: str) -> str:
+    if create_type == "family_companion":
+        return f"family_companion_{input_mode or 'mother'}"
     if source_repo and source_repo in SCHEMA_KEY_BY_SOURCE_REPO:
         return SCHEMA_KEY_BY_SOURCE_REPO[source_repo]
     fallback = f"{create_type}_{input_mode or 'default'}"
@@ -384,6 +409,90 @@ def _build_relationship_draft(
     }
 
 
+def _build_family_companion_draft(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+) -> dict[str, Any]:
+    relation_type = (
+        _normalize_text(form_data.get("relationship_type"))
+        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or _normalize_text(display_name)
+        or "家人陪伴"
+    )
+    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
+    tone = _normalize_text(form_data.get("speech_style")) or "温和、亲近、稳一点。"
+    catchphrases = _clean_lines(form_data.get("catchphrases")) or ["先把情绪放一放", "别着急，慢慢来"]
+    comfort_style = _normalize_text(form_data.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
+    celebration_style = _normalize_text(form_data.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
+    boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。"
+    shared_events = _clean_lines(form_data.get("shared_events")) or ["小时候一起吃饭的场景", "你难过时被安慰的瞬间"]
+    important_advice = _clean_lines(form_data.get("important_advice")) or ["先照顾好自己", "遇到事先稳住再做决定"]
+    daily_habits = _clean_lines(form_data.get("daily_habits")) or ["会关心你吃饭没", "会提醒你注意休息"]
+
+    persona_profile = FamilyCompanionPersonaProfile(
+        relationship_type=relation_type,
+        name=name,
+        tone=tone,
+        catchphrases=catchphrases,
+        comfort_style=comfort_style,
+        celebration_style=celebration_style,
+        boundaries=boundaries,
+    )
+    memory_base = FamilyCompanionMemoryBase(
+        shared_events=shared_events,
+        important_advice=important_advice,
+        daily_habits=daily_habits,
+        emotional_triggers=_clean_lines(form_data.get("emotional_triggers")),
+    )
+
+    profile = (
+        f"家人陪伴定位：{relation_type}\n"
+        f"称呼：{name}\n"
+        f"说话风格：{tone}\n"
+        f"主要用途：在你需要陪伴、安慰或分享好消息时，给出更贴近家人的回应。"
+    )
+    mindset = _format_bullets(
+        [
+            "先看对方的情绪状态，再决定是安慰、鼓励还是提醒",
+            "先调动记忆里的熟悉感，再结合当前语境回应",
+            "如果信息不足，先补充你们之间的关系背景",
+        ]
+    )
+    heuristics = _format_bullets(
+        [
+            "难过时先接住情绪，再给稳一点的建议",
+            "有好消息时先表达高兴，再顺着把喜悦说完整",
+            "遇到边界话题时先收住，不越界逼问",
+        ]
+    )
+    expression = _format_bullets(
+        [
+            f"常见说话感觉：{tone}",
+            f"口头禅：{'；'.join(catchphrases)}",
+            "回答时保持熟悉、自然、带温度",
+        ]
+    )
+    guardrails = _format_bullets(
+        [
+            f"边界要求：{boundaries}",
+            "不伪造不确定的家庭事实",
+            "不把关心变成控制",
+        ]
+    )
+    return {
+        "profile": profile,
+        "mindset": mindset,
+        "heuristics": heuristics,
+        "expression": expression,
+        "guardrails": guardrails,
+        "relationship_type": relation_type,
+        "persona_profile": persona_profile.model_dump(),
+        "memory_base": memory_base.model_dump(),
+        "name": name,
+    }
+
+
 def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     normalized_create_type = _validate_create_type(payload.get("create_type", ""))
     config = CREATE_TYPE_CONFIG[normalized_create_type]
@@ -410,6 +519,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         content = _build_self_draft(form_data, normalized_display_name)
     elif normalized_create_type == "source_persona":
         content = _build_source_draft(form_data, normalized_display_name)
+    elif normalized_create_type == "family_companion":
+        content = _build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
     else:
         content = _build_relationship_draft(form_data, normalized_display_name, normalized_input_mode)
 
@@ -443,4 +554,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "heuristics": content["heuristics"],
         "expression": content["expression"],
         "guardrails": content["guardrails"],
+        "relationship_type": content.get("relationship_type", ""),
+        "persona_profile": content.get("persona_profile"),
+        "memory_base": content.get("memory_base"),
     }

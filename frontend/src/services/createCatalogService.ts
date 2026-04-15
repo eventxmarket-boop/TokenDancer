@@ -4,6 +4,7 @@ export type CreateCatalogItem = {
   slug: string
   name: string
   group: string
+  create_type: string
   source_repo: string
   repo_url: string
   description: string

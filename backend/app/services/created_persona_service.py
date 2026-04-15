@@ -23,11 +23,21 @@ _PERSONA_TYPE_LABELS = {
     "self_persona": "自我",
     "source_persona": "资料",
     "relationship_persona": "关系",
+    "family_companion": "家人陪伴",
 }
 
 
 def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _clean_lines(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = _normalize_text(value)
+    if not text:
+        return []
+    return [line.strip("•- \t") for line in text.splitlines() if line.strip()]
 
 
 def _build_slug(seed_name: str, persona_type: str) -> str:
@@ -41,6 +51,25 @@ def _build_slug(seed_name: str, persona_type: str) -> str:
 
 
 def _build_summary(draft: CreateWizardDraft) -> str:
+    if _normalize_text(draft.meta.create_type) == "family_companion":
+        profile = draft.persona_profile or {}
+        memory = draft.memory_base or {}
+        profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
+        relationship_type = _normalize_text(
+            profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
+        )
+        tone = _normalize_text(profile.get("tone") if isinstance(profile, dict) else getattr(profile, "tone", ""))
+        memories = []
+        if isinstance(memory, dict):
+            memories.extend(_clean_lines(memory.get("shared_events")))
+            memories.extend(_clean_lines(memory.get("important_advice")))
+        summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
+        if summary_parts or memories:
+            combined = " · ".join(summary_parts)
+            if memories:
+                combined = f"{combined} / {memories[0]}" if combined else memories[0]
+            return combined[:120]
+
     pieces = [draft.profile, draft.mindset, draft.heuristics]
     for piece in pieces:
         text = _normalize_text(piece)
@@ -170,6 +199,13 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     display_type = _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type)
     intro = _normalize_text(getattr(draft.meta, "source_hint", ""))
     profile = _normalize_text(draft.profile)
+    relation_type = _normalize_text(getattr(draft, "relationship_type", ""))
+    persona_profile = getattr(draft, "persona_profile", None)
+    if not relation_type and persona_profile is not None:
+        if isinstance(persona_profile, dict):
+            relation_type = _normalize_text(persona_profile.get("relationship_type"))
+        else:
+            relation_type = _normalize_text(getattr(persona_profile, "relationship_type", ""))
 
     return {
         "id": str(record.id),
@@ -179,7 +215,7 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
         "avatar": None,
         "intro": intro or (profile[:80] if profile else record.summary),
         "profile": draft.profile,
-        "tags": [display_type],
+        "tags": [tag for tag in [display_type, relation_type] if tag],
         "topics": [],
         "recommendedQuestions": [],
         "version": getattr(draft.meta, "version", ""),
