@@ -5,6 +5,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+from app.schemas.intimate_companion import (
+    IntimateCompanionMemoryBase,
+    IntimateCompanionRelationshipProfile,
+)
 
 
 class CreateWizardDraftRequest(BaseModel):
@@ -48,6 +52,8 @@ class CreateWizardDraft(BaseModel):
     relationship_type: str = ""
     persona_profile: FamilyCompanionPersonaProfile | None = None
     memory_base: FamilyCompanionMemoryBase | None = None
+    relationship_profile: IntimateCompanionRelationshipProfile | None = None
+    intimate_memory_base: IntimateCompanionMemoryBase | None = None
 
 
 class CreateWizardDraftResponse(BaseModel):

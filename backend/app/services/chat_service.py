@@ -23,6 +23,7 @@ from app.services.llm_gateway import generate_reply
 from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
 from app.services.family_companion_service import build_family_companion_context
+from app.services.intimate_companion_service import build_intimate_companion_context
 from app.services.zhangxuefeng_research import (
     classify_zhangxuefeng_question,
     research_education_question,
@@ -471,6 +472,15 @@ async def chat_with_persona(
     if not is_family_companion:
         family_source_repo = str(persona_meta.get("source_repo") or "").strip()
         is_family_companion = family_source_repo in {"MamaSkill", "parents-skills", "MamaSkill+parents-skills+darwin-skill"}
+    is_intimate_companion = create_type == "intimate_companion"
+    if not is_intimate_companion:
+        intimate_source_repo = str(persona_meta.get("source_repo") or "").strip()
+        is_intimate_companion = intimate_source_repo in {
+            "relationship-training-skill+xinyi",
+            "crush-skill",
+            "partner-skill+npy-skill",
+            "ex-skill+first-love-skill+shuixian-skill",
+        }
 
     normalized_message = user_message.strip()
     if not normalized_message:
@@ -498,6 +508,8 @@ async def chat_with_persona(
             facts_context = _format_research_context(research)
     elif is_family_companion:
         aux_context = build_family_companion_context(persona, history, normalized_message)
+    elif is_intimate_companion:
+        aux_context = build_intimate_companion_context(persona, history, normalized_message)
 
     messages = build_context_messages(
         persona,

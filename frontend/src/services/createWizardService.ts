@@ -52,6 +52,23 @@ export type FamilyCompanionMemoryBase = {
   emotional_triggers: string[]
 }
 
+export type IntimateCompanionRelationshipProfile = {
+  relationship_type: string
+  name: string
+  relationship_stage: string
+  tone: string
+  response_temperature: string
+  catchphrases: string[]
+  boundaries: string
+}
+
+export type IntimateCompanionMemoryBase = {
+  conversation_samples: string[]
+  interaction_rules: string[]
+  relationship_goals: string[]
+  key_memories: string[]
+}
+
 export type CreateWizardDraft = {
   meta: CreateWizardDraftMeta
   profile: string
@@ -62,6 +79,8 @@ export type CreateWizardDraft = {
   relationship_type?: string
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
+  relationship_profile?: IntimateCompanionRelationshipProfile | null
+  intimate_memory_base?: IntimateCompanionMemoryBase | null
 }
 
 export type CreateWizardDraftResponse = {

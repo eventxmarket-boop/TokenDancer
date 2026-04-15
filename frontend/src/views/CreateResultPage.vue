@@ -8,6 +8,8 @@ import {
   type CreateWizardDraft,
   type FamilyCompanionMemoryBase,
   type FamilyCompanionPersonaProfile,
+  type IntimateCompanionMemoryBase,
+  type IntimateCompanionRelationshipProfile,
 } from '@/services/createWizardService'
 import {
   loadMySeed,
@@ -37,6 +39,10 @@ const inputModeLabels: Record<string, string> = {
   partner: '伴侣',
   mother: '妈妈',
   other_family: '其他家人',
+  relationship_understanding: '关系理解',
+  message_simulation: '消息模拟',
+  partner_maintenance: '关系维护',
+  past_relation_mirror: '过去关系 / 自我镜像',
 }
 
 const editableDraft = reactive<CreateWizardDraft>({
@@ -68,6 +74,8 @@ const editableDraft = reactive<CreateWizardDraft>({
   relationship_type: '',
   persona_profile: null,
   memory_base: null,
+  relationship_profile: null,
+  intimate_memory_base: null,
 })
 
 const typeLabel = computed(() => {
@@ -84,6 +92,9 @@ const typeLabel = computed(() => {
   }
   if (type === 'family_companion') {
     return '家人陪伴'
+  }
+  if (type === 'intimate_companion') {
+    return '亲密关系'
   }
   return '关系人格'
 })
@@ -120,6 +131,22 @@ const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
   return payload
 })
 
+const intimateRelationshipProfile = computed<IntimateCompanionRelationshipProfile | null>(() => {
+  const payload = draft.value?.relationship_profile || editableDraft.relationship_profile
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const intimateMemoryBase = computed<IntimateCompanionMemoryBase | null>(() => {
+  const payload = draft.value?.intimate_memory_base || editableDraft.intimate_memory_base
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
 const familyProfileLines = computed(() => {
   const profile = familyPersonaProfile.value
   if (!profile) {
@@ -148,6 +175,37 @@ const familyMemoryLines = computed(() => {
     { label: '最常提起的往事', value: memory.daily_habits?.join(' / ') || '未填写' },
     { label: '反复说过的话', value: memory.important_advice?.join(' / ') || '未填写' },
     { label: '在意的事', value: memory.emotional_triggers?.join(' / ') || '未填写' },
+  ]
+})
+
+const intimateProfileLines = computed(() => {
+  const profile = intimateRelationshipProfile.value
+  if (!profile) {
+    return []
+  }
+
+  return [
+    { label: '关系类型', value: profile.relationship_type || '未填写' },
+    { label: '对象称呼', value: profile.name || '未填写' },
+    { label: '关系阶段', value: profile.relationship_stage || '未填写' },
+    { label: '说话风格', value: profile.tone || '未填写' },
+    { label: '回复温度', value: profile.response_temperature || '未填写' },
+    { label: '边界', value: profile.boundaries || '未填写' },
+    { label: '口头禅', value: profile.catchphrases?.join(' / ') || '未填写' },
+  ]
+})
+
+const intimateMemoryLines = computed(() => {
+  const memory = intimateMemoryBase.value
+  if (!memory) {
+    return []
+  }
+
+  return [
+    { label: '对话样本', value: memory.conversation_samples?.join(' / ') || '未填写' },
+    { label: '互动规则', value: memory.interaction_rules?.join(' / ') || '未填写' },
+    { label: '关系目标', value: memory.relationship_goals?.join(' / ') || '未填写' },
+    { label: '关键记忆', value: memory.key_memories?.join(' / ') || '未填写' },
   ]
 })
 
@@ -363,6 +421,26 @@ onMounted(() => {
           <p class="eyebrow">记忆层</p>
           <div class="family-grid">
             <div v-for="line in familyMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'intimate_companion'" class="draft-card">
+          <p class="eyebrow">关系层</p>
+          <div class="family-grid">
+            <div v-for="line in intimateProfileLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'intimate_companion'" class="draft-card">
+          <p class="eyebrow">记忆层</p>
+          <div class="family-grid">
+            <div v-for="line in intimateMemoryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

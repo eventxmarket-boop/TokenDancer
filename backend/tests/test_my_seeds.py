@@ -177,6 +177,88 @@ class MySeedsTests(unittest.TestCase):
             if created_id is not None:
                 with SessionLocal() as db:
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
+                db.commit()
+
+    def test_intimate_companion_seed_round_trip_persists_and_chats(self):
+        created_id: int | None = None
+
+        payload = {
+            "create_type": "intimate_companion",
+            "group": "relationship_intimate",
+            "source_repo": "relationship-training-skill+xinyi",
+            "display_name": "关系理解",
+            "input_mode": "relationship_understanding",
+            "schema_key": "intimate_companion_relationship_understanding",
+            "form_data": {
+                "relationship_type": "关系理解",
+                "persona_name": "关系理解",
+                "relationship_stage": "关系有点紧张，需要先看表达方式",
+                "speech_style": "自然、贴近、带一点熟悉感",
+                "response_temperature": "先接住情绪，再顺着回应",
+                "catchphrases": "我在听\n先别急",
+                "relation_boundaries": "不越界，不替对方下结论",
+                "conversation_samples": "你今天怎么了？\n最近在忙什么？",
+                "interaction_rules": "先回应情绪，再进入内容本身",
+                "relationship_goals": "让沟通更顺畅\n让关系更稳定",
+                "key_memories": "一起经历过的重要时刻\n常聊的话题",
+            },
+        }
+
+        try:
+            with TestClient(app) as client:
+                draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
+                self.assertEqual(draft_response.status_code, 200)
+                draft = draft_response.json()["draft"]
+
+                save_response = client.post(
+                    "/persona-api/my-seeds",
+                    json={
+                        "draft": draft,
+                        "source_type": "create_wizard",
+                        "status": "saved",
+                    },
+                )
+                self.assertEqual(save_response.status_code, 200)
+                saved = save_response.json()
+                created_id = saved["id"]
+
+                detail_response = client.get(f"/persona-api/my-seeds/{created_id}")
+                self.assertEqual(detail_response.status_code, 200)
+                detail = detail_response.json()
+                self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "intimate_companion")
+                self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "intimate_companion_relationship_understanding")
+                self.assertEqual(detail["draft_payload"]["relationship_type"], "关系理解")
+
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                self.assertEqual(persona_response.status_code, 200)
+                persona = persona_response.json()
+                self.assertEqual(persona["slug"], saved["slug"])
+                self.assertIn("亲密关系", persona.get("category", ""))
+
+                with patch("app.services.chat_service.generate_reply") as fake_reply:
+                    fake_reply.return_value = {
+                        "content": "我在听",
+                        "model": "gpt-admin-test",
+                        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                        "latency_ms": 1,
+                    }
+                    chat_response = client.post(
+                        "/persona-api/chat",
+                        json={
+                            "persona_slug": saved["slug"],
+                            "session_id": None,
+                            "message": "我今天有点烦",
+                        },
+                    )
+
+                self.assertEqual(chat_response.status_code, 200)
+                chat_body = chat_response.json()
+                self.assertEqual(chat_body["persona_slug"], saved["slug"])
+                self.assertTrue(chat_body["reply"])
+        finally:
+            if created_id is not None:
+                with SessionLocal() as db:
+                    db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
                     db.commit()
 
 

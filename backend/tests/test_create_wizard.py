@@ -112,6 +112,46 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("家人陪伴", body["draft"]["profile"])
         self.assertIn("妈妈", body["draft"]["profile"])
 
+    def test_create_wizard_draft_endpoint_builds_intimate_companion_draft(self):
+        payload = {
+            "create_type": "intimate_companion",
+            "group": "relationship_intimate",
+            "source_repo": "relationship-training-skill+xinyi",
+            "display_name": "关系理解",
+            "input_mode": "relationship_understanding",
+            "schema_key": "intimate_companion_relationship_understanding",
+            "form_data": {
+                "relationship_type": "关系理解",
+                "persona_name": "关系理解",
+                "relationship_stage": "关系有点紧张，需要先看表达方式",
+                "speech_style": "自然、贴近、带一点熟悉感",
+                "response_temperature": "先接住情绪，再顺着回应",
+                "catchphrases": "我在听\n先别急",
+                "relation_boundaries": "不越界，不替对方下结论",
+                "conversation_samples": "你今天怎么了？\n最近在忙什么？",
+                "interaction_rules": "先回应情绪，再进入内容本身",
+                "relationship_goals": "让沟通更顺畅\n让关系更稳定",
+                "key_memories": "一起经历过的重要时刻\n常聊的话题",
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["meta"]["create_type"], "intimate_companion")
+        self.assertEqual(body["draft"]["meta"]["group"], "relationship_intimate")
+        self.assertEqual(body["draft"]["meta"]["source_repo"], "relationship-training-skill+xinyi")
+        self.assertEqual(body["draft"]["meta"]["display_name"], "关系理解")
+        self.assertEqual(body["draft"]["meta"]["input_mode"], "relationship_understanding")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "intimate_companion_relationship_understanding")
+        self.assertEqual(body["draft"]["relationship_type"], "关系理解")
+        self.assertIsNotNone(body["draft"]["relationship_profile"])
+        self.assertIsNotNone(body["draft"]["intimate_memory_base"])
+        self.assertIn("亲密关系", body["draft"]["profile"])
+        self.assertIn("关系理解", body["draft"]["profile"])
+
     def test_create_wizard_draft_endpoint_rejects_unsupported_type(self):
         payload = {
             "create_type": "digital_twin",

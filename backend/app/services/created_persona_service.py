@@ -23,6 +23,7 @@ _PERSONA_TYPE_LABELS = {
     "self_persona": "自我",
     "source_persona": "资料",
     "relationship_persona": "关系",
+    "intimate_companion": "亲密关系",
     "family_companion": "家人陪伴",
 }
 
@@ -51,6 +52,30 @@ def _build_slug(seed_name: str, persona_type: str) -> str:
 
 
 def _build_summary(draft: CreateWizardDraft) -> str:
+    if _normalize_text(draft.meta.create_type) == "intimate_companion":
+        profile = draft.relationship_profile or {}
+        memory = draft.intimate_memory_base or {}
+        profile_name = _normalize_text(
+            profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", "")
+        )
+        relationship_type = _normalize_text(
+            profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
+        )
+        stage = _normalize_text(
+            profile.get("relationship_stage") if isinstance(profile, dict) else getattr(profile, "relationship_stage", "")
+        )
+        tone = _normalize_text(profile.get("tone") if isinstance(profile, dict) else getattr(profile, "tone", ""))
+        memories = []
+        if isinstance(memory, dict):
+            memories.extend(_clean_lines(memory.get("conversation_samples")))
+            memories.extend(_clean_lines(memory.get("relationship_goals")))
+        summary_parts = [part for part in [profile_name, relationship_type, stage, tone] if part]
+        if summary_parts or memories:
+            combined = " · ".join(summary_parts)
+            if memories:
+                combined = f"{combined} / {memories[0]}" if combined else memories[0]
+            return combined[:120]
+
     if _normalize_text(draft.meta.create_type) == "family_companion":
         profile = draft.persona_profile or {}
         memory = draft.memory_base or {}
@@ -201,11 +226,17 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     profile = _normalize_text(draft.profile)
     relation_type = _normalize_text(getattr(draft, "relationship_type", ""))
     persona_profile = getattr(draft, "persona_profile", None)
+    intimate_profile = getattr(draft, "relationship_profile", None)
     if not relation_type and persona_profile is not None:
         if isinstance(persona_profile, dict):
             relation_type = _normalize_text(persona_profile.get("relationship_type"))
         else:
             relation_type = _normalize_text(getattr(persona_profile, "relationship_type", ""))
+    if not relation_type and intimate_profile is not None:
+        if isinstance(intimate_profile, dict):
+            relation_type = _normalize_text(intimate_profile.get("relationship_type"))
+        else:
+            relation_type = _normalize_text(getattr(intimate_profile, "relationship_type", ""))
 
     return {
         "id": str(record.id),

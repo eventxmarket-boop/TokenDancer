@@ -7,21 +7,36 @@ from uuid import uuid4
 
 from app.schemas.create_wizard import CreateWizardDraftMeta
 from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+from app.schemas.intimate_companion import (
+    IntimateCompanionMemoryBase,
+    IntimateCompanionRelationshipProfile,
+)
 
 
 class CreateWizardError(RuntimeError):
     pass
 
 
-SUPPORTED_CREATE_TYPES = {"self_persona", "source_persona", "relationship_persona", "family_companion"}
+SUPPORTED_CREATE_TYPES = {
+    "self_persona",
+    "source_persona",
+    "relationship_persona",
+    "family_companion",
+    "intimate_companion",
+}
 
 FAMILY_COMPANION_SOURCE_REPO = "MamaSkill+parents-skills+darwin-skill"
+INTIMATE_UNDERSTANDING_SOURCE_REPO = "relationship-training-skill+xinyi"
+INTIMATE_SIMULATION_SOURCE_REPO = "crush-skill"
+INTIMATE_PARTNER_SOURCE_REPO = "partner-skill+npy-skill"
+INTIMATE_PAST_RELATION_SOURCE_REPO = "ex-skill+first-love-skill+shuixian-skill"
 
 CREATE_TYPE_LABELS = {
     "self_persona": "自我人格",
     "source_persona": "从资料创建人格",
     "relationship_persona": "关系人格",
     "family_companion": "家人陪伴",
+    "intimate_companion": "亲密关系",
 }
 
 CREATE_TYPE_CONFIG = {
@@ -43,12 +58,7 @@ CREATE_TYPE_CONFIG = {
         "group": "relationship",
         "source_repo": "relationship-skill-kit",
         "repo_url": "https://github.com/titanwings/colleague-skill",
-        "source_repos": [
-            "colleague-skill",
-            "supervisor",
-            "parents-skills",
-            "partner-skill",
-        ],
+        "source_repos": ["colleague-skill", "supervisor", "senpai-skill", "professor-skill", "Professor_skill"],
         "source_hint": "关系人格模板",
     },
     "family_companion": {
@@ -57,6 +67,18 @@ CREATE_TYPE_CONFIG = {
         "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
         "source_repos": ["MamaSkill", "parents-skills", "darwin-skill"],
         "source_hint": "家人陪伴模板",
+    },
+    "intimate_companion": {
+        "group": "relationship_intimate",
+        "source_repo": INTIMATE_UNDERSTANDING_SOURCE_REPO,
+        "repo_url": "https://github.com/kroxchan/xinyi",
+        "source_repos": [
+            INTIMATE_UNDERSTANDING_SOURCE_REPO,
+            INTIMATE_SIMULATION_SOURCE_REPO,
+            INTIMATE_PARTNER_SOURCE_REPO,
+            INTIMATE_PAST_RELATION_SOURCE_REPO,
+        ],
+        "source_hint": "亲密关系模板",
     },
 }
 
@@ -87,6 +109,18 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "digital-twin-skill": "multi_source",
     "immortal-skill": "multi_source",
     "anti-distill": "documents",
+    "relationship-training-skill": "relationship_understanding",
+    "xinyi": "relationship_understanding",
+    INTIMATE_UNDERSTANDING_SOURCE_REPO: "relationship_understanding",
+    "crush-skill": "message_simulation",
+    "partner-skill": "partner_maintenance",
+    "npy-skill": "partner_maintenance",
+    INTIMATE_SIMULATION_SOURCE_REPO: "message_simulation",
+    INTIMATE_PARTNER_SOURCE_REPO: "partner_maintenance",
+    "ex-skill": "past_relation_mirror",
+    "first-love-skill": "past_relation_mirror",
+    "shuixian-skill": "past_relation_mirror",
+    INTIMATE_PAST_RELATION_SOURCE_REPO: "past_relation_mirror",
 }
 
 SCHEMA_KEY_BY_SOURCE_REPO = {
@@ -101,14 +135,18 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     "senpai-skill": "relationship_academia_senpai",
     "professor-skill": "relationship_academia_professor_a",
     "Professor_skill": "relationship_academia_professor_b",
-    "ex-skill": "relationship_intimate_ex",
-    "relationship-training-skill": "relationship_intimate_relationship_training",
-    "npy-skill": "relationship_intimate_ideal_partner",
-    "crush-skill": "relationship_intimate_crush",
-    "partner-skill": "relationship_intimate_partner",
-    "first-love-skill": "relationship_intimate_first_love",
-    "shuixian-skill": "relationship_intimate_self_mirror",
-    "xinyi": "relationship_intimate_relationship_interpreter",
+    "relationship-training-skill": "intimate_companion_relationship_understanding",
+    "xinyi": "intimate_companion_relationship_understanding",
+    INTIMATE_UNDERSTANDING_SOURCE_REPO: "intimate_companion_relationship_understanding",
+    "crush-skill": "intimate_companion_message_simulation",
+    "partner-skill": "intimate_companion_partner_maintenance",
+    "npy-skill": "intimate_companion_partner_maintenance",
+    INTIMATE_SIMULATION_SOURCE_REPO: "intimate_companion_message_simulation",
+    INTIMATE_PARTNER_SOURCE_REPO: "intimate_companion_partner_maintenance",
+    "ex-skill": "intimate_companion_past_relation_mirror",
+    "first-love-skill": "intimate_companion_past_relation_mirror",
+    "shuixian-skill": "intimate_companion_past_relation_mirror",
+    INTIMATE_PAST_RELATION_SOURCE_REPO: "intimate_companion_past_relation_mirror",
     "parents-skills": "relationship_family_parents",
     FAMILY_COMPANION_SOURCE_REPO: "family_companion_mother",
     "reunion-skill": "relationship_family_reunion",
@@ -138,6 +176,10 @@ REPO_URL_BY_SOURCE_REPO = {
     "first-love-skill": "https://github.com/z969081067-commits/first-love-skill",
     "shuixian-skill": "https://github.com/Cyh29hao/shuixian-skill",
     "xinyi": "https://github.com/kroxchan/xinyi",
+    INTIMATE_UNDERSTANDING_SOURCE_REPO: "https://github.com/kroxchan/xinyi",
+    INTIMATE_SIMULATION_SOURCE_REPO: "https://github.com/yyyyyyylll/crush-skill",
+    INTIMATE_PARTNER_SOURCE_REPO: "https://github.com/NatalieCao323/partner-skill",
+    INTIMATE_PAST_RELATION_SOURCE_REPO: "https://github.com/titanwings/ex-skill",
     "parents-skills": "https://github.com/xiaoheizi8/parents-skills",
     "reunion-skill": "https://github.com/yangdongchen66-boop/reunion-skill",
     "MamaSkill": "https://github.com/jiangziyan-693/MamaSkill",
@@ -162,6 +204,10 @@ RELATIONSHIP_LABELS = {
     "first_love": "初恋",
     "self_mirror": "自我镜像伴侣",
     "relationship_interpreter": "关系理解辅助",
+    "relationship_understanding": "关系理解",
+    "message_simulation": "消息模拟",
+    "partner_maintenance": "关系维护",
+    "past_relation_mirror": "过去关系 / 自我镜像",
     "parents": "父母",
     "mother": "妈妈",
     "other_family": "其他家人",
@@ -183,9 +229,17 @@ INPUT_MODE_LABELS = {
     },
     "relationship_persona": {
         "colleague": "同事",
+        "boss": "老板",
         "supervisor": "导师",
-        "parents": "父母",
-        "partner": "伴侣",
+        "senpai": "师兄",
+        "professor_a": "大学老师",
+        "professor_b": "大学老师（模板 B）",
+    },
+    "intimate_companion": {
+        "relationship_understanding": "关系理解",
+        "message_simulation": "消息模拟",
+        "partner_maintenance": "关系维护",
+        "past_relation_mirror": "过去关系 / 自我镜像",
     },
     "family_companion": {
         "mother": "妈妈",
@@ -238,12 +292,16 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
         return "documents"
     if create_type == "family_companion":
         return "mother"
+    if create_type == "intimate_companion":
+        return "relationship_understanding"
     return "colleague"
 
 
 def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, display_name: str) -> str:
     if create_type == "family_companion":
         return f"family_companion_{input_mode or 'mother'}"
+    if create_type == "intimate_companion":
+        return f"intimate_companion_{input_mode or 'relationship_understanding'}"
     if source_repo and source_repo in SCHEMA_KEY_BY_SOURCE_REPO:
         return SCHEMA_KEY_BY_SOURCE_REPO[source_repo]
     fallback = f"{create_type}_{input_mode or 'default'}"
@@ -493,6 +551,104 @@ def _build_family_companion_draft(
     }
 
 
+def _build_intimate_companion_draft(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+) -> dict[str, Any]:
+    relation_type = (
+        _normalize_text(form_data.get("relationship_type"))
+        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or _normalize_text(display_name)
+        or "亲密关系"
+    )
+    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
+    relationship_stage = _normalize_text(form_data.get("relationship_stage")) or "暧昧 / 关系中 / 磨合中"
+    tone = _normalize_text(form_data.get("speech_style")) or "自然、亲近、带一点熟悉感。"
+    response_temperature = _normalize_text(form_data.get("response_temperature")) or "先接住情绪，再顺着回应。"
+    catchphrases = _clean_lines(form_data.get("catchphrases")) or ["最近怎么样", "我在听"]
+    boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不越界，不替对方下结论。"
+    conversation_samples = _clean_lines(form_data.get("conversation_samples")) or [
+        "你今天过得怎么样？",
+        "最近在忙什么？",
+    ]
+    interaction_rules = _clean_lines(form_data.get("interaction_rules")) or [
+        "先回应情绪，再给建议",
+        "不要一下子逼问对方",
+    ]
+    relationship_goals = _clean_lines(form_data.get("relationship_goals")) or [
+        "让沟通更顺畅",
+        "让关系更稳定",
+    ]
+    key_memories = _clean_lines(form_data.get("key_memories")) or [
+        "常聊的话题",
+        "一起经历过的重要时刻",
+    ]
+
+    relationship_profile = IntimateCompanionRelationshipProfile(
+        relationship_type=relation_type,
+        name=name,
+        relationship_stage=relationship_stage,
+        tone=tone,
+        response_temperature=response_temperature,
+        catchphrases=catchphrases,
+        boundaries=boundaries,
+    )
+    memory_base = IntimateCompanionMemoryBase(
+        conversation_samples=conversation_samples,
+        interaction_rules=interaction_rules,
+        relationship_goals=relationship_goals,
+        key_memories=key_memories,
+    )
+
+    profile = (
+        f"亲密关系定位：{relation_type}\n"
+        f"称呼：{name}\n"
+        f"关系阶段：{relationship_stage}\n"
+        f"说话风格：{tone}\n"
+        f"回复温度：{response_temperature}"
+    )
+    mindset = _format_bullets(
+        [
+            "先看关系阶段，再决定是安抚、回应还是给建议",
+            "先判断对方这句话想传达什么，再选择回应节奏",
+            "信息不足时先补关系背景和对话样本",
+        ]
+    )
+    heuristics = _format_bullets(
+        [
+            "先回应情绪，再进入内容本身",
+            "优先用真实聊天样本里的节奏，而不是空泛模板",
+            "如果当前问题涉及关系边界，先稳住边界再谈互动",
+        ]
+    )
+    expression = _format_bullets(
+        [
+            f"常见说话感觉：{tone}",
+            f"回应温度：{response_temperature}",
+            f"口头禅：{'；'.join(catchphrases)}",
+        ]
+    )
+    guardrails = _format_bullets(
+        [
+            f"边界要求：{boundaries}",
+            "不伪造未确认的关系事实",
+            "不把单条消息误判成全部关系状态",
+        ]
+    )
+    return {
+        "profile": profile,
+        "mindset": mindset,
+        "heuristics": heuristics,
+        "expression": expression,
+        "guardrails": guardrails,
+        "relationship_type": relation_type,
+        "relationship_profile": relationship_profile.model_dump(),
+        "intimate_memory_base": memory_base.model_dump(),
+        "name": name,
+    }
+
+
 def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     normalized_create_type = _validate_create_type(payload.get("create_type", ""))
     config = CREATE_TYPE_CONFIG[normalized_create_type]
@@ -521,6 +677,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         content = _build_source_draft(form_data, normalized_display_name)
     elif normalized_create_type == "family_companion":
         content = _build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
+    elif normalized_create_type == "intimate_companion":
+        content = _build_intimate_companion_draft(form_data, normalized_display_name, normalized_input_mode)
     else:
         content = _build_relationship_draft(form_data, normalized_display_name, normalized_input_mode)
 
@@ -557,4 +715,6 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "relationship_type": content.get("relationship_type", ""),
         "persona_profile": content.get("persona_profile"),
         "memory_base": content.get("memory_base"),
+        "relationship_profile": content.get("relationship_profile"),
+        "intimate_memory_base": content.get("intimate_memory_base"),
     }

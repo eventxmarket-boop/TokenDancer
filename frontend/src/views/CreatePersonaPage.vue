@@ -193,12 +193,13 @@ function getWizardTypeForGroup(group: string) {
   if (group === 'source') {
     return 'source_persona'
   }
-  if (
-    group === 'relationship_workplace' ||
-    group === 'relationship_academia' ||
-    group === 'relationship_intimate' ||
-    group === 'relationship_family'
-  ) {
+  if (group === 'relationship_family') {
+    return 'family_companion'
+  }
+  if (group === 'relationship_intimate') {
+    return 'intimate_companion'
+  }
+  if (group === 'relationship_workplace' || group === 'relationship_academia') {
     return 'relationship_persona'
   }
   return ''

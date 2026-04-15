@@ -6,6 +6,10 @@ from app.schemas.created_persona import (
     CreatedPersonaSummary,
 )
 from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+from app.schemas.intimate_companion import (
+    IntimateCompanionMemoryBase,
+    IntimateCompanionRelationshipProfile,
+)
 
 __all__ = [
     "CreatedPersonaDetailResponse",
@@ -15,4 +19,6 @@ __all__ = [
     "CreatedPersonaSummary",
     "FamilyCompanionMemoryBase",
     "FamilyCompanionPersonaProfile",
+    "IntimateCompanionMemoryBase",
+    "IntimateCompanionRelationshipProfile",
 ]

@@ -196,6 +196,13 @@
 - 将 darwin 风格的评估与回滚思路纳入家庭人格优化骨架
 - 收口家庭关系类 Create 路径，避免重复入口
 
+## V1.4.18 - 2026-04-16
+
+- Prioritized the family and intimate relation Create paths as the first fully usable chains.
+- Unified intimate relation creation into four main paths: relation understanding, message simulation, relationship maintenance, and past relation mirror.
+- Expanded the family companion and intimate companion creation flows with explicit profile and memory layers.
+- Started merging the four self-related Create entries into a later unified main line.
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.

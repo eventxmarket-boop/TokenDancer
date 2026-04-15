@@ -12,6 +12,7 @@ const typeLabels: Record<string, string> = {
   self_persona: '自我',
   source_persona: '资料',
   relationship_persona: '关系',
+  intimate_companion: '亲密关系',
   family_companion: '家人陪伴',
 }
 
@@ -23,7 +24,7 @@ const groupedSeeds = computed(() => {
     map.set(seed.persona_type, bucket)
   }
 
-  const order = ['self_persona', 'source_persona', 'relationship_persona', 'family_companion']
+  const order = ['self_persona', 'source_persona', 'relationship_persona', 'intimate_companion', 'family_companion']
   return order
     .map((type) => ({
       type,
