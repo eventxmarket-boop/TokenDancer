@@ -4,7 +4,7 @@
       <div class="home-landing__copy">
         <p class="eyebrow">人格小屋</p>
         <h1>创造一个人格，也可以直接选择一个人格开始聊天。</h1>
-        <p class="hero-text">一个更轻、更直观的入口页。先从自己开始，或者先从一个现成人格开始。</p>
+        <p class="hero-text">从自己开始，或者先从一个对话开始。</p>
       </div>
 
       <div class="home-sticker-stack" aria-hidden="true">

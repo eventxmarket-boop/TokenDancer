@@ -1,5 +1,10 @@
 # Changelog
 
+## V1.4.6 - 2026-04-16
+
+- Simplified the homepage subtitle so it now reads as a single concise product statement.
+- Kept the homepage layout, stickers, and navigation behavior unchanged while tightening the opening copy.
+
 ## V1.4.5 - 2026-04-16
 
 - Reworked the homepage into a minimal entry screen with two central stickers and two primary actions.
