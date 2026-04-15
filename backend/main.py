@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.version import get_project_version
 from app.routers.persona import router as persona_router
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Tokendancer Persona Station API",
-        version="V1.0.0",
+        version=get_project_version(),
         docs_url="/persona-api/docs",
         openapi_url="/persona-api/openapi.json",
         redoc_url=None,

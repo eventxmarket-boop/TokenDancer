@@ -1,4 +1,19 @@
-import { getPersonaById, personas, type Persona } from '@/data/personas'
+export type Persona = {
+  id: string
+  slug: string
+  name: string
+  category: string
+  avatar: string | null
+  intro: string
+  profile: string
+  tags: string[]
+  topics: string[]
+  recommendedQuestions: string[]
+  version: string
+  status: string
+}
+
+const API_PREFIX = '/persona-api'
 
 const replyTemplates: Record<string, string[]> = {
   paul_graham: [
@@ -23,12 +38,42 @@ const replyTemplates: Record<string, string[]> = {
   ],
 }
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const detail = await readErrorMessage(response)
+    throw new Error(detail || `Request failed with status ${response.status}`)
+  }
+
+  return (await response.json()) as T
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  const text = await response.text()
+
+  try {
+    const payload = JSON.parse(text) as Record<string, unknown>
+    const message = payload.detail ?? payload.message
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim()
+    }
+  } catch {
+    // fall back to raw text below
+  }
+
+  return text.trim()
+}
+
 export async function listPersonas(): Promise<Persona[]> {
-  return personas
+  const response = await fetch(`${API_PREFIX}/personas`)
+  return readJson<Persona[]>(response)
 }
 
 export async function loadPersona(id: string): Promise<Persona | null> {
-  return getPersonaById(id)
+  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(id)}`)
+  if (response.status === 404) {
+    return null
+  }
+  return readJson<Persona>(response)
 }
 
 export function buildMockReply(persona: Persona, userMessage: string): string {
@@ -42,8 +87,8 @@ export function buildMockReply(persona: Persona, userMessage: string): string {
 
 export function getRecentSessionCards() {
   return [
-    { personaId: 'paul_graham', title: '产品方向要不要重做？', time: '今天 09:12' },
-    { personaId: 'charlie_munger', title: '怎么避免一次错误决策？', time: '昨天 18:40' },
-    { personaId: 'zhang_xue_feng', title: '专业与就业怎么选？', time: '昨天 12:08' },
+    { personaId: 'zhang_xue_feng', title: '专业与就业怎么选？', time: '今天 09:12' },
+    { personaId: 'sun_justin', title: '一个项目怎么讲更有话题？', time: '昨天 18:40' },
+    { personaId: 'zhang_xue_feng', title: '现实约束下怎么做判断？', time: '昨天 12:08' },
   ]
 }

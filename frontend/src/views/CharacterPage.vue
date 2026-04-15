@@ -1,17 +1,81 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getPersonaById } from '@/data/personas'
+import { loadPersona, type Persona } from '@/services/personaService'
 
 const route = useRoute()
-const persona = computed(() => getPersonaById(String(route.params.id || '')))
+const persona = ref<Persona | null>(null)
+const loading = ref(true)
+const error = ref('')
+const notFound = ref(false)
+
+const slug = computed(() => String(route.params.id || ''))
+
+const load = async () => {
+  const target = slug.value.trim()
+  if (!target) {
+    persona.value = null
+    notFound.value = true
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  notFound.value = false
+
+  try {
+    const result = await loadPersona(target)
+    persona.value = result
+    notFound.value = result === null
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : '加载人格详情失败'
+    error.value = message
+    persona.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  void load()
+})
+
+watch(slug, () => {
+  void load()
+})
 </script>
 
 <template>
-  <section v-if="persona" class="detail-layout">
+  <section v-if="loading" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">加载中</p>
+      <h2>正在读取人格详情…</h2>
+    </div>
+  </section>
+
+  <section v-else-if="error" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">加载失败</p>
+      <h2>人格详情暂时不可用</h2>
+      <p class="state-copy">{{ error }}</p>
+      <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
+    </div>
+  </section>
+
+  <section v-else-if="notFound || !persona" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">未找到</p>
+      <h2>没有找到这个人格。</h2>
+      <p class="state-copy">请确认链接里的 slug 是否存在。</p>
+      <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
+    </div>
+  </section>
+
+  <section v-else class="detail-layout">
     <article class="detail-card">
       <div class="detail-header">
-        <div class="detail-avatar">{{ persona.avatar }}</div>
+        <div class="detail-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
         <div>
           <p class="eyebrow">{{ persona.category }}</p>
           <h2>{{ persona.name }}</h2>
@@ -20,19 +84,26 @@ const persona = computed(() => getPersonaById(String(route.params.id || '')))
       </div>
 
       <div class="detail-block">
-        <h3>适合聊什么</h3>
+        <h3>标签</h3>
+        <div class="tag-row">
+          <span v-for="tag in persona.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <h3>适用话题</h3>
         <div class="tag-row">
           <span v-for="topic in persona.topics" :key="topic" class="tag-chip">{{ topic }}</span>
         </div>
       </div>
 
       <div class="detail-block">
-        <h3>一句话简介</h3>
-        <p>{{ persona.profile }}</p>
+        <h3>人物定位</h3>
+        <p class="persona-profile">{{ persona.profile }}</p>
       </div>
 
       <div class="detail-actions">
-        <RouterLink class="primary-btn" :to="`/chat/${persona.id}`">开始聊天</RouterLink>
+        <RouterLink class="primary-btn" :to="`/chat/${persona.slug}`">开始聊天</RouterLink>
         <RouterLink class="secondary-btn" to="/">回到首页</RouterLink>
       </div>
     </article>
@@ -44,11 +115,11 @@ const persona = computed(() => getPersonaById(String(route.params.id || '')))
           <li v-for="question in persona.recommendedQuestions" :key="question">{{ question }}</li>
         </ul>
       </div>
+      <div class="mini-panel">
+        <p class="eyebrow">版本状态</p>
+        <p class="side-title">{{ persona.version }}</p>
+        <p>{{ persona.status }}</p>
+      </div>
     </aside>
-  </section>
-
-  <section v-else class="empty-state">
-    <h2>没有找到这个人格。</h2>
-    <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
   </section>
 </template>

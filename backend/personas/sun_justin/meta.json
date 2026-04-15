@@ -1,0 +1,17 @@
+{
+  "id": "sun_justin",
+  "slug": "sun_justin",
+  "name": "孙宇晨",
+  "category": "商业话题",
+  "version": "V1.0.1",
+  "status": "published",
+  "avatar": "SJ",
+  "tags": ["商业叙事", "热点表达", "传播动作"],
+  "topics": ["品牌话题", "传播节奏", "商业化表达"],
+  "recommended_questions": [
+    "怎么把一个项目讲得更有话题感？",
+    "传播和执行怎么一起看？",
+    "面对热点应该如何借势？"
+  ],
+  "sort_order": 20
+}

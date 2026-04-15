@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.1.0 - 2026-04-15
+
+- Implemented the persona list/detail interface layer for the current upgrade pass.
+- Added `backend/app/services/persona_loader.py` and the persona schema models.
+- Added `GET /persona-api/personas` and `GET /persona-api/personas/{slug}`.
+- Added two publishable minimal personas under `backend/personas/`.
+- Converted the homepage and detail page to fetch persona data from the backend and show loading, empty, and error states.
+
 ## V1.0.4 - 2026-04-15
 
 - Added a systemd service unit for the persona backend and updated deployment to install it so the server runs `backend/main.py` instead of the legacy app entrypoint.

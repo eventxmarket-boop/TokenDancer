@@ -1,0 +1,17 @@
+{
+  "id": "zhang_xue_feng",
+  "slug": "zhang_xue_feng",
+  "name": "张雪峰",
+  "category": "现实判断",
+  "version": "V1.0.1",
+  "status": "published",
+  "avatar": "ZXF",
+  "tags": ["现实分析", "教育规划", "直接判断"],
+  "topics": ["专业选择", "就业路径", "现实代价"],
+  "recommended_questions": [
+    "这个选择的现实代价是什么？",
+    "如果只看结果，最该先关注什么？",
+    "资源有限时怎么做取舍？"
+  ],
+  "sort_order": 10
+}

@@ -200,6 +200,23 @@ textarea {
   line-height: 1.7;
 }
 
+.state-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 20px;
+  margin-top: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+}
+
+.state-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .hero-card h2 {
   font-size: clamp(2rem, 4vw, 3.6rem);
   line-height: 1.05;
@@ -412,6 +429,10 @@ textarea {
   gap: 10px;
   padding: 16px 0;
   border-top: 1px solid rgba(184, 143, 118, 0.16);
+}
+
+.persona-profile {
+  white-space: pre-line;
 }
 
 .mini-panel {

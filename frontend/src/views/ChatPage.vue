@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { buildMockReply, loadPersona } from '@/services/personaService'
-import type { Persona } from '@/data/personas'
+import { buildMockReply, loadPersona, type Persona } from '@/services/personaService'
 
 type ChatMessage = {
   role: 'assistant' | 'user'
