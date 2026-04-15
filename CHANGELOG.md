@@ -1,0 +1,11 @@
+# Changelog
+
+## V1.0.0 - 2026-04-15
+
+- Created the initial persona-station scaffold.
+- Added repository execution rules in `AGENTS.md`.
+- Introduced the subpath-ready frontend skeleton under `frontend/`.
+- Added a minimal FastAPI backend entrypoint with `/persona-api/health`.
+- Added deployment samples for frontend build, backend deploy, and Nginx routing.
+- Added the persona schema, seed, and published persona directories for the V1 workflow.
+- Aligned `frontend/tsconfig.node.json` with the installed Vue TypeScript config package so the frontend build passes in this workspace.
