@@ -47,5 +47,11 @@ class Settings(BaseSettings):
 
     PROXY_MODE: str = "open"
 
+    LLM_BASE_URL: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = "gpt-5.4-mini"
+    LLM_TEMPERATURE: float = 0.7
+    LLM_MAX_TOKENS: int = 800
+
 
 settings = Settings()

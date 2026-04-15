@@ -20,6 +20,8 @@ from app.models.payment_event_log import PaymentEventLog
 from app.models.payment_config import PaymentConfig
 from app.models.subscription import Subscription
 from app.models.token_grant import TokenGrant
+from app.models.chat_session import ChatSession
+from app.models.chat_message import ChatMessage
 
 __all__ = [
     "Base",
@@ -46,4 +48,6 @@ __all__ = [
     "PaymentEventLog",
     "Subscription",
     "TokenGrant",
+    "ChatSession",
+    "ChatMessage",
 ]

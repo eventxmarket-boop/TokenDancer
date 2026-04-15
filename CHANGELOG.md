@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.2.0 - 2026-04-15
+
+- Added `backend/app/services/prompt_builder.py` to turn persona skill files into structured system prompts.
+- Added `backend/app/services/llm_gateway.py` to call an OpenAI-compatible chat API from environment variables.
+- Added `backend/app/services/chat_service.py` and `backend/app/routers/chat.py` for real persona chat sessions.
+- Added SQLite-backed chat session/message models so the current conversation context can be preserved.
+- Replaced the frontend mock reply flow with a real chat API flow in `frontend/src/views/ChatPage.vue`.
+- Filled the first two persona skills with `mindset`, `heuristics`, `expression`, `persona_examples`, `state`, and `guardrails` files.
+
 ## V1.1.3 - 2026-04-15
 
 - Removed an accidentally committed `frontend/node_modules 2` symlink from the repository.

@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.database import Base, engine
 from app.core.version import get_project_version
+from app.models import ChatMessage, ChatSession  # noqa: F401
+from app.routers.chat import router as chat_router
 from app.routers.persona import router as persona_router
 
 
@@ -22,7 +25,12 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.on_event("startup")
+    def on_startup() -> None:
+        Base.metadata.create_all(bind=engine)
+
     app.include_router(persona_router)
+    app.include_router(chat_router)
     return app
 
 

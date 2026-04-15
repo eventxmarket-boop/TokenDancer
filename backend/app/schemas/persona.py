@@ -14,3 +14,9 @@ class PersonaRecord(BaseModel):
     intro: str = ""
     profile: str = ""
     recommendedQuestions: list[str] = Field(default_factory=list)
+    mindset: str = ""
+    heuristics: str = ""
+    expression: str = ""
+    persona_examples: str = ""
+    state: str = ""
+    guardrails: str = ""

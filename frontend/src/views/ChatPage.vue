@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { buildMockReply, loadPersona, type Persona } from '@/services/personaService'
+import { clearChatSession, sendChatMessage } from '@/services/chatService'
+import { loadPersona, type Persona } from '@/services/personaService'
 
 type ChatMessage = {
   role: 'assistant' | 'user'
@@ -10,17 +11,48 @@ type ChatMessage = {
 
 const route = useRoute()
 const persona = ref<Persona | null>(null)
+const personaLoading = ref(true)
+const personaError = ref('')
+const personaMissing = ref(false)
 const messages = ref<ChatMessage[]>([])
 const draft = ref('')
 const sending = ref(false)
+const chatError = ref('')
+const sessionId = ref('')
 
 const personaId = computed(() => String(route.params.id || ''))
 
+const sessionStorageKey = (slug: string) => `persona-chat-session:${slug}`
+
+const resetConversation = () => {
+  messages.value = []
+  draft.value = ''
+  chatError.value = ''
+  sending.value = false
+}
+
 const loadConversation = async (id: string) => {
-  persona.value = await loadPersona(id)
-  messages.value = persona.value
-    ? [{ role: 'assistant', content: `你好，我是 ${persona.value.name}。可以直接问我你最在意的问题。` }]
-    : []
+  personaLoading.value = true
+  personaError.value = ''
+  personaMissing.value = false
+  persona.value = null
+  resetConversation()
+  sessionId.value = ''
+
+  try {
+    const loaded = await loadPersona(id)
+    if (!loaded) {
+      personaMissing.value = true
+      return
+    }
+
+    persona.value = loaded
+    sessionId.value = sessionStorage.getItem(sessionStorageKey(loaded.slug)) || ''
+  } catch (error) {
+    personaError.value = error instanceof Error ? error.message : '加载人格详情失败'
+  } finally {
+    personaLoading.value = false
+  }
 }
 
 onMounted(() => {
@@ -30,6 +62,15 @@ onMounted(() => {
 watch(personaId, (id) => {
   void loadConversation(id)
 })
+
+const rememberSession = (slug: string, value: string) => {
+  sessionId.value = value
+  if (value) {
+    sessionStorage.setItem(sessionStorageKey(slug), value)
+  } else {
+    sessionStorage.removeItem(sessionStorageKey(slug))
+  }
+}
 
 const sendMessage = async (preset?: string) => {
   const text = (preset ?? draft.value).trim()
@@ -41,46 +82,104 @@ const sendMessage = async (preset?: string) => {
     draft.value = ''
   }
 
+  chatError.value = ''
   messages.value.push({ role: 'user', content: text })
   sending.value = true
+
   await nextTick()
 
-  window.setTimeout(() => {
-    messages.value.push({
-      role: 'assistant',
-      content: buildMockReply(persona.value as Persona, text),
+  try {
+    const result = await sendChatMessage({
+      personaSlug: persona.value.slug,
+      sessionId: sessionId.value || null,
+      message: text,
     })
+    rememberSession(persona.value.slug, result.session_id)
+    messages.value.push({ role: 'assistant', content: result.reply })
+  } catch (error) {
+    chatError.value = error instanceof Error ? error.message : '当前模型服务不可用，请稍后再试。'
+  } finally {
     sending.value = false
-  }, 320)
+  }
 }
 
-const clearConversation = () => {
-  if (!persona.value) {
+const clearConversation = async () => {
+  if (!persona.value || sending.value) {
     return
   }
-  messages.value = [{ role: 'assistant', content: `你好，我是 ${persona.value.name}。可以直接问我你最在意的问题。` }]
+
+  chatError.value = ''
+
+  if (sessionId.value) {
+    try {
+      const cleared = await clearChatSession(sessionId.value)
+      rememberSession(persona.value.slug, cleared.session_id)
+    } catch (error) {
+      chatError.value = error instanceof Error ? error.message : '清空上下文失败，请稍后再试。'
+      return
+    }
+  }
+
+  messages.value = []
   draft.value = ''
 }
 </script>
 
 <template>
-  <section v-if="persona" class="chat-layout">
+  <section v-if="personaLoading" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">加载中</p>
+      <h2>正在读取人格与聊天配置…</h2>
+    </div>
+  </section>
+
+  <section v-else-if="personaError" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">加载失败</p>
+      <h2>人格信息暂时不可用</h2>
+      <p class="state-copy">{{ personaError }}</p>
+      <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
+    </div>
+  </section>
+
+  <section v-else-if="personaMissing || !persona" class="empty-state">
+    <div class="section-card">
+      <p class="eyebrow">未找到</p>
+      <h2>没有找到这个人格。</h2>
+      <p class="state-copy">请确认链接里的 slug 是否存在。</p>
+      <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
+    </div>
+  </section>
+
+  <section v-else class="chat-layout">
     <article class="chat-panel">
       <div class="chat-head">
         <div>
           <p class="eyebrow">正在对话</p>
           <h2>{{ persona.name }}</h2>
         </div>
-        <button class="ghost-btn" type="button" @click="clearConversation">清空上下文</button>
+        <button class="ghost-btn" type="button" :disabled="sending" @click="clearConversation">
+          清空上下文
+        </button>
       </div>
 
+      <p v-if="chatError" class="state-copy" style="color: #c85d4c;">
+        {{ chatError }}
+      </p>
+
       <div class="chat-feed">
+        <div v-if="!messages.length && !sending" class="mini-panel">
+          <p class="side-title">还没有开始聊天</p>
+          <p>你可以先点一个推荐问题，或者直接输入自己的问题。</p>
+        </div>
+
         <div v-for="(message, index) in messages" :key="index" class="message-row" :class="message.role">
           <div class="message-bubble">
             <span class="message-role">{{ message.role === 'assistant' ? persona.name : '你' }}</span>
             <p>{{ message.content }}</p>
           </div>
         </div>
+
         <div v-if="sending" class="message-row assistant">
           <div class="message-bubble">正在整理回答…</div>
         </div>
@@ -106,7 +205,7 @@ const clearConversation = () => {
         ></textarea>
         <div class="composer-actions">
           <RouterLink class="secondary-btn" :to="`/character/${persona.id}`">返回详情</RouterLink>
-          <button class="primary-btn" type="submit">发送</button>
+          <button class="primary-btn" type="submit" :disabled="sending">发送</button>
         </div>
       </form>
     </article>
@@ -124,10 +223,5 @@ const clearConversation = () => {
         </ul>
       </div>
     </aside>
-  </section>
-
-  <section v-else class="empty-state">
-    <h2>没有找到这个人格。</h2>
-    <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
   </section>
 </template>
