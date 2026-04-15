@@ -92,7 +92,6 @@ const selectedItem = computed(() => {
 })
 
 const totalItemCount = computed(() => allItems.value.length)
-const totalRepoCount = computed(() => new Set(allItems.value.map((item) => item.source_repo)).size)
 
 const topZones = computed(() => [
   {
@@ -159,13 +158,6 @@ function getGroupDescription(group: string) {
   return groupDescriptions[group] || ''
 }
 
-function formatStage(stage: string) {
-  if (stage === 'entry_only') {
-    return '入口型'
-  }
-  return stage
-}
-
 function getWizardTypeForGroup(group: string) {
   if (group === 'self') {
     return 'self_persona'
@@ -188,7 +180,6 @@ function buildWizardQuery(item: CreateCatalogItem) {
   return {
     type: getWizardTypeForGroup(item.group),
     group: item.group,
-    source_repo: item.source_repo,
     slug: item.slug,
     name: item.name,
     reset: '1',
@@ -280,13 +271,13 @@ onMounted(() => {
       <p class="eyebrow">Create</p>
       <h1>创造一个人格，先从方法开始。</h1>
       <p class="hero-text">
-        这里不是人格成品列表，而是你真正开始创建人格的能力目录。你可以从自己开始，也可以从资料、关系、数字分身和边界保护开始。
+        从自己、已有资料，或关系对象开始，创建一个可以继续完善的人格。
       </p>
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ totalItemCount }}</strong><span>能力项</span></span>
         <span class="metric-chip"><strong>{{ groups.length }}</strong><span>能力分组</span></span>
-        <span class="metric-chip"><strong>{{ totalRepoCount }}</strong><span>来源仓库</span></span>
+        <span class="metric-chip"><strong>{{ topZones.length }}</strong><span>主创建区</span></span>
       </div>
 
       <div class="hero-actions">
@@ -313,15 +304,15 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="hero-band">
+    <div class="hero-band" id="create-rail">
       <article class="hero-band__card">
         <p class="eyebrow">创建主线</p>
-        <h3 class="hero-band__title">自我人格、资料投喂、关系人格</h3>
-        <p class="hero-band__copy">先把能力目录分清，再把真正的蒸馏流程接进来。</p>
+        <h3 class="hero-band__title">自我人格、资料创建、关系人格</h3>
+        <p class="hero-band__copy">先选一种创建路径，再开始补充信息。</p>
       </article>
 
-      <article class="hero-band__card" id="create-rail">
-        <p class="eyebrow">当前选中</p>
+      <article class="hero-band__card">
+        <p class="eyebrow">当前选择</p>
         <template v-if="selectedItem">
           <h3 class="hero-band__title">{{ selectedItem.name }}</h3>
           <p class="hero-band__copy">{{ selectedItem.description }}</p>
@@ -330,8 +321,8 @@ onMounted(() => {
           </div>
         </template>
         <template v-else>
-          <h3 class="hero-band__title">还没有可用的创建模板</h3>
-          <p class="hero-band__copy">当后端目录加载完成后，这里会显示当前选中的创建能力。</p>
+          <h3 class="hero-band__title">请选择一个创建方式</h3>
+          <p class="hero-band__copy">点开下方卡片，就可以进入对应的创建向导。</p>
         </template>
       </article>
     </div>
@@ -341,9 +332,9 @@ onMounted(() => {
     <div class="section-head">
       <div>
         <p class="eyebrow">Create 路线</p>
-        <h3>先看五条主创建路径，再进入细分模板。</h3>
+        <h3>先看五条主创建路径，再进入细分能力。</h3>
       </div>
-      <p class="section-note">点击任意卡片，直接跳到对应能力分区。</p>
+      <p class="section-note">点击任意卡片，直接进入对应的创建路径。</p>
     </div>
 
     <div class="create-mode-grid">
@@ -369,9 +360,9 @@ onMounted(() => {
     <div class="section-head">
       <div>
         <p class="eyebrow">能力目录</p>
-        <h3>按功能分区展开，每一组都有自己的创建模板。</h3>
+        <h3>按功能分区展开，每一组都有自己的创建方式。</h3>
       </div>
-      <p class="section-note">这些条目全部归在 Create，不会混进 Seed。</p>
+      <p class="section-note">这里展示的是可继续创建的能力入口。</p>
     </div>
 
     <div v-if="loading" class="state-panel">
@@ -396,11 +387,11 @@ onMounted(() => {
         >
           <div class="create-group__head">
             <div>
-              <p class="eyebrow">{{ group.source_hint }}</p>
+              <p class="eyebrow">创建方式</p>
               <h3>{{ group.label }}</h3>
               <p class="section-note">{{ getGroupDescription(group.group) }}</p>
             </div>
-            <span class="status-pill">{{ group.items.length }} 个模式</span>
+            <span class="status-pill">{{ group.items.length }} 个入口</span>
           </div>
 
           <div class="create-card-grid">
@@ -412,10 +403,9 @@ onMounted(() => {
             >
               <div class="create-card__head">
                 <div>
-                  <p class="persona-category">{{ item.source_repo }}</p>
+                  <p class="persona-category">{{ getGroupLabel(item.group) }}</p>
                   <h4>{{ item.name }}</h4>
                 </div>
-                <span class="status-pill">{{ formatStage(item.stage) }}</span>
               </div>
 
               <p class="create-card__copy">{{ item.description }}</p>
@@ -436,7 +426,7 @@ onMounted(() => {
                   开始创建
                 </button>
                 <button v-else class="ghost-btn" type="button" @click="scrollToTarget(sectionId(group))">
-                  敬请期待
+                  了解更多
                 </button>
                 <button class="ghost-btn" type="button" @click="focusItem(item)">查看说明</button>
               </div>
@@ -448,27 +438,24 @@ onMounted(() => {
       <aside class="create-rail">
         <div class="summary-panel">
           <p class="eyebrow">创建说明</p>
-          <h3>先选模式，再选材料，最后接入蒸馏流程。</h3>
-          <p class="state-copy">
-            当前版本先把能力目录、模板来源和分组路径整理清楚。真正的上传、生成与调优流程，后面会继续接进来。
-          </p>
+          <h3>先选一种创建方式，再开始填写信息。</h3>
+          <p class="state-copy">Create 会带你进入对应的创建向导，后续还能继续补充内容和完善结果。</p>
 
           <ul class="summary-panel__list">
-            <li><span>主线 1</span><strong>自我人格</strong></li>
-            <li><span>主线 2</span><strong>资料 / 关系 / 数字分身</strong></li>
-            <li><span>保护层</span><strong>防蒸馏与边界</strong></li>
+            <li><span>主线 1</span><strong>从自己开始</strong></li>
+            <li><span>主线 2</span><strong>从资料或关系开始</strong></li>
+            <li><span>辅助</span><strong>数字分身与隐私保护</strong></li>
           </ul>
         </div>
 
         <div class="summary-panel">
-          <p class="eyebrow">当前模式</p>
+          <p class="eyebrow">当前选择</p>
           <template v-if="selectedItem">
             <h3>{{ selectedItem.name }}</h3>
             <p class="state-copy">{{ selectedItem.description }}</p>
             <ul class="summary-panel__list">
-              <li><span>分组</span><strong>{{ getGroupLabel(selectedItem.group) }}</strong></li>
-              <li><span>来源</span><strong>{{ selectedItem.source_repo }}</strong></li>
-              <li><span>输入方式</span><strong>{{ selectedInputModes.join(' · ') }}</strong></li>
+              <li><span>创建类别</span><strong>{{ getGroupLabel(selectedItem.group) }}</strong></li>
+              <li><span>适合输入</span><strong>{{ selectedInputModes.join(' · ') }}</strong></li>
             </ul>
             <div class="hero-actions">
               <button class="primary-btn" type="button" @click="startSelectedCreation">开始创建</button>
@@ -476,19 +463,19 @@ onMounted(() => {
             </div>
           </template>
           <template v-else>
-            <h3>等待目录加载</h3>
-            <p class="state-copy">加载完成后，这里会显示当前选中的创建模式。</p>
+            <h3>等待选择</h3>
+            <p class="state-copy">选中一个创建方式后，这里会显示它的说明和可用输入方式。</p>
           </template>
         </div>
 
         <div class="summary-panel">
-          <p class="eyebrow">后续能力</p>
-          <h3>这一轮先做入口，后续再接生成执行器。</h3>
+          <p class="eyebrow">下一步</p>
+          <h3>先完成创建，再逐步补充更多能力。</h3>
           <ul class="summary-panel__list">
-            <li><span>自我蒸馏</span><strong>Work System</strong></li>
-            <li><span>回复方式</span><strong>Reply Persona</strong></li>
-            <li><span>资料输入</span><strong>文档 / 语音 / 视频</strong></li>
-            <li><span>隐私保护</span><strong>脱敏 / 边界</strong></li>
+            <li><span>自我</span><strong>先从自己开始</strong></li>
+            <li><span>资料</span><strong>上传后继续完善</strong></li>
+            <li><span>关系</span><strong>从熟悉的对象开始</strong></li>
+            <li><span>保护</span><strong>保留你的边界</strong></li>
           </ul>
         </div>
       </aside>

@@ -38,7 +38,7 @@ const router = createRouter({
       path: '/create/result',
       name: 'create-result',
       component: CreateResultPage,
-      meta: { title: '人格草稿' },
+      meta: { title: '创建结果' },
     },
     {
       path: '/character/:id',

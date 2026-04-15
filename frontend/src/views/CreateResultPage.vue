@@ -13,6 +13,18 @@ const loading = ref(true)
 const notice = ref('')
 const draft = ref<CreateWizardDraft | null>(null)
 
+const inputModeLabels: Record<string, string> = {
+  manual_profile: '手动填写',
+  chat_history: '聊天记录',
+  documents: '文档资料',
+  audio_video: '音频 / 视频',
+  multi_source: '多源资料',
+  colleague: '同事',
+  supervisor: '导师',
+  parents: '父母',
+  partner: '伴侣',
+}
+
 const editableDraft = reactive<CreateWizardDraft>({
   meta: {
     id: '',
@@ -41,7 +53,7 @@ const editableDraft = reactive<CreateWizardDraft>({
 
 const typeLabel = computed(() => {
   if (!draft.value) {
-    return '人格草稿'
+    return '人格雏形'
   }
 
   const type = draft.value.meta.create_type
@@ -52,6 +64,15 @@ const typeLabel = computed(() => {
     return '从资料创建'
   }
   return '关系人格'
+})
+
+const inputModeLabel = computed(() => {
+  if (!draft.value) {
+    return '未选择'
+  }
+
+  const mode = draft.value.meta.input_mode
+  return inputModeLabels[mode] || mode || '未选择'
 })
 
 function applyDraft(nextDraft: CreateWizardDraft) {
@@ -81,14 +102,14 @@ function cloneDraft(source: CreateWizardDraft): CreateWizardDraft {
 function persistEditedDraft() {
   const snapshot = cloneDraft(editableDraft)
   saveLatestDraft(snapshot)
-  notice.value = '草稿已同步保存。'
+  notice.value = '这版结果已同步保存。'
 }
 
 function saveDraft() {
   const snapshot = cloneDraft(editableDraft)
   saveLatestDraft(snapshot)
   saveDraftLocally(snapshot)
-  notice.value = '草稿已保存到本地。'
+  notice.value = '这版结果已保存到本地。'
 }
 
 function backToWizard() {
@@ -119,20 +140,18 @@ watch(
 <template>
   <section class="page-hero wizard-hero">
     <div class="hero-copy">
-      <p class="eyebrow">Create Result</p>
-      <h1>一份可以继续编辑的人格草稿。</h1>
-      <p class="hero-text">
-        这里展示的是向导生成后的第一版结构草稿。它还不是最终 skill 文件，但已经足够看出这个人格的定位、判断方式和表达边界。
-      </p>
+      <p class="eyebrow">创建结果</p>
+      <h1>你的人格雏形已经生成。</h1>
+      <p class="hero-text">这是第一版结果。你可以继续补充内容，让它更完整、更贴近真实使用场景。</p>
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ typeLabel }}</strong><span>人格类型</span></span>
-        <span class="metric-chip"><strong>{{ editableDraft.meta.name || '未命名' }}</strong><span>草稿名称</span></span>
-        <span class="metric-chip"><strong>{{ editableDraft.meta.status || 'draft' }}</strong><span>状态</span></span>
+        <span class="metric-chip"><strong>{{ editableDraft.meta.name || '未命名' }}</strong><span>结果名称</span></span>
+        <span class="metric-chip"><strong>可继续完善</strong><span>状态</span></span>
       </div>
 
       <div class="hero-actions">
-        <button class="primary-btn" type="button" @click="saveDraft">保存草稿</button>
+        <button class="primary-btn" type="button" @click="saveDraft">保存这版结果</button>
         <button class="secondary-btn" type="button" @click="backToWizard">返回修改</button>
       </div>
 
@@ -142,14 +161,14 @@ watch(
     <div class="hero-band">
       <article class="hero-band__card">
         <p class="eyebrow">后续动作</p>
-        <h3 class="hero-band__title">后面可以继续转成正式人格</h3>
-        <p class="hero-band__copy">这一版先把草稿收好，后面再接真正的生成和发布流程。</p>
+        <h3 class="hero-band__title">后面可以继续完善成正式人格</h3>
+        <p class="hero-band__copy">这一版结果先收好，后面还可以继续补充信息。</p>
       </article>
 
       <article class="hero-band__card">
         <p class="eyebrow">保存状态</p>
-        <h3 class="hero-band__title">本地草稿已可复用</h3>
-        <p class="hero-band__copy">保存后可以继续回到向导修改，也能留作后续正式人格的起点。</p>
+        <h3 class="hero-band__title">这版结果已可复用</h3>
+        <p class="hero-band__copy">保存后可以继续回到向导修改，也能留作后续完善的起点。</p>
       </article>
     </div>
   </section>
@@ -157,7 +176,7 @@ watch(
   <section class="section-card">
     <div v-if="loading" class="state-panel">
       <p class="eyebrow">加载中</p>
-      <h3>正在读取最新草稿…</h3>
+      <h3>正在读取最新结果…</h3>
     </div>
 
     <div v-else class="draft-layout">
@@ -165,14 +184,12 @@ watch(
         <article class="draft-card draft-card--header">
           <div class="draft-card__head">
             <div>
-              <p class="eyebrow">草稿身份</p>
+              <p class="eyebrow">结果身份</p>
               <h3>{{ editableDraft.meta.name }}</h3>
             </div>
-            <span class="status-pill">{{ editableDraft.meta.source_hint || editableDraft.meta.group }}</span>
+            <span class="status-pill">{{ typeLabel }}</span>
           </div>
-          <p class="state-copy">
-            {{ editableDraft.meta.source_repo }} · {{ editableDraft.meta.input_mode }} · {{ editableDraft.meta.generated_at }}
-          </p>
+          <p class="state-copy">{{ inputModeLabel }} · {{ editableDraft.meta.generated_at }}</p>
         </article>
 
         <article class="draft-card">
@@ -203,9 +220,9 @@ watch(
 
       <aside class="draft-rail">
         <div class="summary-panel">
-          <p class="eyebrow">编辑草稿</p>
+          <p class="eyebrow">继续完善</p>
           <h3>现在可以直接继续改。</h3>
-          <p class="state-copy">编辑区会实时同步当前草稿，保存后会写入本地草稿列表。</p>
+          <p class="state-copy">编辑区会实时同步当前结果，保存后会写入本地结果列表。</p>
         </div>
 
         <div class="summary-panel">
@@ -235,10 +252,10 @@ watch(
           </label>
 
           <div class="hero-actions">
-            <button class="primary-btn" type="button" @click="saveDraft">保存草稿</button>
+            <button class="primary-btn" type="button" @click="saveDraft">保存这版结果</button>
             <button class="secondary-btn" type="button" @click="backToWizard">返回修改</button>
           </div>
-          <button class="ghost-btn" type="button" disabled>后续再生成正式人格</button>
+          <button class="ghost-btn" type="button" disabled>后续继续完善</button>
         </div>
       </aside>
     </div>

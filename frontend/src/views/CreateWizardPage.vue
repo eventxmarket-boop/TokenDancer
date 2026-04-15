@@ -19,7 +19,6 @@ const loading = ref(false)
 const error = ref('')
 const createType = ref<CreateType>('self_persona')
 const inputMode = ref('')
-const selectedSourceRepo = ref('')
 const selectedGroup = ref('')
 const selectedName = ref('')
 
@@ -48,19 +47,19 @@ const typeCards = [
     type: 'self_persona' as const,
     title: '自我人格',
     description: '先把你自己的做事方式、回复方式和边界感整理出来。',
-    hint: 'self-skill / nuwa-skill',
+    hint: '从自己开始',
   },
   {
     type: 'source_persona' as const,
     title: '从资料创建',
-    description: '把聊天记录、文档、音频或视频里的风格整理成草稿。',
-    hint: 'anyone-to-skill',
+    description: '把聊天记录、文档、音频或视频里的风格整理成一版结果。',
+    hint: '从资料开始',
   },
   {
     type: 'relationship_persona' as const,
     title: '关系人格',
     description: '从同事、导师、父母或伴侣这类关系开始创建。',
-    hint: '关系模板',
+    hint: '从关系开始',
   },
 ]
 
@@ -84,7 +83,7 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
   },
 }
 
-const stepLabels = ['选择类型', '选择输入方式', '填写基础信息', '生成草稿']
+const stepLabels = ['选择类型', '选择方式', '填写信息', '生成结果']
 
 const currentInputs = computed(() => Object.entries(inputModeLabels[createType.value]))
 
@@ -98,16 +97,33 @@ const currentTypeLabel = computed(() => {
   return '关系人格'
 })
 
-const currentSourceLabel = computed(() => {
-  if (selectedSourceRepo.value) {
-    return selectedSourceRepo.value
-  }
-  return 'Create 目录'
-})
-
 const selectedInputLabel = computed(() => {
   return inputModeLabels[createType.value][inputMode.value] || inputMode.value || '未选择'
 })
+
+function getInputModeNote(type: CreateType, mode: string) {
+  if (type === 'self_persona') {
+    if (mode === 'manual_profile') return '适合先从你自己的想法开始。'
+    if (mode === 'chat_history') return '适合把对话里的表达方式整理出来。'
+    if (mode === 'documents') return '适合把已有材料补充进去。'
+  }
+
+  if (type === 'source_persona') {
+    if (mode === 'documents') return '适合先从文档或 PDF 开始。'
+    if (mode === 'chat_history') return '适合先从聊天记录开始。'
+    if (mode === 'audio_video') return '适合从音频或视频开始。'
+    if (mode === 'multi_source') return '适合把多个来源放在一起。'
+  }
+
+  if (type === 'relationship_persona') {
+    if (mode === 'colleague') return '适合同事视角。'
+    if (mode === 'supervisor') return '适合导师视角。'
+    if (mode === 'parents') return '适合父母视角。'
+    if (mode === 'partner') return '适合伴侣视角。'
+  }
+
+  return '适合继续完善。'
+}
 
 function resetFormForType(type: CreateType) {
   if (type === 'self_persona') {
@@ -153,7 +169,6 @@ function saveStateSnapshot() {
     step: step.value,
     createType: createType.value,
     inputMode: inputMode.value,
-    selectedSourceRepo: selectedSourceRepo.value,
     selectedGroup: selectedGroup.value,
     selectedName: selectedName.value,
     formState: { ...formState },
@@ -165,7 +180,6 @@ function loadStateSnapshot() {
     step?: number
     createType?: CreateType
     inputMode?: string
-    selectedSourceRepo?: string
     selectedGroup?: string
     selectedName?: string
     formState?: Record<string, string>
@@ -187,7 +201,6 @@ function loadStateSnapshot() {
     inputMode.value = snapshot.inputMode
   }
 
-  selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
   selectedGroup.value = snapshot.selectedGroup || selectedGroup.value
   selectedName.value = snapshot.selectedName || selectedName.value
 
@@ -201,7 +214,6 @@ function loadStateSnapshot() {
 function applyQueryDefaults() {
   const queryType = normalizeType(route.query.type)
   const queryGroup = String(route.query.group || '').trim()
-  const querySourceRepo = String(route.query.source_repo || '').trim()
   const queryName = String(route.query.name || '').trim()
   const reset = String(route.query.reset || '') === '1'
 
@@ -211,7 +223,6 @@ function applyQueryDefaults() {
 
   createType.value = queryType
   selectedGroup.value = queryGroup
-  selectedSourceRepo.value = querySourceRepo
   selectedName.value = queryName
 
   if (createType.value === 'self_persona') {
@@ -257,7 +268,7 @@ async function generateDraft() {
     saveStateSnapshot()
     void router.push('/create/result')
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : '生成草稿失败'
+    const message = cause instanceof Error ? cause.message : '生成结果失败'
     error.value = message
   } finally {
     loading.value = false
@@ -268,7 +279,7 @@ function isCurrentType(type: CreateType) {
   return createType.value === type
 }
 
-watch([createType, inputMode, selectedSourceRepo, selectedGroup, selectedName], saveStateSnapshot)
+watch([createType, inputMode, selectedGroup, selectedName], saveStateSnapshot)
 
 watch(formState, saveStateSnapshot, { deep: true })
 
@@ -286,10 +297,10 @@ onMounted(() => {
 <template>
   <section class="page-hero wizard-hero">
     <div class="hero-copy">
-      <p class="eyebrow">Create Wizard</p>
-      <h1>先选类型，再填材料，最后生成一份人格草稿。</h1>
+      <p class="eyebrow">创建向导</p>
+      <h1>先选类型，再填信息，最后生成一版人格雏形。</h1>
       <p class="hero-text">
-        这是一版最小可用的创建向导。它还不是完整蒸馏引擎，但已经可以把你要创建的方向、输入方式和基础资料整理成结构化草稿。
+        按步骤填写信息，先生成一版人格雏形，再继续补充成更贴近你的样子。
       </p>
 
       <div class="hero-metrics">
@@ -301,15 +312,15 @@ onMounted(() => {
 
     <div class="hero-band">
       <article class="hero-band__card">
-        <p class="eyebrow">来源</p>
-        <h3 class="hero-band__title">{{ currentSourceLabel }}</h3>
-        <p class="hero-band__copy">Create 页的卡片会把你带到这里，先把流程跑起来，再逐步接入更深的蒸馏能力。</p>
+        <p class="eyebrow">创建方式</p>
+        <h3 class="hero-band__title">{{ currentTypeLabel }}</h3>
+        <p class="hero-band__copy">Create 页的卡片会把你带到这里，先把流程跑起来，再继续补充更多信息。</p>
       </article>
 
       <article class="hero-band__card">
         <p class="eyebrow">说明</p>
-        <h3 class="hero-band__title">只保留最小可用流程</h3>
-        <p class="hero-band__copy">这一轮只支持自我人格、资料创建、关系人格三类入口。</p>
+        <h3 class="hero-band__title">先完成一版可用结果</h3>
+        <p class="hero-band__copy">这一轮先支持自我人格、资料创建、关系人格三类入口。</p>
       </article>
     </div>
   </section>
@@ -360,9 +371,9 @@ onMounted(() => {
           <div class="section-head">
             <div>
               <p class="eyebrow">第 2 步</p>
-              <h3>选择输入方式</h3>
+              <h3>选择创建方式</h3>
             </div>
-            <p class="section-note">不同类型会显示不同的输入方式。</p>
+            <p class="section-note">不同类型会显示不同的方式选择。</p>
           </div>
 
           <div class="wizard-card-grid">
@@ -375,7 +386,7 @@ onMounted(() => {
               @click="selectInputMode(mode)"
             >
               <h4>{{ label }}</h4>
-              <p>{{ mode }}</p>
+              <p>{{ getInputModeNote(createType, mode) }}</p>
             </button>
           </div>
         </article>
@@ -384,9 +395,9 @@ onMounted(() => {
           <div class="section-head">
             <div>
               <p class="eyebrow">第 3 步</p>
-              <h3>填写基础信息</h3>
+              <h3>填写信息</h3>
             </div>
-            <p class="section-note">先把草稿里的关键变量写清楚。</p>
+            <p class="section-note">先把关键变量写清楚，后面才更容易继续完善。</p>
           </div>
 
           <div v-if="createType === 'self_persona'" class="wizard-form">
@@ -493,9 +504,9 @@ onMounted(() => {
           <div class="section-head">
             <div>
               <p class="eyebrow">第 4 步</p>
-              <h3>确认并生成草稿</h3>
+              <h3>确认并生成结果</h3>
             </div>
-            <p class="section-note">先看一眼，再生成结构化人格草稿。</p>
+            <p class="section-note">先看一眼，再生成第一版结果。</p>
           </div>
 
           <div class="wizard-review">
@@ -504,7 +515,7 @@ onMounted(() => {
               <h3>{{ currentTypeLabel }}</h3>
               <ul class="summary-panel__list">
                 <li><span>输入方式</span><strong>{{ selectedInputLabel }}</strong></li>
-                <li><span>来源</span><strong>{{ currentSourceLabel }}</strong></li>
+                <li><span>创建类型</span><strong>{{ currentTypeLabel }}</strong></li>
                 <li><span>组别</span><strong>{{ selectedGroup || '默认分组' }}</strong></li>
               </ul>
             </div>
@@ -529,7 +540,7 @@ onMounted(() => {
 
         <div v-if="error" class="state-panel">
           <p class="eyebrow">生成失败</p>
-          <h3>草稿生成暂时失败</h3>
+          <h3>结果生成暂时失败</h3>
           <p class="state-copy">{{ error }}</p>
         </div>
 
@@ -543,7 +554,7 @@ onMounted(() => {
             :disabled="loading"
             @click="generateDraft"
           >
-            {{ loading ? '生成中…' : '生成草稿' }}
+            {{ loading ? '生成中…' : '生成结果' }}
           </button>
         </div>
       </div>
@@ -551,24 +562,22 @@ onMounted(() => {
       <aside class="wizard-rail">
         <div class="summary-panel">
           <p class="eyebrow">当前状态</p>
-          <h3>按步骤填完就能出一版草稿。</h3>
-          <p class="state-copy">
-            这版向导先生成结构化人格草稿，不直接产出最终 skill 文件，方便你先看雏形。
-          </p>
+          <h3>按步骤填完就能看到第一版结果。</h3>
+          <p class="state-copy">这版向导先帮你把信息整理成清晰的人格雏形，方便你先看轮廓。</p>
           <ul class="summary-panel__list">
             <li><span>类型</span><strong>{{ currentTypeLabel }}</strong></li>
             <li><span>输入方式</span><strong>{{ selectedInputLabel }}</strong></li>
-            <li><span>来源</span><strong>{{ currentSourceLabel }}</strong></li>
+            <li><span>状态</span><strong>可继续完善</strong></li>
           </ul>
         </div>
 
         <div class="summary-panel">
-          <p class="eyebrow">支持范围</p>
-          <h3>目前只接三类最小入口。</h3>
+          <p class="eyebrow">当前支持</p>
+          <h3>三种创建方式已经可用。</h3>
           <ul class="summary-panel__list">
-            <li><span>1</span><strong>自我人格</strong></li>
-            <li><span>2</span><strong>资料创建</strong></li>
-            <li><span>3</span><strong>关系人格</strong></li>
+            <li><span>1</span><strong>从自己开始</strong></li>
+            <li><span>2</span><strong>从资料开始</strong></li>
+            <li><span>3</span><strong>从关系开始</strong></li>
           </ul>
         </div>
       </aside>

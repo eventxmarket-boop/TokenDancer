@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.4 - 2026-04-16
+
+- Cleaned up Create-facing frontend copy so it reads like a normal product page instead of a development screen.
+- Removed direct exposure of internal source fields and draft-oriented wording from the Create landing, wizard, and result views.
+- Reworked the Create wizard and result page language to emphasize user outcomes, gradual refinement, and finished-looking product entry points.
+- Kept the underlying Create flow unchanged while improving the visible product language and presentation.
+
 ## V1.4.1 - 2026-04-16
 
 - Reworked the frontend into a more product-like landing experience with stronger visual hierarchy and spacing.
