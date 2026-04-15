@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.2.1 - 2026-04-15
+
+- Added `/persona/admin` as a lightweight admin entry page for LLM configuration.
+- Added persona-side `llm_configs` persistence and admin APIs for reading, saving, and activating the default model config.
+- Updated the chat gateway to prefer the saved admin configuration before falling back to environment variables.
+- Added a frontend admin service and a minimal pastel-styled admin UI.
+
 ## V1.2.0 - 2026-04-15
 
 - Added `backend/app/services/prompt_builder.py` to turn persona skill files into structured system prompts.

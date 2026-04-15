@@ -200,6 +200,113 @@ textarea {
   line-height: 1.7;
 }
 
+.admin-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.admin-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.field-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(184, 143, 118, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: rgba(234, 127, 102, 0.5);
+  box-shadow: 0 0 0 4px rgba(255, 159, 138, 0.12);
+}
+
+.toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.field-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.config-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.config-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+}
+
+.config-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.config-card h4 {
+  margin: 0;
+}
+
+.config-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
+  font-size: 0.84rem;
+  border: 1px solid rgba(184, 143, 118, 0.18);
+}
+
+.status-pill.active {
+  color: #9d5b4b;
+  background: var(--accent-soft);
+}
+
 .state-panel {
   display: grid;
   gap: 10px;
@@ -589,6 +696,11 @@ textarea {
 
   .mobile-nav {
     display: flex;
+  }
+
+  .admin-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
 

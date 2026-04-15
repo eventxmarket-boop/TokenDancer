@@ -138,7 +138,7 @@ async def chat_with_persona(
     messages = build_chat_messages(persona, history, normalized_message)
 
     try:
-        reply = await generate_reply(messages)
+        reply = await generate_reply(messages, db=db)
         _persist_messages(db, session.session_id, normalized_message, reply)
         session.updated_at = utcnow()
         db.commit()

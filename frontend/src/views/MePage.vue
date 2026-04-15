@@ -33,6 +33,7 @@ const favorites = ['Paul Graham', 'Charlie Munger', '张雪峰']
           <p class="side-title">反馈入口</p>
           <p>这一版先把入口做轻，后续再接更完整的反馈流。</p>
           <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
+          <RouterLink class="secondary-btn" to="/admin" style="margin-top: 10px;">后台设置</RouterLink>
         </div>
       </div>
     </article>

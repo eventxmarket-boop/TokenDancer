@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/views/HomePage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
+import AdminPage from '@/views/AdminPage.vue'
 import MePage from '@/views/MePage.vue'
 
 const router = createRouter({
@@ -21,6 +22,7 @@ const router = createRouter({
       meta: { title: '对话' },
     },
     { path: '/me', name: 'me', component: MePage, meta: { title: '我的' } },
+    { path: '/admin', name: 'admin', component: AdminPage, meta: { title: '后台设置' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {
