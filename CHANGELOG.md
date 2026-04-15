@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.8 - 2026-04-16
+
+- Simplified the Favorites page so it now keeps only the core list, actions, and empty state.
+- Removed the self-explaining hero copy, statistics, and product commentary from Favorites.
+- Moved the Favorites content upward and centered the list-focused layout.
+
 ## V1.4.7 - 2026-04-16
 
 - Simplified the homepage subtitle to a single line and made the two central stickers interactive entry points.

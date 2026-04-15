@@ -318,6 +318,60 @@ textarea {
   gap: 12px;
 }
 
+.favorites-page {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  align-items: start;
+  justify-content: center;
+  padding: 14px 0 44px;
+}
+
+.favorites-page__inner {
+  width: min(920px, 100%);
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+}
+
+.favorites-page__head {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  width: min(720px, 100%);
+}
+
+.favorites-page__head h1 {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.favorites-page__head .hero-text {
+  max-width: 40ch;
+}
+
+.favorites-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.favorites-page__body {
+  width: 100%;
+  display: grid;
+  gap: 18px;
+}
+
+.state-panel--center,
+.empty-panel--compact {
+  min-height: 240px;
+}
+
+.group-stack--favorites {
+  margin-top: 0;
+}
+
 .hero-card,
 .section-card,
 .detail-card,
@@ -1237,6 +1291,10 @@ textarea {
   max-width: 40ch;
 }
 
+.empty-panel--compact {
+  padding-block: 34px;
+}
+
 .create-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1868,5 +1926,18 @@ textarea {
 
   .home-sticker--seed {
     transform: translateX(40px) translateY(10px) rotate(6deg);
+  }
+
+  .favorites-page {
+    min-height: auto;
+    padding-top: 4px;
+  }
+
+  .favorites-page__inner {
+    gap: 14px;
+  }
+
+  .favorites-page__head {
+    width: 100%;
   }
 }
