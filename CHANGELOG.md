@@ -1,5 +1,9 @@
 # Changelog
 
+## V1.0.1 - 2026-04-15
+
+- Fixed the backend deployment script to use the project virtual environment when installing Python dependencies, avoiding the server's externally managed system Python.
+
 ## V1.0.0 - 2026-04-15
 
 - Created the initial persona-station scaffold.

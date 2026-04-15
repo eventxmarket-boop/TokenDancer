@@ -4,13 +4,19 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ROOT_DIR}/backend"
 SERVICE_NAME="${SERVICE_NAME:-tokendancer-persona-api}"
+VENV_DIR="${VENV_DIR:-${BACKEND_DIR}/.venv}"
+PYTHON_BIN="${PYTHON_BIN:-${VENV_DIR}/bin/python}"
 
 cd "${BACKEND_DIR}"
 
-python3 -m pip install -r requirements.txt
+if [ ! -x "${PYTHON_BIN}" ]; then
+  python3 -m venv "${VENV_DIR}"
+fi
+
+"${PYTHON_BIN}" -m pip install -r requirements.txt
 
 if [ -f alembic.ini ]; then
-  alembic upgrade head
+  "${PYTHON_BIN}" -m alembic upgrade head
 fi
 
 if command -v systemctl >/dev/null 2>&1; then
