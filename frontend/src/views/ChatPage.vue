@@ -22,17 +22,35 @@ const personaLoading = ref(true)
 const personaError = ref('')
 const personaMissing = ref(false)
 const messages = ref<ChatMessage[]>([])
+const messagesContainerRef = ref<HTMLElement | null>(null)
 const draft = ref('')
 const sending = ref(false)
 const chatError = ref('')
 const sessionId = ref('')
 
 const personaId = computed(() => String(route.params.id || ''))
+const conversationMessages = computed(() =>
+  messages.value.filter((message) => message.role === 'user' || message.role === 'assistant'),
+)
+const shouldShowRecommendedQuestions = computed(() => conversationMessages.value.length === 0)
 
 const sessionStorageKey = (slug: string) => `persona-chat-session:${slug}`
 const sessionIndexKey = 'persona-chat-session-index'
 
 const renderAssistantMessage = (content: string) => renderMarkdown(stripThinkBlocks(content || ''))
+
+const scrollToBottom = async (behavior: ScrollBehavior = 'smooth') => {
+  await nextTick()
+  const el = messagesContainerRef.value
+  if (!el) {
+    return
+  }
+
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior,
+  })
+}
 
 const readSessionIndex = (): Record<string, string> => {
   try {
@@ -63,6 +81,11 @@ const resetConversation = () => {
   sending.value = false
 }
 
+const setConversationMessages = async (nextMessages: ChatMessage[], behavior: ScrollBehavior = 'auto') => {
+  messages.value = nextMessages
+  await scrollToBottom(behavior)
+}
+
 const loadConversation = async (id: string) => {
   personaLoading.value = true
   personaError.value = ''
@@ -87,10 +110,13 @@ const loadConversation = async (id: string) => {
       const latestSession = await loadLatestPersonaSession(loaded.slug)
       if (latestSession) {
         rememberSession(loaded.slug, latestSession.session_id)
-        messages.value = latestSession.messages.map((message) => ({
-          role: message.role,
-          content: stripThinkBlocks(message.content || ''),
-        }))
+        await setConversationMessages(
+          latestSession.messages.map((message) => ({
+            role: message.role,
+            content: stripThinkBlocks(message.content || ''),
+          })),
+          'auto',
+        )
         return
       }
     }
@@ -99,10 +125,13 @@ const loadConversation = async (id: string) => {
       const session = await loadChatSession(sessionId.value)
       if (session && session.persona_slug === loaded.slug) {
         rememberSession(loaded.slug, session.session_id)
-        messages.value = session.messages.map((message) => ({
-          role: message.role,
-          content: stripThinkBlocks(message.content || ''),
-        }))
+        await setConversationMessages(
+          session.messages.map((message) => ({
+            role: message.role,
+            content: stripThinkBlocks(message.content || ''),
+          })),
+          'auto',
+        )
         return
       }
       rememberSession(loaded.slug, '')
@@ -111,10 +140,13 @@ const loadConversation = async (id: string) => {
     const latestSession = await loadLatestPersonaSession(loaded.slug)
     if (latestSession) {
       rememberSession(loaded.slug, latestSession.session_id)
-      messages.value = latestSession.messages.map((message) => ({
-        role: message.role,
-        content: stripThinkBlocks(message.content || ''),
-      }))
+      await setConversationMessages(
+        latestSession.messages.map((message) => ({
+          role: message.role,
+          content: stripThinkBlocks(message.content || ''),
+        })),
+        'auto',
+      )
     }
   } catch (error) {
     personaError.value = error instanceof Error ? error.message : '加载人格详情失败'
@@ -158,7 +190,7 @@ const sendMessage = async (preset?: string) => {
   messages.value.push({ role: 'user', content: text })
   sending.value = true
 
-  await nextTick()
+  await scrollToBottom('smooth')
 
   try {
     const result = await sendChatMessage({
@@ -168,6 +200,7 @@ const sendMessage = async (preset?: string) => {
     })
     rememberSession(persona.value.slug, result.session_id)
     messages.value.push({ role: 'assistant', content: stripThinkBlocks(result.reply || '') })
+    await scrollToBottom('smooth')
   } catch (error) {
     chatError.value = error instanceof Error ? error.message : '当前模型服务不可用，请稍后再试。'
   } finally {
@@ -239,7 +272,7 @@ const clearConversation = async () => {
         {{ chatError }}
       </p>
 
-      <div class="chat-feed">
+      <div ref="messagesContainerRef" class="chat-feed">
         <div v-if="!messages.length && !sending" class="mini-panel">
           <p class="side-title">还没有开始聊天</p>
           <p>你可以先点一个推荐问题，或者直接输入自己的问题。</p>
@@ -262,7 +295,7 @@ const clearConversation = async () => {
         </div>
       </div>
 
-      <div class="quick-questions">
+      <div v-if="shouldShowRecommendedQuestions" class="quick-questions">
         <button
           v-for="question in persona.recommendedQuestions.slice(0, 3)"
           :key="question"
@@ -293,7 +326,7 @@ const clearConversation = async () => {
         <p class="side-title">{{ persona.category }}</p>
         <p>{{ persona.profile }}</p>
       </div>
-      <div class="mini-panel">
+      <div v-if="shouldShowRecommendedQuestions" class="mini-panel">
         <p class="eyebrow">适合提问</p>
         <ul class="question-list">
           <li v-for="question in persona.recommendedQuestions" :key="question">{{ question }}</li>

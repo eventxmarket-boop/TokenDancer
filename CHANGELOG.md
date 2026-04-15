@@ -52,6 +52,12 @@
 - Redirected the app root `/` to `/persona/` so the main site no longer falls through to the backend 404.
 - Kept the `/persona/` and `/persona-api/` subpath deployment model unchanged.
 
+## V1.2.7 - 2026-04-15
+
+- Hid recommended prompts after the first real message so they only appear in an empty conversation.
+- Added automatic chat scrolling to the bottom after user messages, assistant replies, and restored history.
+- Kept skill, model, and backend chat logic unchanged.
+
 ## V1.2.6 - 2026-04-15
 
 - Fixed assistant chat bubble rendering so Markdown now displays as formatted HTML instead of raw `**` text.
