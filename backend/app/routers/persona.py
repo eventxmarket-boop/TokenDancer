@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from app.core.version import get_project_version
+from app.schemas.create_catalog import CreateCatalogResponse
 from app.schemas.persona import PersonaRecord
+from app.services.create_catalog_loader import CreateCatalogLoadError, load_create_catalog
 from app.services.persona_loader import PersonaLoadError, load_persona_summary, list_personas, list_seed_personas
 
 router = APIRouter()
@@ -41,6 +43,14 @@ async def seed_persona_list():
     try:
         return list_seed_personas()
     except PersonaLoadError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/persona-api/create-catalog", response_model=CreateCatalogResponse)
+async def create_catalog():
+    try:
+        return load_create_catalog()
+    except CreateCatalogLoadError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

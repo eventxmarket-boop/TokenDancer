@@ -41,6 +41,7 @@ Source mapping for this repository:
 - `mliu98/awesome-human-distillation`
   - Use as the selection index only.
   - Treat it as a catalog of persona directions, not a runtime dependency.
+  - The Create catalog should be derived from it as a product curation map, not as published Seed personas.
 - `xming521/WeClone-Skills`
   - Use as the persona-pack structure reference.
   - Keep persona, context, and review boundaries separate.

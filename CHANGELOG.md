@@ -88,6 +88,14 @@
 - Added a lightweight frontend Markdown renderer for bold text, lists, and paragraph breaks.
 - Kept the existing think-block sanitization and session persistence behavior unchanged.
 
+## V1.4.2 - 2026-04-16
+
+- Added a dedicated Create capability catalog for self, source, relationship, digital twin, and protection workflows.
+- Exposed `GET /persona-api/create-catalog` for the frontend Create page.
+- Rebuilt the Create page into a grouped catalog view with a hero section, functional zones, and sticky selection details.
+- Kept Seed limited to ready-made personas while routing creation templates into Create only.
+- Added endpoint coverage for the Create catalog response.
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.

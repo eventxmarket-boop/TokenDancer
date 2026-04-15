@@ -1,0 +1,428 @@
+{
+  "version": "V1.4.2",
+  "updated_at": "2026-04-16",
+  "groups": [
+    {
+      "group": "self",
+      "label": "自我人格",
+      "description": "从自己开始，把做事方式、回复方式和判断顺序整理成可用人格。",
+      "source_hint": "自我人格模板",
+      "sort_order": 1,
+      "items": [
+        {
+          "slug": "self_persona",
+          "name": "自我人格",
+          "group": "self",
+          "source_repo": "self-skill",
+          "repo_url": "https://github.com/moyitech/self-skill",
+          "description": "把自己蒸馏成一个能替你工作、替你起草回复、保留你边界感的人格。",
+          "input_modes": ["manual_profile", "chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "mindset_distill",
+          "name": "思维框架提炼",
+          "group": "self",
+          "source_repo": "nuwa-skill",
+          "repo_url": "https://github.com/alchaincyf/nuwa-skill",
+          "description": "提炼一个人的心智模型、决策启发式与表达 DNA。",
+          "input_modes": ["manual_profile", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        },
+        {
+          "slug": "deep_self_persona",
+          "name": "深度自我人格",
+          "group": "self",
+          "source_repo": "forge-skill",
+          "repo_url": "https://github.com/YIKUAIBANZI/forge-skill",
+          "description": "蒸馏自己的决策盲点与表达模式，也支持更深的人格调优。",
+          "input_modes": ["chat_history", "manual_profile"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 3
+        },
+        {
+          "slug": "digital_trace_persona",
+          "name": "数字痕迹人格",
+          "group": "self",
+          "source_repo": "digital-life",
+          "repo_url": "https://github.com/wildbyteai/digital-life",
+          "description": "从你的数字痕迹里提炼一个更真实的自我人格。",
+          "input_modes": ["digital_traces", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 4
+        }
+      ]
+    },
+    {
+      "group": "source",
+      "label": "资料投喂创建",
+      "description": "从聊天记录、PDF、音频、视频和文本里提炼人格。",
+      "source_hint": "资料蒸馏器",
+      "sort_order": 2,
+      "items": [
+        {
+          "slug": "anyone_from_sources",
+          "name": "从资料创建人格",
+          "group": "source",
+          "source_repo": "anyone-to-skill",
+          "repo_url": "https://github.com/OpenDemon/anyone-to-skill",
+          "description": "从视频、PDF、聊天记录、音频等资料中提炼人格。",
+          "input_modes": ["video", "pdf", "chat_history", "audio", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        }
+      ]
+    },
+    {
+      "group": "relationship_workplace",
+      "label": "职场关系",
+      "description": "把同事、老板等职场关系整理成可以继续问的互动视角。",
+      "source_hint": "职场关系模板",
+      "sort_order": 3,
+      "items": [
+        {
+          "slug": "colleague_persona",
+          "name": "同事人格",
+          "group": "relationship_workplace",
+          "source_repo": "colleague-skill",
+          "repo_url": "https://github.com/titanwings/colleague-skill",
+          "description": "从聊天记录与共同经历中提炼同事人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "boss_persona",
+          "name": "老板人格",
+          "group": "relationship_workplace",
+          "source_repo": "boss-skills",
+          "repo_url": "https://github.com/vogtsw/boss-skills",
+          "description": "把老板的表达方式与决策风格提炼成可对话人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        }
+      ]
+    },
+    {
+      "group": "relationship_academia",
+      "label": "学术关系",
+      "description": "把导师、师兄和老师的视角整理成可问答的人格模板。",
+      "source_hint": "学术关系模板",
+      "sort_order": 4,
+      "items": [
+        {
+          "slug": "supervisor_persona",
+          "name": "导师人格",
+          "group": "relationship_academia",
+          "source_repo": "supervisor",
+          "repo_url": "https://github.com/ybq22/supervisor",
+          "description": "把导师蒸馏成随时可问的 AI 人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "senpai_persona",
+          "name": "师兄人格",
+          "group": "relationship_academia",
+          "source_repo": "senpai-skill",
+          "repo_url": "https://github.com/zhanghaichao520/senpai-skill",
+          "description": "把毕业的师兄蒸馏成继续开组会与救火的人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        },
+        {
+          "slug": "professor_persona_a",
+          "name": "大学老师人格",
+          "group": "relationship_academia",
+          "source_repo": "professor-skill",
+          "repo_url": "https://github.com/CommitHu502Craft/professor-skill",
+          "description": "把大学老师提炼成可提问的人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 3
+        },
+        {
+          "slug": "professor_persona_b",
+          "name": "大学老师人格（另一模板）",
+          "group": "relationship_academia",
+          "source_repo": "Professor_skill",
+          "repo_url": "https://github.com/Azurboy/Professor_skill",
+          "description": "另一种大学老师人格模板。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 4
+        }
+      ]
+    },
+    {
+      "group": "relationship_intimate",
+      "label": "亲密关系",
+      "description": "把亲密关系里的角色和互动模式整理成可理解的人格模板。",
+      "source_hint": "亲密关系模板",
+      "sort_order": 5,
+      "items": [
+        {
+          "slug": "ex_persona",
+          "name": "前任人格",
+          "group": "relationship_intimate",
+          "source_repo": "ex-skill",
+          "repo_url": "https://github.com/titanwings/ex-skill",
+          "description": "从记忆与聊天记录中提炼前任人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "relationship_training",
+          "name": "关系训练",
+          "group": "relationship_intimate",
+          "source_repo": "relationship-training-skill",
+          "repo_url": "https://github.com/TammyTan516/relationship-training-skill",
+          "description": "帮助理解健康关系中的表达与互动。",
+          "input_modes": ["manual_profile", "chat_history"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        },
+        {
+          "slug": "ideal_partner_persona",
+          "name": "理想伴侣",
+          "group": "relationship_intimate",
+          "source_repo": "npy-skill",
+          "repo_url": "https://github.com/wwwttlll/npy-skill",
+          "description": "根据理想中的 TA 创建一个伴侣人格。",
+          "input_modes": ["manual_profile"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 3
+        },
+        {
+          "slug": "crush_persona",
+          "name": "暧昧对象",
+          "group": "relationship_intimate",
+          "source_repo": "crush-skill",
+          "repo_url": "https://github.com/yyyyyyylll/crush-skill",
+          "description": "模拟暧昧关系中的消息理解与对话。",
+          "input_modes": ["chat_history"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 4
+        },
+        {
+          "slug": "partner_persona",
+          "name": "现任伴侣",
+          "group": "relationship_intimate",
+          "source_repo": "partner-skill",
+          "repo_url": "https://github.com/NatalieCao323/partner-skill",
+          "description": "基于关系维护与依恋理论构建伴侣人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 5
+        },
+        {
+          "slug": "first_love_persona",
+          "name": "初恋人格",
+          "group": "relationship_intimate",
+          "source_repo": "first-love-skill",
+          "repo_url": "https://github.com/z969081067-commits/first-love-skill",
+          "description": "把记忆中的初恋提炼成可对话人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 6
+        },
+        {
+          "slug": "self_mirror_partner",
+          "name": "自我镜像伴侣",
+          "group": "relationship_intimate",
+          "source_repo": "shuixian-skill",
+          "repo_url": "https://github.com/Cyh29hao/shuixian-skill",
+          "description": "把你的表达方式和思维方式提炼成浪漫镜像人格。",
+          "input_modes": ["chat_history", "manual_profile"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 7
+        },
+        {
+          "slug": "relationship_interpreter",
+          "name": "关系理解辅助",
+          "group": "relationship_intimate",
+          "source_repo": "xinyi",
+          "repo_url": "https://github.com/kroxchan/xinyi",
+          "description": "帮助理解关系中的表达与潜台词。",
+          "input_modes": ["chat_history"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 8
+        }
+      ]
+    },
+    {
+      "group": "relationship_family",
+      "label": "家庭关系",
+      "description": "把父母、妈妈和重逢场景整理成更细腻的关系人格模板。",
+      "source_hint": "家庭关系模板",
+      "sort_order": 6,
+      "items": [
+        {
+          "slug": "parents_persona",
+          "name": "父母人格",
+          "group": "relationship_family",
+          "source_repo": "parents-skills",
+          "repo_url": "https://github.com/xiaoheizi8/parents-skills",
+          "description": "用父母的口头禅与关心方式，生成更像他们的人格。",
+          "input_modes": ["chat_history", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "reunion_persona",
+          "name": "重逢人格",
+          "group": "relationship_family",
+          "source_repo": "reunion-skill",
+          "repo_url": "https://github.com/yangdongchen66-boop/reunion-skill",
+          "description": "用于逝去亲人的数字陪伴与重逢式人格创建。",
+          "input_modes": ["chat_history", "documents", "memory_notes"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        },
+        {
+          "slug": "mama_persona",
+          "name": "妈妈人格",
+          "group": "relationship_family",
+          "source_repo": "MamaSkill",
+          "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
+          "description": "从与母亲有关的记忆与资料中提炼妈妈人格。",
+          "input_modes": ["chat_history", "documents", "memory_notes"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 3
+        }
+      ]
+    },
+    {
+      "group": "digital_twin",
+      "label": "数字分身",
+      "description": "做更高保真的长期数字分身或全平台蒸馏框架。",
+      "source_hint": "高保真创建框架",
+      "sort_order": 7,
+      "items": [
+        {
+          "slug": "high_fidelity_twin",
+          "name": "高保真数字分身",
+          "group": "digital_twin",
+          "source_repo": "digital-twin-skill",
+          "repo_url": "https://github.com/FredHJC/digital-twin-skill",
+          "description": "基于个人数据创建高保真 AI 数字分身。",
+          "input_modes": ["chat_history", "documents", "personal_data"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        },
+        {
+          "slug": "immortal_twin",
+          "name": "数字永生",
+          "group": "digital_twin",
+          "source_repo": "immortal-skill",
+          "repo_url": "https://github.com/agenmod/immortal-skill",
+          "description": "支持多平台、多维蒸馏的数字永生型人格创建。",
+          "input_modes": ["multi_platform_data", "documents", "chat_history"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 2
+        }
+      ]
+    },
+    {
+      "group": "protection",
+      "label": "隐私与防护",
+      "description": "做资料脱敏、防蒸馏与边界保留，不让创建流程越界。",
+      "source_hint": "边界保护工具",
+      "sort_order": 8,
+      "items": [
+        {
+          "slug": "anti_distill_protection",
+          "name": "防蒸馏保护",
+          "group": "protection",
+          "source_repo": "anti-distill",
+          "repo_url": "https://github.com/leilei926524-tech/anti-distill",
+          "description": "对被迫写出的 skill 文件做清洗，保护核心知识与边界。",
+          "input_modes": ["skill_file", "documents"],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        }
+      ]
+    }
+  ]
+}
