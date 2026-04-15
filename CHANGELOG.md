@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.2.2 - 2026-04-15
+
+- Added a dedicated `tokendancer.xyz` nginx entry for the persona station.
+- Prepared HTTPS routing so the bare domain can redirect to `/persona/` without hitting the backend 404.
+- Kept the existing `app.tokendancer.xyz` deployment unchanged.
+
 ## V1.2.1 - 2026-04-15
 
 - Added `/persona/admin` as a lightweight admin entry page for LLM configuration.
