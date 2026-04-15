@@ -1,5 +1,10 @@
 # Changelog
 
+## V1.1.3 - 2026-04-15
+
+- Removed an accidentally committed `frontend/node_modules 2` symlink from the repository.
+- Kept the production nginx fix for `app.tokendancer.xyz` intact.
+
 ## V1.1.2 - 2026-04-15
 
 - Added an explicit `app.tokendancer.xyz` nginx server block for the persona station.
