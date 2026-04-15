@@ -48,8 +48,20 @@ def detect_emotional_state(user_message: str, history: list[dict[str, str]]) -> 
 
 def _memory_sources(memory_base: dict[str, Any]) -> list[str]:
     items: list[str] = []
-    for key in ("shared_events", "important_advice", "daily_habits", "emotional_triggers"):
+    for key in (
+        "shared_events",
+        "important_advice",
+        "daily_habits",
+        "emotional_triggers",
+        "memory_fragments",
+        "text_materials",
+        "image_notes",
+        "voice_notes",
+    ):
         items.extend(_clean_lines(memory_base.get(key)))
+    chat_history_summary = _normalize_text(memory_base.get("chat_history_summary"))
+    if chat_history_summary:
+        items.append(chat_history_summary)
     return [item for item in items if item]
 
 
@@ -133,6 +145,9 @@ def build_family_reply_context(
     if memories:
         parts.append("可调用回忆：")
         parts.extend(f"- {item}" for item in memories[:4])
+    chat_history_summary = _normalize_text(persona_profile.get("chat_history_summary"))
+    if chat_history_summary:
+        parts.append(f"聊天记录摘要：{chat_history_summary}")
     if boundaries:
         parts.append(f"边界提醒：{boundaries}")
     parts.append(f"当前用户消息：{_normalize_text(user_message)}")

@@ -81,6 +81,79 @@ def build_persona_system_prompt_with_context(
         _append_layer_section(parts, "生活痕迹", self_unified.get("memory_evidence"))
         _append_layer_section(parts, "反思规则", self_unified.get("reflection_rules"))
         _append_section(parts, "边界规则", persona.get("guardrails", ""))
+    reunion_persona = persona.get("reunion_persona_profile") or {}
+    reunion_memory = persona.get("reunion_memory_base") or {}
+    reunion_policy = persona.get("reunion_memory_retrieval_policy") or {}
+    reunion_guardrails = persona.get("reunion_safety_guardrails") or {}
+    if reunion_persona:
+        profile_lines = []
+        for label, key in [
+            ("重逢身份", "relationship_type"),
+            ("称呼", "name"),
+            ("说话风格", "tone"),
+            ("回忆方式", "remembrance_style"),
+            ("安抚方式", "comfort_style"),
+            ("边界", "boundaries"),
+        ]:
+            value = str(reunion_persona.get(key, "")).strip()
+            if value:
+                profile_lines.append(f"- {label}：{value}")
+        _append_section(parts, "人格层", "\n".join(profile_lines))
+
+        memory_lines = []
+        for label, key in [
+            ("聊天记录摘要", "chat_history_summary"),
+            ("日记 / 信件", "diary_notes"),
+            ("照片 / 截图", "photo_notes"),
+            ("口述回忆", "voice_notes"),
+            ("记忆片段", "memory_fragments"),
+            ("共同记忆", "shared_memories"),
+        ]:
+            value = reunion_memory.get(key, []) if isinstance(reunion_memory, dict) else []
+            if isinstance(value, list):
+                text = " / ".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                text = str(value or "").strip()
+            if text:
+                memory_lines.append(f"- {label}：{text}")
+        _append_section(parts, "记忆层", "\n".join(memory_lines))
+
+        policy_lines = []
+        for label, key in [
+            ("检索模式", "mode"),
+            ("渐进式回忆", "progressive_recall"),
+        ]:
+            value = reunion_policy.get(key, "") if isinstance(reunion_policy, dict) else ""
+            if isinstance(value, bool):
+                text = "是" if value else "否"
+            else:
+                text = str(value or "").strip()
+            if text:
+                policy_lines.append(f"- {label}：{text}")
+        for label, key in [("优先规则", "priority_rules"), ("降级规则", "fallback_rules")]:
+            value = reunion_policy.get(key, []) if isinstance(reunion_policy, dict) else []
+            if isinstance(value, list):
+                text = " / ".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                text = str(value or "").strip()
+            if text:
+                policy_lines.append(f"- {label}：{text}")
+        _append_section(parts, "记忆检索策略", "\n".join(policy_lines))
+
+        guardrail_lines = []
+        for label, key in [
+            ("边界", "boundaries"),
+            ("情绪护栏", "emotional_protection"),
+            ("避免触发", "avoid_triggers"),
+        ]:
+            value = reunion_guardrails.get(key, []) if isinstance(reunion_guardrails, dict) else []
+            if isinstance(value, list):
+                text = " / ".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                text = str(value or "").strip()
+            if text:
+                guardrail_lines.append(f"- {label}：{text}")
+        _append_section(parts, "安全护栏", "\n".join(guardrail_lines))
     else:
         _append_section(parts, "人格身份与定位", persona.get("profile", ""))
         _append_section(parts, "思维方式", persona.get("mindset", ""))

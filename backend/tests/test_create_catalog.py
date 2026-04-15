@@ -37,6 +37,18 @@ class CreateCatalogTests(unittest.TestCase):
             )
         )
 
+        self.assertIn("relationship_family", groups)
+        family_items = groups["relationship_family"]["items"]
+        family_slugs = {item["slug"] for item in family_items}
+        self.assertIn("family_companion", family_slugs)
+        self.assertIn("reunion_persona", family_slugs)
+        family_item = next(item for item in family_items if item["slug"] == "family_companion")
+        self.assertEqual(family_item["source_repo"], "parents-skills+MamaSkill")
+        self.assertIn("https://github.com/xiaoheizi8/parents-skills", family_item["source_urls"])
+        reunion_item = next(item for item in family_items if item["slug"] == "reunion_persona")
+        self.assertEqual(reunion_item["source_repo"], "reunion-skill")
+        self.assertIn("https://github.com/yangdongchen66-boop/reunion-skill", reunion_item["source_urls"])
+
 
 if __name__ == "__main__":
     unittest.main()

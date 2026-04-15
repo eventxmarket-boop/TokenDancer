@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.20 - 2026-04-16
+
+- Consolidated the family relation Create path around `家人陪伴` and `重逢人格` with explicit upstream source mapping.
+- Kept `parents-skills`, `MamaSkill`, and `reunion-skill` as the normalized family mapping sources in the Create catalog.
+- Expanded the Create wizard, result page, and My Seeds flow to surface reunion personas as a distinct family path.
+- Added regression coverage for the family and reunion create/save/open/chat round trips.
+
 ## V1.4.19 - 2026-04-16
 
 - Unified the four self-persona Create entries into a single `我的人格` main line.

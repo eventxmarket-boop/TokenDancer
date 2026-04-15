@@ -9,6 +9,12 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.reunion_persona import (
+    ReunionPersonaMemoryBase,
+    ReunionPersonaProfile,
+    ReunionPersonaRetrievalPolicy,
+    ReunionPersonaSafetyGuardrails,
+)
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
 
 
@@ -58,6 +64,10 @@ class CreateWizardDraft(BaseModel):
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None
     memory_base: FamilyCompanionMemoryBase | None = None
+    reunion_persona_profile: ReunionPersonaProfile | None = None
+    reunion_memory_base: ReunionPersonaMemoryBase | None = None
+    reunion_memory_retrieval_policy: ReunionPersonaRetrievalPolicy | None = None
+    reunion_safety_guardrails: ReunionPersonaSafetyGuardrails | None = None
     relationship_profile: IntimateCompanionRelationshipProfile | None = None
     intimate_memory_base: IntimateCompanionMemoryBase | None = None
 

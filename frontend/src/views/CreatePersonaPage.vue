@@ -51,7 +51,7 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'family',
     title: '家人陪伴',
-    description: '从熟悉的关心方式、说话方式和记忆片段中开始。',
+    description: '从熟悉的关心方式、说话方式和记忆片段中开始，也可进入重逢人格。',
     groupKeys: ['relationship_family'],
   },
 ]
@@ -141,6 +141,9 @@ function getSchemaKeyForItem(item: CreateCatalogItem) {
   if (item.create_type === 'family_companion') {
     return `family_companion_${getDefaultInputMode(item)}`
   }
+  if (item.create_type === 'reunion_persona') {
+    return `reunion_persona_${getDefaultInputMode(item)}`
+  }
   return schemaKeyBySourceRepo[item.source_repo] || `${item.group}_${item.slug}`
 }
 
@@ -179,7 +182,12 @@ const sectionViews = computed(() => {
         if (section.key !== 'family') {
           return true
         }
-        return item.create_type === 'family_companion' || item.slug === 'family_companion'
+        return (
+          item.create_type === 'family_companion' ||
+          item.create_type === 'reunion_persona' ||
+          item.slug === 'family_companion' ||
+          item.slug === 'reunion_persona'
+        )
       })
 
     return {

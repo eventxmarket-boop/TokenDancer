@@ -10,6 +10,10 @@ import {
   type FamilyCompanionPersonaProfile,
   type IntimateCompanionMemoryBase,
   type IntimateCompanionRelationshipProfile,
+  type ReunionPersonaMemoryBase,
+  type ReunionPersonaProfile,
+  type ReunionPersonaRetrievalPolicy,
+  type ReunionPersonaSafetyGuardrails,
   type SelfPersonaUnifiedDraft,
 } from '@/services/createWizardService'
 import {
@@ -86,6 +90,10 @@ const editableDraft = reactive<CreateWizardDraft>({
   },
   persona_profile: null,
   memory_base: null,
+  reunion_persona_profile: null,
+  reunion_memory_base: null,
+  reunion_memory_retrieval_policy: null,
+  reunion_safety_guardrails: null,
   relationship_profile: null,
   intimate_memory_base: null,
 })
@@ -104,6 +112,9 @@ const typeLabel = computed(() => {
   }
   if (type === 'family_companion') {
     return '家人陪伴'
+  }
+  if (type === 'reunion_persona') {
+    return '重逢人格'
   }
   if (type === 'intimate_companion') {
     return '亲密关系'
@@ -183,10 +194,86 @@ const familyMemoryLines = computed(() => {
   }
 
   return [
+    { label: '聊天摘要', value: memory.chat_history_summary || '未填写' },
     { label: '关键共同经历', value: memory.shared_events?.join(' / ') || '未填写' },
     { label: '最常提起的往事', value: memory.daily_habits?.join(' / ') || '未填写' },
     { label: '反复说过的话', value: memory.important_advice?.join(' / ') || '未填写' },
     { label: '在意的事', value: memory.emotional_triggers?.join(' / ') || '未填写' },
+    { label: '记忆片段', value: memory.memory_fragments?.join(' / ') || '未填写' },
+    { label: '文本材料', value: memory.text_materials?.join(' / ') || '未填写' },
+    { label: '图片备注', value: memory.image_notes?.join(' / ') || '未填写' },
+    { label: '语音备注', value: memory.voice_notes?.join(' / ') || '未填写' },
+  ]
+})
+
+const reunionPersonaProfile = computed<ReunionPersonaProfile | null>(() => {
+  const payload = editableDraft.reunion_persona_profile || draft.value?.reunion_persona_profile
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const reunionMemoryBase = computed<ReunionPersonaMemoryBase | null>(() => {
+  const payload = editableDraft.reunion_memory_base || draft.value?.reunion_memory_base
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const reunionRetrievalPolicy = computed<ReunionPersonaRetrievalPolicy | null>(() => {
+  const payload = editableDraft.reunion_memory_retrieval_policy || draft.value?.reunion_memory_retrieval_policy
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const reunionSafetyGuardrails = computed<ReunionPersonaSafetyGuardrails | null>(() => {
+  const payload = editableDraft.reunion_safety_guardrails || draft.value?.reunion_safety_guardrails
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const reunionProfileLines = computed(() => {
+  const profile = reunionPersonaProfile.value
+  if (!profile) {
+    return []
+  }
+
+  return [
+    { label: '关系类型', value: profile.relationship_type || '未填写' },
+    { label: '称呼', value: profile.name || '未填写' },
+    { label: '说话风格', value: profile.tone || '未填写' },
+    { label: '回忆方式', value: profile.remembrance_style || '未填写' },
+    { label: '安抚方式', value: profile.comfort_style || '未填写' },
+    { label: '边界', value: profile.boundaries || '未填写' },
+  ]
+})
+
+const reunionMemoryLines = computed(() => {
+  const memory = reunionMemoryBase.value
+  if (!memory) {
+    return []
+  }
+
+  const policy = reunionRetrievalPolicy.value
+  const safety = reunionSafetyGuardrails.value
+
+  return [
+    { label: '聊天摘要', value: memory.chat_history_summary || '未填写' },
+    { label: '日记 / 信件', value: memory.diary_notes?.join(' / ') || '未填写' },
+    { label: '书信文本', value: memory.letter_notes?.join(' / ') || '未填写' },
+    { label: '照片备注', value: memory.photo_notes?.join(' / ') || '未填写' },
+    { label: '语音备注', value: memory.voice_notes?.join(' / ') || '未填写' },
+    { label: '记忆片段', value: memory.memory_fragments?.join(' / ') || '未填写' },
+    { label: '共同记忆', value: memory.shared_memories?.join(' / ') || '未填写' },
+    { label: '检索模式', value: policy?.mode || '未填写' },
+    { label: '优先规则', value: policy?.priority_rules?.join(' / ') || '未填写' },
+    { label: '安全护栏', value: safety?.emotional_protection?.join(' / ') || '未填写' },
   ]
 })
 
@@ -535,6 +622,26 @@ onMounted(() => {
           <p class="eyebrow">记忆层</p>
           <div class="family-grid">
             <div v-for="line in familyMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'reunion_persona'" class="draft-card">
+          <p class="eyebrow">人格层</p>
+          <div class="family-grid">
+            <div v-for="line in reunionProfileLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'reunion_persona'" class="draft-card">
+          <p class="eyebrow">记忆层</p>
+          <div class="family-grid">
+            <div v-for="line in reunionMemoryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

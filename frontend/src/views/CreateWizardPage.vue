@@ -9,7 +9,13 @@ import {
   submitCreateDraft,
 } from '@/services/createWizardService'
 
-type CreateType = 'self_unified' | 'source_persona' | 'relationship_persona' | 'family_companion' | 'intimate_companion'
+type CreateType =
+  | 'self_unified'
+  | 'source_persona'
+  | 'relationship_persona'
+  | 'family_companion'
+  | 'reunion_persona'
+  | 'intimate_companion'
 
 type SelfCreateMode = 'light' | 'standard' | 'deep'
 
@@ -62,10 +68,26 @@ const formState = reactive({
   important_advice: '',
   daily_habits: '',
   emotional_triggers: '',
+  chat_history_summary: '',
+  memory_fragments: '',
+  text_materials: '',
+  image_notes: '',
+  voice_notes: '',
+  remembrance_style: '',
+  retrieval_mode: '',
+  priority_rules: '',
+  fallback_rules: '',
+  safety_boundaries: '',
+  emotional_protection: '',
+  avoid_triggers: '',
+  diary_notes: '',
+  letter_notes: '',
+  photo_notes: '',
   conversation_samples: '',
   interaction_rules: '',
   relationship_goals: '',
   key_memories: '',
+  shared_memories: '',
 })
 
 const typeCards = [
@@ -127,6 +149,13 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     parents: '父母',
     other_family: '其他家人',
   },
+  reunion_persona: {
+    chat_history: '聊天记录',
+    documents: '文档资料',
+    memory_notes: '记忆片段',
+    photo_notes: '照片 / 截图',
+    voice_notes: '语音 / 口述',
+  },
 }
 
 const inputModeBySourceRepo: Record<string, string> = {
@@ -146,6 +175,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'reunion-skill': 'reunion',
   MamaSkill: 'mama',
   'MamaSkill+parents-skills+darwin-skill': 'mother',
+  'parents-skills+MamaSkill': 'mother',
   'digital-twin-skill': 'multi_source',
   'immortal-skill': 'multi_source',
   'anti-distill': 'documents',
@@ -221,12 +251,14 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'reunion-skill': 'relationship_family_reunion',
   MamaSkill: 'relationship_family_mama',
   'MamaSkill+parents-skills+darwin-skill': 'family_companion_mother',
+  'parents-skills+MamaSkill': 'family_companion_mother',
   'digital-twin-skill': 'digital_twin_high_fidelity',
   'immortal-skill': 'digital_twin_immortal',
   'anti-distill': 'protection_anti_distill',
 }
 
-const isFamilyCompanion = computed(() => createType.value === 'family_companion')
+const isFamilyCompanion = computed(() => createType.value === 'family_companion' || createType.value === 'reunion_persona')
+const isReunionPersona = computed(() => createType.value === 'reunion_persona')
 const isSelfUnified = computed(() => createType.value === 'self_unified')
 
 const stepLabels = computed(() =>
@@ -234,6 +266,8 @@ const stepLabels = computed(() =>
     ? ['选择深度', '选择方式', '填写信息', '生成结果']
     : isFamilyCompanion.value
     ? ['选择关系类型', '填写信息', '确认结果', '生成结果']
+    : isReunionPersona.value
+    ? ['选择材料', '填写信息', '确认结果', '生成结果']
     : ['选择类型', '选择方式', '填写信息', '生成结果'],
 )
 
@@ -271,6 +305,8 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 }
 
 const memoryEvidenceFileName = ref('')
+const familyMaterialFileName = ref('')
+const reunionMaterialFileName = ref('')
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
@@ -278,6 +314,9 @@ const currentTypeLabel = computed(() => {
   }
   if (createType.value === 'source_persona') {
     return '从资料创建'
+  }
+  if (createType.value === 'reunion_persona') {
+    return '重逢人格'
   }
   if (createType.value === 'intimate_companion') {
     return '亲密关系'
@@ -320,6 +359,7 @@ function normalizeCreateType(value: string): CreateType {
     value === 'source_persona' ||
     value === 'relationship_persona' ||
     value === 'family_companion' ||
+    value === 'reunion_persona' ||
     value === 'intimate_companion'
   ) {
     return value
@@ -336,7 +376,7 @@ function inferCreateTypeFromQuery() {
   if (explicit === 'relationship_persona') {
     const relationGroup = readQueryValue('group')
     if (relationGroup === 'relationship_family') {
-      return 'family_companion'
+      return readQueryValue('source_repo') === 'reunion-skill' ? 'reunion_persona' : 'family_companion'
     }
     if (relationGroup === 'relationship_intimate') {
       return 'intimate_companion'
@@ -349,7 +389,7 @@ function inferCreateTypeFromQuery() {
     return 'source_persona'
   }
   if (group === 'relationship_family') {
-    return 'family_companion'
+    return readQueryValue('source_repo') === 'reunion-skill' ? 'reunion_persona' : 'family_companion'
   }
   if (group === 'relationship_intimate') {
     return 'intimate_companion'
@@ -384,6 +424,9 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
   if (createTypeValue === 'family_companion') {
     return 'mother'
   }
+  if (createTypeValue === 'reunion_persona') {
+    return 'chat_history'
+  }
   if (createTypeValue === 'intimate_companion') {
     return 'relationship_understanding'
   }
@@ -394,6 +437,9 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
 function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, inputModeValue: string, displayName: string) {
   if (createTypeValue === 'family_companion') {
     return `family_companion_${inputModeValue || 'mother'}`
+  }
+  if (createTypeValue === 'reunion_persona') {
+    return `reunion_persona_${inputModeValue || 'chat_history'}`
   }
   if (createTypeValue === 'intimate_companion') {
     return `intimate_companion_${inputModeValue || 'relationship_understanding'}`
@@ -416,6 +462,9 @@ function getDefaultGroupForType(type: CreateType) {
   if (type === 'family_companion') {
     return 'relationship_family'
   }
+  if (type === 'reunion_persona') {
+    return 'relationship_family'
+  }
   if (type === 'intimate_companion') {
     return 'relationship_intimate'
   }
@@ -430,7 +479,10 @@ function getDefaultSourceRepoForType(type: CreateType) {
     return 'anyone-to-skill'
   }
   if (type === 'family_companion') {
-    return 'MamaSkill+parents-skills+darwin-skill'
+    return 'parents-skills+MamaSkill'
+  }
+  if (type === 'reunion_persona') {
+    return 'reunion-skill'
   }
   if (type === 'intimate_companion') {
     return 'relationship-training-skill+xinyi'
@@ -447,6 +499,9 @@ function getDefaultDisplayNameForType(type: CreateType) {
   }
   if (type === 'family_companion') {
     return '家人陪伴'
+  }
+  if (type === 'reunion_persona') {
+    return '重逢人格'
   }
   if (type === 'intimate_companion') {
     return '亲密关系'
@@ -514,6 +569,54 @@ function handleSelfMemoryFileChange(event: Event) {
   target.value = ''
 }
 
+function appendTextToFormField(field: keyof typeof formState, content: string) {
+  const current = String(formState[field] || '').trim()
+  const appended = [current, content.trim()].filter(Boolean).join('\n')
+  formState[field] = appended
+}
+
+function handleFamilyMaterialFileChange(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file) {
+    return
+  }
+
+  familyMaterialFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = () => {
+    const content = String(reader.result || '').trim()
+    if (!content) {
+      return
+    }
+    appendTextToFormField('text_materials', content)
+    appendTextToFormField('memory_fragments', content)
+  }
+  reader.readAsText(file)
+  target.value = ''
+}
+
+function handleReunionMaterialFileChange(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file) {
+    return
+  }
+
+  reunionMaterialFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = () => {
+    const content = String(reader.result || '').trim()
+    if (!content) {
+      return
+    }
+    appendTextToFormField('diary_notes', content)
+    appendTextToFormField('memory_fragments', content)
+  }
+  reader.readAsText(file)
+  target.value = ''
+}
+
 function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   if (type === 'self_unified') {
     return 'self'
@@ -522,6 +625,9 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
     return 'source'
   }
   if (type === 'family_companion') {
+    return 'relationship_family'
+  }
+  if (type === 'reunion_persona') {
     return 'relationship_family'
   }
   if (type === 'intimate_companion') {
@@ -596,6 +702,14 @@ function getInputModeNote(type: CreateType, mode: string) {
     if (mode === 'other_family') return '适合其他家人视角。'
   }
 
+  if (type === 'reunion_persona') {
+    if (mode === 'chat_history') return '适合从聊天记录开始。'
+    if (mode === 'documents') return '适合从文档或纪念材料开始。'
+    if (mode === 'memory_notes') return '适合先整理回忆片段。'
+    if (mode === 'photo_notes') return '适合先整理照片 / 截图说明。'
+    if (mode === 'voice_notes') return '适合先整理口述回忆。'
+  }
+
   return '适合继续完善。'
 }
 
@@ -604,6 +718,7 @@ function getRelationshipLabel(mode: string) {
     inputModeLabels.relationship_persona[mode] ||
     inputModeLabels.intimate_companion[mode] ||
     inputModeLabels.family_companion[mode] ||
+    inputModeLabels.reunion_persona[mode] ||
     '关系人格'
   )
 }
@@ -616,6 +731,8 @@ function clearFormState() {
 
 function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
+  familyMaterialFileName.value = ''
+  reunionMaterialFileName.value = ''
 
   if (type === 'self_unified') {
     formState.name = displayName || '我的人格'
@@ -660,6 +777,33 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
     formState.daily_habits = '会问你吃饭没\n会提醒你休息'
     formState.emotional_triggers = '考试压力\n工作烦心\n好消息分享'
     formState.relation_boundaries = '不越界，不替你做决定，不伪造没发生过的事。'
+    formState.chat_history_summary = '把你和家人之间的重要聊天、提醒和记忆先整理出来。'
+    formState.memory_fragments = '聊天记录片段\n共同回忆\n日常关心'
+    formState.text_materials = '文本材料\n手记内容'
+    formState.image_notes = '照片 / 截图说明'
+    formState.voice_notes = '语音片段说明'
+  }
+
+  if (type === 'reunion_persona') {
+    formState.relationship_type = getRelationshipLabel(mode) || displayName || '重逢人格'
+    formState.persona_name = displayName || getRelationshipLabel(mode) || '重逢人格'
+    formState.speech_style = '克制、温和、保留记忆感。'
+    formState.remembrance_style = '先慢慢回忆，再一点点靠近。'
+    formState.comfort_style = '先稳住情绪，再带着记忆慢慢说。'
+    formState.relation_boundaries = '不激进刺激，不越界替代现实。'
+    formState.chat_history_summary = '把聊天记录、日记、信件和口述材料先整理一下。'
+    formState.memory_fragments = '关键回忆片段\n重要往事\n共同经历'
+    formState.diary_notes = '日记内容\n信件摘录'
+    formState.letter_notes = '书信文本'
+    formState.photo_notes = '照片说明 / 截图说明'
+    formState.voice_notes = '口述回忆 / 语音说明'
+    formState.shared_memories = '你们共同经历过的时刻\n反复出现的记忆'
+    formState.retrieval_mode = '渐进式回忆'
+    formState.priority_rules = '优先最近对话\n优先当前情绪相关记忆'
+    formState.fallback_rules = '记忆不足时先稳住情绪\n不编造细节'
+    formState.safety_boundaries = '不激进刺激\n不替现实关系下结论'
+    formState.emotional_protection = '先接住情绪\n避免高压追问'
+    formState.avoid_triggers = '不要把空白补成确定事实\n不要一次抛出过多强刺激回忆'
   }
 
   if (type === 'intimate_companion') {
@@ -764,7 +908,8 @@ function loadStateSnapshot() {
     const intimateModes = new Set(['relationship_understanding', 'message_simulation', 'partner_maintenance', 'past_relation_mirror'])
     const familyModes = new Set(['mother', 'parents', 'other_family'])
     const intimateSources = new Set(['relationship-training-skill+xinyi', 'crush-skill', 'partner-skill+npy-skill', 'ex-skill+first-love-skill+shuixian-skill'])
-    const familySources = new Set(['MamaSkill', 'parents-skills', 'MamaSkill+parents-skills+darwin-skill', 'reunion-skill'])
+    const familySources = new Set(['MamaSkill', 'parents-skills', 'MamaSkill+parents-skills+darwin-skill', 'parents-skills+MamaSkill'])
+    const reunionSources = new Set(['reunion-skill'])
 
     if (
       selectedGroup.value === 'relationship_intimate' ||
@@ -782,6 +927,12 @@ function loadStateSnapshot() {
       } else if (inputMode.value === 'relationship_training' || inputMode.value === 'relationship_interpreter') {
         inputMode.value = 'relationship_understanding'
       }
+    } else if (reunionSources.has(selectedSourceRepo.value) || inputMode.value === 'reunion' || selectedSchemaKey.value?.startsWith('reunion_persona_')) {
+      createType.value = 'reunion_persona'
+      selectedGroup.value = 'relationship_family'
+      inputMode.value = inputMode.value || 'chat_history'
+      selectedSourceRepo.value = 'reunion-skill'
+      selectedName.value = selectedName.value || '重逢人格'
     } else if (
       selectedGroup.value === 'relationship_family' ||
       familyModes.has(inputMode.value) ||
@@ -893,6 +1044,8 @@ function selectType(type: CreateType) {
     inputMode.value = 'documents'
   } else if (type === 'family_companion') {
     inputMode.value = 'mother'
+  } else if (type === 'reunion_persona') {
+    inputMode.value = 'chat_history'
   } else if (type === 'intimate_companion') {
     inputMode.value = 'relationship_understanding'
   } else {
@@ -909,16 +1062,25 @@ function selectInputMode(mode: string) {
   if (
     createType.value === 'relationship_persona' ||
     createType.value === 'family_companion' ||
+    createType.value === 'reunion_persona' ||
     createType.value === 'intimate_companion'
   ) {
-    selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
-    selectedName.value = getRelationshipLabel(mode) || selectedName.value
+    if (createType.value === 'family_companion') {
+      selectedSourceRepo.value = 'parents-skills+MamaSkill'
+      selectedName.value = getRelationshipLabel(mode) || selectedName.value
+    } else if (createType.value === 'reunion_persona') {
+      selectedSourceRepo.value = 'reunion-skill'
+      selectedName.value = selectedName.value || '重逢人格'
+    } else {
+      selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
+      selectedName.value = getRelationshipLabel(mode) || selectedName.value
+    }
   } else if (createType.value === 'self_unified') {
     selfInputModes.value = Array.from(new Set([...(selfInputModes.value || []), mode]))
   }
   selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, mode, selectedName.value)
   resetFormForType(createType.value, selectedName.value, mode)
-  step.value = createType.value === 'family_companion' ? 2 : 3
+  step.value = createType.value === 'family_companion' || createType.value === 'reunion_persona' ? 2 : 3
 }
 
 function goStep(nextStep: number) {
@@ -1071,10 +1233,10 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 1 步</p>
-              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? '选择关系类型' : '选择创建类型' }}</h3>
+              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择关系类型') : '选择创建类型' }}</h3>
             </div>
             <p class="section-note">
-              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? '先选妈妈、父母或其他家人。' : '先确认你要从哪里开始创建。' }}
+              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人。') : '先确认你要从哪里开始创建。' }}
             </p>
           </div>
 
@@ -1126,10 +1288,10 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 2 步</p>
-              <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? '填写人物资料' : '选择创建方式' }}</h3>
+              <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? (isReunionPersona ? '填写重逢资料' : '填写人物资料') : '选择创建方式' }}</h3>
             </div>
             <p class="section-note">
-              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? '把人物层和记忆层先写清楚。' : '不同类型会显示不同的方式选择。' }}
+              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? (isReunionPersona ? '把记忆层和安全边界先写清楚。' : '把人物层和记忆层先写清楚。') : '不同类型会显示不同的方式选择。' }}
             </p>
           </div>
 
@@ -1205,6 +1367,96 @@ watch(
                   <textarea v-model="formState.emotional_triggers" class="field-input wizard-textarea" rows="4"></textarea>
                 </label>
               </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>聊天记录摘要</span>
+                  <textarea v-model="formState.chat_history_summary" class="field-input wizard-textarea" rows="4" placeholder="把关键聊天记录先整理一下"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>记忆片段</span>
+                  <textarea v-model="formState.memory_fragments" class="field-input wizard-textarea" rows="4" placeholder="一句一句整理出最有记忆感的片段"></textarea>
+                </label>
+              </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>上传 txt / md / csv</span>
+                  <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleFamilyMaterialFileChange" />
+                  <small class="field-hint">{{ familyMaterialFileName || '可把文本材料追加到文本材料和记忆片段里' }}</small>
+                </label>
+                <label class="form-field">
+                  <span>文本材料</span>
+                  <textarea v-model="formState.text_materials" class="field-input wizard-textarea" rows="4" placeholder="可直接粘贴文字材料"></textarea>
+                </label>
+              </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>照片 / 截图备注</span>
+                  <textarea v-model="formState.image_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录图片或截图里的关键信息"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>语音备注</span>
+                  <textarea v-model="formState.voice_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录语音里的关键信息"></textarea>
+                </label>
+              </div>
+
+              <div v-if="isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>回忆方式</span>
+                  <textarea v-model="formState.remembrance_style" class="field-input wizard-textarea" rows="4" placeholder="先慢慢回忆，再一点点靠近"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>聊天记录摘要</span>
+                  <textarea v-model="formState.chat_history_summary" class="field-input wizard-textarea" rows="4" placeholder="把关键聊天记录、信件或日记先整理一下"></textarea>
+                </label>
+              </div>
+
+              <div v-if="isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>日记 / 信件</span>
+                  <textarea v-model="formState.diary_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴日记或信件摘录"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>书信文本</span>
+                  <textarea v-model="formState.letter_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴信件摘录"></textarea>
+                </label>
+              </div>
+
+              <div v-if="isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>上传 txt / md / csv</span>
+                  <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleReunionMaterialFileChange" />
+                  <small class="field-hint">{{ reunionMaterialFileName || '可把文本材料追加到日记 / 信件里' }}</small>
+                </label>
+                <label class="form-field">
+                  <span>书信文本</span>
+                  <textarea v-model="formState.letter_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴信件摘录"></textarea>
+                </label>
+              </div>
+
+              <div v-if="isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>记忆片段</span>
+                  <textarea v-model="formState.memory_fragments" class="field-input wizard-textarea" rows="4" placeholder="一句一句整理出最有回忆感的片段"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>语音备注</span>
+                  <textarea v-model="formState.voice_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录语音里的关键信息"></textarea>
+                </label>
+              </div>
+
+              <div v-if="isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>照片 / 截图备注</span>
+                  <textarea v-model="formState.photo_notes" class="field-input wizard-textarea" rows="4" placeholder="照片说明、截图说明、口述回忆"></textarea>
+                </label>
+                <label class="form-field">
+                  <span>安全边界</span>
+                  <textarea v-model="formState.safety_boundaries" class="field-input wizard-textarea" rows="4" placeholder="不激进刺激，不替现实关系下结论"></textarea>
+                </label>
+              </div>
             </div>
           </template>
 
@@ -1227,9 +1479,9 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 3 步</p>
-              <h3>{{ isFamilyCompanion ? '确认人物层与记忆层' : '填写信息' }}</h3>
+              <h3>{{ isFamilyCompanion ? (isReunionPersona ? '确认重逢人格与记忆层' : '确认人物层与记忆层') : '填写信息' }}</h3>
             </div>
-            <p class="section-note">{{ isFamilyCompanion ? '先看一眼，再继续生成。' : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
+            <p class="section-note">{{ isFamilyCompanion ? (isReunionPersona ? '先看一眼记忆与护栏，再继续生成。' : '先看一眼，再继续生成。') : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
           </div>
 
           <div v-if="createType === 'self_unified'" class="wizard-form">
@@ -1398,24 +1650,24 @@ watch(
             </div>
           </div>
 
-          <div v-else-if="createType === 'family_companion'" class="wizard-review wizard-review--family">
+          <div v-else-if="createType === 'family_companion' || createType === 'reunion_persona'" class="wizard-review wizard-review--family">
             <div class="summary-panel">
-              <p class="eyebrow">人物层</p>
+              <p class="eyebrow">{{ createType === 'reunion_persona' ? '重逢人格层' : '人物层' }}</p>
               <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
               <ul class="summary-panel__list">
                 <li><span>关系类型</span><strong>{{ getRelationshipLabel(inputMode) }}</strong></li>
                 <li><span>说话风格</span><strong>{{ formState.speech_style || '未填写' }}</strong></li>
-                <li><span>口头禅</span><strong>{{ formState.catchphrases || '未填写' }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '回忆方式' : '口头禅' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.remembrance_style || '未填写') : (formState.catchphrases || '未填写') }}</strong></li>
               </ul>
             </div>
 
             <div class="summary-panel">
               <p class="eyebrow">记忆层</p>
-              <h3>共同记忆</h3>
+              <h3>{{ createType === 'reunion_persona' ? '重逢记忆' : '共同记忆' }}</h3>
               <ul class="summary-panel__list">
-                <li><span>关键经历</span><strong>{{ formState.shared_events || '未填写' }}</strong></li>
-                <li><span>常见安慰</span><strong>{{ formState.comfort_style || '未填写' }}</strong></li>
-                <li><span>重要建议</span><strong>{{ formState.important_advice || '未填写' }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '聊天摘要' : '关键经历' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.chat_history_summary || '未填写') : (formState.shared_events || '未填写') }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '检索策略' : '常见安慰' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.priority_rules || '未填写') : (formState.comfort_style || '未填写') }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '安全护栏' : '重要建议' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.safety_boundaries || '未填写') : (formState.important_advice || '未填写') }}</strong></li>
               </ul>
             </div>
           </div>
@@ -1559,6 +1811,10 @@ watch(
               <template v-else-if="createType === 'family_companion'">
                 <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
                 <p class="state-copy">{{ formState.comfort_style || '还没有填写安慰方式。' }}</p>
+              </template>
+              <template v-else-if="createType === 'reunion_persona'">
+                <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
+                <p class="state-copy">{{ formState.remembrance_style || '还没有填写回忆方式。' }}</p>
               </template>
               <template v-else-if="createType === 'intimate_companion'">
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>

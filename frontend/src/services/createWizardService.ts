@@ -54,6 +54,43 @@ export type FamilyCompanionMemoryBase = {
   important_advice: string[]
   daily_habits: string[]
   emotional_triggers: string[]
+  chat_history_summary: string
+  memory_fragments: string[]
+  text_materials: string[]
+  image_notes: string[]
+  voice_notes: string[]
+}
+
+export type ReunionPersonaProfile = {
+  relationship_type: string
+  name: string
+  tone: string
+  remembrance_style: string
+  comfort_style: string
+  boundaries: string
+}
+
+export type ReunionPersonaMemoryBase = {
+  chat_history_summary: string
+  diary_notes: string[]
+  letter_notes: string[]
+  photo_notes: string[]
+  voice_notes: string[]
+  memory_fragments: string[]
+  shared_memories: string[]
+}
+
+export type ReunionPersonaRetrievalPolicy = {
+  mode: string
+  progressive_recall: boolean
+  priority_rules: string[]
+  fallback_rules: string[]
+}
+
+export type ReunionPersonaSafetyGuardrails = {
+  boundaries: string[]
+  emotional_protection: string[]
+  avoid_triggers: string[]
 }
 
 export type SelfPersonaUnifiedLayer = {
@@ -99,6 +136,10 @@ export type CreateWizardDraft = {
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
+  reunion_persona_profile?: ReunionPersonaProfile | null
+  reunion_memory_base?: ReunionPersonaMemoryBase | null
+  reunion_memory_retrieval_policy?: ReunionPersonaRetrievalPolicy | null
+  reunion_safety_guardrails?: ReunionPersonaSafetyGuardrails | null
   relationship_profile?: IntimateCompanionRelationshipProfile | null
   intimate_memory_base?: IntimateCompanionMemoryBase | null
 }

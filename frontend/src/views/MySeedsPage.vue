@@ -14,6 +14,7 @@ const typeLabels: Record<string, string> = {
   relationship_persona: '关系',
   intimate_companion: '亲密关系',
   family_companion: '家人陪伴',
+  reunion_persona: '重逢人格',
 }
 
 function normalizePersonaType(type: string) {
@@ -37,7 +38,14 @@ const groupedSeeds = computed(() => {
     map.set(normalizedType, bucket)
   }
 
-  const order = ['self_unified', 'source_persona', 'relationship_persona', 'intimate_companion', 'family_companion']
+  const order = [
+    'self_unified',
+    'source_persona',
+    'relationship_persona',
+    'intimate_companion',
+    'family_companion',
+    'reunion_persona',
+  ]
   return order
     .map((type) => ({
       type,

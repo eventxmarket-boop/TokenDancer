@@ -10,6 +10,12 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.reunion_persona import (
+    ReunionPersonaMemoryBase,
+    ReunionPersonaProfile,
+    ReunionPersonaRetrievalPolicy,
+    ReunionPersonaSafetyGuardrails,
+)
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft, SelfPersonaUnifiedLayer
 
 __all__ = [
@@ -22,6 +28,10 @@ __all__ = [
     "FamilyCompanionPersonaProfile",
     "IntimateCompanionMemoryBase",
     "IntimateCompanionRelationshipProfile",
+    "ReunionPersonaMemoryBase",
+    "ReunionPersonaProfile",
+    "ReunionPersonaRetrievalPolicy",
+    "ReunionPersonaSafetyGuardrails",
     "SelfPersonaUnifiedDraft",
     "SelfPersonaUnifiedLayer",
 ]

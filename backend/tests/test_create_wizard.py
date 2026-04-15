@@ -94,7 +94,7 @@ class CreateWizardTests(unittest.TestCase):
         payload = {
             "create_type": "family_companion",
             "group": "relationship_family",
-            "source_repo": "MamaSkill+parents-skills+darwin-skill",
+            "source_repo": "parents-skills+MamaSkill",
             "display_name": "家人陪伴",
             "input_mode": "mother",
             "schema_key": "family_companion_mother",
@@ -110,6 +110,11 @@ class CreateWizardTests(unittest.TestCase):
                 "important_advice": "先照顾好自己\n遇事先稳住",
                 "daily_habits": "会问你吃饭没\n会提醒你休息",
                 "emotional_triggers": "考试压力\n工作烦心\n好消息分享",
+                "chat_history_summary": "总是提醒你按时吃饭和休息",
+                "memory_fragments": "小时候一起写作业\n晚上陪你散步",
+                "text_materials": "家书片段\n日常聊天摘录",
+                "image_notes": "老照片说明",
+                "voice_notes": "语音提醒片段",
             },
         }
 
@@ -120,7 +125,7 @@ class CreateWizardTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["draft"]["meta"]["create_type"], "family_companion")
         self.assertEqual(body["draft"]["meta"]["group"], "relationship_family")
-        self.assertEqual(body["draft"]["meta"]["source_repo"], "MamaSkill+parents-skills+darwin-skill")
+        self.assertEqual(body["draft"]["meta"]["source_repo"], "parents-skills+MamaSkill")
         self.assertEqual(body["draft"]["meta"]["display_name"], "家人陪伴")
         self.assertEqual(body["draft"]["meta"]["input_mode"], "mother")
         self.assertEqual(body["draft"]["meta"]["schema_key"], "family_companion_mother")
@@ -129,6 +134,54 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIsNotNone(body["draft"]["memory_base"])
         self.assertIn("家人陪伴", body["draft"]["profile"])
         self.assertIn("妈妈", body["draft"]["profile"])
+
+    def test_create_wizard_draft_endpoint_builds_reunion_persona_draft(self):
+        payload = {
+            "create_type": "reunion_persona",
+            "group": "relationship_family",
+            "source_repo": "reunion-skill",
+            "display_name": "重逢人格",
+            "input_mode": "chat_history",
+            "schema_key": "reunion_persona_chat_history",
+            "form_data": {
+                "relationship_type": "重逢人格",
+                "persona_name": "重逢人格",
+                "speech_style": "克制、温和、保留记忆感",
+                "remembrance_style": "先慢慢回忆，再一点点靠近",
+                "comfort_style": "先稳住情绪，再带着记忆慢慢说",
+                "relation_boundaries": "不激进刺激，不替现实关系下结论",
+                "chat_history_summary": "过去常提起的片段与时间线",
+                "diary_notes": "那年夏天的日记摘录",
+                "letter_notes": "一封旧信里的话",
+                "memory_fragments": "记忆片段 A\n记忆片段 B",
+                "shared_memories": "共同经历的一件事\n共同记得的一句话",
+                "priority_rules": "优先当前情绪相关记忆\n优先最近对话",
+                "fallback_rules": "记忆不足时先稳住情绪\n不编造细节",
+                "safety_boundaries": "不做激进刺激\n不替现实关系下结论",
+                "emotional_protection": "先接住情绪\n避免高压追问",
+                "avoid_triggers": "不要把空白补成确定事实\n不要一次抛出过多强刺激回忆",
+                "photo_notes": "照片里的关键场景说明",
+                "voice_notes": "口述回忆片段",
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["meta"]["create_type"], "reunion_persona")
+        self.assertEqual(body["draft"]["meta"]["group"], "relationship_family")
+        self.assertEqual(body["draft"]["meta"]["source_repo"], "reunion-skill")
+        self.assertEqual(body["draft"]["meta"]["display_name"], "重逢人格")
+        self.assertEqual(body["draft"]["meta"]["input_mode"], "chat_history")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "reunion_persona_chat_history")
+        self.assertEqual(body["draft"]["relationship_type"], "重逢人格")
+        self.assertIsNotNone(body["draft"]["reunion_persona_profile"])
+        self.assertIsNotNone(body["draft"]["reunion_memory_base"])
+        self.assertIsNotNone(body["draft"]["reunion_memory_retrieval_policy"])
+        self.assertIsNotNone(body["draft"]["reunion_safety_guardrails"])
+        self.assertIn("重逢人格", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_intimate_companion_draft(self):
         payload = {

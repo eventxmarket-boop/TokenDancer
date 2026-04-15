@@ -8,6 +8,8 @@ class CreateCatalogItem(BaseModel):
     create_type: str = ""
     source_repo: str
     repo_url: str
+    source_repos: list[str] = Field(default_factory=list)
+    source_urls: list[str] = Field(default_factory=list)
     description: str
     input_modes: list[str] = Field(default_factory=list)
     stage: str

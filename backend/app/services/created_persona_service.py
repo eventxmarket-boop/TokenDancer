@@ -26,6 +26,7 @@ _PERSONA_TYPE_LABELS = {
     "relationship_persona": "关系",
     "intimate_companion": "亲密关系",
     "family_companion": "家人陪伴",
+    "reunion_persona": "重逢人格",
 }
 
 _SELF_UNIFIED_ALIASES = {
@@ -114,13 +115,50 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         tone = _normalize_text(profile.get("tone") if isinstance(profile, dict) else getattr(profile, "tone", ""))
         memories = []
         if isinstance(memory, dict):
+            memories.extend(_clean_lines(memory.get("chat_history_summary")))
             memories.extend(_clean_lines(memory.get("shared_events")))
             memories.extend(_clean_lines(memory.get("important_advice")))
+            memories.extend(_clean_lines(memory.get("memory_fragments")))
+            memories.extend(_clean_lines(memory.get("text_materials")))
+            memories.extend(_clean_lines(memory.get("image_notes")))
+            memories.extend(_clean_lines(memory.get("voice_notes")))
         summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
         if summary_parts or memories:
             combined = " · ".join(summary_parts)
             if memories:
                 combined = f"{combined} / {memories[0]}" if combined else memories[0]
+            return combined[:120]
+
+    if _normalize_text(draft.meta.create_type) == "reunion_persona":
+        profile = draft.reunion_persona_profile or {}
+        memory = draft.reunion_memory_base or {}
+        policy = draft.reunion_memory_retrieval_policy or {}
+        safety = draft.reunion_safety_guardrails or {}
+        profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
+        relationship_type = _normalize_text(
+            profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
+        )
+        tone = _normalize_text(profile.get("tone") if isinstance(profile, dict) else getattr(profile, "tone", ""))
+        retrieval_mode = _normalize_text(policy.get("mode") if isinstance(policy, dict) else getattr(policy, "mode", ""))
+        memories = []
+        if isinstance(memory, dict):
+            memories.extend(_clean_lines(memory.get("chat_history_summary")))
+            memories.extend(_clean_lines(memory.get("diary_notes")))
+            memories.extend(_clean_lines(memory.get("letter_notes")))
+            memories.extend(_clean_lines(memory.get("photo_notes")))
+            memories.extend(_clean_lines(memory.get("voice_notes")))
+            memories.extend(_clean_lines(memory.get("memory_fragments")))
+            memories.extend(_clean_lines(memory.get("shared_memories")))
+        safety_notes = []
+        if isinstance(safety, dict):
+            safety_notes.extend(_clean_lines(safety.get("boundaries")))
+            safety_notes.extend(_clean_lines(safety.get("emotional_protection")))
+        summary_parts = [part for part in [profile_name, relationship_type, tone, retrieval_mode] if part]
+        if summary_parts or memories or safety_notes:
+            combined = " · ".join(summary_parts)
+            extras = memories or safety_notes
+            if extras:
+                combined = f"{combined} / {extras[0]}" if combined else extras[0]
             return combined[:120]
 
     pieces = [draft.profile, draft.mindset, draft.heuristics]
@@ -258,6 +296,7 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     relation_type = _normalize_text(getattr(draft, "relationship_type", ""))
     persona_profile = getattr(draft, "persona_profile", None)
     intimate_profile = getattr(draft, "relationship_profile", None)
+    reunion_profile = getattr(draft, "reunion_persona_profile", None)
     if not relation_type and persona_profile is not None:
         if isinstance(persona_profile, dict):
             relation_type = _normalize_text(persona_profile.get("relationship_type"))
@@ -268,6 +307,11 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
             relation_type = _normalize_text(intimate_profile.get("relationship_type"))
         else:
             relation_type = _normalize_text(getattr(intimate_profile, "relationship_type", ""))
+    if not relation_type and reunion_profile is not None:
+        if isinstance(reunion_profile, dict):
+            relation_type = _normalize_text(reunion_profile.get("relationship_type"))
+        else:
+            relation_type = _normalize_text(getattr(reunion_profile, "relationship_type", ""))
 
     return {
         "id": str(record.id),

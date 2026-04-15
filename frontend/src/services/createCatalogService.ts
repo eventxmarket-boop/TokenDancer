@@ -7,6 +7,8 @@ export type CreateCatalogItem = {
   create_type: string
   source_repo: string
   repo_url: string
+  source_repos?: string[]
+  source_urls?: string[]
   description: string
   input_modes: string[]
   stage: string

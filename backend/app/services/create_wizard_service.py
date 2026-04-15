@@ -11,6 +11,12 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.reunion_persona import (
+    ReunionPersonaMemoryBase,
+    ReunionPersonaProfile,
+    ReunionPersonaRetrievalPolicy,
+    ReunionPersonaSafetyGuardrails,
+)
 from app.services.self_persona_unified_service import build_self_persona_draft
 
 
@@ -23,11 +29,14 @@ SUPPORTED_CREATE_TYPES = {
     "source_persona",
     "relationship_persona",
     "family_companion",
+    "reunion_persona",
     "intimate_companion",
 }
 
 SELF_UNIFIED_SOURCE_REPO = "self-skill+nuwa-skill+forge-skill+digital-life"
-FAMILY_COMPANION_SOURCE_REPO = "MamaSkill+parents-skills+darwin-skill"
+FAMILY_COMPANION_SOURCE_REPO = "parents-skills+MamaSkill"
+LEGACY_FAMILY_COMPANION_SOURCE_REPO = "MamaSkill+parents-skills+darwin-skill"
+REUNION_PERSONA_SOURCE_REPO = "reunion-skill"
 INTIMATE_UNDERSTANDING_SOURCE_REPO = "relationship-training-skill+xinyi"
 INTIMATE_SIMULATION_SOURCE_REPO = "crush-skill"
 INTIMATE_PARTNER_SOURCE_REPO = "partner-skill+npy-skill"
@@ -38,6 +47,7 @@ CREATE_TYPE_LABELS = {
     "source_persona": "从资料创建人格",
     "relationship_persona": "关系人格",
     "family_companion": "家人陪伴",
+    "reunion_persona": "重逢人格",
     "intimate_companion": "亲密关系",
 }
 
@@ -67,8 +77,15 @@ CREATE_TYPE_CONFIG = {
         "group": "relationship_family",
         "source_repo": FAMILY_COMPANION_SOURCE_REPO,
         "repo_url": "https://github.com/jiangziyan-693/MamaSkill",
-        "source_repos": ["MamaSkill", "parents-skills", "darwin-skill"],
+        "source_repos": ["parents-skills", "MamaSkill"],
         "source_hint": "家人陪伴模板",
+    },
+    "reunion_persona": {
+        "group": "relationship_family",
+        "source_repo": REUNION_PERSONA_SOURCE_REPO,
+        "repo_url": "https://github.com/yangdongchen66-boop/reunion-skill",
+        "source_repos": ["reunion-skill"],
+        "source_hint": "重逢人格模板",
     },
     "intimate_companion": {
         "group": "relationship_intimate",
@@ -107,8 +124,10 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "xinyi": "relationship_interpreter",
     "parents-skills": "parents",
     FAMILY_COMPANION_SOURCE_REPO: "mother",
+    LEGACY_FAMILY_COMPANION_SOURCE_REPO: "mother",
     "reunion-skill": "reunion",
     "MamaSkill": "mama",
+    REUNION_PERSONA_SOURCE_REPO: "chat_history",
     "digital-twin-skill": "multi_source",
     "immortal-skill": "multi_source",
     "anti-distill": "documents",
@@ -153,8 +172,10 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     INTIMATE_PAST_RELATION_SOURCE_REPO: "intimate_companion_past_relation_mirror",
     "parents-skills": "relationship_family_parents",
     FAMILY_COMPANION_SOURCE_REPO: "family_companion_mother",
+    LEGACY_FAMILY_COMPANION_SOURCE_REPO: "family_companion_mother",
     "reunion-skill": "relationship_family_reunion",
     "MamaSkill": "relationship_family_mama",
+    REUNION_PERSONA_SOURCE_REPO: "reunion_persona_chat_history",
     "digital-twin-skill": "digital_twin_high_fidelity",
     "immortal-skill": "digital_twin_immortal",
     "anti-distill": "protection_anti_distill",
@@ -189,6 +210,8 @@ REPO_URL_BY_SOURCE_REPO = {
     "reunion-skill": "https://github.com/yangdongchen66-boop/reunion-skill",
     "MamaSkill": "https://github.com/jiangziyan-693/MamaSkill",
     FAMILY_COMPANION_SOURCE_REPO: "https://github.com/jiangziyan-693/MamaSkill",
+    LEGACY_FAMILY_COMPANION_SOURCE_REPO: "https://github.com/jiangziyan-693/MamaSkill",
+    REUNION_PERSONA_SOURCE_REPO: "https://github.com/yangdongchen66-boop/reunion-skill",
     "digital-twin-skill": "https://github.com/FredHJC/digital-twin-skill",
     "immortal-skill": "https://github.com/agenmod/immortal-skill",
     "anti-distill": "https://github.com/leilei926524-tech/anti-distill",
@@ -251,6 +274,13 @@ INPUT_MODE_LABELS = {
         "parents": "父母",
         "other_family": "其他家人",
     },
+    "reunion_persona": {
+        "chat_history": "聊天记录",
+        "documents": "日记 / 信件",
+        "memory_notes": "回忆片段",
+        "photo_notes": "照片 / 截图说明",
+        "voice_notes": "口述回忆",
+    },
 }
 
 
@@ -307,6 +337,8 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
         return "documents"
     if create_type == "family_companion":
         return "mother"
+    if create_type == "reunion_persona":
+        return "chat_history"
     if create_type == "intimate_companion":
         return "relationship_understanding"
     return "colleague"
@@ -317,6 +349,8 @@ def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, dis
         return "self_unified"
     if create_type == "family_companion":
         return f"family_companion_{input_mode or 'mother'}"
+    if create_type == "reunion_persona":
+        return f"reunion_persona_{input_mode or 'chat_history'}"
     if create_type == "intimate_companion":
         return f"intimate_companion_{input_mode or 'relationship_understanding'}"
     if source_repo and source_repo in SCHEMA_KEY_BY_SOURCE_REPO:
@@ -482,6 +516,12 @@ def _build_family_companion_draft(
     shared_events = _clean_lines(form_data.get("shared_events")) or ["小时候一起吃饭的场景", "你难过时被安慰的瞬间"]
     important_advice = _clean_lines(form_data.get("important_advice")) or ["先照顾好自己", "遇到事先稳住再做决定"]
     daily_habits = _clean_lines(form_data.get("daily_habits")) or ["会关心你吃饭没", "会提醒你注意休息"]
+    emotional_triggers = _clean_lines(form_data.get("emotional_triggers"))
+    chat_history_summary = _normalize_text(form_data.get("chat_history_summary"))
+    memory_fragments = _clean_lines(form_data.get("memory_fragments"))
+    text_materials = _clean_lines(form_data.get("text_materials"))
+    image_notes = _clean_lines(form_data.get("image_notes"))
+    voice_notes = _clean_lines(form_data.get("voice_notes"))
 
     persona_profile = FamilyCompanionPersonaProfile(
         relationship_type=relation_type,
@@ -496,7 +536,12 @@ def _build_family_companion_draft(
         shared_events=shared_events,
         important_advice=important_advice,
         daily_habits=daily_habits,
-        emotional_triggers=_clean_lines(form_data.get("emotional_triggers")),
+        emotional_triggers=emotional_triggers,
+        chat_history_summary=chat_history_summary,
+        memory_fragments=memory_fragments,
+        text_materials=text_materials,
+        image_notes=image_notes,
+        voice_notes=voice_notes,
     )
 
     profile = (
@@ -542,6 +587,130 @@ def _build_family_companion_draft(
         "relationship_type": relation_type,
         "persona_profile": persona_profile.model_dump(),
         "memory_base": memory_base.model_dump(),
+        "name": name,
+    }
+
+
+def _build_reunion_persona_draft(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+) -> dict[str, Any]:
+    relation_type = (
+        _normalize_text(form_data.get("relationship_type"))
+        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or _normalize_text(display_name)
+        or "重逢人格"
+    )
+    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
+    tone = _normalize_text(form_data.get("tone")) or "克制、温柔、保留记忆感。"
+    remembrance_style = _normalize_text(form_data.get("remembrance_style")) or "先慢慢回忆，再一点点靠近。"
+    comfort_style = _normalize_text(form_data.get("comfort_style")) or "先稳住情绪，再带着记忆慢慢说。"
+    boundaries = _normalize_text(form_data.get("boundaries")) or "不激进刺激，不越界替代现实。"
+    chat_history_summary = _normalize_text(form_data.get("chat_history_summary"))
+    diary_notes = _clean_lines(form_data.get("diary_notes"))
+    letter_notes = _clean_lines(form_data.get("letter_notes"))
+    photo_notes = _clean_lines(form_data.get("photo_notes"))
+    voice_notes = _clean_lines(form_data.get("voice_notes"))
+    memory_fragments = _clean_lines(form_data.get("memory_fragments"))
+    shared_memories = _clean_lines(form_data.get("shared_memories"))
+    retrieval_mode = _normalize_text(form_data.get("retrieval_mode")) or "渐进式回忆"
+    priority_rules = _clean_lines(form_data.get("priority_rules")) or [
+        "优先从最近的对话和回忆片段开始",
+        "优先提取和当前情绪有关的记忆",
+    ]
+    fallback_rules = _clean_lines(form_data.get("fallback_rules")) or [
+        "当记忆不足时，先稳住当前情绪",
+        "不编造没有记录的具体细节",
+    ]
+    safety_boundaries = _clean_lines(form_data.get("safety_boundaries")) or [
+        "不激进刺激情绪",
+        "不替现实关系下结论",
+    ]
+    emotional_protection = _clean_lines(form_data.get("emotional_protection")) or [
+        "先接住情绪，再慢慢回忆",
+        "避免反复追问高压细节",
+    ]
+    avoid_triggers = _clean_lines(form_data.get("avoid_triggers")) or [
+        "不要把空白补成确定事实",
+        "不要一次性抛出过多强刺激回忆",
+    ]
+
+    persona_profile = ReunionPersonaProfile(
+        relationship_type=relation_type,
+        name=name,
+        tone=tone,
+        remembrance_style=remembrance_style,
+        comfort_style=comfort_style,
+        boundaries=boundaries,
+    )
+    memory_base = ReunionPersonaMemoryBase(
+        chat_history_summary=chat_history_summary,
+        diary_notes=diary_notes,
+        letter_notes=letter_notes,
+        photo_notes=photo_notes,
+        voice_notes=voice_notes,
+        memory_fragments=memory_fragments,
+        shared_memories=shared_memories,
+    )
+    memory_retrieval_policy = ReunionPersonaRetrievalPolicy(
+        mode=retrieval_mode,
+        progressive_recall=True,
+        priority_rules=priority_rules,
+        fallback_rules=fallback_rules,
+    )
+    safety_guardrails = ReunionPersonaSafetyGuardrails(
+        boundaries=safety_boundaries,
+        emotional_protection=emotional_protection,
+        avoid_triggers=avoid_triggers,
+    )
+
+    profile = (
+        f"重逢人格定位：{relation_type}\n"
+        f"称呼：{name}\n"
+        f"说话风格：{tone}\n"
+        f"回忆方式：{remembrance_style}\n"
+        f"用途：从回忆和纪念材料里，慢慢整理出更克制、更温和的陪伴回应。"
+    )
+    mindset = _format_bullets(
+        [
+            "先判断当前情绪，再决定是回忆、安抚还是停顿",
+            "先从少量相关记忆开始，不一下子铺满全部细节",
+            "信息不足时先补上下文和材料来源",
+        ]
+    )
+    heuristics = _format_bullets(
+        [
+            "优先采用渐进式回忆，不急着一次说完",
+            "优先挑选与当前语境和情绪有关的片段",
+            "当记忆和现实边界冲突时，先保护当下情绪",
+        ]
+    )
+    expression = _format_bullets(
+        [
+            f"常见说话感觉：{tone}",
+            f"回忆节奏：{remembrance_style}",
+            "回答要克制、带记忆感，但不过度刺激情绪",
+        ]
+    )
+    guardrails = _format_bullets(
+        [
+            f"边界要求：{boundaries}",
+            "不激进刺激，不伪造未确认细节",
+            "不把怀念变成对现实关系的替代",
+        ]
+    )
+    return {
+        "profile": profile,
+        "mindset": mindset,
+        "heuristics": heuristics,
+        "expression": expression,
+        "guardrails": guardrails,
+        "relationship_type": relation_type,
+        "reunion_persona_profile": persona_profile.model_dump(),
+        "reunion_memory_base": memory_base.model_dump(),
+        "reunion_memory_retrieval_policy": memory_retrieval_policy.model_dump(),
+        "reunion_safety_guardrails": safety_guardrails.model_dump(),
         "name": name,
     }
 
@@ -679,6 +848,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         content = _build_source_draft(form_data, normalized_display_name)
     elif normalized_create_type == "family_companion":
         content = _build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
+    elif normalized_create_type == "reunion_persona":
+        content = _build_reunion_persona_draft(form_data, normalized_display_name, normalized_input_mode)
     elif normalized_create_type == "intimate_companion":
         content = _build_intimate_companion_draft(form_data, normalized_display_name, normalized_input_mode)
     else:
@@ -720,6 +891,10 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),
         "memory_base": content.get("memory_base"),
+        "reunion_persona_profile": content.get("reunion_persona_profile"),
+        "reunion_memory_base": content.get("reunion_memory_base"),
+        "reunion_memory_retrieval_policy": content.get("reunion_memory_retrieval_policy"),
+        "reunion_safety_guardrails": content.get("reunion_safety_guardrails"),
         "relationship_profile": content.get("relationship_profile"),
         "intimate_memory_base": content.get("intimate_memory_base"),
     }
