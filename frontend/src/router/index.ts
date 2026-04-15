@@ -3,6 +3,8 @@ import HomePage from '@/views/HomePage.vue'
 import SeedPage from '@/views/SeedPage.vue'
 import FavoritesPage from '@/views/FavoritesPage.vue'
 import CreatePersonaPage from '@/views/CreatePersonaPage.vue'
+import CreateWizardPage from '@/views/CreateWizardPage.vue'
+import CreateResultPage from '@/views/CreateResultPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -25,6 +27,18 @@ const router = createRouter({
       name: 'create-persona',
       component: CreatePersonaPage,
       meta: { title: '创建自我人格' },
+    },
+    {
+      path: '/create/wizard',
+      name: 'create-wizard',
+      component: CreateWizardPage,
+      meta: { title: '创建向导' },
+    },
+    {
+      path: '/create/result',
+      name: 'create-result',
+      component: CreateResultPage,
+      meta: { title: '人格草稿' },
     },
     {
       path: '/character/:id',

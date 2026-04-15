@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   loadCreateCatalog,
   type CreateCatalogGroup,
@@ -11,6 +12,7 @@ const loading = ref(true)
 const error = ref('')
 const catalog = ref<CreateCatalogResponse | null>(null)
 const selectedSlug = ref('')
+const router = useRouter()
 
 const groupOrder = [
   'self',
@@ -164,6 +166,39 @@ function formatStage(stage: string) {
   return stage
 }
 
+function getWizardTypeForGroup(group: string) {
+  if (group === 'self') {
+    return 'self_persona'
+  }
+  if (group === 'source') {
+    return 'source_persona'
+  }
+  if (
+    group === 'relationship_workplace' ||
+    group === 'relationship_academia' ||
+    group === 'relationship_intimate' ||
+    group === 'relationship_family'
+  ) {
+    return 'relationship_persona'
+  }
+  return ''
+}
+
+function buildWizardQuery(item: CreateCatalogItem) {
+  return {
+    type: getWizardTypeForGroup(item.group),
+    group: item.group,
+    source_repo: item.source_repo,
+    slug: item.slug,
+    name: item.name,
+    reset: '1',
+  }
+}
+
+function canOpenWizard(item: CreateCatalogItem) {
+  return Boolean(getWizardTypeForGroup(item.group))
+}
+
 async function scrollToTarget(targetId: string) {
   await nextTick()
   document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -180,7 +215,29 @@ function startSelectedCreation() {
     return
   }
 
-  void focusItem(selectedItem.value)
+  const item = selectedItem.value
+  const type = getWizardTypeForGroup(item.group)
+  if (!type) {
+    void focusItem(item)
+    return
+  }
+
+  void router.push({
+    path: '/create/wizard',
+    query: buildWizardQuery(item),
+  })
+}
+
+function startCreation(item: CreateCatalogItem) {
+  const type = getWizardTypeForGroup(item.group)
+  if (!type) {
+    return
+  }
+
+  void router.push({
+    path: '/create/wizard',
+    query: buildWizardQuery(item),
+  })
 }
 
 const loadCatalog = async () => {
@@ -233,8 +290,20 @@ onMounted(() => {
       </div>
 
       <div class="hero-actions">
-        <button class="primary-btn" type="button" @click="scrollToTarget(sectionAnchors.self)">创建自我人格</button>
-        <button class="secondary-btn" type="button" @click="scrollToTarget(sectionAnchors.source)">上传资料生成</button>
+        <button
+          class="primary-btn"
+          type="button"
+          @click="router.push({ path: '/create/wizard', query: { type: 'self_persona', reset: '1' } })"
+        >
+          创建自我人格
+        </button>
+        <button
+          class="secondary-btn"
+          type="button"
+          @click="router.push({ path: '/create/wizard', query: { type: 'source_persona', reset: '1' } })"
+        >
+          上传资料生成
+        </button>
       </div>
 
       <div class="inline-links">
@@ -358,10 +427,18 @@ onMounted(() => {
               </div>
 
               <div class="create-card__actions">
-                <button class="primary-btn" type="button" @click="focusItem(item)">开始创建</button>
-                <button class="ghost-btn" type="button" @click="scrollToTarget(sectionId(group))">
-                  继续浏览
+                <button
+                  v-if="canOpenWizard(item)"
+                  class="primary-btn"
+                  type="button"
+                  @click="startCreation(item)"
+                >
+                  开始创建
                 </button>
+                <button v-else class="ghost-btn" type="button" @click="scrollToTarget(sectionId(group))">
+                  敬请期待
+                </button>
+                <button class="ghost-btn" type="button" @click="focusItem(item)">查看说明</button>
               </div>
             </article>
           </div>

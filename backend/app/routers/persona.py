@@ -4,8 +4,10 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.version import get_project_version
 from app.schemas.create_catalog import CreateCatalogResponse
+from app.schemas.create_wizard import CreateWizardDraftRequest, CreateWizardDraftResponse
 from app.schemas.persona import PersonaRecord
 from app.services.create_catalog_loader import CreateCatalogLoadError, load_create_catalog
+from app.services.create_wizard_service import CreateWizardError, build_persona_draft
 from app.services.persona_loader import PersonaLoadError, load_persona_summary, list_personas, list_seed_personas
 
 router = APIRouter()
@@ -52,6 +54,16 @@ async def create_catalog():
         return load_create_catalog()
     except CreateCatalogLoadError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/persona-api/create-wizard/draft", response_model=CreateWizardDraftResponse)
+async def create_wizard_draft(payload: CreateWizardDraftRequest):
+    try:
+        draft = build_persona_draft(payload.create_type, payload.input_mode, payload.form_data)
+    except CreateWizardError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {"draft": draft}
 
 
 @router.get("/persona-api/personas/{slug}", response_model=PersonaRecord)

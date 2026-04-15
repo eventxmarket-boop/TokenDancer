@@ -88,6 +88,14 @@
 - Added a lightweight frontend Markdown renderer for bold text, lists, and paragraph breaks.
 - Kept the existing think-block sanitization and session persistence behavior unchanged.
 
+## V1.4.3 - 2026-04-16
+
+- Upgraded Create from a capability catalog into a step-based creation wizard.
+- Added self persona, source-based creation, and relationship persona flows.
+- Added a wizard result page that shows a structured persona draft and supports local editing.
+- Added a backend draft builder and `POST /persona-api/create-wizard/draft`.
+- Kept the Create catalog as the upstream capability map for the wizard entry points.
+
 ## V1.4.2 - 2026-04-16
 
 - Added a dedicated Create capability catalog for self, source, relationship, digital twin, and protection workflows.
