@@ -25,6 +25,36 @@ def _append_section(parts: list[str], title: str, content: str) -> None:
     parts.append(f"## {title}\n{text}")
 
 
+def _append_layer_section(parts: list[str], title: str, layer: Any) -> None:
+    if not layer:
+        return
+
+    summary = ""
+    points: list[str] = []
+    if isinstance(layer, dict):
+        summary = str(layer.get("summary") or layer.get("title") or "").strip()
+        raw_points = layer.get("points") or layer.get("items") or layer.get("details") or []
+        if isinstance(raw_points, list):
+            points = [str(item).strip() for item in raw_points if str(item).strip()]
+        else:
+            text_points = str(raw_points or "").strip()
+            points = [line.strip("•- \t") for line in text_points.splitlines() if line.strip()]
+    else:
+        summary = str(getattr(layer, "summary", "") or "").strip()
+        raw_points = getattr(layer, "points", []) or []
+        if isinstance(raw_points, list):
+            points = [str(item).strip() for item in raw_points if str(item).strip()]
+
+    if not summary and not points:
+        return
+
+    lines: list[str] = []
+    if summary:
+        lines.append(summary)
+    lines.extend(f"- {point}" for point in points)
+    _append_section(parts, title, "\n".join(lines))
+
+
 def build_persona_system_prompt(persona: dict[str, Any]) -> str:
     return build_persona_system_prompt_with_context(persona)
 
@@ -43,13 +73,22 @@ def build_persona_system_prompt_with_context(
         f"人格标识：{meta.get('slug', '')}",
     ]
 
-    _append_section(parts, "人格身份与定位", persona.get("profile", ""))
-    _append_section(parts, "思维方式", persona.get("mindset", ""))
-    _append_section(parts, "决策规则", persona.get("heuristics", ""))
-    _append_section(parts, "表达风格", persona.get("expression", ""))
-    _append_section(parts, "示例风格", persona.get("persona_examples", ""))
-    _append_section(parts, "当前状态", persona.get("state", ""))
-    _append_section(parts, "边界规则", persona.get("guardrails", ""))
+    self_unified = persona.get("self_persona_unified") or {}
+    if self_unified:
+        _append_layer_section(parts, "做事方式", self_unified.get("work_system"))
+        _append_layer_section(parts, "回复方式", self_unified.get("reply_persona"))
+        _append_layer_section(parts, "思考方式", self_unified.get("thinking_dna"))
+        _append_layer_section(parts, "生活痕迹", self_unified.get("memory_evidence"))
+        _append_layer_section(parts, "反思规则", self_unified.get("reflection_rules"))
+        _append_section(parts, "边界规则", persona.get("guardrails", ""))
+    else:
+        _append_section(parts, "人格身份与定位", persona.get("profile", ""))
+        _append_section(parts, "思维方式", persona.get("mindset", ""))
+        _append_section(parts, "决策规则", persona.get("heuristics", ""))
+        _append_section(parts, "表达风格", persona.get("expression", ""))
+        _append_section(parts, "示例风格", persona.get("persona_examples", ""))
+        _append_section(parts, "当前状态", persona.get("state", ""))
+        _append_section(parts, "边界规则", persona.get("guardrails", ""))
     if session_summary:
         _append_section(parts, "会话摘要（仅供内部理解上下文）", session_summary)
     if facts_context:

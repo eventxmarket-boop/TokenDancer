@@ -20,11 +20,19 @@ class CreatedPersonaNotFoundError(CreatedPersonaError):
 
 
 _PERSONA_TYPE_LABELS = {
-    "self_persona": "自我",
+    "self_unified": "我的人格",
+    "self_persona": "我的人格",
     "source_persona": "资料",
     "relationship_persona": "关系",
     "intimate_companion": "亲密关系",
     "family_companion": "家人陪伴",
+}
+
+_SELF_UNIFIED_ALIASES = {
+    "self_persona",
+    "self_mindset_distill",
+    "self_deep_self_persona",
+    "self_digital_trace_persona",
 }
 
 
@@ -41,6 +49,13 @@ def _clean_lines(value: Any) -> list[str]:
     return [line.strip("•- \t") for line in text.splitlines() if line.strip()]
 
 
+def _normalize_persona_type(value: Any) -> str:
+    persona_type = _normalize_text(value) or "self_unified"
+    if persona_type in _SELF_UNIFIED_ALIASES:
+        return "self_unified"
+    return persona_type
+
+
 def _build_slug(seed_name: str, persona_type: str) -> str:
     base = _normalize_text(seed_name).lower()
     base = re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "-", base)
@@ -52,6 +67,19 @@ def _build_slug(seed_name: str, persona_type: str) -> str:
 
 
 def _build_summary(draft: CreateWizardDraft) -> str:
+    if _normalize_text(draft.meta.create_type) == "self_unified":
+        unified = draft.self_persona_unified or {}
+        if isinstance(unified, dict):
+            parts = []
+            for key in ["work_system", "reply_persona", "thinking_dna", "memory_evidence", "reflection_rules"]:
+                section = unified.get(key) or {}
+                if isinstance(section, dict):
+                    summary = _normalize_text(section.get("summary"))
+                    if summary:
+                        parts.append(summary)
+            if parts:
+                return " / ".join(parts)[:120]
+
     if _normalize_text(draft.meta.create_type) == "intimate_companion":
         profile = draft.relationship_profile or {}
         memory = draft.intimate_memory_base or {}
@@ -152,7 +180,7 @@ def save_created_persona(
 ) -> dict[str, Any]:
     normalized_source_type = _normalize_text(source_type) or "create_wizard"
     normalized_status = _normalize_text(status) or "saved"
-    persona_type = _normalize_text(draft.meta.create_type) or "self_persona"
+    persona_type = _normalize_persona_type(draft.meta.create_type)
     name = _normalize_text(draft.meta.name) or "未命名 Seed"
     summary = _build_summary(draft)
     stored_draft = CreateWizardDraft.model_validate(draft.model_dump())
@@ -224,6 +252,9 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     display_type = _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type)
     intro = _normalize_text(getattr(draft.meta, "source_hint", ""))
     profile = _normalize_text(draft.profile)
+    unified = getattr(draft, "self_persona_unified", None)
+    if isinstance(unified, dict):
+        profile = _normalize_text((unified.get("work_system") or {}).get("summary")) or profile
     relation_type = _normalize_text(getattr(draft, "relationship_type", ""))
     persona_profile = getattr(draft, "persona_profile", None)
     intimate_profile = getattr(draft, "relationship_profile", None)

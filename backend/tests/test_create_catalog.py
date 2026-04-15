@@ -24,8 +24,12 @@ class CreateCatalogTests(unittest.TestCase):
         self.assertIn("digital_twin", groups)
         self.assertIn("protection", groups)
 
-        self.assertGreaterEqual(len(groups["self"]["items"]), 4)
-        self.assertEqual(groups["self"]["items"][0]["source_repo"], "self-skill")
+        self.assertEqual(len(groups["self"]["items"]), 1)
+        self.assertEqual(groups["self"]["items"][0]["create_type"], "self_unified")
+        self.assertEqual(
+            groups["self"]["items"][0]["source_repo"],
+            "self-skill+nuwa-skill+forge-skill+digital-life",
+        )
         self.assertTrue(
             any(
                 item["repo_url"] == "https://github.com/moyitech/self-skill"

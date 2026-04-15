@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.19 - 2026-04-16
+
+- Unified the four self-persona Create entries into a single `我的人格` main line.
+- Added the shared five-layer self-persona structure: `work_system`, `reply_persona`, `thinking_dna`, `memory_evidence`, and `reflection_rules`.
+- Aligned Create, result, My Seeds, and chat flows around the same self persona object.
+- Added support for handwritten input, pasted text, and plain-text file evidence in the unified self-persona path.
+
 ## V1.4.16 - 2026-04-16
 
 - Added an internal rolling summary for chat sessions so long conversations can retain earlier context without exposing it in the frontend.

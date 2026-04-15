@@ -9,7 +9,9 @@ import {
   submitCreateDraft,
 } from '@/services/createWizardService'
 
-type CreateType = 'self_persona' | 'source_persona' | 'relationship_persona' | 'family_companion' | 'intimate_companion'
+type CreateType = 'self_unified' | 'source_persona' | 'relationship_persona' | 'family_companion' | 'intimate_companion'
+
+type SelfCreateMode = 'light' | 'standard' | 'deep'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,7 +19,9 @@ const route = useRoute()
 const step = ref(1)
 const loading = ref(false)
 const error = ref('')
-const createType = ref<CreateType>('self_persona')
+const createType = ref<CreateType>('self_unified')
+const createMode = ref<SelfCreateMode>('standard')
+const selfInputModes = ref<string[]>(['manual_profile'])
 const inputMode = ref('')
 const selectedGroup = ref('')
 const selectedName = ref('')
@@ -27,11 +31,17 @@ const isBootstrapping = ref(false)
 
 const formState = reactive({
   name: '',
-  intro: '',
-  values: '',
-  decision_priority: '',
-  expression_style: '',
-  boundaries: '',
+  create_mode: 'standard',
+  work_system_summary: '',
+  work_system_points: '',
+  reply_persona_summary: '',
+  reply_persona_points: '',
+  thinking_dna_summary: '',
+  thinking_dna_points: '',
+  memory_evidence_summary: '',
+  memory_evidence_points: '',
+  reflection_rules_summary: '',
+  reflection_rules_points: '',
   target_name: '',
   material_type: '',
   material_description: '',
@@ -60,9 +70,9 @@ const formState = reactive({
 
 const typeCards = [
   {
-    type: 'self_persona' as const,
-    title: '自我人格',
-    description: '先把你自己的做事方式、回复方式和边界感整理出来。',
+    type: 'self_unified' as const,
+    title: '我的人格',
+    description: '先把做事方式、回复方式、思考路径和生活痕迹整理出来。',
     hint: '从自己开始',
   },
   {
@@ -86,10 +96,11 @@ const typeCards = [
 ]
 
 const inputModeLabels: Record<CreateType, Record<string, string>> = {
-  self_persona: {
+  self_unified: {
     manual_profile: '手动填写',
     chat_history: '聊天记录',
     documents: '文档资料',
+    memory_notes: '记忆片段',
   },
   source_persona: {
     documents: 'PDF / 文档',
@@ -123,6 +134,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'nuwa-skill': 'documents',
   'forge-skill': 'chat_history',
   'digital-life': 'documents',
+  'self-skill+nuwa-skill+forge-skill+digital-life': 'manual_profile',
   'anyone-to-skill': 'documents',
   'colleague-skill': 'colleague',
   'boss-skills': 'boss',
@@ -182,10 +194,11 @@ const sourceRepoByInputMode: Record<string, string> = {
 }
 
 const schemaKeyBySourceRepo: Record<string, string> = {
-  'self-skill': 'self_persona',
-  'nuwa-skill': 'self_mindset_distill',
-  'forge-skill': 'self_deep_self_persona',
-  'digital-life': 'self_digital_trace_persona',
+  'self-skill': 'self_unified',
+  'nuwa-skill': 'self_unified',
+  'forge-skill': 'self_unified',
+  'digital-life': 'self_unified',
+  'self-skill+nuwa-skill+forge-skill+digital-life': 'self_unified',
   'anyone-to-skill': 'source_anyone_from_sources',
   'colleague-skill': 'relationship_workplace_colleague',
   'boss-skills': 'relationship_workplace_boss',
@@ -214,18 +227,54 @@ const schemaKeyBySourceRepo: Record<string, string> = {
 }
 
 const isFamilyCompanion = computed(() => createType.value === 'family_companion')
+const isSelfUnified = computed(() => createType.value === 'self_unified')
 
 const stepLabels = computed(() =>
-  isFamilyCompanion.value
+  isSelfUnified.value
+    ? ['选择深度', '选择方式', '填写信息', '生成结果']
+    : isFamilyCompanion.value
     ? ['选择关系类型', '填写信息', '确认结果', '生成结果']
     : ['选择类型', '选择方式', '填写信息', '生成结果'],
 )
 
 const currentInputs = computed(() => Object.entries(inputModeLabels[createType.value] || {}))
 
+const selfModeCards = [
+  {
+    mode: 'light' as const,
+    title: '轻量模式',
+    description: '先用表单快速生成一版人格骨架。',
+  },
+  {
+    mode: 'standard' as const,
+    title: '标准模式',
+    description: '表单加少量材料，生成更稳的一版结果。',
+  },
+  {
+    mode: 'deep' as const,
+    title: '深度模式',
+    description: '表单加材料再加反思层，做更完整的自己。',
+  },
+]
+
+const selfInputModeOptions = [
+  { key: 'manual_profile', label: '手动填写' },
+  { key: 'chat_history', label: '聊天记录' },
+  { key: 'documents', label: '文档资料' },
+  { key: 'memory_notes', label: '记忆片段' },
+]
+
+const selfModeLabels: Record<SelfCreateMode, string> = {
+  light: '轻量模式',
+  standard: '标准模式',
+  deep: '深度模式',
+}
+
+const memoryEvidenceFileName = ref('')
+
 const currentTypeLabel = computed(() => {
-  if (createType.value === 'self_persona') {
-    return '自我人格'
+  if (createType.value === 'self_unified') {
+    return '我的人格'
   }
   if (createType.value === 'source_persona') {
     return '从资料创建'
@@ -240,6 +289,12 @@ const currentTypeLabel = computed(() => {
 })
 
 const selectedInputLabel = computed(() => {
+  if (isSelfUnified.value) {
+    const modes = selfInputModes.value.length
+      ? selfInputModes.value.map((mode) => inputModeLabels.self_unified[mode] || mode).join(' / ')
+      : '未选择'
+    return `${selfModeLabels[createMode.value]} · ${modes}`
+  }
   return inputModeLabels[createType.value]?.[inputMode.value] || inputMode.value || '未选择'
 })
 
@@ -251,15 +306,31 @@ function readQueryValue(key: string) {
   return String(value || '').trim()
 }
 
+function normalizeCreateType(value: string): CreateType {
+  if (
+    value === 'self_persona' ||
+    value === 'self_mindset_distill' ||
+    value === 'self_deep_self_persona' ||
+    value === 'self_digital_trace_persona'
+  ) {
+    return 'self_unified'
+  }
+  if (
+    value === 'self_unified' ||
+    value === 'source_persona' ||
+    value === 'relationship_persona' ||
+    value === 'family_companion' ||
+    value === 'intimate_companion'
+  ) {
+    return value
+  }
+  return 'self_unified'
+}
+
 function inferCreateTypeFromQuery() {
   const explicit = readQueryValue('create_type') || readQueryValue('type')
-  if (
-    explicit === 'self_persona' ||
-    explicit === 'source_persona' ||
-    explicit === 'family_companion' ||
-    explicit === 'intimate_companion'
-  ) {
-    return explicit as CreateType
+  if (explicit) {
+    return normalizeCreateType(explicit)
   }
 
   if (explicit === 'relationship_persona') {
@@ -291,7 +362,7 @@ function inferCreateTypeFromQuery() {
     return 'relationship_persona'
   }
 
-  return 'self_persona'
+  return 'self_unified'
 }
 
 function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schemaKey: string) {
@@ -303,7 +374,7 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
     return inputModeBySourceRepo[sourceRepo]
   }
 
-  if (createTypeValue === 'self_persona') {
+  if (createTypeValue === 'self_unified') {
     return 'manual_profile'
   }
 
@@ -336,7 +407,7 @@ function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, input
 }
 
 function getDefaultGroupForType(type: CreateType) {
-  if (type === 'self_persona') {
+  if (type === 'self_unified') {
     return 'self'
   }
   if (type === 'source_persona') {
@@ -352,8 +423,8 @@ function getDefaultGroupForType(type: CreateType) {
 }
 
 function getDefaultSourceRepoForType(type: CreateType) {
-  if (type === 'self_persona') {
-    return 'self-skill'
+  if (type === 'self_unified') {
+    return 'self-skill+nuwa-skill+forge-skill+digital-life'
   }
   if (type === 'source_persona') {
     return 'anyone-to-skill'
@@ -368,8 +439,8 @@ function getDefaultSourceRepoForType(type: CreateType) {
 }
 
 function getDefaultDisplayNameForType(type: CreateType) {
-  if (type === 'self_persona') {
-    return '我的自我人格'
+  if (type === 'self_unified') {
+    return '我的人格'
   }
   if (type === 'source_persona') {
     return '资料人格'
@@ -383,8 +454,68 @@ function getDefaultDisplayNameForType(type: CreateType) {
   return '关系人格'
 }
 
+function selectSelfMode(mode: SelfCreateMode) {
+  createMode.value = mode
+  selectedGroup.value = getDefaultGroupForType(createType.value)
+  selectedSourceRepo.value = getDefaultSourceRepoForType(createType.value)
+  selectedName.value = getDefaultDisplayNameForType(createType.value)
+  selectedSchemaKey.value = 'self_unified'
+  inputMode.value = 'manual_profile'
+  selfInputModes.value = ['manual_profile']
+  resetFormForType(createType.value, selectedName.value, inputMode.value)
+  step.value = 2
+}
+
+function toggleSelfInputMode(mode: string) {
+  const allowedModes = new Set(['manual_profile', 'chat_history', 'documents', 'memory_notes'])
+  if (!allowedModes.has(mode)) {
+    return
+  }
+
+  const existing = new Set(selfInputModes.value)
+  if (existing.has(mode)) {
+    existing.delete(mode)
+  } else {
+    existing.add(mode)
+  }
+
+  selfInputModes.value = Array.from(existing)
+  if (!selfInputModes.value.length) {
+    selfInputModes.value = ['manual_profile']
+  }
+  inputMode.value = mode
+  selectedGroup.value = getDefaultGroupForType(createType.value)
+  selectedSourceRepo.value = getDefaultSourceRepoForType(createType.value)
+  selectedName.value = getDefaultDisplayNameForType(createType.value)
+  selectedSchemaKey.value = 'self_unified'
+}
+
+function handleSelfMemoryFileChange(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file) {
+    return
+  }
+
+  memoryEvidenceFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = () => {
+    const content = String(reader.result || '').trim()
+    if (!content) {
+      return
+    }
+    if (!selfInputModes.value.includes('documents')) {
+      selfInputModes.value = Array.from(new Set([...selfInputModes.value, 'documents']))
+    }
+    const appended = [formState.memory_evidence_points, content].filter(Boolean).join('\n')
+    formState.memory_evidence_points = appended
+  }
+  reader.readAsText(file)
+  target.value = ''
+}
+
 function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
-  if (type === 'self_persona') {
+  if (type === 'self_unified') {
     return 'self'
   }
   if (type === 'source_persona') {
@@ -419,10 +550,11 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
 }
 
 function getInputModeNote(type: CreateType, mode: string) {
-  if (type === 'self_persona') {
+  if (type === 'self_unified') {
     if (mode === 'manual_profile') return '适合先从你自己的想法开始。'
     if (mode === 'chat_history') return '适合把对话里的表达方式整理出来。'
     if (mode === 'documents') return '适合把已有材料补充进去。'
+    if (mode === 'memory_notes') return '适合把记忆片段补进去。'
   }
 
   if (type === 'source_persona') {
@@ -485,13 +617,18 @@ function clearFormState() {
 function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
 
-  if (type === 'self_persona') {
-    formState.name = displayName || '我的自我人格'
-    formState.intro = '把我自己的做事方式整理成可以继续聊天的人格。'
-    formState.values = '更看重结果、边界和可执行性。'
-    formState.decision_priority = '先看目标，再看路径。'
-    formState.expression_style = '直接、清楚、略带解释。'
-    formState.boundaries = '保留私密内容，不越过边界。'
+  if (type === 'self_unified') {
+    formState.name = displayName || '我的人格'
+    formState.work_system_summary = '把做事方式整理成可以继续使用的人格骨架。'
+    formState.work_system_points = '先看目标\n再看路径\n再看边界'
+    formState.reply_persona_summary = '把回复方式整理成更像自己的表达。'
+    formState.reply_persona_points = '直接一点\n清楚一点\n保留边界'
+    formState.thinking_dna_summary = '把判断路径和取舍逻辑整理出来。'
+    formState.thinking_dna_points = '先问条件\n再看出路\n再算代价'
+    formState.memory_evidence_summary = '把聊天片段、文字材料和生活痕迹整理进去。'
+    formState.memory_evidence_points = '聊天记录\n文字片段\n文件材料'
+    formState.reflection_rules_summary = '把容易失真和需要保留的边界先写清楚。'
+    formState.reflection_rules_points = '不夸张\n不越界\n不替自己下定论'
   }
 
   if (type === 'source_persona') {
@@ -545,6 +682,7 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
 function buildEntryDefaults() {
   const createTypeValue = inferCreateTypeFromQuery()
   const displayName = readQueryValue('display_name') || readQueryValue('name') || getDefaultDisplayNameForType(createTypeValue)
+  const createModeValue = readQueryValue('create_mode') as SelfCreateMode || 'standard'
   const schemaKeyFromQuery = readQueryValue('schema_key')
   const inputModeFromQuery = readQueryValue('input_mode')
   const sourceRepo = readQueryValue('source_repo') || getDefaultSourceRepoForType(createTypeValue)
@@ -558,6 +696,7 @@ function buildEntryDefaults() {
     group,
     sourceRepo,
     displayName,
+    createMode: createModeValue,
     inputMode: inputModeValue,
     schemaKey: schemaKeyValue,
   }
@@ -567,7 +706,9 @@ function saveStateSnapshot() {
   saveWizardState({
     step: step.value,
     createType: createType.value,
+    createMode: createMode.value,
     inputMode: inputMode.value,
+    selfInputModes: selfInputModes.value,
     selectedGroup: selectedGroup.value,
     selectedName: selectedName.value,
     selectedSourceRepo: selectedSourceRepo.value,
@@ -579,8 +720,10 @@ function saveStateSnapshot() {
 function loadStateSnapshot() {
   const snapshot = loadWizardState<{
     step?: number
-    createType?: CreateType
+    createType?: string
+    createMode?: SelfCreateMode
     inputMode?: string
+    selfInputModes?: string[]
     selectedGroup?: string
     selectedName?: string
     selectedSourceRepo?: string
@@ -597,11 +740,19 @@ function loadStateSnapshot() {
   }
 
   if (snapshot.createType) {
-    createType.value = snapshot.createType
+    createType.value = normalizeCreateType(snapshot.createType)
+  }
+
+  if (snapshot.createMode) {
+    createMode.value = snapshot.createMode
   }
 
   if (snapshot.inputMode) {
     inputMode.value = snapshot.inputMode
+  }
+
+  if (Array.isArray(snapshot.selfInputModes) && snapshot.selfInputModes.length > 0) {
+    selfInputModes.value = snapshot.selfInputModes
   }
 
   selectedGroup.value = snapshot.selectedGroup || selectedGroup.value
@@ -641,6 +792,20 @@ function loadStateSnapshot() {
     }
   }
 
+  if (createType.value === 'self_unified') {
+    const allowedModes = new Set(['manual_profile', 'chat_history', 'documents', 'memory_notes'])
+    if (!selfInputModes.value.length) {
+      selfInputModes.value = ['manual_profile']
+    }
+    selfInputModes.value = selfInputModes.value.filter((mode) => allowedModes.has(mode))
+    if (!selfInputModes.value.length) {
+      selfInputModes.value = ['manual_profile']
+    }
+    if (!createMode.value) {
+      createMode.value = 'standard'
+    }
+  }
+
   resetFormForType(createType.value, selectedName.value, inputMode.value)
 
   if (snapshot.formState) {
@@ -654,11 +819,13 @@ function applyQueryDefaults() {
   const defaults = buildEntryDefaults()
 
   createType.value = defaults.createType
+  createMode.value = defaults.createMode
   selectedGroup.value = defaults.group
   selectedName.value = defaults.displayName
   selectedSourceRepo.value = defaults.sourceRepo
   selectedSchemaKey.value = defaults.schemaKey
   inputMode.value = defaults.inputMode
+  selfInputModes.value = createType.value === 'self_unified' ? ['manual_profile'] : [defaults.inputMode || 'manual_profile']
 
   resetFormForType(createType.value, selectedName.value, inputMode.value)
 }
@@ -700,8 +867,10 @@ function initializeWizardState() {
   }
 
   step.value = 1
-  createType.value = 'self_persona'
+  createType.value = 'self_unified'
+  createMode.value = 'standard'
   inputMode.value = 'manual_profile'
+  selfInputModes.value = ['manual_profile']
   selectedGroup.value = getDefaultGroupForType(createType.value)
   selectedName.value = getDefaultDisplayNameForType(createType.value)
   selectedSourceRepo.value = getDefaultSourceRepoForType(createType.value)
@@ -716,8 +885,10 @@ function selectType(type: CreateType) {
   selectedGroup.value = getDefaultGroupForType(type)
   selectedSourceRepo.value = getDefaultSourceRepoForType(type)
   selectedName.value = getDefaultDisplayNameForType(type)
-  if (type === 'self_persona') {
+  if (type === 'self_unified') {
+    createMode.value = 'standard'
     inputMode.value = 'manual_profile'
+    selfInputModes.value = ['manual_profile']
   } else if (type === 'source_persona') {
     inputMode.value = 'documents'
   } else if (type === 'family_companion') {
@@ -729,15 +900,21 @@ function selectType(type: CreateType) {
   }
   selectedSchemaKey.value = resolveSchemaKey(type, selectedSourceRepo.value, inputMode.value, selectedName.value)
   resetFormForType(type, selectedName.value, inputMode.value)
-  step.value = 2
+  step.value = type === 'self_unified' ? 1 : 2
 }
 
 function selectInputMode(mode: string) {
   inputMode.value = mode
   selectedGroup.value = resolveGroupForTypeAndMode(createType.value, mode)
-  if (createType.value === 'relationship_persona' || createType.value === 'family_companion' || createType.value === 'intimate_companion') {
+  if (
+    createType.value === 'relationship_persona' ||
+    createType.value === 'family_companion' ||
+    createType.value === 'intimate_companion'
+  ) {
     selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
     selectedName.value = getRelationshipLabel(mode) || selectedName.value
+  } else if (createType.value === 'self_unified') {
+    selfInputModes.value = Array.from(new Set([...(selfInputModes.value || []), mode]))
   }
   selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, mode, selectedName.value)
   resetFormForType(createType.value, selectedName.value, mode)
@@ -753,14 +930,51 @@ async function generateDraft() {
   error.value = ''
 
   try {
+    const selfUnifiedPayload =
+      createType.value === 'self_unified'
+        ? {
+            create_mode: createMode.value,
+            input_modes: selfInputModes.value,
+            self_persona_unified: {
+              create_mode: createMode.value,
+              input_modes: selfInputModes.value,
+              work_system: {
+                summary: formState.work_system_summary,
+                points: formState.work_system_points.split(/\n+/).map((item) => item.trim()).filter(Boolean),
+              },
+              reply_persona: {
+                summary: formState.reply_persona_summary,
+                points: formState.reply_persona_points.split(/\n+/).map((item) => item.trim()).filter(Boolean),
+              },
+              thinking_dna: {
+                summary: formState.thinking_dna_summary,
+                points: formState.thinking_dna_points.split(/\n+/).map((item) => item.trim()).filter(Boolean),
+              },
+              memory_evidence: {
+                summary: formState.memory_evidence_summary,
+                points: formState.memory_evidence_points.split(/\n+/).map((item) => item.trim()).filter(Boolean),
+              },
+              reflection_rules: {
+                summary: formState.reflection_rules_summary,
+                points: formState.reflection_rules_points.split(/\n+/).map((item) => item.trim()).filter(Boolean),
+              },
+            },
+          }
+        : null
+
     const draft = await submitCreateDraft({
       create_type: createType.value,
       group: selectedGroup.value,
       source_repo: selectedSourceRepo.value,
       display_name: selectedName.value,
+      create_mode: createType.value === 'self_unified' ? createMode.value : '',
       input_mode: inputMode.value,
+      input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
-      form_data: { ...formState },
+      form_data:
+        createType.value === 'self_unified'
+          ? { ...formState, ...selfUnifiedPayload }
+          : { ...formState },
     })
 
     saveLatestDraft(draft)
@@ -857,12 +1071,28 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 1 步</p>
-              <h3>{{ isFamilyCompanion ? '选择关系类型' : '选择创建类型' }}</h3>
+              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? '选择关系类型' : '选择创建类型' }}</h3>
             </div>
-            <p class="section-note">{{ isFamilyCompanion ? '先选妈妈、父母或其他家人。' : '先确认你要从哪里开始创建。' }}</p>
+            <p class="section-note">
+              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? '先选妈妈、父母或其他家人。' : '先确认你要从哪里开始创建。' }}
+            </p>
           </div>
 
-          <div v-if="isFamilyCompanion" class="wizard-card-grid wizard-card-grid--three">
+          <div v-if="isSelfUnified" class="wizard-card-grid wizard-card-grid--three">
+            <button
+              v-for="card in selfModeCards"
+              :key="card.mode"
+              type="button"
+              class="wizard-option-card"
+              :class="{ active: createMode === card.mode }"
+              @click="selectSelfMode(card.mode)"
+            >
+              <h4>{{ card.title }}</h4>
+              <p>{{ card.description }}</p>
+            </button>
+          </div>
+
+          <div v-else-if="isFamilyCompanion" class="wizard-card-grid wizard-card-grid--three">
             <button
               v-for="[mode, label] in currentInputs"
               :key="mode"
@@ -896,12 +1126,30 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 2 步</p>
-              <h3>{{ isFamilyCompanion ? '填写人物资料' : '选择创建方式' }}</h3>
+              <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? '填写人物资料' : '选择创建方式' }}</h3>
             </div>
-            <p class="section-note">{{ isFamilyCompanion ? '把人物层和记忆层先写清楚。' : '不同类型会显示不同的方式选择。' }}</p>
+            <p class="section-note">
+              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? '把人物层和记忆层先写清楚。' : '不同类型会显示不同的方式选择。' }}
+            </p>
           </div>
 
-          <template v-if="isFamilyCompanion">
+          <template v-if="isSelfUnified">
+            <div class="wizard-card-grid wizard-card-grid--three">
+              <button
+                v-for="option in selfInputModeOptions"
+                :key="option.key"
+                type="button"
+                class="wizard-option-card"
+                :class="{ active: selfInputModes.includes(option.key) }"
+                @click="toggleSelfInputMode(option.key)"
+              >
+                <h4>{{ option.label }}</h4>
+                <p>{{ getInputModeNote(createType, option.key) }}</p>
+              </button>
+            </div>
+          </template>
+
+          <template v-else-if="isFamilyCompanion">
             <div class="wizard-form">
               <div class="form-grid">
                 <label class="form-field">
@@ -984,38 +1232,140 @@ watch(
             <p class="section-note">{{ isFamilyCompanion ? '先看一眼，再继续生成。' : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
           </div>
 
-          <div v-if="createType === 'self_persona'" class="wizard-form">
+          <div v-if="createType === 'self_unified'" class="wizard-form">
             <div class="form-grid">
               <label class="form-field">
                 <span>名称</span>
-                <input v-model="formState.name" class="field-input" type="text" placeholder="例如：更理性的我" />
+                <input v-model="formState.name" class="field-input" type="text" placeholder="例如：更完整的我" />
               </label>
               <label class="form-field">
-                <span>一句话介绍</span>
-                <input v-model="formState.intro" class="field-input" type="text" placeholder="一句话描述这个自我人格" />
+                <span>创建深度</span>
+                <input :value="selfModeLabels[createMode]" class="field-input" type="text" readonly />
               </label>
             </div>
 
             <div class="form-grid">
               <label class="form-field">
-                <span>你最看重什么</span>
-                <textarea v-model="formState.values" class="field-input wizard-textarea" rows="4"></textarea>
+                <span>做事方式摘要</span>
+                <textarea
+                  v-model="formState.work_system_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="先写你做事时最稳定的样子"
+                ></textarea>
               </label>
               <label class="form-field">
-                <span>做决定时优先看什么</span>
-                <textarea v-model="formState.decision_priority" class="field-input wizard-textarea" rows="4"></textarea>
+                <span>做事方式要点</span>
+                <textarea
+                  v-model="formState.work_system_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：先看目标 / 再看路径 / 再看边界"
+                ></textarea>
               </label>
             </div>
 
             <div class="form-grid">
               <label class="form-field">
-                <span>表达风格</span>
-                <textarea v-model="formState.expression_style" class="field-input wizard-textarea" rows="4"></textarea>
+                <span>回复方式</span>
+                <textarea
+                  v-model="formState.reply_persona_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="你希望这个人格怎么开口说话"
+                ></textarea>
               </label>
               <label class="form-field">
-                <span>希望保留的边界</span>
-                <textarea v-model="formState.boundaries" class="field-input wizard-textarea" rows="4"></textarea>
+                <span>回复方式要点</span>
+                <textarea
+                  v-model="formState.reply_persona_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：直接一点 / 清楚一点 / 保留边界"
+                ></textarea>
               </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>思考方式</span>
+                <textarea
+                  v-model="formState.thinking_dna_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="你做判断时最看重什么"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>思考方式要点</span>
+                <textarea
+                  v-model="formState.thinking_dna_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：先问条件 / 再看出路 / 再算代价"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>生活痕迹</span>
+                <textarea
+                  v-model="formState.memory_evidence_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="可写聊天记录、文本片段或数字痕迹"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>生活痕迹要点</span>
+                <textarea
+                  v-model="formState.memory_evidence_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：聊天片段 / 文字材料 / 文件内容"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>上传 txt / md / csv</span>
+                <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleSelfMemoryFileChange" />
+                <small class="field-hint">{{ memoryEvidenceFileName || '可把文件内容追加到生活痕迹里' }}</small>
+              </label>
+              <label class="form-field">
+                <span>反思规则</span>
+                <textarea
+                  v-model="formState.reflection_rules_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="你希望这个人格保留什么边界"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>反思规则要点</span>
+                <textarea
+                  v-model="formState.reflection_rules_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：不夸张 / 不越界 / 不替自己下定论"
+                ></textarea>
+              </label>
+              <div class="summary-panel summary-panel--compact">
+                <p class="eyebrow">输入方式</p>
+                <h3>可多选</h3>
+                <p class="state-copy">你可以同时保留手动填写、聊天记录、文本材料和记忆片段。</p>
+                <ul class="summary-panel__list">
+                  <li v-for="option in selfInputModeOptions" :key="option.key">
+                    <span>{{ option.label }}</span>
+                    <strong>{{ selfInputModes.includes(option.key) ? '已选择' : '未选择' }}</strong>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -1172,9 +1522,11 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 4 步</p>
-              <h3>{{ isFamilyCompanion ? '生成结果' : '确认并生成结果' }}</h3>
+              <h3>{{ isSelfUnified ? '生成结果' : isFamilyCompanion ? '生成结果' : '确认并生成结果' }}</h3>
             </div>
-            <p class="section-note">{{ isFamilyCompanion ? '把这一版保存成可继续完善的结果。' : '先看一眼，再生成第一版结果。' }}</p>
+            <p class="section-note">
+              {{ isSelfUnified ? '先看一眼 5 层结果，再保存成可继续完善的版本。' : isFamilyCompanion ? '把这一版保存成可继续完善的结果。' : '先看一眼，再生成第一版结果。' }}
+            </p>
           </div>
 
           <div class="wizard-review">
@@ -1190,9 +1542,15 @@ watch(
 
             <div class="summary-panel">
               <p class="eyebrow">表单预览</p>
-              <template v-if="createType === 'self_persona'">
+              <template v-if="createType === 'self_unified'">
                 <h3>{{ formState.name || '未填写名称' }}</h3>
-                <p class="state-copy">{{ formState.intro || '还没有写简介。' }}</p>
+                <ul class="summary-panel__list">
+                  <li><span>做事方式</span><strong>{{ formState.work_system_summary || '未填写' }}</strong></li>
+                  <li><span>回复方式</span><strong>{{ formState.reply_persona_summary || '未填写' }}</strong></li>
+                  <li><span>思考方式</span><strong>{{ formState.thinking_dna_summary || '未填写' }}</strong></li>
+                  <li><span>生活痕迹</span><strong>{{ formState.memory_evidence_summary || '未填写' }}</strong></li>
+                  <li><span>反思规则</span><strong>{{ formState.reflection_rules_summary || '未填写' }}</strong></li>
+                </ul>
               </template>
               <template v-else-if="createType === 'source_persona'">
                 <h3>{{ formState.target_name || '未填写目标名称' }}</h3>

@@ -8,21 +8,30 @@ from main import app
 
 
 class CreateWizardTests(unittest.TestCase):
-    def test_create_wizard_draft_endpoint_builds_self_persona_draft(self):
+    def test_create_wizard_draft_endpoint_builds_self_unified_draft(self):
         payload = {
-            "create_type": "self_persona",
+            "create_type": "self_unified",
             "group": "self",
-            "source_repo": "self-skill",
-            "display_name": "更理性的我",
+            "source_repo": "self-skill+nuwa-skill+forge-skill+digital-life",
+            "display_name": "我的人格",
+            "create_mode": "deep",
             "input_mode": "manual_profile",
-            "schema_key": "self_persona",
+            "input_modes": ["manual_profile", "chat_history", "documents", "memory_notes"],
+            "schema_key": "self_unified",
             "form_data": {
-                "name": "更理性的我",
-                "intro": "先把自己说清楚",
-                "values": "结果和边界",
-                "decision_priority": "先看可执行性",
-                "expression_style": "简洁直接",
-                "boundaries": "不越界",
+                "name": "我的人格",
+                "create_mode": "deep",
+                "input_modes": ["manual_profile", "chat_history", "documents", "memory_notes"],
+                "work_system_summary": "把做事方式整理成可以继续使用的人格骨架。",
+                "work_system_points": "先看目标\n再看路径\n再看边界",
+                "reply_persona_summary": "把回复方式整理成更像自己的表达。",
+                "reply_persona_points": "直接一点\n清楚一点\n保留边界",
+                "thinking_dna_summary": "把判断路径和取舍逻辑整理出来。",
+                "thinking_dna_points": "先问条件\n再看出路\n再算代价",
+                "memory_evidence_summary": "把聊天片段、文字材料和生活痕迹整理进去。",
+                "memory_evidence_points": "聊天记录\n文字片段\n文件材料",
+                "reflection_rules_summary": "把容易失真和需要保留的边界先写清楚。",
+                "reflection_rules_points": "不夸张\n不越界\n不替自己下定论",
             },
         }
 
@@ -32,12 +41,21 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertIn("draft", body)
-        self.assertEqual(body["draft"]["meta"]["create_type"], "self_persona")
-        self.assertEqual(body["draft"]["meta"]["name"], "更理性的我")
-        self.assertEqual(body["draft"]["meta"]["display_name"], "更理性的我")
+        self.assertEqual(body["draft"]["meta"]["create_type"], "self_unified")
+        self.assertEqual(body["draft"]["meta"]["name"], "我的人格")
+        self.assertEqual(body["draft"]["meta"]["display_name"], "我的人格")
         self.assertEqual(body["draft"]["meta"]["group"], "self")
-        self.assertEqual(body["draft"]["meta"]["source_repo"], "self-skill")
-        self.assertEqual(body["draft"]["meta"]["schema_key"], "self_persona")
+        self.assertEqual(body["draft"]["meta"]["source_repo"], "self-skill+nuwa-skill+forge-skill+digital-life")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "self_unified")
+        self.assertEqual(body["draft"]["meta"]["create_mode"], "deep")
+        self.assertEqual(
+            body["draft"]["meta"]["input_modes"],
+            ["manual_profile", "chat_history", "documents", "memory_notes"],
+        )
+        self.assertIn("self_persona_unified", body["draft"])
+        self.assertTrue(body["draft"]["self_persona_unified"]["work_system"]["summary"])
+        self.assertTrue(body["draft"]["self_persona_unified"]["thinking_dna"]["points"])
+        self.assertTrue(body["draft"]["profile"].strip())
         self.assertTrue(body["draft"]["mindset"].strip())
         self.assertTrue(body["draft"]["guardrails"].strip())
 

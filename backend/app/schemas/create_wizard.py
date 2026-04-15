@@ -9,6 +9,7 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
 
 
 class CreateWizardDraftRequest(BaseModel):
@@ -16,7 +17,9 @@ class CreateWizardDraftRequest(BaseModel):
     group: str = ""
     source_repo: str = ""
     display_name: str = ""
+    create_mode: str = ""
     input_mode: str
+    input_modes: list[str] = Field(default_factory=list)
     schema_key: str = ""
     form_data: dict[str, Any] = Field(default_factory=dict)
 
@@ -30,7 +33,9 @@ class CreateWizardDraftMeta(BaseModel):
     version: str
     status: str
     create_type: str
+    create_mode: str = ""
     input_mode: str
+    input_modes: list[str] = Field(default_factory=list)
     group: str
     schema_key: str = ""
     source_repo: str
@@ -50,6 +55,7 @@ class CreateWizardDraft(BaseModel):
     expression: str
     guardrails: str
     relationship_type: str = ""
+    self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None
     memory_base: FamilyCompanionMemoryBase | None = None
     relationship_profile: IntimateCompanionRelationshipProfile | None = None

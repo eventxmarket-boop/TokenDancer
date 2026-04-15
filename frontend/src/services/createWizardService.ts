@@ -9,7 +9,9 @@ export type CreateWizardPayload = {
   group: string
   source_repo: string
   display_name: string
+  create_mode: string
   input_mode: string
+  input_modes: string[]
   schema_key: string
   form_data: Record<string, unknown>
 }
@@ -22,7 +24,9 @@ export type CreateWizardDraftMeta = {
   version: string
   status: string
   create_type: string
+  create_mode: string
   input_mode: string
+  input_modes: string[]
   group: string
   display_name: string
   schema_key: string
@@ -52,6 +56,21 @@ export type FamilyCompanionMemoryBase = {
   emotional_triggers: string[]
 }
 
+export type SelfPersonaUnifiedLayer = {
+  summary: string
+  points: string[]
+}
+
+export type SelfPersonaUnifiedDraft = {
+  create_mode: string
+  input_modes: string[]
+  work_system: SelfPersonaUnifiedLayer
+  reply_persona: SelfPersonaUnifiedLayer
+  thinking_dna: SelfPersonaUnifiedLayer
+  memory_evidence: SelfPersonaUnifiedLayer
+  reflection_rules: SelfPersonaUnifiedLayer
+}
+
 export type IntimateCompanionRelationshipProfile = {
   relationship_type: string
   name: string
@@ -77,6 +96,7 @@ export type CreateWizardDraft = {
   expression: string
   guardrails: string
   relationship_type?: string
+  self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
   relationship_profile?: IntimateCompanionRelationshipProfile | null

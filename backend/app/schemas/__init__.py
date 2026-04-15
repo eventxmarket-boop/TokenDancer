@@ -10,6 +10,7 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft, SelfPersonaUnifiedLayer
 
 __all__ = [
     "CreatedPersonaDetailResponse",
@@ -21,4 +22,6 @@ __all__ = [
     "FamilyCompanionPersonaProfile",
     "IntimateCompanionMemoryBase",
     "IntimateCompanionRelationshipProfile",
+    "SelfPersonaUnifiedDraft",
+    "SelfPersonaUnifiedLayer",
 ]

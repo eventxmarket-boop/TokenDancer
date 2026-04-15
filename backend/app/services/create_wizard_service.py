@@ -11,6 +11,7 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.services.self_persona_unified_service import build_self_persona_draft
 
 
 class CreateWizardError(RuntimeError):
@@ -18,13 +19,14 @@ class CreateWizardError(RuntimeError):
 
 
 SUPPORTED_CREATE_TYPES = {
-    "self_persona",
+    "self_unified",
     "source_persona",
     "relationship_persona",
     "family_companion",
     "intimate_companion",
 }
 
+SELF_UNIFIED_SOURCE_REPO = "self-skill+nuwa-skill+forge-skill+digital-life"
 FAMILY_COMPANION_SOURCE_REPO = "MamaSkill+parents-skills+darwin-skill"
 INTIMATE_UNDERSTANDING_SOURCE_REPO = "relationship-training-skill+xinyi"
 INTIMATE_SIMULATION_SOURCE_REPO = "crush-skill"
@@ -32,7 +34,7 @@ INTIMATE_PARTNER_SOURCE_REPO = "partner-skill+npy-skill"
 INTIMATE_PAST_RELATION_SOURCE_REPO = "ex-skill+first-love-skill+shuixian-skill"
 
 CREATE_TYPE_LABELS = {
-    "self_persona": "自我人格",
+    "self_unified": "我的人格",
     "source_persona": "从资料创建人格",
     "relationship_persona": "关系人格",
     "family_companion": "家人陪伴",
@@ -40,12 +42,12 @@ CREATE_TYPE_LABELS = {
 }
 
 CREATE_TYPE_CONFIG = {
-    "self_persona": {
+    "self_unified": {
         "group": "self",
-        "source_repo": "self-skill",
+        "source_repo": SELF_UNIFIED_SOURCE_REPO,
         "repo_url": "https://github.com/moyitech/self-skill",
-        "source_repos": ["self-skill", "nuwa-skill"],
-        "source_hint": "自我人格模板",
+        "source_repos": ["self-skill", "nuwa-skill", "forge-skill", "digital-life"],
+        "source_hint": "自我人格融合模板",
     },
     "source_persona": {
         "group": "source",
@@ -87,6 +89,7 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "nuwa-skill": "documents",
     "forge-skill": "chat_history",
     "digital-life": "documents",
+    SELF_UNIFIED_SOURCE_REPO: "manual_profile",
     "anyone-to-skill": "documents",
     "colleague-skill": "colleague",
     "boss-skills": "boss",
@@ -128,6 +131,7 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     "nuwa-skill": "self_mindset_distill",
     "forge-skill": "self_deep_self_persona",
     "digital-life": "self_digital_trace_persona",
+    SELF_UNIFIED_SOURCE_REPO: "self_unified",
     "anyone-to-skill": "source_anyone_from_sources",
     "colleague-skill": "relationship_workplace_colleague",
     "boss-skills": "relationship_workplace_boss",
@@ -161,6 +165,7 @@ REPO_URL_BY_SOURCE_REPO = {
     "nuwa-skill": "https://github.com/alchaincyf/nuwa-skill",
     "forge-skill": "https://github.com/YIKUAIBANZI/forge-skill",
     "digital-life": "https://github.com/wildbyteai/digital-life",
+    SELF_UNIFIED_SOURCE_REPO: "https://github.com/moyitech/self-skill",
     "anyone-to-skill": "https://github.com/OpenDemon/anyone-to-skill",
     "colleague-skill": "https://github.com/titanwings/colleague-skill",
     "boss-skills": "https://github.com/vogtsw/boss-skills",
@@ -253,6 +258,14 @@ def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
+SELF_UNIFIED_ALIASES = {
+    "self_persona",
+    "self_mindset_distill",
+    "self_deep_self_persona",
+    "self_digital_trace_persona",
+}
+
+
 def _normalize_slug(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "-", value.lower())
     cleaned = re.sub(r"-+", "-", cleaned).strip("-")
@@ -276,6 +289,8 @@ def _format_bullets(items: list[str]) -> str:
 
 def _validate_create_type(create_type: str) -> str:
     normalized = _normalize_text(create_type)
+    if normalized in SELF_UNIFIED_ALIASES:
+        normalized = "self_unified"
     if normalized not in SUPPORTED_CREATE_TYPES:
         raise CreateWizardError(f"Unsupported create_type: {create_type}")
     return normalized
@@ -286,7 +301,7 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
         return schema_key
     if source_repo and source_repo in INPUT_MODE_BY_SOURCE_REPO:
         return INPUT_MODE_BY_SOURCE_REPO[source_repo]
-    if create_type == "self_persona":
+    if create_type == "self_unified":
         return "manual_profile"
     if create_type == "source_persona":
         return "documents"
@@ -298,6 +313,8 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
 
 
 def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, display_name: str) -> str:
+    if create_type == "self_unified":
+        return "self_unified"
     if create_type == "family_companion":
         return f"family_companion_{input_mode or 'mother'}"
     if create_type == "intimate_companion":
@@ -308,55 +325,33 @@ def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, dis
     return f"{fallback}_{_normalize_slug(display_name)}" if display_name else fallback
 
 
-def _build_self_draft(form_data: dict[str, Any], display_name: str = "") -> dict[str, str]:
-    name = _normalize_text(form_data.get("name")) or _normalize_text(display_name) or "我的自我人格"
-    intro = _normalize_text(form_data.get("intro")) or "先把我自己的做事方式和表达方式整理出来。"
-    values = _normalize_text(form_data.get("values")) or "先把重要的事做好，再让表达尽量清楚。"
-    decision_priority = _normalize_text(form_data.get("decision_priority")) or "先看结果和可执行性。"
-    expression_style = _normalize_text(form_data.get("expression_style")) or "直接、清楚、带一点解释。"
-    boundaries = _normalize_text(form_data.get("boundaries")) or "保留个人边界，不越过自己不愿意暴露的部分。"
-
-    profile = (
-        f"{name} 的定位是一个从自己出发的自我人格。\n"
-        f"简介：{intro}\n"
-        f"最看重的东西：{values}"
-    )
-    mindset = _format_bullets(
-        [
-            f"遇到问题时先看 {decision_priority}",
-            "先梳理目标，再判断路径是否可行",
-            "信息不足时先补关键条件，而不是直接下结论",
-        ]
-    )
-    heuristics = _format_bullets(
-        [
-            "先给一个能执行的版本，再补更理想的版本",
-            "当选择过多时，优先筛掉代价高但收益低的选项",
-            "如果目标和边界冲突，先保护边界，再调整方案",
-        ]
-    )
-    expression = _format_bullets(
-        [
-            f"表达风格：{expression_style}",
-            "回答时先说结论，再说理由",
-            "适合拆成 3 到 4 个小点讲清楚",
-        ]
-    )
-    guardrails = _format_bullets(
-        [
-            f"边界要求：{boundaries}",
-            "不把不确定的内容说成确定事实",
-            "不伪装成比实际更熟悉用户自己",
-        ]
-    )
-    return {
-        "profile": profile,
-        "mindset": mindset,
-        "heuristics": heuristics,
-        "expression": expression,
-        "guardrails": guardrails,
-        "name": name,
+def _build_self_draft(form_data: dict[str, Any], display_name: str = "") -> dict[str, Any]:
+    unified_form: dict[str, Any] = {
+        "name": _normalize_text(form_data.get("name")) or _normalize_text(display_name) or "我的人格",
+        "create_mode": _normalize_text(form_data.get("create_mode")) or "standard",
+        "input_modes": form_data.get("input_modes") or [form_data.get("input_mode") or "manual_profile"],
     }
+
+    for layer_key, fallback in [
+        ("work_system", "先把重要的事做好，再让表达尽量清楚。"),
+        ("reply_persona", "回答时先说结论，再说理由。"),
+        ("thinking_dna", "先梳理目标，再判断路径是否可行。"),
+        ("memory_evidence", "把重要经历、聊天片段和生活痕迹整理进来。"),
+        ("reflection_rules", "保留边界，不越过不愿意暴露的部分。"),
+    ]:
+        raw_summary = _normalize_text(form_data.get(f"{layer_key}_summary"))
+        raw_points = _clean_lines(
+            form_data.get(f"{layer_key}_points")
+            or form_data.get(f"{layer_key}_details")
+            or form_data.get(f"{layer_key}_items")
+            or form_data.get(layer_key)
+        )
+        unified_form[layer_key] = {
+            "summary": raw_summary or fallback,
+            "points": raw_points,
+        }
+
+    return build_self_persona_draft(unified_form)
 
 
 def _build_source_draft(form_data: dict[str, Any], display_name: str = "") -> dict[str, str]:
@@ -656,6 +651,13 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     normalized_group = _normalize_text(payload.get("group")) or config["group"]
     normalized_source_repo = _normalize_text(payload.get("source_repo")) or config["source_repo"]
     normalized_display_name = _normalize_text(payload.get("display_name")) or _normalize_text(payload.get("name"))
+    normalized_create_mode = _normalize_text(payload.get("create_mode")) or "standard"
+    input_modes_payload = payload.get("input_modes")
+    normalized_input_modes = (
+        [str(item).strip() for item in input_modes_payload if str(item).strip()]
+        if isinstance(input_modes_payload, list)
+        else []
+    )
     normalized_input_mode = _normalize_text(payload.get("input_mode")) or _resolve_input_mode(
         normalized_create_type,
         normalized_source_repo,
@@ -671,7 +673,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(form_data, dict):
         raise CreateWizardError("form_data must be an object")
 
-    if normalized_create_type == "self_persona":
+    if normalized_create_type == "self_unified":
         content = _build_self_draft(form_data, normalized_display_name)
     elif normalized_create_type == "source_persona":
         content = _build_source_draft(form_data, normalized_display_name)
@@ -695,12 +697,14 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         version="V0.1.0-draft",
         status="draft",
         create_type=normalized_create_type,
+        create_mode=normalized_create_mode,
         input_mode=normalized_input_mode,
+        input_modes=normalized_input_modes or ([normalized_input_mode] if normalized_input_mode else []),
         group=normalized_group,
         schema_key=normalized_schema_key,
         source_repo=normalized_source_repo,
         repo_url=REPO_URL_BY_SOURCE_REPO.get(normalized_source_repo, config["repo_url"]),
-        source_repos=[normalized_source_repo] if normalized_source_repo else list(config["source_repos"]),
+        source_repos=list(config["source_repos"]) if normalized_create_type == "self_unified" else ([normalized_source_repo] if normalized_source_repo else list(config["source_repos"])),
         source_hint=config["source_hint"],
         generated_at=generated_at,
     )
@@ -713,6 +717,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "expression": content["expression"],
         "guardrails": content["guardrails"],
         "relationship_type": content.get("relationship_type", ""),
+        "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),
         "memory_base": content.get("memory_base"),
         "relationship_profile": content.get("relationship_profile"),

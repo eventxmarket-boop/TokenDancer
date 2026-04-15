@@ -15,15 +15,28 @@ class MySeedsTests(unittest.TestCase):
         created_id: int | None = None
 
         payload = {
-            "create_type": "relationship_persona",
-            "input_mode": "colleague",
+            "create_type": "self_unified",
+            "group": "self",
+            "source_repo": "self-skill+nuwa-skill+forge-skill+digital-life",
+            "display_name": "我的人格",
+            "create_mode": "standard",
+            "input_mode": "manual_profile",
+            "input_modes": ["manual_profile", "documents"],
+            "schema_key": "self_unified",
             "form_data": {
-                "relationship_type": "同事",
-                "persona_name": "产品同事",
-                "speech_style": "说话直接，先讲结论",
-                "decision_logic": "先看时间成本和协作成本",
-                "purpose": "帮助理解这位同事的表达方式",
-                "relation_boundaries": "不越界，不臆测未说出的事实",
+                "name": "我的人格",
+                "create_mode": "standard",
+                "input_modes": ["manual_profile", "documents"],
+                "work_system_summary": "先把重要的事情做好。",
+                "work_system_points": "先看目标\n再看路径",
+                "reply_persona_summary": "回答时更清楚一点。",
+                "reply_persona_points": "先说结论\n再补理由",
+                "thinking_dna_summary": "先判断条件，再决定下一步。",
+                "thinking_dna_points": "先问条件\n再看出路\n再算代价",
+                "memory_evidence_summary": "把过去写过的话整理进去。",
+                "memory_evidence_points": "聊天记录片段\n文字材料",
+                "reflection_rules_summary": "保留边界，不替自己下定论。",
+                "reflection_rules_points": "不夸张\n不越界",
             },
         }
 
@@ -57,7 +70,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["slug"], saved["slug"])
                 self.assertEqual(detail["name"], saved["name"])
                 self.assertEqual(detail["draft_payload"]["meta"]["slug"], saved["slug"])
-                self.assertEqual(detail["draft_payload"]["meta"]["create_type"], draft["meta"]["create_type"])
+                self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "self_unified")
+                self.assertIn("self_persona_unified", detail["draft_payload"])
                 self.assertEqual(detail["draft_payload"]["profile"], draft["profile"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}")

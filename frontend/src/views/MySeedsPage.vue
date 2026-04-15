@@ -9,22 +9,35 @@ const error = ref('')
 const seeds = ref<CreatedPersonaSummary[]>([])
 
 const typeLabels: Record<string, string> = {
-  self_persona: '自我',
+  self_unified: '我的人格',
   source_persona: '资料',
   relationship_persona: '关系',
   intimate_companion: '亲密关系',
   family_companion: '家人陪伴',
 }
 
+function normalizePersonaType(type: string) {
+  if (
+    type === 'self_persona' ||
+    type === 'self_mindset_distill' ||
+    type === 'self_deep_self_persona' ||
+    type === 'self_digital_trace_persona'
+  ) {
+    return 'self_unified'
+  }
+  return type
+}
+
 const groupedSeeds = computed(() => {
   const map = new Map<string, CreatedPersonaSummary[]>()
   for (const seed of seeds.value) {
-    const bucket = map.get(seed.persona_type) || []
+    const normalizedType = normalizePersonaType(seed.persona_type)
+    const bucket = map.get(normalizedType) || []
     bucket.push(seed)
-    map.set(seed.persona_type, bucket)
+    map.set(normalizedType, bucket)
   }
 
-  const order = ['self_persona', 'source_persona', 'relationship_persona', 'intimate_companion', 'family_companion']
+  const order = ['self_unified', 'source_persona', 'relationship_persona', 'intimate_companion', 'family_companion']
   return order
     .map((type) => ({
       type,
@@ -108,7 +121,7 @@ onMounted(() => {
               </div>
 
               <div class="tag-row">
-                <span class="tag-chip">{{ typeLabels[seed.persona_type] || seed.persona_type }}</span>
+                <span class="tag-chip">{{ typeLabels[normalizePersonaType(seed.persona_type)] || normalizePersonaType(seed.persona_type) }}</span>
                 <span class="tag-chip">{{ new Date(seed.created_at).toLocaleDateString() }}</span>
               </div>
 

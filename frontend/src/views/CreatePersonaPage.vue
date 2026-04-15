@@ -26,8 +26,8 @@ const expandedSection = ref<MainPathKey>('self')
 const mainPathSections: MainPathSection[] = [
   {
     key: 'self',
-    title: '创造自己',
-    description: '从你的思考方式、表达习惯和边界开始。',
+    title: '我的人格',
+    description: '从你的做事方式、表达习惯、思考路径和生活痕迹出发。',
     groupKeys: ['self'],
   },
   {
@@ -71,10 +71,11 @@ const inputModeLabels: Record<string, string> = {
 }
 
 const schemaKeyBySourceRepo: Record<string, string> = {
-  'self-skill': 'self_persona',
-  'nuwa-skill': 'self_mindset_distill',
-  'forge-skill': 'self_deep_self_persona',
-  'digital-life': 'self_digital_trace_persona',
+  'self-skill': 'self_unified',
+  'nuwa-skill': 'self_unified',
+  'forge-skill': 'self_unified',
+  'digital-life': 'self_unified',
+  'self-skill+nuwa-skill+forge-skill+digital-life': 'self_unified',
   'anyone-to-skill': 'source_anyone_from_sources',
   'colleague-skill': 'relationship_workplace_colleague',
   'boss-skills': 'relationship_workplace_boss',
@@ -104,6 +105,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'nuwa-skill': 'documents',
   'forge-skill': 'chat_history',
   'digital-life': 'documents',
+  'self-skill+nuwa-skill+forge-skill+digital-life': 'manual_profile',
   'anyone-to-skill': 'documents',
   'colleague-skill': 'colleague',
   'boss-skills': 'boss',
@@ -133,6 +135,9 @@ function getDefaultInputMode(item: CreateCatalogItem) {
 }
 
 function getSchemaKeyForItem(item: CreateCatalogItem) {
+  if (item.create_type === 'self_unified' || item.group === 'self') {
+    return 'self_unified'
+  }
   if (item.create_type === 'family_companion') {
     return `family_companion_${getDefaultInputMode(item)}`
   }
@@ -188,7 +193,7 @@ const sectionViews = computed(() => {
 
 function getWizardTypeForGroup(group: string) {
   if (group === 'self') {
-    return 'self_persona'
+    return 'self_unified'
   }
   if (group === 'source') {
     return 'source_persona'
@@ -206,11 +211,13 @@ function getWizardTypeForGroup(group: string) {
 }
 
 function buildWizardQuery(item: CreateCatalogItem) {
+  const createType = getWizardCreateTypeForItem(item)
   return {
-    create_type: getWizardCreateTypeForItem(item),
+    create_type: createType,
     group: item.group,
     source_repo: item.source_repo,
     display_name: item.name,
+    create_mode: createType === 'self_unified' ? 'standard' : '',
     input_mode: getDefaultInputMode(item),
     schema_key: getSchemaKeyForItem(item),
     reset: '1',

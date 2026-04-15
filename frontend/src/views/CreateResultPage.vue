@@ -10,6 +10,7 @@ import {
   type FamilyCompanionPersonaProfile,
   type IntimateCompanionMemoryBase,
   type IntimateCompanionRelationshipProfile,
+  type SelfPersonaUnifiedDraft,
 } from '@/services/createWizardService'
 import {
   loadMySeed,
@@ -55,7 +56,9 @@ const editableDraft = reactive<CreateWizardDraft>({
     version: '',
     status: '',
     create_type: '',
+    create_mode: '',
     input_mode: '',
+    input_modes: [],
     group: '',
     schema_key: '',
     source_repo: '',
@@ -72,6 +75,15 @@ const editableDraft = reactive<CreateWizardDraft>({
   expression: '',
   guardrails: '',
   relationship_type: '',
+  self_persona_unified: {
+    create_mode: 'standard',
+    input_modes: [],
+    work_system: { summary: '', points: [] },
+    reply_persona: { summary: '', points: [] },
+    thinking_dna: { summary: '', points: [] },
+    memory_evidence: { summary: '', points: [] },
+    reflection_rules: { summary: '', points: [] },
+  },
   persona_profile: null,
   memory_base: null,
   relationship_profile: null,
@@ -84,8 +96,8 @@ const typeLabel = computed(() => {
   }
 
   const type = draft.value.meta.create_type
-  if (type === 'self_persona') {
-    return '自我人格'
+  if (type === 'self_unified') {
+    return '我的人格'
   }
   if (type === 'source_persona') {
     return '从资料创建'
@@ -116,7 +128,7 @@ const savedSeedLabel = computed(() => {
 })
 
 const familyPersonaProfile = computed<FamilyCompanionPersonaProfile | null>(() => {
-  const payload = draft.value?.persona_profile || editableDraft.persona_profile
+  const payload = editableDraft.persona_profile || draft.value?.persona_profile
   if (!payload || typeof payload !== 'object') {
     return null
   }
@@ -124,7 +136,7 @@ const familyPersonaProfile = computed<FamilyCompanionPersonaProfile | null>(() =
 })
 
 const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
-  const payload = draft.value?.memory_base || editableDraft.memory_base
+  const payload = editableDraft.memory_base || draft.value?.memory_base
   if (!payload || typeof payload !== 'object') {
     return null
   }
@@ -132,7 +144,7 @@ const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
 })
 
 const intimateRelationshipProfile = computed<IntimateCompanionRelationshipProfile | null>(() => {
-  const payload = draft.value?.relationship_profile || editableDraft.relationship_profile
+  const payload = editableDraft.relationship_profile || draft.value?.relationship_profile
   if (!payload || typeof payload !== 'object') {
     return null
   }
@@ -140,7 +152,7 @@ const intimateRelationshipProfile = computed<IntimateCompanionRelationshipProfil
 })
 
 const intimateMemoryBase = computed<IntimateCompanionMemoryBase | null>(() => {
-  const payload = draft.value?.intimate_memory_base || editableDraft.intimate_memory_base
+  const payload = editableDraft.intimate_memory_base || draft.value?.intimate_memory_base
   if (!payload || typeof payload !== 'object') {
     return null
   }
@@ -177,6 +189,95 @@ const familyMemoryLines = computed(() => {
     { label: '在意的事', value: memory.emotional_triggers?.join(' / ') || '未填写' },
   ]
 })
+
+const selfUnifiedDraft = computed<SelfPersonaUnifiedDraft | null>(() => {
+  const payload = editableDraft.self_persona_unified || draft.value?.self_persona_unified
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const selfUnifiedLayers = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+
+  return [
+    {
+      title: '做事方式',
+      summary: unified.work_system?.summary || '',
+      points: unified.work_system?.points || [],
+    },
+    {
+      title: '回复方式',
+      summary: unified.reply_persona?.summary || '',
+      points: unified.reply_persona?.points || [],
+    },
+    {
+      title: '思考方式',
+      summary: unified.thinking_dna?.summary || '',
+      points: unified.thinking_dna?.points || [],
+    },
+    {
+      title: '生活痕迹',
+      summary: unified.memory_evidence?.summary || '',
+      points: unified.memory_evidence?.points || [],
+    },
+    {
+      title: '反思规则',
+      summary: unified.reflection_rules?.summary || '',
+      points: unified.reflection_rules?.points || [],
+    },
+  ]
+})
+
+type SelfUnifiedLayerKey = 'work_system' | 'reply_persona' | 'thinking_dna' | 'memory_evidence' | 'reflection_rules'
+
+function ensureSelfUnifiedDraft() {
+  if (!editableDraft.self_persona_unified) {
+    editableDraft.self_persona_unified = {
+      create_mode: 'standard',
+      input_modes: [],
+      work_system: { summary: '', points: [] },
+      reply_persona: { summary: '', points: [] },
+      thinking_dna: { summary: '', points: [] },
+      memory_evidence: { summary: '', points: [] },
+      reflection_rules: { summary: '', points: [] },
+    }
+  }
+  return editableDraft.self_persona_unified
+}
+
+function getUnifiedLayerSummary(layer: SelfUnifiedLayerKey) {
+  return ensureSelfUnifiedDraft()[layer].summary || ''
+}
+
+function getUnifiedLayerPointsText(layer: SelfUnifiedLayerKey) {
+  return ensureSelfUnifiedDraft()[layer].points.join('\n')
+}
+
+function updateUnifiedLayerSummary(layer: SelfUnifiedLayerKey, value: string) {
+  ensureSelfUnifiedDraft()[layer].summary = value
+}
+
+function updateUnifiedLayerPoints(layer: SelfUnifiedLayerKey, value: string) {
+  ensureSelfUnifiedDraft()[layer].points = value
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function handleUnifiedLayerSummaryInput(layer: SelfUnifiedLayerKey, event: Event) {
+  const target = event.target as HTMLTextAreaElement | null
+  updateUnifiedLayerSummary(layer, target?.value || '')
+}
+
+function handleUnifiedLayerPointsInput(layer: SelfUnifiedLayerKey, event: Event) {
+  const target = event.target as HTMLTextAreaElement | null
+  updateUnifiedLayerPoints(layer, target?.value || '')
+}
 
 const intimateProfileLines = computed(() => {
   const profile = intimateRelationshipProfile.value
@@ -407,6 +508,19 @@ onMounted(() => {
           <p class="state-copy">{{ inputModeLabel }} · {{ editableDraft.meta.generated_at }}</p>
         </article>
 
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">五层结构</p>
+          <div class="self-unified-grid">
+            <div v-for="layer in selfUnifiedLayers" :key="layer.title" class="self-unified-grid__item">
+              <span>{{ layer.title }}</span>
+              <strong>{{ layer.summary || '未填写' }}</strong>
+              <p v-if="layer.points.length" class="self-unified-grid__copy">
+                {{ layer.points.join(' / ') }}
+              </p>
+            </div>
+          </div>
+        </article>
+
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
           <p class="eyebrow">人格层</p>
           <div class="family-grid">
@@ -485,6 +599,103 @@ onMounted(() => {
             <span>名称</span>
             <input v-model="editableDraft.meta.name" class="field-input" type="text" />
           </label>
+          <template v-if="draft?.meta.create_type === 'self_unified'">
+            <label class="form-field">
+              <span>做事方式</span>
+              <textarea
+                :value="getUnifiedLayerSummary('work_system')"
+                class="field-input wizard-textarea"
+                rows="4"
+                @input="handleUnifiedLayerSummaryInput('work_system', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>做事方式要点</span>
+              <textarea
+                :value="getUnifiedLayerPointsText('work_system')"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="每行一条"
+                @input="handleUnifiedLayerPointsInput('work_system', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>回复方式</span>
+              <textarea
+                :value="getUnifiedLayerSummary('reply_persona')"
+                class="field-input wizard-textarea"
+                rows="4"
+                @input="handleUnifiedLayerSummaryInput('reply_persona', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>回复方式要点</span>
+              <textarea
+                :value="getUnifiedLayerPointsText('reply_persona')"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="每行一条"
+                @input="handleUnifiedLayerPointsInput('reply_persona', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>思考方式</span>
+              <textarea
+                :value="getUnifiedLayerSummary('thinking_dna')"
+                class="field-input wizard-textarea"
+                rows="4"
+                @input="handleUnifiedLayerSummaryInput('thinking_dna', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>思考方式要点</span>
+              <textarea
+                :value="getUnifiedLayerPointsText('thinking_dna')"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="每行一条"
+                @input="handleUnifiedLayerPointsInput('thinking_dna', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>生活痕迹</span>
+              <textarea
+                :value="getUnifiedLayerSummary('memory_evidence')"
+                class="field-input wizard-textarea"
+                rows="4"
+                @input="handleUnifiedLayerSummaryInput('memory_evidence', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>生活痕迹要点</span>
+              <textarea
+                :value="getUnifiedLayerPointsText('memory_evidence')"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="每行一条"
+                @input="handleUnifiedLayerPointsInput('memory_evidence', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>反思规则</span>
+              <textarea
+                :value="getUnifiedLayerSummary('reflection_rules')"
+                class="field-input wizard-textarea"
+                rows="4"
+                @input="handleUnifiedLayerSummaryInput('reflection_rules', $event)"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>反思规则要点</span>
+              <textarea
+                :value="getUnifiedLayerPointsText('reflection_rules')"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="每行一条"
+                @input="handleUnifiedLayerPointsInput('reflection_rules', $event)"
+              ></textarea>
+            </label>
+          </template>
           <label class="form-field">
             <span>Profile</span>
             <textarea v-model="editableDraft.profile" class="field-input wizard-textarea" rows="6"></textarea>
