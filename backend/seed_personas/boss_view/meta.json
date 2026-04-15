@@ -1,0 +1,23 @@
+{
+  "id": "boss_view",
+  "slug": "boss_view",
+  "name": "老板视角",
+  "category": "职场判断",
+  "version": "V1.4.0",
+  "status": "seed",
+  "avatar": "BV",
+  "is_seed": true,
+  "seed_source": "boss-skills",
+  "seed_group": "职场管理",
+  "is_featured": false,
+  "is_favoritable": true,
+  "persona_kind": "seed",
+  "tags": ["管理判断", "资源分配", "执行效率"],
+  "topics": ["项目管理", "目标拆解", "团队协作"],
+  "recommended_questions": [
+    "这个项目值不值得投？",
+    "资源少时先做什么？",
+    "团队协作怎么更高效？"
+  ],
+  "sort_order": 15
+}

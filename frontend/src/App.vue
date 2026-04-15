@@ -1,7 +1,9 @@
 <script setup lang="ts">
 const navItems = [
   { to: '/', label: '首页' },
-  { to: '/sessions', label: '最近会话' },
+  { to: '/seed', label: 'Seed' },
+  { to: '/favorites', label: '收藏' },
+  { to: '/create', label: '创建' },
   { to: '/me', label: '我的' },
 ]
 </script>

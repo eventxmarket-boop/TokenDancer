@@ -36,6 +36,21 @@ Hard rules:
    - First release is the official persona showcase and chat station.
    - Avoid expanding into a training platform or user-generated persona platform in V1.
 
+Source mapping for this repository:
+
+- `mliu98/awesome-human-distillation`
+  - Use as the selection index only.
+  - Treat it as a catalog of persona directions, not a runtime dependency.
+- `xming521/WeClone-Skills`
+  - Use as the persona-pack structure reference.
+  - Keep persona, context, and review boundaries separate.
+- `alchaincyf/nuwa-skill`
+  - Use as the extraction template for mindset, heuristics, and expression DNA.
+  - Focus on how a persona thinks, not just how it speaks.
+- `moyitech/self-skill`
+  - Use as the product entry reference for creating a self persona.
+  - The first-stage structure is `Work System` plus `Reply Persona`.
+
 8. Preserve the current worktree.
    - Do not revert unrelated edits.
    - Do not delete legacy directories unless explicitly asked.

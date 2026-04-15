@@ -1,77 +1,67 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { loadRecentSessions, type RecentSessionSummary } from '@/services/chatService'
-import { listPersonas, type Persona } from '@/services/personaService'
 
-const personas = ref<Persona[]>([])
 const recentSessions = ref<RecentSessionSummary[]>([])
-const loading = ref(true)
-const recentLoading = ref(true)
+const loadingRecent = ref(true)
 const error = ref('')
 
-const spotlight = computed(() => personas.value[0] ?? null)
-const sessionLink = (session: RecentSessionSummary) => ({
+const loadRecent = async () => {
+  loadingRecent.value = true
+  error.value = ''
+
+  try {
+    recentSessions.value = await loadRecentSessions(3)
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : '加载最近会话失败'
+    error.value = message
+    recentSessions.value = []
+  } finally {
+    loadingRecent.value = false
+  }
+}
+
+const recentLink = (session: RecentSessionSummary) => ({
   path: `/chat/${session.persona_slug}`,
   query: { session_id: session.id },
 })
 
-const load = async () => {
-  loading.value = true
-  error.value = ''
-
-  try {
-    personas.value = await listPersonas()
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : '加载人格列表失败'
-    error.value = message
-    personas.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadRecent = async () => {
-  recentLoading.value = true
-  try {
-    recentSessions.value = await loadRecentSessions(3)
-  } catch {
-    recentSessions.value = []
-  } finally {
-    recentLoading.value = false
-  }
-}
-
 onMounted(() => {
-  void load()
   void loadRecent()
 })
 </script>
 
 <template>
-  <section class="hero-card">
+  <section class="hero-card home-hero">
     <div class="hero-copy">
-      <p class="eyebrow">官方首发人格馆</p>
-      <h2>先选视角，再开始聊天。</h2>
+      <p class="eyebrow">两条主线</p>
+      <h2>先创造一个自我人格，再和不同人格继续聊。</h2>
       <p class="hero-text">
-        这里放的是几位首发人格：你可以先看简介，再进详情，最后进入聊天页开始对话。
+        这一版把入口收束成两个方向：一边是自己的 Work System 与 Reply Persona，另一边是从 Seed 里挑一个视角直接开聊。
       </p>
+
       <div class="hero-actions">
-        <RouterLink class="primary-btn" :to="`/character/${spotlight?.slug ?? 'zhang_xue_feng'}`">先看一个人格</RouterLink>
-        <RouterLink class="secondary-btn" to="/me">去我的页面</RouterLink>
+        <RouterLink class="primary-btn" to="/create">创造一个自我人格</RouterLink>
+        <RouterLink class="secondary-btn" to="/seed">去 Seed 选择人格</RouterLink>
+      </div>
+
+      <div class="inline-links">
+        <RouterLink class="text-link" to="/favorites">打开收藏人格</RouterLink>
+        <RouterLink class="text-link" to="/sessions">继续最近会话</RouterLink>
       </div>
     </div>
 
-    <div class="hero-visual">
+    <div class="hero-visual home-visual">
       <div class="floating-orb"></div>
-      <div class="spotlight-card" v-if="spotlight">
-        <p class="spotlight-card__label">今天推荐</p>
-        <h3>{{ spotlight.name }}</h3>
-        <p>{{ spotlight.intro }}</p>
+      <div class="spotlight-card">
+        <p class="spotlight-card__label">功能 A</p>
+        <h3>创造自我人格</h3>
+        <p>先定义做事方式，再定义回复方式，后面再慢慢补成完整蒸馏入口。</p>
       </div>
-      <div class="spotlight-card" v-else>
-        <p class="spotlight-card__label">今天推荐</p>
-        <h3>等待人格数据</h3>
-        <p>后端接口准备好后，这里会展示首个可用人格。</p>
+      <div class="spotlight-card spotlight-card--alt">
+        <p class="spotlight-card__label">功能 B</p>
+        <h3>Seed 选人格聊天</h3>
+        <p>从精选人格里直接进入对话，收藏常用人格后还能快速回聊。</p>
       </div>
     </div>
   </section>
@@ -79,61 +69,58 @@ onMounted(() => {
   <section class="section-card">
     <div class="section-head">
       <div>
-        <p class="eyebrow">首发人格</p>
-        <h3>四个角色，四种入口。</h3>
+        <p class="eyebrow">快捷入口</p>
+        <h3>先做最短路径，再做细节扩展。</h3>
       </div>
-      <p class="section-note">每个卡片都可以直接进入详情或开始聊天。</p>
+      <p class="section-note">这些入口是产品主线，不是辅助菜单。</p>
     </div>
 
-    <div v-if="loading" class="state-panel">
-      <p class="eyebrow">加载中</p>
-      <h3>正在读取人格列表…</h3>
-    </div>
+    <div class="feature-grid">
+      <RouterLink class="feature-card" to="/create">
+        <p class="feature-card__label">Create</p>
+        <h4>创造一个自我人格</h4>
+        <p>围绕 Work System 和 Reply Persona，先把你自己说清楚。</p>
+      </RouterLink>
 
-    <div v-else-if="error" class="state-panel">
-      <p class="eyebrow">加载失败</p>
-      <h3>人格列表暂时不可用</h3>
-      <p class="state-copy">{{ error }}</p>
-      <button class="primary-btn" type="button" @click="load">重试</button>
-    </div>
+      <RouterLink class="feature-card" to="/seed">
+        <p class="feature-card__label">Seed</p>
+        <h4>选择一个人格</h4>
+        <p>在精选种子里挑一个当前最想聊的视角，直接开始对话。</p>
+      </RouterLink>
 
-    <div v-else-if="!personas.length" class="state-panel">
-      <p class="eyebrow">暂无人格</p>
-      <h3>还没有可展示的人格。</h3>
-      <p class="state-copy">请先补充 backend/personas 下的正式人格目录。</p>
-    </div>
+      <RouterLink class="feature-card" to="/favorites">
+        <p class="feature-card__label">Favorites</p>
+        <h4>收藏常用人格</h4>
+        <p>把经常用的人格放进收藏夹，后面继续聊更顺手。</p>
+      </RouterLink>
 
-    <div v-else class="persona-grid">
-      <article v-for="persona in personas" :key="persona.slug" class="persona-card">
-        <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
-        <div class="persona-body">
-          <p class="persona-category">{{ persona.category }}</p>
-          <h4>{{ persona.name }}</h4>
-          <p class="persona-intro">{{ persona.intro }}</p>
-          <div class="tag-row">
-            <span v-for="tag in persona.tags" :key="tag" class="tag-chip">{{ tag }}</span>
-          </div>
-        </div>
-        <div class="persona-actions">
-          <RouterLink class="text-link" :to="`/character/${persona.slug}`">查看详情</RouterLink>
-          <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊天</RouterLink>
-        </div>
-      </article>
+      <RouterLink class="feature-card" to="/sessions">
+        <p class="feature-card__label">Recent</p>
+        <h4>继续最近会话</h4>
+        <p>从上次聊到的位置接着聊，不需要每次重新找入口。</p>
+      </RouterLink>
     </div>
   </section>
 
   <section class="section-card">
     <div class="section-head">
       <div>
-        <p class="eyebrow">继续最近对话</p>
-        <h3>从上次聊到的位置继续。</h3>
+        <p class="eyebrow">最近会话</p>
+        <h3>继续上一次聊到的位置。</h3>
       </div>
       <RouterLink class="text-link" to="/sessions">查看全部</RouterLink>
     </div>
 
-    <div v-if="recentLoading" class="state-panel">
+    <div v-if="loadingRecent" class="state-panel">
       <p class="eyebrow">加载中</p>
       <h3>正在读取最近会话…</h3>
+    </div>
+
+    <div v-else-if="error" class="state-panel">
+      <p class="eyebrow">加载失败</p>
+      <h3>最近会话暂时不可用</h3>
+      <p class="state-copy">{{ error }}</p>
+      <button class="primary-btn" type="button" @click="loadRecent">重试</button>
     </div>
 
     <div v-else-if="recentSessions.length" class="recent-session-grid">
@@ -141,7 +128,7 @@ onMounted(() => {
         v-for="session in recentSessions"
         :key="session.id"
         class="recent-session-card"
-        :to="sessionLink(session)"
+        :to="recentLink(session)"
       >
         <div class="recent-session-card__head">
           <p class="persona-category">{{ session.persona_name }}</p>

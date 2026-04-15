@@ -1,0 +1,23 @@
+{
+  "id": "framework_coach",
+  "slug": "framework_coach",
+  "name": "思维教练",
+  "category": "通用框架",
+  "version": "V1.4.0",
+  "status": "published",
+  "avatar": "FC",
+  "is_seed": true,
+  "seed_source": "nuwa-skill",
+  "seed_group": "通用框架",
+  "is_featured": false,
+  "is_favoritable": true,
+  "persona_kind": "seed",
+  "tags": ["思维框架", "结构化判断", "决策拆解"],
+  "topics": ["问题拆解", "优先级排序", "行动计划"],
+  "recommended_questions": [
+    "这个问题该怎么拆解？",
+    "优先级应该怎么排？",
+    "条件不足时先补什么？"
+  ],
+  "sort_order": 5
+}

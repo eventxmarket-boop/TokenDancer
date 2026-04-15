@@ -2,14 +2,20 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadPersona, type Persona } from '@/services/personaService'
+import { getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
 
 const route = useRoute()
 const persona = ref<Persona | null>(null)
 const loading = ref(true)
 const error = ref('')
 const notFound = ref(false)
+const favoriteSlugs = ref<string[]>(getFavoriteSlugs())
 
 const slug = computed(() => String(route.params.id || ''))
+const isFavorite = computed(() => {
+  const current = persona.value?.slug
+  return current ? favoriteSlugs.value.includes(current) : false
+})
 
 const load = async () => {
   const target = slug.value.trim()
@@ -35,6 +41,18 @@ const load = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const refreshFavorites = () => {
+  favoriteSlugs.value = getFavoriteSlugs()
+}
+
+const toggleFavorite = () => {
+  if (!persona.value || persona.value.isFavoritable === false) {
+    return
+  }
+  toggleFavoriteSlug(persona.value.slug)
+  refreshFavorites()
 }
 
 onMounted(() => {
@@ -104,6 +122,14 @@ watch(slug, () => {
 
       <div class="detail-actions">
         <RouterLink class="primary-btn" :to="`/chat/${persona.slug}`">开始聊天</RouterLink>
+        <button
+          v-if="persona.isFavoritable !== false"
+          class="secondary-btn"
+          type="button"
+          @click="toggleFavorite"
+        >
+          {{ isFavorite ? '取消收藏' : '收藏人格' }}
+        </button>
         <RouterLink class="secondary-btn" to="/">回到首页</RouterLink>
       </div>
     </article>
@@ -119,6 +145,11 @@ watch(slug, () => {
         <p class="eyebrow">版本状态</p>
         <p class="side-title">{{ persona.version }}</p>
         <p>{{ persona.status }}</p>
+      </div>
+      <div class="mini-panel" v-if="persona.seedSource || persona.seedGroup">
+        <p class="eyebrow">种子来源</p>
+        <p class="side-title">{{ persona.seedGroup || persona.category }}</p>
+        <p>{{ persona.seedSource || '本地整理' }}</p>
       </div>
     </aside>
   </section>

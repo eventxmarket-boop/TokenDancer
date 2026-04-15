@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.4.0 - 2026-04-16
+
+- Added a Seed selection page for browsing normalized persona packs from the curated seed layer.
+- Added a Favorites page backed by local browser storage so commonly used personas can be reused quickly.
+- Added a Create page that introduces the self-persona flow as Work System plus Reply Persona.
+- Reworked the homepage around the two main product lines: creating a self persona and chatting with seeded personas.
+- Added seed metadata and source-mapping documentation to clarify how open-source references map to the app's persona-pack model.
+- Added two new normalized seed personas, `framework_coach` and `boss_view`, to expand the curated selection set.
+
 ## V1.2.5 - 2026-04-15
 
 - Added session detail and latest-session APIs so chat history can be restored after re-entry.

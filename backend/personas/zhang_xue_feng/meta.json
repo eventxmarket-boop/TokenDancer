@@ -6,6 +6,12 @@
   "version": "V1.0.1",
   "status": "published",
   "avatar": "ZXF",
+  "is_seed": true,
+  "seed_source": "zhang-xue-feng-skill",
+  "seed_group": "现实判断",
+  "is_featured": true,
+  "is_favoritable": true,
+  "persona_kind": "seed",
   "tags": ["现实分析", "教育规划", "直接判断"],
   "topics": ["专业选择", "就业路径", "现实代价"],
   "recommended_questions": [

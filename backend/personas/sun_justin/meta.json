@@ -6,6 +6,12 @@
   "version": "V1.0.1",
   "status": "published",
   "avatar": "SJ",
+  "is_seed": true,
+  "seed_source": "sun-skill",
+  "seed_group": "商业表达",
+  "is_featured": true,
+  "is_favoritable": true,
+  "persona_kind": "seed",
   "tags": ["商业叙事", "热点表达", "传播动作"],
   "topics": ["品牌话题", "传播节奏", "商业化表达"],
   "recommended_questions": [

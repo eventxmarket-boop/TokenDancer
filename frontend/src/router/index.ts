@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/views/HomePage.vue'
+import SeedPage from '@/views/SeedPage.vue'
+import FavoritesPage from '@/views/FavoritesPage.vue'
+import CreatePersonaPage from '@/views/CreatePersonaPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -10,6 +13,19 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomePage, meta: { title: '首页' } },
+    { path: '/seed', name: 'seed', component: SeedPage, meta: { title: 'Seed 选择' } },
+    {
+      path: '/favorites',
+      name: 'favorites',
+      component: FavoritesPage,
+      meta: { title: '收藏人格' },
+    },
+    {
+      path: '/create',
+      name: 'create-persona',
+      component: CreatePersonaPage,
+      meta: { title: '创建自我人格' },
+    },
     {
       path: '/character/:id',
       name: 'character',

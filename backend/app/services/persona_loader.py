@@ -21,6 +21,12 @@ class PersonaPack:
     avatar: str | None
     tags: list[str]
     topics: list[str]
+    is_seed: bool
+    seed_source: str
+    seed_group: str
+    is_featured: bool
+    is_favoritable: bool
+    persona_kind: str
     intro: str
     profile: str
     mindset: str
@@ -43,6 +49,12 @@ class PersonaPack:
             "avatar": self.avatar,
             "tags": self.tags,
             "topics": self.topics,
+            "isSeed": self.is_seed,
+            "seedSource": self.seed_source,
+            "seedGroup": self.seed_group,
+            "isFeatured": self.is_featured,
+            "isFavoritable": self.is_favoritable,
+            "personaKind": self.persona_kind,
             "intro": self.intro,
             "profile": self.profile,
             "recommendedQuestions": self.recommended_questions,
@@ -60,6 +72,12 @@ class PersonaPack:
                 "avatar": self.avatar,
                 "tags": self.tags,
                 "topics": self.topics,
+                "is_seed": self.is_seed,
+                "seed_source": self.seed_source,
+                "seed_group": self.seed_group,
+                "is_featured": self.is_featured,
+                "is_favoritable": self.is_favoritable,
+                "persona_kind": self.persona_kind,
                 "recommended_questions": self.recommended_questions,
                 "sort_order": self.sort_order,
             },
@@ -141,6 +159,12 @@ def _load_persona_pack(persona_dir: Path) -> PersonaPack:
         avatar=str(meta.get("avatar") or "").strip() or None,
         tags=_normalize_str_list(meta.get("tags")),
         topics=_normalize_str_list(meta.get("topics")),
+        is_seed=bool(meta.get("is_seed", True)),
+        seed_source=str(meta.get("seed_source") or "").strip(),
+        seed_group=str(meta.get("seed_group") or "").strip(),
+        is_featured=bool(meta.get("is_featured", False)),
+        is_favoritable=bool(meta.get("is_favoritable", True)),
+        persona_kind=str(meta.get("persona_kind") or "seed").strip() or "seed",
         intro=_read_text_file(persona_dir / "intro.md"),
         profile=_read_text_file(persona_dir / "profile.md"),
         mindset=_read_text_file(persona_dir / "mindset.md"),
@@ -196,6 +220,10 @@ def list_personas() -> list[dict[str, Any]]:
 
     packs.sort(key=lambda pack: (pack.sort_order, pack.category, pack.name))
     return [pack.summary_dict() for pack in packs]
+
+
+def list_seed_personas() -> list[dict[str, Any]]:
+    return [persona for persona in list_personas() if bool(persona.get("isSeed", False))]
 
 
 def get_persona_by_slug(slug: str) -> dict[str, Any] | None:

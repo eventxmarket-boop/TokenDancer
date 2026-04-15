@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.version import get_project_version
 from app.schemas.persona import PersonaRecord
-from app.services.persona_loader import PersonaLoadError, load_persona_summary, list_personas
+from app.services.persona_loader import PersonaLoadError, load_persona_summary, list_personas, list_seed_personas
 
 router = APIRouter()
 
@@ -32,6 +32,14 @@ async def persona_health():
 async def persona_list():
     try:
         return list_personas()
+    except PersonaLoadError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/persona-api/seed-personas", response_model=list[PersonaRecord])
+async def seed_persona_list():
+    try:
+        return list_seed_personas()
     except PersonaLoadError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

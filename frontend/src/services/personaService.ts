@@ -11,6 +11,13 @@ export type Persona = {
   recommendedQuestions: string[]
   version: string
   status: string
+  isSeed?: boolean
+  seedSource?: string
+  seedGroup?: string
+  isFeatured?: boolean
+  isFavoritable?: boolean
+  personaKind?: string
+  sortOrder?: number
 }
 
 const API_PREFIX = '/persona-api'
@@ -51,4 +58,9 @@ export async function loadPersona(id: string): Promise<Persona | null> {
     return null
   }
   return readJson<Persona>(response)
+}
+
+export async function loadSeedPersonas(): Promise<Persona[]> {
+  const response = await fetch(`${API_PREFIX}/seed-personas`)
+  return readJson<Persona[]>(response)
 }
