@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.2.4 - 2026-04-15
+
+- Extracted a shared backend text sanitizer for `<think>`, `<reasoning>`, and `<analysis>` blocks.
+- Added regression tests to verify sanitized replies and the no-thinking prompt constraint.
+- Kept the frontend display-layer sanitizer in place as a backup guard.
+
 ## V1.2.3 - 2026-04-15
 
 - Added backend reply sanitization to remove `<think>`, `<reasoning>`, and `<analysis>` blocks before responses reach the frontend.

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -9,6 +8,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.services.llm_config_service import LLMConfigServiceError, resolve_llm_config
+from app.services.text_sanitizer import strip_think_blocks
 
 
 class LLMGatewayError(RuntimeError):
@@ -29,17 +29,6 @@ class LLMReply:
             "usage": self.usage,
             "latency_ms": self.latency_ms,
         }
-
-
-def strip_think_blocks(text: str) -> str:
-    if not text:
-        return text
-
-    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r"<reasoning>.*?</reasoning>", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r"<analysis>.*?</analysis>", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip()
 
 
 def _extract_content(payload: dict[str, Any]) -> str:
