@@ -9,6 +9,7 @@ import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
 import RecentSessionsPage from '@/views/RecentSessionsPage.vue'
+import MySeedsPage from '@/views/MySeedsPage.vue'
 import MePage from '@/views/MePage.vue'
 
 const router = createRouter({
@@ -57,6 +58,12 @@ const router = createRouter({
       name: 'sessions',
       component: RecentSessionsPage,
       meta: { title: '最近会话' },
+    },
+    {
+      path: '/my-seeds',
+      name: 'my-seeds',
+      component: MySeedsPage,
+      meta: { title: '我创建的 Seed' },
     },
     { path: '/me', name: 'me', component: MePage, meta: { title: '我的' } },
     { path: '/admin', name: 'admin', component: AdminPage, meta: { title: '后台设置' } },

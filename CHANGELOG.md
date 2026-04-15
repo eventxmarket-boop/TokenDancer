@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.9 - 2026-04-16
+
+- Added a day/night theme toggle to the global shell and persisted the choice in local storage.
+- Simplified the My page into three direct entry cards: created seeds, favorites, and recent sessions.
+- Added a dedicated My Seeds page so saved create results can be reopened, continued, and chatted with consistently.
+- Persisted Create wizard results into the backend so the created object can be reopened as the same persona later.
+
 ## V1.4.8 - 2026-04-16
 
 - Simplified the Favorites page so it now keeps only the core list, actions, and empty state.

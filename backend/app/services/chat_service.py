@@ -10,6 +10,10 @@ from sqlalchemy.orm import Session
 from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.base_mixins import utcnow
+from app.services.created_persona_service import (
+    load_created_persona_skill,
+    load_created_persona_summary,
+)
 from app.services.llm_gateway import generate_reply
 from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
@@ -121,6 +125,20 @@ def _resolve_session_title(
     )
 
 
+def _load_persona_summary_any(db: Session, slug: str) -> dict[str, object] | None:
+    summary = load_persona_summary(slug)
+    if summary is not None:
+        return summary
+    return load_created_persona_summary(db, slug)
+
+
+def _load_persona_skill_any(db: Session, slug: str) -> dict[str, object] | None:
+    skill = load_persona_skill(slug)
+    if skill is not None:
+        return skill
+    return load_created_persona_skill(db, slug)
+
+
 def _get_or_create_session(db: Session, persona_slug: str, session_id: str | None) -> ChatSession:
     normalized_session_id = (session_id or "").strip()
     session: ChatSession | None = None
@@ -214,7 +232,7 @@ def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] |
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         .all()
     )
-    persona_summary = load_persona_summary(session.persona_slug) or {}
+    persona_summary = _load_persona_summary_any(db, session.persona_slug) or {}
     persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
     first_user_message = next(
         (row.content for row in rows if row.role == "user" and row.content.strip()),
@@ -267,7 +285,7 @@ def get_recent_chat_sessions(db: Session, limit: int = 10) -> list[dict[str, obj
         if has_messages is None:
             continue
 
-        persona_summary = load_persona_summary(session.persona_slug) or {}
+        persona_summary = _load_persona_summary_any(db, session.persona_slug) or {}
         persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
         first_user = (
             db.query(ChatMessage.content)
@@ -336,7 +354,7 @@ async def chat_with_persona(
     user_message: str,
     db: Session,
 ) -> dict[str, object]:
-    persona = load_persona_skill(persona_slug)
+    persona = _load_persona_skill_any(db, persona_slug)
     if persona is None:
         raise PersonaNotFoundError(f"Persona not found: {persona_slug}")
 

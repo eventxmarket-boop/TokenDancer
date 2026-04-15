@@ -29,7 +29,7 @@ from app.routers.admin_finance import router as admin_finance_router
 from app.routers.admin_audit import router as admin_audit_router
 from app.routers.subscriptions import router as subscriptions_router
 from app.routers.billing import router as billing_router
-from app.models import User, Product, Cart, CartItem, Order, OrderItem, RedeemCode, RedeemLog, APIKey, UsageRecord, BalanceLedger  # noqa: F401
+from app.models import User, Product, Cart, CartItem, Order, OrderItem, RedeemCode, RedeemLog, APIKey, UsageRecord, BalanceLedger, CreatedPersona  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.token_grant import TokenGrant  # noqa: F401
 

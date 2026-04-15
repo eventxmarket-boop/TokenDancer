@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import Base, engine
 from app.core.version import get_project_version
 from app.core.schema_upgrade import upgrade_runtime_schema
-from app.models import ChatMessage, ChatSession, LLMConfig  # noqa: F401
+from app.models import ChatMessage, ChatSession, CreatedPersona, LLMConfig  # noqa: F401
 from app.routers.persona_admin import router as persona_admin_router
 from app.routers.chat import router as chat_router
 from app.routers.persona import router as persona_router

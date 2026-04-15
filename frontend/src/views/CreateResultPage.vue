@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   loadLatestDraft,
   saveDraftLocally,
   saveLatestDraft,
   type CreateWizardDraft,
 } from '@/services/createWizardService'
+import {
+  loadMySeed,
+  saveMySeed,
+  type CreatedPersonaRecord,
+} from '@/services/createdPersonaService'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(true)
 const notice = ref('')
 const draft = ref<CreateWizardDraft | null>(null)
+const createdSeedId = ref<number | null>(null)
+const createdSeed = ref<CreatedPersonaRecord | null>(null)
+const saving = ref(false)
+const editorAnchor = ref<HTMLElement | null>(null)
 
 const inputModeLabels: Record<string, string> = {
   manual_profile: '手动填写',
@@ -75,6 +85,13 @@ const inputModeLabel = computed(() => {
   return inputModeLabels[mode] || mode || '未选择'
 })
 
+const savedSeedLabel = computed(() => {
+  if (createdSeed.value) {
+    return '已保存到“我创建的 Seed”'
+  }
+  return '先保存到“我创建的 Seed”'
+})
+
 function applyDraft(nextDraft: CreateWizardDraft) {
   draft.value = nextDraft
   editableDraft.meta = { ...nextDraft.meta }
@@ -99,17 +116,72 @@ function cloneDraft(source: CreateWizardDraft): CreateWizardDraft {
   }
 }
 
-function persistEditedDraft() {
-  const snapshot = cloneDraft(editableDraft)
-  saveLatestDraft(snapshot)
-  notice.value = '这版结果已同步保存。'
+async function ensureSeedSaved() {
+  if (createdSeedId.value) {
+    return true
+  }
+
+  await saveDraft()
+  return Boolean(createdSeedId.value)
 }
 
-function saveDraft() {
+async function goToMySeeds() {
+  const saved = await ensureSeedSaved()
+  if (!saved) {
+    return
+  }
+  void router.push('/my-seeds')
+}
+
+async function startChat() {
+  const saved = await ensureSeedSaved()
+  if (!saved) {
+    return
+  }
+  const slug = createdSeed.value?.slug?.trim() || editableDraft.meta.slug.trim()
+  if (!slug) {
+    return
+  }
+  void router.push(`/chat/${slug}`)
+}
+
+function continueEditing() {
+  editorAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function persistToBackend() {
   const snapshot = cloneDraft(editableDraft)
-  saveLatestDraft(snapshot)
-  saveDraftLocally(snapshot)
-  notice.value = '这版结果已保存到本地。'
+  const response = await saveMySeed(
+    {
+      draft: snapshot,
+      source_type: 'create_wizard',
+      status: 'saved',
+    },
+    createdSeedId.value,
+  )
+
+  createdSeedId.value = response.id
+  createdSeed.value = response
+  applyDraft(response.draft_payload)
+  editableDraft.meta.slug = response.slug
+  saveLatestDraft(response.draft_payload)
+  saveDraftLocally(response.draft_payload)
+  notice.value = '已保存到“我创建的 Seed”'
+  await router.replace({ query: { ...route.query, seed_id: String(response.id) } })
+}
+
+async function saveDraft() {
+  saving.value = true
+  notice.value = ''
+
+  try {
+    await persistToBackend()
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : '保存失败'
+    notice.value = message
+  } finally {
+    saving.value = false
+  }
 }
 
 function backToWizard() {
@@ -117,16 +189,44 @@ function backToWizard() {
   void router.push('/create/wizard')
 }
 
-onMounted(() => {
+function persistEditedDraft() {
+  const snapshot = cloneDraft(editableDraft)
+  saveLatestDraft(snapshot)
+}
+
+async function loadFromSeed(seedId: number) {
+  const record = await loadMySeed(seedId)
+  if (!record) {
+    return false
+  }
+
+  createdSeedId.value = record.id
+  createdSeed.value = record
+  applyDraft(record.draft_payload)
+  editableDraft.meta.slug = record.slug
+  saveLatestDraft(record.draft_payload)
+  return true
+}
+
+async function loadInitialDraft() {
+  const querySeedId = Number(route.query.seed_id || 0)
+  if (querySeedId > 0) {
+    const restored = await loadFromSeed(querySeedId)
+    if (restored) {
+      loading.value = false
+      return
+    }
+  }
+
   const storedDraft = loadLatestDraft()
   if (!storedDraft) {
-    void router.replace('/create/wizard')
+    await router.replace('/create/wizard')
     return
   }
 
   applyDraft(storedDraft)
   loading.value = false
-})
+}
 
 watch(
   editableDraft,
@@ -135,6 +235,10 @@ watch(
   },
   { deep: true },
 )
+
+onMounted(() => {
+  void loadInitialDraft()
+})
 </script>
 
 <template>
@@ -147,15 +251,23 @@ watch(
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ typeLabel }}</strong><span>人格类型</span></span>
         <span class="metric-chip"><strong>{{ editableDraft.meta.name || '未命名' }}</strong><span>结果名称</span></span>
-        <span class="metric-chip"><strong>可继续完善</strong><span>状态</span></span>
+        <span class="metric-chip"><strong>{{ savedSeedLabel }}</strong><span>保存状态</span></span>
       </div>
 
       <div class="hero-actions">
-        <button class="primary-btn" type="button" @click="saveDraft">保存这版结果</button>
+        <button class="primary-btn" type="button" :disabled="saving" @click="saveDraft">
+          {{ saving ? '保存中…' : createdSeedId ? '保存更新' : '保存到我的 Seed' }}
+        </button>
         <button class="secondary-btn" type="button" @click="backToWizard">返回修改</button>
       </div>
 
       <p v-if="notice" class="persona-hero-note">{{ notice }}</p>
+
+      <div v-if="createdSeedId || createdSeed" class="hero-actions hero-actions--wrap">
+        <button class="secondary-btn" type="button" @click="goToMySeeds">去我的 Seed</button>
+        <button class="secondary-btn" type="button" @click="startChat">开始对话</button>
+        <button class="secondary-btn" type="button" @click="continueEditing">继续编辑</button>
+      </div>
     </div>
 
     <div class="hero-band">
@@ -173,7 +285,7 @@ watch(
     </div>
   </section>
 
-  <section class="section-card">
+  <section class="section-card" ref="editorAnchor">
     <div v-if="loading" class="state-panel">
       <p class="eyebrow">加载中</p>
       <h3>正在读取最新结果…</h3>
@@ -222,7 +334,7 @@ watch(
         <div class="summary-panel">
           <p class="eyebrow">继续完善</p>
           <h3>现在可以直接继续改。</h3>
-          <p class="state-copy">编辑区会实时同步当前结果，保存后会写入本地结果列表。</p>
+          <p class="state-copy">编辑区会实时同步当前结果，保存后会写入我的 Seed。</p>
         </div>
 
         <div class="summary-panel">
@@ -252,7 +364,9 @@ watch(
           </label>
 
           <div class="hero-actions">
-            <button class="primary-btn" type="button" @click="saveDraft">保存这版结果</button>
+            <button class="primary-btn" type="button" :disabled="saving" @click="saveDraft">
+              {{ saving ? '保存中…' : createdSeedId ? '保存更新' : '保存到我的 Seed' }}
+            </button>
             <button class="secondary-btn" type="button" @click="backToWizard">返回修改</button>
           </div>
           <button class="ghost-btn" type="button" disabled>后续继续完善</button>

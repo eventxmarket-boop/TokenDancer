@@ -22,6 +22,7 @@ from app.models.subscription import Subscription
 from app.models.token_grant import TokenGrant
 from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
+from app.models.created_persona import CreatedPersona
 from app.models.llm_config import LLMConfig
 
 __all__ = [
@@ -51,5 +52,6 @@ __all__ = [
     "TokenGrant",
     "ChatSession",
     "ChatMessage",
+    "CreatedPersona",
     "LLMConfig",
 ]

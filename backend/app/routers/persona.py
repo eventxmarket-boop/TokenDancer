@@ -1,11 +1,22 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.deps import get_db
 
 from app.core.version import get_project_version
+from app.schemas.created_persona import CreatedPersonaRecord, CreatedPersonaSaveRequest, CreatedPersonaSummary
 from app.schemas.create_catalog import CreateCatalogResponse
 from app.schemas.create_wizard import CreateWizardDraftRequest, CreateWizardDraftResponse
 from app.schemas.persona import PersonaRecord
+from app.services.created_persona_service import (
+    CreatedPersonaError,
+    CreatedPersonaNotFoundError,
+    get_created_persona,
+    list_created_personas,
+    save_created_persona,
+)
 from app.services.create_catalog_loader import CreateCatalogLoadError, load_create_catalog
 from app.services.create_wizard_service import CreateWizardError, build_persona_draft
 from app.services.persona_loader import PersonaLoadError, load_persona_summary, list_personas, list_seed_personas
@@ -64,6 +75,56 @@ async def create_wizard_draft(payload: CreateWizardDraftRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"draft": draft}
+
+
+@router.post("/persona-api/my-seeds", response_model=CreatedPersonaRecord)
+async def create_my_seed(payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
+    try:
+        return save_created_persona(
+            db,
+            payload.draft,
+            source_type=payload.source_type,
+            status=payload.status,
+        )
+    except CreatedPersonaError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/persona-api/my-seeds/{seed_id}", response_model=CreatedPersonaRecord)
+async def update_my_seed(seed_id: int, payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
+    try:
+        return save_created_persona(
+            db,
+            payload.draft,
+            record_id=seed_id,
+            source_type=payload.source_type,
+            status=payload.status,
+        )
+    except CreatedPersonaNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CreatedPersonaError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/persona-api/my-seeds", response_model=list[CreatedPersonaSummary])
+async def list_my_seeds(db: Session = Depends(get_db)):
+    try:
+        return list_created_personas(db)
+    except CreatedPersonaError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/persona-api/my-seeds/{seed_id}", response_model=CreatedPersonaRecord)
+async def get_my_seed(seed_id: int, db: Session = Depends(get_db)):
+    try:
+        seed = get_created_persona(db, seed_id)
+    except CreatedPersonaError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if seed is None:
+        raise HTTPException(status_code=404, detail=f"Created seed not found: {seed_id}")
+
+    return seed
 
 
 @router.get("/persona-api/personas/{slug}", response_model=PersonaRecord)

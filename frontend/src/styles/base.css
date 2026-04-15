@@ -30,6 +30,21 @@
   --radius-md: 18px;
 }
 
+html[data-theme='night'] {
+  color-scheme: dark;
+  --bg: #15111c;
+  --bg-strong: #1d1726;
+  --panel: rgba(31, 25, 39, 0.84);
+  --panel-solid: #1f1927;
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f7f1ea;
+  --muted: #c7b5ae;
+  --accent: #ffb59f;
+  --accent-deep: #ff8e72;
+  --accent-soft: rgba(255, 177, 156, 0.16);
+  --shadow: 0 22px 54px rgba(6, 3, 10, 0.42);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -49,6 +64,13 @@ body {
     radial-gradient(circle at 85% 12%, rgba(204, 169, 255, 0.2), transparent 22%),
     linear-gradient(180deg, #fff9f4 0%, #fff6f0 55%, #fff1e7 100%);
   line-height: 1.6;
+}
+
+html[data-theme='night'] body {
+  background:
+    radial-gradient(circle at top left, rgba(255, 159, 138, 0.12), transparent 28%),
+    radial-gradient(circle at 86% 10%, rgba(183, 148, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, #17111f 0%, #140f18 58%, #100c13 100%);
 }
 
 h1,
@@ -115,6 +137,14 @@ textarea {
   margin-bottom: 24px;
 }
 
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .brand-lockup {
   display: flex;
   align-items: center;
@@ -165,6 +195,22 @@ textarea {
 .desktop-nav {
   display: flex;
   gap: 10px;
+}
+
+.theme-toggle {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(184, 127, 101, 0.12);
+}
+
+html[data-theme='night'] .theme-toggle {
+  background: rgba(35, 28, 43, 0.86);
 }
 
 .nav-link,
@@ -311,6 +357,15 @@ textarea {
   outline: none;
 }
 
+html[data-theme='night'] .home-sticker {
+  background: rgba(31, 25, 39, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme='night'] .home-sticker--seed {
+  background: linear-gradient(180deg, rgba(37, 29, 48, 0.96), rgba(27, 21, 35, 0.96));
+}
+
 .home-actions {
   display: flex;
   flex-wrap: wrap;
@@ -381,6 +436,29 @@ textarea {
   background: var(--panel);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow);
+}
+
+html[data-theme='night'] .page-hero,
+html[data-theme='night'] .hero-card,
+html[data-theme='night'] .section-card,
+html[data-theme='night'] .detail-card,
+html[data-theme='night'] .chat-panel,
+html[data-theme='night'] .mini-panel,
+html[data-theme='night'] .summary-panel,
+html[data-theme='night'] .seed-group,
+html[data-theme='night'] .persona-card,
+html[data-theme='night'] .session-card,
+html[data-theme='night'] .empty-panel,
+html[data-theme='night'] .state-panel,
+html[data-theme='night'] .draft-card,
+html[data-theme='night'] .wizard-stage,
+html[data-theme='night'] .create-accordion__section,
+html[data-theme='night'] .create-subgroup,
+html[data-theme='night'] .create-card,
+html[data-theme='night'] .feature-card,
+html[data-theme='night'] .my-entry-card {
+  background: rgba(31, 25, 39, 0.82);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .hero-card {
@@ -761,6 +839,86 @@ textarea {
   border-radius: var(--radius-xl);
 }
 
+.my-page,
+.my-seeds-page {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  align-items: start;
+  justify-content: center;
+  padding: 14px 0 44px;
+}
+
+.my-page__inner,
+.my-seeds-page__inner {
+  width: min(1024px, 100%);
+  display: grid;
+  gap: 18px;
+}
+
+.my-page__head,
+.my-seeds-page__head {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  justify-items: center;
+}
+
+.my-page__head h1,
+.my-seeds-page__head h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.my-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.my-entry-card {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  min-height: 190px;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.my-entry-card h3 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.my-entry-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.my-entry-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 28px 60px rgba(184, 127, 101, 0.18);
+}
+
+.my-seeds-group-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.hero-actions--wrap {
+  flex-wrap: wrap;
+}
+
+.state-panel--center {
+  justify-items: center;
+  text-align: center;
+}
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -859,6 +1017,10 @@ textarea {
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid rgba(220, 180, 161, 0.18);
+}
+
+.my-seeds-page .summary-panel {
+  background: var(--panel);
 }
 
 .summary-panel h3,
@@ -1878,6 +2040,11 @@ textarea {
     align-items: flex-start;
   }
 
+  .topbar__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .hero-card,
   .section-card,
   .page-hero,
@@ -1926,6 +2093,21 @@ textarea {
 
   .home-sticker--seed {
     transform: translateX(40px) translateY(10px) rotate(6deg);
+  }
+
+  .my-page,
+  .my-seeds-page {
+    min-height: auto;
+    padding-top: 4px;
+  }
+
+  .my-entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .my-page__inner,
+  .my-seeds-page__inner {
+    gap: 14px;
   }
 
   .favorites-page {
