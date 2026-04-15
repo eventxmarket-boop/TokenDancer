@@ -1,6 +1,4 @@
 backend/.venv/
-xuedingtoken-frontend/node_modules/
-xuedingtoken-frontend/dist/
 frontend/node_modules/
 frontend/node_modules
 frontend/dist/

@@ -11,7 +11,7 @@ Current scope:
 - Backend API prefix under `/persona-api/`
 - Git-driven build and deployment workflow
 
-The repo also contains older legacy application files. The persona station lives in the new `frontend/` and `backend/` entrypoints added for V1.
+The persona station lives in the `frontend/` and `backend/` entrypoints only.
 
 ## Layout
 

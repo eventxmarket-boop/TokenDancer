@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.1.1 - 2026-04-15
+
+- Unified the repository around the single `frontend/` directory.
+- Removed the legacy `xuedingtoken-frontend/` tree from the repository.
+- Updated deployment scripts, docs, and status notes to reference the current layout only.
+- Kept the `tokendancer.com/persona/` deployment flow intact.
+
 ## V1.1.0 - 2026-04-15
 
 - Implemented the persona list/detail interface layer for the current upgrade pass.

@@ -39,6 +39,7 @@ Hard rules:
 8. Preserve the current worktree.
    - Do not revert unrelated edits.
    - Do not delete legacy directories unless explicitly asked.
+   - The active frontend root is `frontend/`; do not reintroduce the legacy frontend tree as a live source tree.
 
 Execution preference:
 

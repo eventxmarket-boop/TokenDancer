@@ -98,7 +98,7 @@ cd /Users/chanzi/.qclaw/workspace/backend
 
 ### 启动前端
 ```bash
-cd /Users/chanzi/.qclaw/workspace/xuedingtoken-frontend
+cd /Users/chanzi/Desktop/xuedingtoken_latest/frontend
 npm run dev
 ```
 
