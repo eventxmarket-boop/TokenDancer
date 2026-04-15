@@ -26,6 +26,13 @@ def _append_section(parts: list[str], title: str, content: str) -> None:
 
 
 def build_persona_system_prompt(persona: dict[str, Any]) -> str:
+    return build_persona_system_prompt_with_context(persona)
+
+
+def build_persona_system_prompt_with_context(
+    persona: dict[str, Any],
+    facts_context: str | None = None,
+) -> str:
     meta = persona.get("meta") or {}
     parts: list[str] = [
         "你正在为 Tokendancer persona 子站提供回复。"
@@ -41,6 +48,12 @@ def build_persona_system_prompt(persona: dict[str, Any]) -> str:
     _append_section(parts, "示例风格", persona.get("persona_examples", ""))
     _append_section(parts, "当前状态", persona.get("state", ""))
     _append_section(parts, "边界规则", persona.get("guardrails", ""))
+    if facts_context:
+        _append_section(parts, "研究事实摘要", facts_context)
+        parts.append(
+            "研究后回答约束：当问题涉及具体院校、专业、录取线、保研率、就业率、薪资或政策变化时，"
+            "先基于已获取的事实摘要判断，再给结论。不要跳过事实层直接拍脑袋回答。纯框架问题才允许直接基于判断模型回答。"
+        )
 
     parts.append(f"平台统一约束：{PLATFORM_CONSTRAINT}")
     return "\n\n".join(parts).strip()
@@ -50,9 +63,14 @@ def build_chat_messages(
     persona: dict[str, Any],
     history: list[dict[str, str]],
     user_message: str,
+    *,
+    facts_context: str | None = None,
 ) -> list[dict[str, str]]:
     messages: list[dict[str, str]] = [
-        {"role": "system", "content": build_persona_system_prompt(persona)},
+        {
+            "role": "system",
+            "content": build_persona_system_prompt_with_context(persona, facts_context=facts_context),
+        },
     ]
 
     for message in history:

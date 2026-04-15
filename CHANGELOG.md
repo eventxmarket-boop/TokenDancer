@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.14 - 2026-04-16
+
+- Added a research-first split for the `zhang_xue_feng` persona so education and career questions can be classified before answering.
+- Introduced `zhangxuefeng_research` as a lightweight research layer for fact-required and hybrid questions.
+- Expanded Zhang Xuefeng examples with research-oriented cases that show what should be checked before answering.
+- Strengthened guardrails so the persona does not pretend to have checked facts it has not actually researched.
+
 ## V1.4.13 - 2026-04-16
 
 - Enhanced the built-in `zhang_xue_feng` persona by absorbing the stronger research framing and decision logic from the open-source skill.

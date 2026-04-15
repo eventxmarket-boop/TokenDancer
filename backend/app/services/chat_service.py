@@ -17,6 +17,10 @@ from app.services.created_persona_service import (
 from app.services.llm_gateway import generate_reply
 from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
+from app.services.zhangxuefeng_research import (
+    classify_zhangxuefeng_question,
+    research_education_question,
+)
 
 
 CONTEXT_HISTORY_LIMIT = 20
@@ -194,10 +198,36 @@ def build_context_messages(
     persona: dict[str, object],
     history: list[dict[str, str]],
     user_message: str,
+    *,
+    facts_context: str | None = None,
 ) -> list[dict[str, str]]:
     recent_history = history[-CONTEXT_HISTORY_LIMIT:] if CONTEXT_HISTORY_LIMIT > 0 else history
     _ = summarize_older_messages(history[:-CONTEXT_HISTORY_LIMIT]) if len(history) > CONTEXT_HISTORY_LIMIT else None
-    return build_chat_messages(persona, recent_history, user_message)
+    return build_chat_messages(persona, recent_history, user_message, facts_context=facts_context)
+
+
+def _format_research_context(research: dict[str, object]) -> str:
+    summary_lines = [
+        str(line).strip()
+        for line in (research.get("facts_summary") or [])
+        if str(line).strip()
+    ]
+    sources_hint = [
+        str(line).strip()
+        for line in (research.get("sources_hint") or [])
+        if str(line).strip()
+    ]
+    question_class = str(research.get("question_class") or "").strip()
+    parts: list[str] = []
+    if question_class:
+        parts.append(f"问题分类：{question_class}")
+    if summary_lines:
+        parts.append("核实清单：")
+        parts.extend(f"- {line}" for line in summary_lines)
+    if sources_hint:
+        parts.append("优先核实来源：")
+        parts.extend(f"- {line}" for line in sources_hint)
+    return "\n".join(parts).strip()
 
 
 def _serialize_message(row: ChatMessage) -> dict[str, object]:
@@ -373,7 +403,20 @@ async def chat_with_persona(
             normalized_message,
         )
         session.title = _build_session_title(persona_name, first_user_message)
-    messages = build_context_messages(persona, history, normalized_message)
+
+    facts_context: str | None = None
+    if persona_slug.strip() == "zhang_xue_feng":
+        question_class = classify_zhangxuefeng_question(normalized_message, history)
+        if question_class in {"fact_required", "hybrid"}:
+            research = await research_education_question(normalized_message, classification=question_class)
+            facts_context = _format_research_context(research)
+
+    messages = build_context_messages(
+        persona,
+        history,
+        normalized_message,
+        facts_context=facts_context,
+    )
 
     try:
         reply = await generate_reply(messages, db=db)
