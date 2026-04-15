@@ -70,6 +70,70 @@ const inputModeLabels: Record<string, string> = {
   skill_file: '资料内容',
 }
 
+const schemaKeyBySourceRepo: Record<string, string> = {
+  'self-skill': 'self_persona',
+  'nuwa-skill': 'self_mindset_distill',
+  'forge-skill': 'self_deep_self_persona',
+  'digital-life': 'self_digital_trace_persona',
+  'anyone-to-skill': 'source_anyone_from_sources',
+  'colleague-skill': 'relationship_workplace_colleague',
+  'boss-skills': 'relationship_workplace_boss',
+  supervisor: 'relationship_academia_supervisor',
+  'senpai-skill': 'relationship_academia_senpai',
+  'professor-skill': 'relationship_academia_professor_a',
+  Professor_skill: 'relationship_academia_professor_b',
+  'ex-skill': 'relationship_intimate_ex',
+  'relationship-training-skill': 'relationship_intimate_relationship_training',
+  'npy-skill': 'relationship_intimate_ideal_partner',
+  'crush-skill': 'relationship_intimate_crush',
+  'partner-skill': 'relationship_intimate_partner',
+  'first-love-skill': 'relationship_intimate_first_love',
+  'shuixian-skill': 'relationship_intimate_self_mirror',
+  xinyi: 'relationship_intimate_relationship_interpreter',
+  'parents-skills': 'relationship_family_parents',
+  'reunion-skill': 'relationship_family_reunion',
+  MamaSkill: 'relationship_family_mama',
+  'digital-twin-skill': 'digital_twin_high_fidelity',
+  'immortal-skill': 'digital_twin_immortal',
+  'anti-distill': 'protection_anti_distill',
+}
+
+const inputModeBySourceRepo: Record<string, string> = {
+  'self-skill': 'manual_profile',
+  'nuwa-skill': 'documents',
+  'forge-skill': 'chat_history',
+  'digital-life': 'documents',
+  'anyone-to-skill': 'documents',
+  'colleague-skill': 'colleague',
+  'boss-skills': 'boss',
+  supervisor: 'supervisor',
+  'senpai-skill': 'senpai',
+  'professor-skill': 'professor_a',
+  Professor_skill: 'professor_b',
+  'ex-skill': 'ex',
+  'relationship-training-skill': 'relationship_training',
+  'npy-skill': 'ideal_partner',
+  'crush-skill': 'crush',
+  'partner-skill': 'partner',
+  'first-love-skill': 'first_love',
+  'shuixian-skill': 'self_mirror',
+  xinyi: 'relationship_interpreter',
+  'parents-skills': 'parents',
+  'reunion-skill': 'reunion',
+  MamaSkill: 'mama',
+  'digital-twin-skill': 'multi_source',
+  'immortal-skill': 'multi_source',
+  'anti-distill': 'documents',
+}
+
+function getDefaultInputMode(item: CreateCatalogItem) {
+  return inputModeBySourceRepo[item.source_repo] || item.input_modes[0] || 'manual_profile'
+}
+
+function getSchemaKeyForItem(item: CreateCatalogItem) {
+  return schemaKeyBySourceRepo[item.source_repo] || `${item.group}_${item.slug}`
+}
+
 const groups = computed(() => {
   const items = catalog.value?.groups ?? []
   return [...items].sort((left, right) => {
@@ -126,11 +190,12 @@ function getWizardTypeForGroup(group: string) {
 
 function buildWizardQuery(item: CreateCatalogItem) {
   return {
-    type: getWizardTypeForGroup(item.group),
+    create_type: getWizardTypeForGroup(item.group),
     group: item.group,
-    slug: item.slug,
-    name: item.name,
     source_repo: item.source_repo,
+    display_name: item.name,
+    input_mode: getDefaultInputMode(item),
+    schema_key: getSchemaKeyForItem(item),
     reset: '1',
   }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.11 - 2026-04-16
+
+- Aligned the Create chain so entry cards, wizard initialization, form schema, and generated results all point to the same creation object.
+- Standardized Create navigation payloads with `create_type`, `group`, `source_repo`, `display_name`, `input_mode`, and `schema_key`.
+- Prioritized query params over local wizard snapshots so a newly clicked Create card no longer reuses stale state.
+- Completed the my-seeds save/list/detail persistence loop so saved creations can be reopened and used consistently.
+
 ## V1.4.10 - 2026-04-16
 
 - Fixed Create wizard state pollution by prioritizing entry query params and honoring the reset flag before restoring any local snapshot.

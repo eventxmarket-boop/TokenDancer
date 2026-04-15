@@ -70,7 +70,7 @@ async def create_catalog():
 @router.post("/persona-api/create-wizard/draft", response_model=CreateWizardDraftResponse)
 async def create_wizard_draft(payload: CreateWizardDraftRequest):
     try:
-        draft = build_persona_draft(payload.create_type, payload.input_mode, payload.form_data)
+        draft = build_persona_draft(payload.model_dump())
     except CreateWizardError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

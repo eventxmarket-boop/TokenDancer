@@ -6,7 +6,11 @@ const SAVED_DRAFTS_KEY = 'persona-create-saved-drafts'
 
 export type CreateWizardPayload = {
   create_type: string
+  group: string
+  source_repo: string
+  display_name: string
   input_mode: string
+  schema_key: string
   form_data: Record<string, unknown>
 }
 
@@ -20,6 +24,8 @@ export type CreateWizardDraftMeta = {
   create_type: string
   input_mode: string
   group: string
+  display_name: string
+  schema_key: string
   source_repo: string
   repo_url: string
   source_repos: string[]

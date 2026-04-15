@@ -7,7 +7,11 @@ from pydantic import BaseModel, Field
 
 class CreateWizardDraftRequest(BaseModel):
     create_type: str
+    group: str = ""
+    source_repo: str = ""
+    display_name: str = ""
     input_mode: str
+    schema_key: str = ""
     form_data: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -16,11 +20,13 @@ class CreateWizardDraftMeta(BaseModel):
     slug: str
     name: str
     category: str
+    display_name: str = ""
     version: str
     status: str
     create_type: str
     input_mode: str
     group: str
+    schema_key: str = ""
     source_repo: str
     repo_url: str
     source_repos: list[str] = Field(default_factory=list)

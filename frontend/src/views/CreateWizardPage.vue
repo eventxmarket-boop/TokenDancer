@@ -22,6 +22,8 @@ const inputMode = ref('')
 const selectedGroup = ref('')
 const selectedName = ref('')
 const selectedSourceRepo = ref('')
+const selectedSchemaKey = ref('')
+const isBootstrapping = ref(false)
 
 const formState = reactive({
   name: '',
@@ -78,10 +80,104 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
   },
   relationship_persona: {
     colleague: '同事',
+    boss: '老板',
     supervisor: '导师',
+    senpai: '师兄',
+    professor_a: '大学老师',
+    professor_b: '大学老师（模板 B）',
+    ex: '前任',
+    relationship_training: '关系训练',
+    ideal_partner: '理想伴侣',
+    crush: '暧昧对象',
+    partner: '现任伴侣',
+    first_love: '初恋',
+    self_mirror: '自我镜像伴侣',
+    relationship_interpreter: '关系理解辅助',
     parents: '父母',
-    partner: '伴侣',
+    reunion: '重逢人格',
+    mama: '妈妈',
   },
+}
+
+const inputModeBySourceRepo: Record<string, string> = {
+  'self-skill': 'manual_profile',
+  'nuwa-skill': 'documents',
+  'forge-skill': 'chat_history',
+  'digital-life': 'documents',
+  'anyone-to-skill': 'documents',
+  'colleague-skill': 'colleague',
+  'boss-skills': 'boss',
+  supervisor: 'supervisor',
+  'senpai-skill': 'senpai',
+  'professor-skill': 'professor_a',
+  Professor_skill: 'professor_b',
+  'ex-skill': 'ex',
+  'relationship-training-skill': 'relationship_training',
+  'npy-skill': 'ideal_partner',
+  'crush-skill': 'crush',
+  'partner-skill': 'partner',
+  'first-love-skill': 'first_love',
+  'shuixian-skill': 'self_mirror',
+  xinyi: 'relationship_interpreter',
+  'parents-skills': 'parents',
+  'reunion-skill': 'reunion',
+  MamaSkill: 'mama',
+  'digital-twin-skill': 'multi_source',
+  'immortal-skill': 'multi_source',
+  'anti-distill': 'documents',
+}
+
+const sourceRepoByInputMode: Record<string, string> = {
+  manual_profile: 'self-skill',
+  chat_history: 'self-skill',
+  documents: 'anyone-to-skill',
+  audio_video: 'anyone-to-skill',
+  multi_source: 'anyone-to-skill',
+  colleague: 'colleague-skill',
+  boss: 'boss-skills',
+  supervisor: 'supervisor',
+  senpai: 'senpai-skill',
+  professor_a: 'professor-skill',
+  professor_b: 'Professor_skill',
+  ex: 'ex-skill',
+  relationship_training: 'relationship-training-skill',
+  ideal_partner: 'npy-skill',
+  crush: 'crush-skill',
+  partner: 'partner-skill',
+  first_love: 'first-love-skill',
+  self_mirror: 'shuixian-skill',
+  relationship_interpreter: 'xinyi',
+  parents: 'parents-skills',
+  reunion: 'reunion-skill',
+  mama: 'MamaSkill',
+}
+
+const schemaKeyBySourceRepo: Record<string, string> = {
+  'self-skill': 'self_persona',
+  'nuwa-skill': 'self_mindset_distill',
+  'forge-skill': 'self_deep_self_persona',
+  'digital-life': 'self_digital_trace_persona',
+  'anyone-to-skill': 'source_anyone_from_sources',
+  'colleague-skill': 'relationship_workplace_colleague',
+  'boss-skills': 'relationship_workplace_boss',
+  supervisor: 'relationship_academia_supervisor',
+  'senpai-skill': 'relationship_academia_senpai',
+  'professor-skill': 'relationship_academia_professor_a',
+  Professor_skill: 'relationship_academia_professor_b',
+  'ex-skill': 'relationship_intimate_ex',
+  'relationship-training-skill': 'relationship_intimate_relationship_training',
+  'npy-skill': 'relationship_intimate_ideal_partner',
+  'crush-skill': 'relationship_intimate_crush',
+  'partner-skill': 'relationship_intimate_partner',
+  'first-love-skill': 'relationship_intimate_first_love',
+  'shuixian-skill': 'relationship_intimate_self_mirror',
+  xinyi: 'relationship_intimate_relationship_interpreter',
+  'parents-skills': 'relationship_family_parents',
+  'reunion-skill': 'relationship_family_reunion',
+  MamaSkill: 'relationship_family_mama',
+  'digital-twin-skill': 'digital_twin_high_fidelity',
+  'immortal-skill': 'digital_twin_immortal',
+  'anti-distill': 'protection_anti_distill',
 }
 
 const stepLabels = ['选择类型', '选择方式', '填写信息', '生成结果']
@@ -102,6 +198,128 @@ const selectedInputLabel = computed(() => {
   return inputModeLabels[createType.value][inputMode.value] || inputMode.value || '未选择'
 })
 
+function readQueryValue(key: string) {
+  const value = route.query[key]
+  if (Array.isArray(value)) {
+    return String(value[0] || '').trim()
+  }
+  return String(value || '').trim()
+}
+
+function inferCreateTypeFromQuery() {
+  const explicit = readQueryValue('create_type') || readQueryValue('type')
+  if (explicit === 'self_persona' || explicit === 'source_persona' || explicit === 'relationship_persona') {
+    return explicit as CreateType
+  }
+
+  const group = readQueryValue('group')
+  if (group === 'source') {
+    return 'source_persona'
+  }
+  if (
+    group === 'relationship_workplace' ||
+    group === 'relationship_academia' ||
+    group === 'relationship_intimate' ||
+    group === 'relationship_family'
+  ) {
+    return 'relationship_persona'
+  }
+
+  return 'self_persona'
+}
+
+function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schemaKey: string) {
+  if (schemaKey && schemaKey in inputModeLabels[createTypeValue]) {
+    return schemaKey
+  }
+
+  if (sourceRepo && inputModeBySourceRepo[sourceRepo]) {
+    return inputModeBySourceRepo[sourceRepo]
+  }
+
+  if (createTypeValue === 'self_persona') {
+    return 'manual_profile'
+  }
+
+  if (createTypeValue === 'source_persona') {
+    return 'documents'
+  }
+
+  return 'colleague'
+}
+
+function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, inputModeValue: string, displayName: string) {
+  if (sourceRepo && schemaKeyBySourceRepo[sourceRepo]) {
+    return schemaKeyBySourceRepo[sourceRepo]
+  }
+
+  const fallbackKey = `${createTypeValue}_${inputModeValue || 'default'}`
+  return displayName ? `${fallbackKey}_${displayName}` : fallbackKey
+}
+
+function getDefaultGroupForType(type: CreateType) {
+  if (type === 'self_persona') {
+    return 'self'
+  }
+  if (type === 'source_persona') {
+    return 'source'
+  }
+  return 'relationship_workplace'
+}
+
+function getDefaultSourceRepoForType(type: CreateType) {
+  if (type === 'self_persona') {
+    return 'self-skill'
+  }
+  if (type === 'source_persona') {
+    return 'anyone-to-skill'
+  }
+  return 'colleague-skill'
+}
+
+function getDefaultDisplayNameForType(type: CreateType) {
+  if (type === 'self_persona') {
+    return '我的自我人格'
+  }
+  if (type === 'source_persona') {
+    return '资料人格'
+  }
+  return '关系人格'
+}
+
+function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
+  if (type === 'self_persona') {
+    return 'self'
+  }
+  if (type === 'source_persona') {
+    return 'source'
+  }
+
+  if (mode === 'colleague' || mode === 'boss') {
+    return 'relationship_workplace'
+  }
+  if (mode === 'supervisor' || mode === 'senpai' || mode === 'professor_a' || mode === 'professor_b') {
+    return 'relationship_academia'
+  }
+  if (
+    mode === 'ex' ||
+    mode === 'relationship_training' ||
+    mode === 'ideal_partner' ||
+    mode === 'crush' ||
+    mode === 'partner' ||
+    mode === 'first_love' ||
+    mode === 'self_mirror' ||
+    mode === 'relationship_interpreter'
+  ) {
+    return 'relationship_intimate'
+  }
+  if (mode === 'parents' || mode === 'reunion' || mode === 'mama') {
+    return 'relationship_family'
+  }
+
+  return 'relationship_workplace'
+}
+
 function getInputModeNote(type: CreateType, mode: string) {
   if (type === 'self_persona') {
     if (mode === 'manual_profile') return '适合先从你自己的想法开始。'
@@ -118,17 +336,41 @@ function getInputModeNote(type: CreateType, mode: string) {
 
   if (type === 'relationship_persona') {
     if (mode === 'colleague') return '适合同事视角。'
+    if (mode === 'boss') return '适合老板视角。'
     if (mode === 'supervisor') return '适合导师视角。'
+    if (mode === 'senpai') return '适合师兄视角。'
+    if (mode === 'professor_a' || mode === 'professor_b') return '适合老师视角。'
+    if (mode === 'ex') return '适合前任视角。'
+    if (mode === 'relationship_training') return '适合关系训练视角。'
+    if (mode === 'ideal_partner') return '适合理想伴侣视角。'
+    if (mode === 'crush') return '适合暧昧对象视角。'
     if (mode === 'parents') return '适合父母视角。'
     if (mode === 'partner') return '适合伴侣视角。'
+    if (mode === 'first_love') return '适合初恋视角。'
+    if (mode === 'self_mirror') return '适合自我镜像伴侣视角。'
+    if (mode === 'relationship_interpreter') return '适合关系理解辅助视角。'
+    if (mode === 'reunion') return '适合重逢人格视角。'
+    if (mode === 'mama') return '适合妈妈视角。'
   }
 
   return '适合继续完善。'
 }
 
-function resetFormForType(type: CreateType) {
+function getRelationshipLabel(mode: string) {
+  return inputModeLabels.relationship_persona[mode] || '关系人格'
+}
+
+function clearFormState() {
+  for (const key of Object.keys(formState) as Array<keyof typeof formState>) {
+    formState[key] = ''
+  }
+}
+
+function resetFormForType(type: CreateType, displayName = '', mode = '') {
+  clearFormState()
+
   if (type === 'self_persona') {
-    formState.name = '我的自我人格'
+    formState.name = displayName || '我的自我人格'
     formState.intro = '把我自己的做事方式整理成可以继续聊天的人格。'
     formState.values = '更看重结果、边界和可执行性。'
     formState.decision_priority = '先看目标，再看路径。'
@@ -137,7 +379,7 @@ function resetFormForType(type: CreateType) {
   }
 
   if (type === 'source_persona') {
-    formState.target_name = '资料人格'
+    formState.target_name = displayName || '资料人格'
     formState.material_type = '文档 / 聊天记录'
     formState.material_description = '基于已有资料提炼一个可对话人格。'
     formState.focus_points = '判断顺序\n表达习惯'
@@ -145,8 +387,8 @@ function resetFormForType(type: CreateType) {
   }
 
   if (type === 'relationship_persona') {
-    formState.relationship_type = '同事'
-    formState.persona_name = '关系人格'
+    formState.relationship_type = getRelationshipLabel(mode) || displayName || '关系人格'
+    formState.persona_name = displayName || getRelationshipLabel(mode) || '关系人格'
     formState.speech_style = '说话直白、场景化。'
     formState.decision_logic = '先看现实条件，再给建议。'
     formState.purpose = '帮助理解这段关系。'
@@ -154,15 +396,25 @@ function resetFormForType(type: CreateType) {
   }
 }
 
-function normalizeType(value: unknown): CreateType {
-  const normalized = String(value || '').trim()
-  if (normalized === 'source_persona') {
-    return 'source_persona'
+function buildEntryDefaults() {
+  const createTypeValue = inferCreateTypeFromQuery()
+  const displayName = readQueryValue('display_name') || readQueryValue('name') || getDefaultDisplayNameForType(createTypeValue)
+  const schemaKeyFromQuery = readQueryValue('schema_key')
+  const inputModeFromQuery = readQueryValue('input_mode')
+  const sourceRepo = readQueryValue('source_repo') || getDefaultSourceRepoForType(createTypeValue)
+  const inputModeValue = inputModeFromQuery || resolveInputMode(createTypeValue, sourceRepo, schemaKeyFromQuery)
+  const group = readQueryValue('group') || resolveGroupForTypeAndMode(createTypeValue, inputModeValue)
+  const schemaKeyValue =
+    schemaKeyFromQuery || resolveSchemaKey(createTypeValue, sourceRepo, inputModeValue, displayName)
+
+  return {
+    createType: createTypeValue,
+    group,
+    sourceRepo,
+    displayName,
+    inputMode: inputModeValue,
+    schemaKey: schemaKeyValue,
   }
-  if (normalized === 'relationship_persona') {
-    return 'relationship_persona'
-  }
-  return 'self_persona'
 }
 
 function saveStateSnapshot() {
@@ -173,6 +425,7 @@ function saveStateSnapshot() {
     selectedGroup: selectedGroup.value,
     selectedName: selectedName.value,
     selectedSourceRepo: selectedSourceRepo.value,
+    selectedSchemaKey: selectedSchemaKey.value,
     formState: { ...formState },
   })
 }
@@ -185,6 +438,7 @@ function loadStateSnapshot() {
     selectedGroup?: string
     selectedName?: string
     selectedSourceRepo?: string
+    selectedSchemaKey?: string
     formState?: Record<string, string>
   }>()
 
@@ -207,6 +461,7 @@ function loadStateSnapshot() {
   selectedGroup.value = snapshot.selectedGroup || selectedGroup.value
   selectedName.value = snapshot.selectedName || selectedName.value
   selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
+  selectedSchemaKey.value = snapshot.selectedSchemaKey || selectedSchemaKey.value
 
   if (snapshot.formState) {
     Object.assign(formState, snapshot.formState)
@@ -216,39 +471,35 @@ function loadStateSnapshot() {
 }
 
 function applyQueryDefaults() {
-  const queryType = normalizeType(route.query.type)
-  const queryGroup = String(route.query.group || '').trim()
-  const queryName = String(route.query.name || '').trim()
-  const querySourceRepo = String(route.query.source_repo || '').trim()
+  const defaults = buildEntryDefaults()
 
-  createType.value = queryType
-  selectedGroup.value = queryGroup
-  selectedName.value = queryName
-  selectedSourceRepo.value = querySourceRepo
+  createType.value = defaults.createType
+  selectedGroup.value = defaults.group
+  selectedName.value = defaults.displayName
+  selectedSourceRepo.value = defaults.sourceRepo
+  selectedSchemaKey.value = defaults.schemaKey
+  inputMode.value = defaults.inputMode
 
-  if (createType.value === 'self_persona') {
-    inputMode.value = 'manual_profile'
-  } else if (createType.value === 'source_persona') {
-    inputMode.value = 'documents'
-  } else {
-    inputMode.value = 'colleague'
-  }
-
-  resetFormForType(createType.value)
+  resetFormForType(createType.value, selectedName.value, inputMode.value)
 }
 
 function hasEntryQuery() {
   return Boolean(
-    String(route.query.type || '').trim() ||
-      String(route.query.group || '').trim() ||
-      String(route.query.source_repo || '').trim() ||
-      String(route.query.name || '').trim(),
+    readQueryValue('create_type') ||
+      readQueryValue('type') ||
+      readQueryValue('group') ||
+      readQueryValue('source_repo') ||
+      readQueryValue('display_name') ||
+      readQueryValue('name') ||
+      readQueryValue('input_mode') ||
+      readQueryValue('schema_key'),
   )
 }
 
 function initializeWizardState() {
-  const reset = String(route.query.reset || '') === '1'
+  const reset = readQueryValue('reset') === '1'
   const hasEntry = hasEntryQuery()
+  isBootstrapping.value = true
 
   if (reset) {
     clearWizardState()
@@ -258,34 +509,48 @@ function initializeWizardState() {
     step.value = 1
     applyQueryDefaults()
     saveStateSnapshot()
+    isBootstrapping.value = false
     return
   }
 
   const restored = loadStateSnapshot()
   if (restored) {
+    isBootstrapping.value = false
     return
   }
 
   step.value = 1
   createType.value = 'self_persona'
   inputMode.value = 'manual_profile'
-  selectedGroup.value = ''
-  selectedName.value = ''
-  selectedSourceRepo.value = ''
-  resetFormForType(createType.value)
+  selectedGroup.value = getDefaultGroupForType(createType.value)
+  selectedName.value = getDefaultDisplayNameForType(createType.value)
+  selectedSourceRepo.value = getDefaultSourceRepoForType(createType.value)
+  selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value)
+  resetFormForType(createType.value, selectedName.value, inputMode.value)
   saveStateSnapshot()
+  isBootstrapping.value = false
 }
 
 function selectType(type: CreateType) {
   createType.value = type
+  selectedGroup.value = getDefaultGroupForType(type)
+  selectedSourceRepo.value = getDefaultSourceRepoForType(type)
+  selectedName.value = getDefaultDisplayNameForType(type)
   inputMode.value =
     type === 'self_persona' ? 'manual_profile' : type === 'source_persona' ? 'documents' : 'colleague'
-  resetFormForType(type)
+  selectedSchemaKey.value = resolveSchemaKey(type, selectedSourceRepo.value, inputMode.value, selectedName.value)
+  resetFormForType(type, selectedName.value, inputMode.value)
   step.value = 2
 }
 
 function selectInputMode(mode: string) {
   inputMode.value = mode
+  selectedGroup.value = resolveGroupForTypeAndMode(createType.value, mode)
+  if (createType.value === 'relationship_persona') {
+    selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
+  }
+  selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, mode, selectedName.value)
+  resetFormForType(createType.value, selectedName.value, mode)
   step.value = 3
 }
 
@@ -300,7 +565,11 @@ async function generateDraft() {
   try {
     const draft = await submitCreateDraft({
       create_type: createType.value,
+      group: selectedGroup.value,
+      source_repo: selectedSourceRepo.value,
+      display_name: selectedName.value,
       input_mode: inputMode.value,
+      schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
       form_data: { ...formState },
     })
 
@@ -319,13 +588,33 @@ function isCurrentType(type: CreateType) {
   return createType.value === type
 }
 
-watch([createType, inputMode, selectedGroup, selectedName], saveStateSnapshot)
+watch([createType, inputMode, selectedGroup, selectedName, selectedSourceRepo, selectedSchemaKey], () => {
+  if (!isBootstrapping.value) {
+    saveStateSnapshot()
+  }
+})
 
-watch(formState, saveStateSnapshot, { deep: true })
+watch(
+  formState,
+  () => {
+    if (!isBootstrapping.value) {
+      saveStateSnapshot()
+    }
+  },
+  { deep: true },
+)
 
 onMounted(() => {
   initializeWizardState()
 })
+
+watch(
+  () => route.query,
+  () => {
+    initializeWizardState()
+  },
+  { deep: true },
+)
 </script>
 
 <template>
