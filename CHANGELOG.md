@@ -1,3 +1,11 @@
+## V1.4.21 - 2026-04-16
+
+- Normalized the family relationship Create flow around `family_companion` and `reunion_persona` with explicit upstream source URLs.
+- Kept `parents-skills`, `MamaSkill`, and `reunion-skill` as the normalized family mapping sources in the Create catalog.
+- Expanded the family and reunion wizard payloads to include persona, memory, and material layers.
+- Added dedicated family and reunion services to keep save, open, and chat aligned with the same persisted object.
+- Updated create and seed round-trip coverage for the new family/reunion chain.
+
 # Changelog
 
 ## V1.4.20 - 2026-04-16
