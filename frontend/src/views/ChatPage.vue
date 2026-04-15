@@ -9,6 +9,7 @@ import {
 } from '@/services/chatService'
 import { loadPersona, type Persona } from '@/services/personaService'
 import { stripThinkBlocks } from '@/utils/sanitizeMessage'
+import { renderMarkdown } from '@/utils/markdown'
 
 type ChatMessage = {
   role: 'assistant' | 'user'
@@ -30,6 +31,8 @@ const personaId = computed(() => String(route.params.id || ''))
 
 const sessionStorageKey = (slug: string) => `persona-chat-session:${slug}`
 const sessionIndexKey = 'persona-chat-session-index'
+
+const renderAssistantMessage = (content: string) => renderMarkdown(stripThinkBlocks(content || ''))
 
 const readSessionIndex = (): Record<string, string> => {
   try {
@@ -245,7 +248,12 @@ const clearConversation = async () => {
         <div v-for="(message, index) in messages" :key="index" class="message-row" :class="message.role">
           <div class="message-bubble">
             <span class="message-role">{{ message.role === 'assistant' ? persona.name : '你' }}</span>
-            <p>{{ message.content }}</p>
+            <div
+              v-if="message.role === 'assistant'"
+              class="message-markdown"
+              v-html="renderAssistantMessage(message.content)"
+            />
+            <p v-else>{{ message.content }}</p>
           </div>
         </div>
 

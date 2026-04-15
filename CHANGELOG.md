@@ -52,6 +52,12 @@
 - Redirected the app root `/` to `/persona/` so the main site no longer falls through to the backend 404.
 - Kept the `/persona/` and `/persona-api/` subpath deployment model unchanged.
 
+## V1.2.6 - 2026-04-15
+
+- Fixed assistant chat bubble rendering so Markdown now displays as formatted HTML instead of raw `**` text.
+- Added a lightweight frontend Markdown renderer for bold text, lists, and paragraph breaks.
+- Kept the existing think-block sanitization and session persistence behavior unchanged.
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.

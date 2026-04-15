@@ -612,6 +612,40 @@ textarea {
   color: var(--accent-deep);
 }
 
+.message-markdown {
+  color: var(--text);
+  line-height: 1.75;
+}
+
+.message-markdown p {
+  margin: 0;
+}
+
+.message-markdown p + p,
+.message-markdown ul + p,
+.message-markdown ol + p,
+.message-markdown p + ul,
+.message-markdown p + ol,
+.message-markdown ul + ul,
+.message-markdown ol + ol {
+  margin-top: 0.75rem;
+}
+
+.message-markdown ul,
+.message-markdown ol {
+  margin: 0.4rem 0;
+  padding-left: 1.35rem;
+}
+
+.message-markdown li + li {
+  margin-top: 0.35rem;
+}
+
+.message-markdown strong {
+  color: var(--text);
+  font-weight: 800;
+}
+
 .chat-composer {
   display: grid;
   gap: 12px;
