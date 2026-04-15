@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.13 - 2026-04-16
+
+- Enhanced the built-in `zhang_xue_feng` persona by absorbing the stronger research framing and decision logic from the open-source skill.
+- Expanded `mindset`, `heuristics`, `expression`, `persona_examples`, and `guardrails` to emphasize practical education and job-path judgment.
+- Added a prompt-level reminder to keep education and career answers anchored in conditions, exit paths, and tradeoffs.
+
 ## V1.4.12 - 2026-04-16
 
 - Added a created-seed fallback to `/persona-api/personas/{slug}` so saved seeds can open like formal personas.
