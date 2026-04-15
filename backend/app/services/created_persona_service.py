@@ -172,7 +172,7 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     profile = _normalize_text(draft.profile)
 
     return {
-        "id": record.id,
+        "id": str(record.id),
         "slug": record.slug,
         "name": record.name,
         "category": display_type,

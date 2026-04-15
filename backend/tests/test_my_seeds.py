@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -58,6 +59,33 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["slug"], saved["slug"])
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], draft["meta"]["create_type"])
                 self.assertEqual(detail["draft_payload"]["profile"], draft["profile"])
+
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                self.assertEqual(persona_response.status_code, 200)
+                persona = persona_response.json()
+                self.assertEqual(persona["slug"], saved["slug"])
+                self.assertEqual(persona["name"], saved["name"])
+
+                with patch("app.services.chat_service.generate_reply") as fake_reply:
+                    fake_reply.return_value = {
+                        "content": "已接收",
+                        "model": "gpt-admin-test",
+                        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                        "latency_ms": 1,
+                    }
+                    chat_response = client.post(
+                        "/persona-api/chat",
+                        json={
+                            "persona_slug": saved["slug"],
+                            "session_id": None,
+                            "message": "你好",
+                        },
+                    )
+
+                self.assertEqual(chat_response.status_code, 200)
+                chat_body = chat_response.json()
+                self.assertEqual(chat_body["persona_slug"], saved["slug"])
+                self.assertTrue(chat_body["reply"])
         finally:
             if created_id is not None:
                 with SessionLocal() as db:

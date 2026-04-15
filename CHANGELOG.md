@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.12 - 2026-04-16
+
+- Added a created-seed fallback to `/persona-api/personas/{slug}` so saved seeds can open like formal personas.
+- Kept chat resolution dual-source aware so created seeds can enter the same chat flow as built-in personas.
+- Added regression coverage for created-seed detail lookup and created-seed chat entry.
+
 ## V1.4.11 - 2026-04-16
 
 - Aligned the Create chain so entry cards, wizard initialization, form schema, and generated results all point to the same creation object.

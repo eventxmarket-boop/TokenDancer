@@ -15,6 +15,7 @@ from app.services.created_persona_service import (
     CreatedPersonaNotFoundError,
     get_created_persona,
     list_created_personas,
+    load_created_persona_summary,
     save_created_persona,
 )
 from app.services.create_catalog_loader import CreateCatalogLoadError, load_create_catalog
@@ -135,11 +136,17 @@ async def get_my_seed(seed_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/persona-api/personas/{slug}", response_model=PersonaRecord)
-async def persona_detail(slug: str):
+async def persona_detail(slug: str, db: Session = Depends(get_db)):
     try:
         persona = load_persona_summary(slug)
     except PersonaLoadError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if persona is None:
+        try:
+            persona = load_created_persona_summary(db, slug)
+        except CreatedPersonaError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     if persona is None:
         raise HTTPException(status_code=404, detail=f"Persona not found: {slug}")
