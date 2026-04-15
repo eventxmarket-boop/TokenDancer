@@ -57,7 +57,6 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
-
                 list_response = client.get("/persona-api/my-seeds")
                 self.assertEqual(list_response.status_code, 200)
                 seeds = list_response.json()
@@ -133,6 +132,16 @@ class MySeedsTests(unittest.TestCase):
                 "text_materials": "家书片段\n日常聊天摘录",
                 "image_notes": "老照片说明",
                 "voice_notes": "语音提醒片段",
+                "raw_materials": {
+                    "chat_history_text": "妈总是提醒我按时吃饭和休息",
+                    "memory_notes_text": "小时候一起写作业\n晚上陪你散步",
+                    "text_materials_text": "家书片段\n日常聊天摘录",
+                    "uploaded_text_documents": [
+                        {"filename": "family-notes.txt", "content": "回家吃饭，别太晚"},
+                    ],
+                    "image_notes_text": "老照片说明",
+                    "voice_notes_text": "语音提醒片段",
+                },
             },
         }
 
@@ -153,6 +162,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
+                self.assertIn("family-notes.txt", saved["summary"])
 
                 list_response = client.get("/persona-api/my-seeds")
                 self.assertEqual(list_response.status_code, 200)
@@ -165,6 +175,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
                 self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "family_companion_mother")
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "妈妈")
+                self.assertIn("raw_materials", detail["draft_payload"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
                 self.assertEqual(persona_response.status_code, 200)
@@ -227,6 +239,17 @@ class MySeedsTests(unittest.TestCase):
                 "avoid_triggers": "不要把空白补成确定事实\n不要一次抛出过多强刺激回忆",
                 "photo_notes": "照片里的关键场景说明",
                 "voice_notes": "口述回忆片段",
+                "raw_materials": {
+                    "chat_history_text": "过去常提起的片段与时间线",
+                    "diary_text": "那年夏天的日记摘录",
+                    "letter_text": "一封旧信里的话",
+                    "memory_notes_text": "记忆片段 A\n记忆片段 B",
+                    "uploaded_text_documents": [
+                        {"filename": "reunion-notes.md", "content": "那天我们在门口见过"},
+                    ],
+                    "photo_notes_text": "照片里的关键场景说明",
+                    "voice_notes_text": "口述回忆片段",
+                },
             },
         }
 
@@ -259,6 +282,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "reunion_persona")
                 self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "reunion_persona_chat_history")
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "重逢人格")
+                self.assertIn("raw_materials", detail["draft_payload"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
                 self.assertEqual(persona_response.status_code, 200)

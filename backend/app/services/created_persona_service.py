@@ -50,6 +50,80 @@ def _clean_lines(value: Any) -> list[str]:
     return [line.strip("•- \t") for line in text.splitlines() if line.strip()]
 
 
+def _normalize_documents(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+
+    documents: list[dict[str, str]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            content = _normalize_text(item.get("content") or item.get("text") or item.get("body"))
+        else:
+            filename = ""
+            content = _normalize_text(item)
+        if not filename and not content:
+            continue
+        documents.append({"filename": filename, "content": content})
+    return documents
+
+
+def _excerpt_text(value: Any, limit: int = 48) -> str:
+    text = _normalize_text(value)
+    if not text:
+        return ""
+    return text[:limit]
+
+
+def _material_summary_from_raw_materials(raw_materials: Any) -> str:
+    if not isinstance(raw_materials, dict):
+        return ""
+
+    parts: list[str] = []
+    chat_history = _excerpt_text(raw_materials.get("chat_history_text"), 40)
+    if chat_history:
+        parts.append(f"聊天记录：{chat_history}")
+
+    text_notes = _excerpt_text(
+        raw_materials.get("memory_notes_text")
+        or raw_materials.get("text_materials_text")
+        or raw_materials.get("diary_text")
+        or raw_materials.get("letter_text"),
+        40,
+    )
+    if text_notes:
+        parts.append(f"文本材料：{text_notes}")
+
+    documents = _normalize_documents(raw_materials.get("uploaded_text_documents"))
+    if documents:
+        doc_items: list[str] = []
+        for document in documents[:2]:
+            filename = _normalize_text(document.get("filename"))
+            content = _normalize_text(document.get("content"))
+            snippet = content[:24]
+            if filename and snippet:
+                doc_items.append(f"{filename}：{snippet}")
+            elif filename:
+                doc_items.append(filename)
+            elif snippet:
+                doc_items.append(snippet)
+        if doc_items:
+            parts.append(f"文件材料：{' / '.join(doc_items)}")
+        else:
+            parts.append(f"文件材料：{len(documents)} 份")
+
+    extra_notes = _excerpt_text(
+        raw_materials.get("image_notes_text")
+        or raw_materials.get("photo_notes_text")
+        or raw_materials.get("voice_notes_text"),
+        30,
+    )
+    if extra_notes:
+        parts.append(f"备注：{extra_notes}")
+
+    return "；".join(parts[:4])
+
+
 def _normalize_persona_type(value: Any) -> str:
     persona_type = _normalize_text(value) or "self_unified"
     if persona_type in _SELF_UNIFIED_ALIASES:
@@ -108,6 +182,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
     if _normalize_text(draft.meta.create_type) == "family_companion":
         profile = draft.persona_profile or {}
         memory = draft.memory_base or {}
+        raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
         relationship_type = _normalize_text(
             profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
@@ -123,6 +198,8 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             memories.extend(_clean_lines(memory.get("image_notes")))
             memories.extend(_clean_lines(memory.get("voice_notes")))
         summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
+        if raw_materials_summary:
+            summary_parts.append(raw_materials_summary)
         if summary_parts or memories:
             combined = " · ".join(summary_parts)
             if memories:
@@ -134,6 +211,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         memory = draft.reunion_memory_base or {}
         policy = draft.reunion_memory_retrieval_policy or {}
         safety = draft.reunion_safety_guardrails or {}
+        raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
         relationship_type = _normalize_text(
             profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
@@ -154,6 +232,8 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             safety_notes.extend(_clean_lines(safety.get("boundaries")))
             safety_notes.extend(_clean_lines(safety.get("emotional_protection")))
         summary_parts = [part for part in [profile_name, relationship_type, tone, retrieval_mode] if part]
+        if raw_materials_summary:
+            summary_parts.append(raw_materials_summary)
         if summary_parts or memories or safety_notes:
             combined = " · ".join(summary_parts)
             extras = memories or safety_notes

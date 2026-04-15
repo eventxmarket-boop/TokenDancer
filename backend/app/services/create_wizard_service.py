@@ -311,6 +311,92 @@ def _clean_lines(value: Any) -> list[str]:
     return [line.strip("•- \t") for line in text.splitlines() if line.strip()]
 
 
+def _merge_unique_lines(*values: Any) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for item in _clean_lines(value):
+            if item and item not in seen:
+                merged.append(item)
+                seen.add(item)
+    return merged
+
+
+def _normalize_documents(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+
+    documents: list[dict[str, str]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            content = _normalize_text(item.get("content") or item.get("text") or item.get("body"))
+        else:
+            filename = ""
+            content = _normalize_text(item)
+
+        if not filename and not content:
+            continue
+
+        documents.append({"filename": filename, "content": content})
+    return documents
+
+
+def _excerpt_text(value: Any, limit: int = 120) -> str:
+    text = _normalize_text(value)
+    if not text:
+        return ""
+    return text[:limit]
+
+
+def _document_snippets(documents: list[dict[str, str]], *, limit: int = 2) -> list[str]:
+    snippets: list[str] = []
+    for doc in documents[:limit]:
+        filename = _normalize_text(doc.get("filename"))
+        content = _normalize_text(doc.get("content"))
+        if not filename and not content:
+            continue
+        excerpt = content[:80]
+        if filename and excerpt:
+            snippets.append(f"{filename}：{excerpt}")
+        elif filename:
+            snippets.append(filename)
+        else:
+            snippets.append(excerpt)
+    return [snippet for snippet in snippets if snippet]
+
+
+def _select_material_summary(*parts: Any) -> str:
+    snippets = [_excerpt_text(part, 48) for part in parts if _normalize_text(part)]
+    snippets = [snippet for snippet in snippets if snippet]
+    return " / ".join(snippets[:3])
+
+
+def _raw_materials_payload(
+    *,
+    chat_history_text: Any = "",
+    memory_notes_text: Any = "",
+    text_materials_text: Any = "",
+    uploaded_text_documents: Any = None,
+    image_notes_text: Any = "",
+    voice_notes_text: Any = "",
+    diary_text: Any = "",
+    letter_text: Any = "",
+    photo_notes_text: Any = "",
+) -> dict[str, Any]:
+    return {
+        "chat_history_text": _normalize_text(chat_history_text),
+        "memory_notes_text": _normalize_text(memory_notes_text),
+        "text_materials_text": _normalize_text(text_materials_text),
+        "uploaded_text_documents": _normalize_documents(uploaded_text_documents),
+        "image_notes_text": _normalize_text(image_notes_text),
+        "voice_notes_text": _normalize_text(voice_notes_text),
+        "diary_text": _normalize_text(diary_text),
+        "letter_text": _normalize_text(letter_text),
+        "photo_notes_text": _normalize_text(photo_notes_text),
+    }
+
+
 def _format_bullets(items: list[str]) -> str:
     if not items:
         return "- 暂无"
@@ -501,6 +587,7 @@ def _build_family_companion_draft(
     display_name: str = "",
     input_mode: str = "",
 ) -> dict[str, Any]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
@@ -517,11 +604,59 @@ def _build_family_companion_draft(
     important_advice = _clean_lines(form_data.get("important_advice")) or ["先照顾好自己", "遇到事先稳住再做决定"]
     daily_habits = _clean_lines(form_data.get("daily_habits")) or ["会关心你吃饭没", "会提醒你注意休息"]
     emotional_triggers = _clean_lines(form_data.get("emotional_triggers"))
-    chat_history_summary = _normalize_text(form_data.get("chat_history_summary"))
     memory_fragments = _clean_lines(form_data.get("memory_fragments"))
     text_materials = _clean_lines(form_data.get("text_materials"))
     image_notes = _clean_lines(form_data.get("image_notes"))
     voice_notes = _clean_lines(form_data.get("voice_notes"))
+
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
+        memory_notes_text=raw_materials_input.get("memory_notes_text")
+        or form_data.get("memory_fragments")
+        or form_data.get("memory_notes"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
+        or form_data.get("uploaded_text_documents"),
+        image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
+    )
+    material_lines = _merge_unique_lines(
+        raw_materials["chat_history_text"],
+        raw_materials["memory_notes_text"],
+        raw_materials["text_materials_text"],
+        raw_materials["image_notes_text"],
+        raw_materials["voice_notes_text"],
+        [doc.get("content", "") for doc in raw_materials["uploaded_text_documents"]],
+    )
+
+    if not raw_materials["chat_history_text"]:
+        raw_materials["chat_history_text"] = _select_material_summary(
+            form_data.get("chat_history_summary"),
+            raw_materials["memory_notes_text"],
+            raw_materials["text_materials_text"],
+        )
+
+    for line in material_lines:
+        if any(keyword in line for keyword in ("小时候", "一起", "回家", "团圆", "陪你", "家里", "过年")):
+            shared_events.append(line)
+        elif any(keyword in line for keyword in ("先", "别", "记得", "一定", "注意", "照顾", "稳住", "要")):
+            important_advice.append(line)
+        elif any(keyword in line for keyword in ("常", "总是", "每天", "会", "经常", "习惯")):
+            daily_habits.append(line)
+        elif any(keyword in line for keyword in ("难过", "开心", "高兴", "委屈", "压力", "担心", "焦虑")):
+            emotional_triggers.append(line)
+        else:
+            memory_fragments.append(line)
+
+    shared_events = _merge_unique_lines(shared_events)
+    important_advice = _merge_unique_lines(important_advice)
+    daily_habits = _merge_unique_lines(daily_habits)
+    emotional_triggers = _merge_unique_lines(emotional_triggers)
+    memory_fragments = _merge_unique_lines(memory_fragments, _document_snippets(raw_materials["uploaded_text_documents"]))
+    text_materials = _merge_unique_lines(text_materials, _document_snippets(raw_materials["uploaded_text_documents"]))
+    image_notes = _merge_unique_lines(image_notes)
+    voice_notes = _merge_unique_lines(voice_notes)
+    chat_history_summary = _normalize_text(raw_materials["chat_history_text"])
 
     persona_profile = FamilyCompanionPersonaProfile(
         relationship_type=relation_type,
@@ -587,6 +722,7 @@ def _build_family_companion_draft(
         "relationship_type": relation_type,
         "persona_profile": persona_profile.model_dump(),
         "memory_base": memory_base.model_dump(),
+        "raw_materials": raw_materials,
         "name": name,
     }
 
@@ -596,6 +732,7 @@ def _build_reunion_persona_draft(
     display_name: str = "",
     input_mode: str = "",
 ) -> dict[str, Any]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
@@ -607,7 +744,6 @@ def _build_reunion_persona_draft(
     remembrance_style = _normalize_text(form_data.get("remembrance_style")) or "先慢慢回忆，再一点点靠近。"
     comfort_style = _normalize_text(form_data.get("comfort_style")) or "先稳住情绪，再带着记忆慢慢说。"
     boundaries = _normalize_text(form_data.get("boundaries")) or "不激进刺激，不越界替代现实。"
-    chat_history_summary = _normalize_text(form_data.get("chat_history_summary"))
     diary_notes = _clean_lines(form_data.get("diary_notes"))
     letter_notes = _clean_lines(form_data.get("letter_notes"))
     photo_notes = _clean_lines(form_data.get("photo_notes"))
@@ -635,6 +771,50 @@ def _build_reunion_persona_draft(
         "不要把空白补成确定事实",
         "不要一次性抛出过多强刺激回忆",
     ]
+
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
+        diary_text=raw_materials_input.get("diary_text") or form_data.get("diary_notes"),
+        letter_text=raw_materials_input.get("letter_text") or form_data.get("letter_notes"),
+        memory_notes_text=raw_materials_input.get("memory_notes_text")
+        or form_data.get("memory_fragments")
+        or form_data.get("memory_notes"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
+        or form_data.get("uploaded_text_documents"),
+        photo_notes_text=raw_materials_input.get("photo_notes_text") or form_data.get("photo_notes"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
+    )
+    material_lines = _merge_unique_lines(
+        raw_materials["chat_history_text"],
+        raw_materials["diary_text"],
+        raw_materials["letter_text"],
+        raw_materials["memory_notes_text"],
+        raw_materials["photo_notes_text"],
+        raw_materials["voice_notes_text"],
+        [doc.get("content", "") for doc in raw_materials["uploaded_text_documents"]],
+    )
+
+    if not raw_materials["chat_history_text"]:
+        raw_materials["chat_history_text"] = _select_material_summary(
+            form_data.get("chat_history_summary"),
+            raw_materials["diary_text"],
+            raw_materials["letter_text"],
+            raw_materials["memory_notes_text"],
+        )
+
+    for line in material_lines:
+        if any(keyword in line for keyword in ("记得", "以前", "从前", "过去", "曾经", "重逢", "再见", "怀念", "想念")):
+            shared_memories.append(line)
+        else:
+            memory_fragments.append(line)
+
+    diary_notes = _merge_unique_lines(diary_notes)
+    letter_notes = _merge_unique_lines(letter_notes)
+    photo_notes = _merge_unique_lines(photo_notes)
+    voice_notes = _merge_unique_lines(voice_notes)
+    memory_fragments = _merge_unique_lines(memory_fragments, _document_snippets(raw_materials["uploaded_text_documents"]))
+    shared_memories = _merge_unique_lines(shared_memories)
+    chat_history_summary = _normalize_text(raw_materials["chat_history_text"])
 
     persona_profile = ReunionPersonaProfile(
         relationship_type=relation_type,
@@ -711,6 +891,7 @@ def _build_reunion_persona_draft(
         "reunion_memory_base": memory_base.model_dump(),
         "reunion_memory_retrieval_policy": memory_retrieval_policy.model_dump(),
         "reunion_safety_guardrails": safety_guardrails.model_dump(),
+        "raw_materials": raw_materials,
         "name": name,
     }
 
@@ -888,6 +1069,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "expression": content["expression"],
         "guardrails": content["guardrails"],
         "relationship_type": content.get("relationship_type", ""),
+        "raw_materials": content.get("raw_materials"),
         "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),
         "memory_base": content.get("memory_base"),

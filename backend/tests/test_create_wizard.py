@@ -115,6 +115,16 @@ class CreateWizardTests(unittest.TestCase):
                 "text_materials": "家书片段\n日常聊天摘录",
                 "image_notes": "老照片说明",
                 "voice_notes": "语音提醒片段",
+                "raw_materials": {
+                    "chat_history_text": "妈总是提醒我按时吃饭和休息",
+                    "memory_notes_text": "小时候一起写作业\n晚上陪你散步",
+                    "text_materials_text": "家书片段\n日常聊天摘录",
+                    "uploaded_text_documents": [
+                        {"filename": "family-notes.txt", "content": "回家吃饭，别太晚"},
+                    ],
+                    "image_notes_text": "老照片说明",
+                    "voice_notes_text": "语音提醒片段",
+                },
             },
         }
 
@@ -132,6 +142,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["relationship_type"], "妈妈")
         self.assertIsNotNone(body["draft"]["persona_profile"])
         self.assertIsNotNone(body["draft"]["memory_base"])
+        self.assertIn("raw_materials", body["draft"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertIn("家人陪伴", body["draft"]["profile"])
         self.assertIn("妈妈", body["draft"]["profile"])
 
@@ -162,6 +174,17 @@ class CreateWizardTests(unittest.TestCase):
                 "avoid_triggers": "不要把空白补成确定事实\n不要一次抛出过多强刺激回忆",
                 "photo_notes": "照片里的关键场景说明",
                 "voice_notes": "口述回忆片段",
+                "raw_materials": {
+                    "chat_history_text": "过去常提起的片段与时间线",
+                    "diary_text": "那年夏天的日记摘录",
+                    "letter_text": "一封旧信里的话",
+                    "memory_notes_text": "记忆片段 A\n记忆片段 B",
+                    "uploaded_text_documents": [
+                        {"filename": "reunion-notes.md", "content": "那天我们在门口见过"},
+                    ],
+                    "photo_notes_text": "照片里的关键场景说明",
+                    "voice_notes_text": "口述回忆片段",
+                },
             },
         }
 
@@ -181,6 +204,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIsNotNone(body["draft"]["reunion_memory_base"])
         self.assertIsNotNone(body["draft"]["reunion_memory_retrieval_policy"])
         self.assertIsNotNone(body["draft"]["reunion_safety_guardrails"])
+        self.assertIn("raw_materials", body["draft"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertIn("重逢人格", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_intimate_companion_draft(self):

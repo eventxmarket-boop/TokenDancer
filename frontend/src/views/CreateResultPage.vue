@@ -79,6 +79,7 @@ const editableDraft = reactive<CreateWizardDraft>({
   expression: '',
   guardrails: '',
   relationship_type: '',
+  raw_materials: null,
   self_persona_unified: {
     create_mode: 'standard',
     input_modes: [],
@@ -145,6 +146,87 @@ const familyPersonaProfile = computed<FamilyCompanionPersonaProfile | null>(() =
   }
   return payload
 })
+
+function normalizeText(value: unknown) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function excerptText(value: unknown, limit = 48) {
+  const text = normalizeText(value)
+  return text ? text.slice(0, limit) : ''
+}
+
+function normalizeDocuments(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      const filename = normalizeText(record.filename || record.name)
+      const content = normalizeText(record.content || record.text || record.body)
+      return filename || content ? { filename, content } : null
+    })
+    .filter(Boolean) as Array<{ filename: string; content: string }>
+}
+
+function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion') {
+  if (!rawMaterials || typeof rawMaterials !== 'object') {
+    return []
+  }
+
+  const record = rawMaterials as Record<string, unknown>
+  if (mode === 'family') {
+    const documents = normalizeDocuments(record.uploaded_text_documents)
+    return [
+      { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
+      { label: '记忆片段', value: excerptText(record.memory_notes_text) || '未填写' },
+      { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
+      {
+        label: '上传文件',
+        value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
+      },
+      { label: '图片备注', value: excerptText(record.image_notes_text) || '未填写' },
+      { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
+    ]
+  }
+
+  const documents = normalizeDocuments(record.uploaded_text_documents)
+  return [
+    { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
+    { label: '日记 / 信件', value: excerptText(record.diary_text) || '未填写' },
+    { label: '书信文本', value: excerptText(record.letter_text) || '未填写' },
+    {
+      label: '上传文件',
+      value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
+    },
+    { label: '照片备注', value: excerptText(record.photo_notes_text) || '未填写' },
+    { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
+  ]
+}
+
+const familyRawMaterials = computed(() => {
+  const payload = editableDraft.raw_materials || draft.value?.raw_materials
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const familyMaterialLines = computed(() => buildMaterialLines(familyRawMaterials.value, 'family'))
+
+const reunionRawMaterials = computed(() => {
+  const payload = editableDraft.raw_materials || draft.value?.raw_materials
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const reunionMaterialLines = computed(() => buildMaterialLines(reunionRawMaterials.value, 'reunion'))
 
 const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
   const payload = editableDraft.memory_base || draft.value?.memory_base
@@ -553,6 +635,7 @@ onMounted(() => {
       </div>
 
       <p v-if="notice" class="persona-hero-note">{{ notice }}</p>
+      <p v-if="draft?.raw_materials" class="persona-hero-note">已基于输入材料生成记忆库。</p>
 
       <div v-if="createdSeedId || createdSeed" class="hero-actions hero-actions--wrap">
         <button class="secondary-btn" type="button" @click="goToMySeeds">去我的 Seed</button>
@@ -628,6 +711,17 @@ onMounted(() => {
           </div>
         </article>
 
+        <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成记忆库</h3>
+          <div class="family-grid">
+            <div v-for="line in familyMaterialLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
         <article v-if="draft?.meta.create_type === 'reunion_persona'" class="draft-card">
           <p class="eyebrow">人格层</p>
           <div class="family-grid">
@@ -642,6 +736,17 @@ onMounted(() => {
           <p class="eyebrow">记忆层</p>
           <div class="family-grid">
             <div v-for="line in reunionMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'reunion_persona'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成记忆库</h3>
+          <div class="family-grid">
+            <div v-for="line in reunionMaterialLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

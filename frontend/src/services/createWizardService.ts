@@ -61,6 +61,20 @@ export type FamilyCompanionMemoryBase = {
   voice_notes: string[]
 }
 
+export type TextMaterialDocument = {
+  filename: string
+  content: string
+}
+
+export type FamilyCompanionRawMaterials = {
+  chat_history_text: string
+  memory_notes_text: string
+  text_materials_text: string
+  uploaded_text_documents: TextMaterialDocument[]
+  image_notes_text: string
+  voice_notes_text: string
+}
+
 export type ReunionPersonaProfile = {
   relationship_type: string
   name: string
@@ -78,6 +92,16 @@ export type ReunionPersonaMemoryBase = {
   voice_notes: string[]
   memory_fragments: string[]
   shared_memories: string[]
+}
+
+export type ReunionPersonaRawMaterials = {
+  chat_history_text: string
+  diary_text: string
+  letter_text: string
+  memory_notes_text: string
+  uploaded_text_documents: TextMaterialDocument[]
+  photo_notes_text: string
+  voice_notes_text: string
 }
 
 export type ReunionPersonaRetrievalPolicy = {
@@ -133,6 +157,7 @@ export type CreateWizardDraft = {
   expression: string
   guardrails: string
   relationship_type?: string
+  raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null

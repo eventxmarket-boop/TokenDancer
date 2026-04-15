@@ -1,5 +1,5 @@
 {
-  "version": "V1.4.22",
+  "version": "V1.4.23",
   "updated_at": "2026-04-16",
   "groups": [
     {
@@ -255,8 +255,8 @@
     {
       "group": "relationship_family",
       "label": "家人陪伴",
-      "description": "从家人的说话方式、共同记忆和关心方式中创建更有温度的陪伴人格。",
-      "source_hint": "家人陪伴模板",
+      "description": "从聊天记录、回忆片段和文本材料里提炼家人的说话方式、共同记忆和关心方式，创建更有温度的陪伴人格。",
+      "source_hint": "家人陪伴 + 记忆库提炼",
       "sort_order": 6,
       "items": [
         {
@@ -271,7 +271,7 @@
             "https://github.com/xiaoheizi8/parents-skills",
             "https://github.com/jiangziyan-693/MamaSkill"
           ],
-          "description": "从家人的说话方式、共同记忆和关心方式中，创建一个更有温度的陪伴人格。",
+          "description": "从聊天记录、回忆片段和文本材料里提炼家人的说话方式、共同记忆和关心方式，创建一个更有温度的陪伴人格。",
           "input_modes": ["mother", "parents", "other_family", "chat_history", "documents", "memory_notes", "image_notes", "voice_notes"],
           "stage": "entry_only",
           "entry_type": "create",
@@ -288,7 +288,7 @@
           "repo_url": "https://github.com/yangdongchen66-boop/reunion-skill",
           "source_repos": ["reunion-skill"],
           "source_urls": ["https://github.com/yangdongchen66-boop/reunion-skill"],
-          "description": "从聊天记录、回忆片段和纪念材料中，整理出一个更慎重、更克制的重逢型人格。",
+          "description": "从聊天记录、回忆片段、日记和纪念材料中，整理出一个更慎重、更克制的重逢型人格。",
           "input_modes": ["chat_history", "documents", "memory_notes", "photo_notes", "voice_notes"],
           "stage": "entry_only",
           "entry_type": "create",

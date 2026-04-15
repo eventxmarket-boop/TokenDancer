@@ -7,6 +7,7 @@ import {
   saveLatestDraft,
   saveWizardState,
   submitCreateDraft,
+  type TextMaterialDocument,
 } from '@/services/createWizardService'
 
 type CreateType =
@@ -307,6 +308,8 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 const memoryEvidenceFileName = ref('')
 const familyMaterialFileName = ref('')
 const reunionMaterialFileName = ref('')
+const familyUploadedTextDocuments = ref<TextMaterialDocument[]>([])
+const reunionUploadedTextDocuments = ref<TextMaterialDocument[]>([])
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
@@ -589,8 +592,13 @@ function handleFamilyMaterialFileChange(event: Event) {
     if (!content) {
       return
     }
+    familyUploadedTextDocuments.value = [
+      ...familyUploadedTextDocuments.value,
+      { filename: file.name, content },
+    ]
     appendTextToFormField('text_materials', content)
     appendTextToFormField('memory_fragments', content)
+    saveStateSnapshot()
   }
   reader.readAsText(file)
   target.value = ''
@@ -610,8 +618,13 @@ function handleReunionMaterialFileChange(event: Event) {
     if (!content) {
       return
     }
+    reunionUploadedTextDocuments.value = [
+      ...reunionUploadedTextDocuments.value,
+      { filename: file.name, content },
+    ]
     appendTextToFormField('diary_notes', content)
     appendTextToFormField('memory_fragments', content)
+    saveStateSnapshot()
   }
   reader.readAsText(file)
   target.value = ''
@@ -733,6 +746,8 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
   familyMaterialFileName.value = ''
   reunionMaterialFileName.value = ''
+  familyUploadedTextDocuments.value = []
+  reunionUploadedTextDocuments.value = []
 
   if (type === 'self_unified') {
     formState.name = displayName || '我的人格'
@@ -857,6 +872,8 @@ function saveStateSnapshot() {
     selectedName: selectedName.value,
     selectedSourceRepo: selectedSourceRepo.value,
     selectedSchemaKey: selectedSchemaKey.value,
+    familyUploadedTextDocuments: familyUploadedTextDocuments.value,
+    reunionUploadedTextDocuments: reunionUploadedTextDocuments.value,
     formState: { ...formState },
   })
 }
@@ -872,6 +889,8 @@ function loadStateSnapshot() {
     selectedName?: string
     selectedSourceRepo?: string
     selectedSchemaKey?: string
+    familyUploadedTextDocuments?: TextMaterialDocument[]
+    reunionUploadedTextDocuments?: TextMaterialDocument[]
     formState?: Record<string, string>
   }>()
 
@@ -903,6 +922,12 @@ function loadStateSnapshot() {
   selectedName.value = snapshot.selectedName || selectedName.value
   selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
   selectedSchemaKey.value = snapshot.selectedSchemaKey || selectedSchemaKey.value
+  if (Array.isArray(snapshot.familyUploadedTextDocuments)) {
+    familyUploadedTextDocuments.value = snapshot.familyUploadedTextDocuments
+  }
+  if (Array.isArray(snapshot.reunionUploadedTextDocuments)) {
+    reunionUploadedTextDocuments.value = snapshot.reunionUploadedTextDocuments
+  }
 
   if (createType.value === 'relationship_persona') {
     const intimateModes = new Set(['relationship_understanding', 'message_simulation', 'partner_maintenance', 'past_relation_mirror'])
@@ -1087,6 +1112,29 @@ function goStep(nextStep: number) {
   step.value = Math.min(Math.max(nextStep, 1), 4)
 }
 
+function buildFamilyRawMaterials() {
+  return {
+    chat_history_text: formState.chat_history_summary,
+    memory_notes_text: formState.memory_fragments,
+    text_materials_text: formState.text_materials,
+    uploaded_text_documents: familyUploadedTextDocuments.value,
+    image_notes_text: formState.image_notes,
+    voice_notes_text: formState.voice_notes,
+  }
+}
+
+function buildReunionRawMaterials() {
+  return {
+    chat_history_text: formState.chat_history_summary,
+    diary_text: formState.diary_notes,
+    letter_text: formState.letter_notes,
+    memory_notes_text: formState.memory_fragments,
+    uploaded_text_documents: reunionUploadedTextDocuments.value,
+    photo_notes_text: formState.photo_notes,
+    voice_notes_text: formState.voice_notes,
+  }
+}
+
 async function generateDraft() {
   loading.value = true
   error.value = ''
@@ -1136,7 +1184,17 @@ async function generateDraft() {
       form_data:
         createType.value === 'self_unified'
           ? { ...formState, ...selfUnifiedPayload }
-          : { ...formState },
+          : createType.value === 'family_companion'
+            ? {
+                ...formState,
+                raw_materials: buildFamilyRawMaterials(),
+              }
+            : createType.value === 'reunion_persona'
+              ? {
+                  ...formState,
+                  raw_materials: buildReunionRawMaterials(),
+                }
+              : { ...formState },
     })
 
     saveLatestDraft(draft)
@@ -1313,6 +1371,7 @@ watch(
 
           <template v-else-if="isFamilyCompanion">
             <div class="wizard-form">
+              <p class="eyebrow">人格层</p>
               <div class="form-grid">
                 <label class="form-field">
                   <span>你怎么称呼他 / 她</span>
@@ -1346,6 +1405,7 @@ watch(
                 </label>
               </div>
 
+              <p class="eyebrow">记忆层</p>
               <div class="form-grid">
                 <label class="form-field">
                   <span>关键共同经历</span>
@@ -1368,6 +1428,7 @@ watch(
                 </label>
               </div>
 
+              <p class="eyebrow">材料输入层</p>
               <div v-if="!isReunionPersona" class="form-grid">
                 <label class="form-field">
                   <span>聊天记录摘要</span>
@@ -1383,7 +1444,13 @@ watch(
                 <label class="form-field">
                   <span>上传 txt / md / csv</span>
                   <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleFamilyMaterialFileChange" />
-                  <small class="field-hint">{{ familyMaterialFileName || '可把文本材料追加到文本材料和记忆片段里' }}</small>
+                  <small class="field-hint">
+                    {{
+                      familyUploadedTextDocuments.length
+                        ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ')
+                        : (familyMaterialFileName || '可把文本材料追加到文本材料和记忆片段里')
+                    }}
+                  </small>
                 </label>
                 <label class="form-field">
                   <span>文本材料</span>
@@ -1413,6 +1480,7 @@ watch(
                 </label>
               </div>
 
+              <p v-if="isReunionPersona" class="eyebrow">回忆层</p>
               <div v-if="isReunionPersona" class="form-grid">
                 <label class="form-field">
                   <span>日记 / 信件</span>
@@ -1424,11 +1492,18 @@ watch(
                 </label>
               </div>
 
+              <p v-if="isReunionPersona" class="eyebrow">材料输入层</p>
               <div v-if="isReunionPersona" class="form-grid">
                 <label class="form-field">
                   <span>上传 txt / md / csv</span>
                   <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleReunionMaterialFileChange" />
-                  <small class="field-hint">{{ reunionMaterialFileName || '可把文本材料追加到日记 / 信件里' }}</small>
+                  <small class="field-hint">
+                    {{
+                      reunionUploadedTextDocuments.length
+                        ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ')
+                        : (reunionMaterialFileName || '可把文本材料追加到日记 / 信件里')
+                    }}
+                  </small>
                 </label>
                 <label class="form-field">
                   <span>书信文本</span>
@@ -1668,6 +1743,17 @@ watch(
                 <li><span>{{ createType === 'reunion_persona' ? '聊天摘要' : '关键经历' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.chat_history_summary || '未填写') : (formState.shared_events || '未填写') }}</strong></li>
                 <li><span>{{ createType === 'reunion_persona' ? '检索策略' : '常见安慰' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.priority_rules || '未填写') : (formState.comfort_style || '未填写') }}</strong></li>
                 <li><span>{{ createType === 'reunion_persona' ? '安全护栏' : '重要建议' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.safety_boundaries || '未填写') : (formState.important_advice || '未填写') }}</strong></li>
+              </ul>
+            </div>
+
+            <div class="summary-panel">
+              <p class="eyebrow">材料输入层</p>
+              <h3>{{ createType === 'reunion_persona' ? '重逢材料' : '家人材料' }}</h3>
+              <ul class="summary-panel__list">
+                <li><span>聊天记录</span><strong>{{ formState.chat_history_summary || '未填写' }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '日记 / 信件' : '记忆片段' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.diary_notes || formState.letter_notes || '未填写') : (formState.memory_fragments || '未填写') }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '口述回忆' : '文本材料' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.voice_notes || '未填写') : (formState.text_materials || '未填写') }}</strong></li>
+                <li><span>上传文件</span><strong>{{ createType === 'reunion_persona' ? (reunionUploadedTextDocuments.length ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ') : (reunionMaterialFileName || '未上传')) : (familyUploadedTextDocuments.length ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ') : (familyMaterialFileName || '未上传')) }}</strong></li>
               </ul>
             </div>
           </div>

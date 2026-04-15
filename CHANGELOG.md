@@ -1,3 +1,10 @@
+## V1.4.23 - 2026-04-16
+
+- Expanded the family-companion and reunion create flows so they can ingest pasted materials and uploaded text documents instead of relying only on hand-filled fields.
+- Added raw material payloads for family and reunion drafts so the backend can derive memory bases from chat history, memory notes, diary entries, letters, and text documents.
+- Surfaced concise material-input summaries in the Create result and My Seeds flows while keeping the full raw materials hidden from the user-facing cards.
+- Kept the family and reunion save/open/chat chain aligned around the same persisted object.
+
 ## V1.4.22 - 2026-04-16
 
 - Added explicit source URL checks for the intimate relationship create paths.
