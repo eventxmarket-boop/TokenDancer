@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.1.2 - 2026-04-15
+
+- Added an explicit `app.tokendancer.xyz` nginx server block for the persona station.
+- Redirected the app root `/` to `/persona/` so the main site no longer falls through to the backend 404.
+- Kept the `/persona/` and `/persona-api/` subpath deployment model unchanged.
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.
