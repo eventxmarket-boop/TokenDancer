@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -7,10 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
+from app.models.base_mixins import utcnow
 from app.services.llm_gateway import generate_reply
 from app.services.persona_loader import load_persona_skill
 from app.services.prompt_builder import build_chat_messages
-from app.models.base_mixins import utcnow
 
 
 class ChatServiceError(RuntimeError):
@@ -38,6 +39,30 @@ class ChatResult:
             "model": self.model,
             "usage": self.usage,
             "latency_ms": self.latency_ms,
+        }
+
+
+@dataclass(slots=True)
+class ChatMessageRecord:
+    role: str
+    content: str
+    model: str | None
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    latency_ms: int
+    created_at: datetime
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "role": self.role,
+            "content": self.content,
+            "model": self.model,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.total_tokens,
+            "latency_ms": self.latency_ms,
+            "created_at": self.created_at,
         }
 
 
@@ -83,6 +108,61 @@ def _load_recent_history(db: Session, session_id: str, limit: int = 12) -> list[
     )
     recent_rows = rows[-limit:] if limit > 0 else rows
     return [{"role": row.role, "content": row.content} for row in recent_rows]
+
+
+def _serialize_message(row: ChatMessage) -> dict[str, object]:
+    return ChatMessageRecord(
+        role=row.role,
+        content=row.content,
+        model=row.model,
+        prompt_tokens=int(row.prompt_tokens or 0),
+        completion_tokens=int(row.completion_tokens or 0),
+        total_tokens=int(row.total_tokens or 0),
+        latency_ms=int(row.latency_ms or 0),
+        created_at=row.created_at,
+    ).as_dict()
+
+
+def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] | None:
+    normalized_session_id = session_id.strip()
+    if not normalized_session_id:
+        raise ChatServiceError("session_id 不能为空")
+
+    session = (
+        db.query(ChatSession)
+        .filter(ChatSession.session_id == normalized_session_id)
+        .first()
+    )
+    if session is None:
+        return None
+
+    rows = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == normalized_session_id)
+        .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
+        .all()
+    )
+    return {
+        "session_id": session.session_id,
+        "persona_slug": session.persona_slug,
+        "messages": [_serialize_message(row) for row in rows],
+    }
+
+
+def get_latest_chat_session_for_persona(db: Session, persona_slug: str) -> dict[str, object] | None:
+    normalized_slug = persona_slug.strip()
+    if not normalized_slug:
+        raise ChatServiceError("persona_slug 不能为空")
+
+    session = (
+        db.query(ChatSession)
+        .filter(ChatSession.persona_slug == normalized_slug)
+        .order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc())
+        .first()
+    )
+    if session is None:
+        return None
+    return get_chat_session_detail(db, session.session_id)
 
 
 def _persist_messages(
@@ -160,21 +240,21 @@ async def chat_with_persona(
     ).as_dict()
 
 
-def clear_chat_session(db: Session, session_id: str) -> None:
+def clear_chat_session(db: Session, session_id: str) -> str:
     normalized_session_id = session_id.strip()
     if not normalized_session_id:
         raise ChatServiceError("session_id 不能为空")
 
-    (
-        db.query(ChatMessage)
-        .filter(ChatMessage.session_id == normalized_session_id)
-        .delete(synchronize_session=False)
-    )
     session = (
         db.query(ChatSession)
         .filter(ChatSession.session_id == normalized_session_id)
         .first()
     )
-    if session is not None:
-        session.updated_at = utcnow()
+    if session is None:
+        raise ChatServiceError(f"session not found: {normalized_session_id}")
+
+    new_session_id = uuid4().hex
+    new_session = ChatSession(session_id=new_session_id, persona_slug=session.persona_slug)
+    db.add(new_session)
     db.commit()
+    return new_session_id

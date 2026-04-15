@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { clearChatSession, sendChatMessage } from '@/services/chatService'
+import {
+  clearChatSession,
+  loadChatSession,
+  loadLatestPersonaSession,
+  sendChatMessage,
+} from '@/services/chatService'
 import { loadPersona, type Persona } from '@/services/personaService'
 import { stripThinkBlocks } from '@/utils/sanitizeMessage'
 
@@ -24,6 +29,29 @@ const sessionId = ref('')
 const personaId = computed(() => String(route.params.id || ''))
 
 const sessionStorageKey = (slug: string) => `persona-chat-session:${slug}`
+const sessionIndexKey = 'persona-chat-session-index'
+
+const readSessionIndex = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(sessionIndexKey)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    return Object.entries(parsed).reduce<Record<string, string>>((acc, [key, value]) => {
+      if (typeof value === 'string' && value.trim()) {
+        acc[key] = value
+      }
+      return acc
+    }, {})
+  } catch {
+    return {}
+  }
+}
+
+const writeSessionIndex = (value: Record<string, string>) => {
+  localStorage.setItem(sessionIndexKey, JSON.stringify(value))
+}
 
 const resetConversation = () => {
   messages.value = []
@@ -48,7 +76,43 @@ const loadConversation = async (id: string) => {
     }
 
     persona.value = loaded
-    sessionId.value = sessionStorage.getItem(sessionStorageKey(loaded.slug)) || ''
+    const storedSessionId = sessionStorage.getItem(sessionStorageKey(loaded.slug)) || ''
+    const sessionIndex = readSessionIndex()
+    sessionId.value = storedSessionId || sessionIndex[loaded.slug] || ''
+
+    if (!sessionId.value) {
+      const latestSession = await loadLatestPersonaSession(loaded.slug)
+      if (latestSession) {
+        rememberSession(loaded.slug, latestSession.session_id)
+        messages.value = latestSession.messages.map((message) => ({
+          role: message.role,
+          content: stripThinkBlocks(message.content || ''),
+        }))
+        return
+      }
+    }
+
+    if (sessionId.value) {
+      const session = await loadChatSession(sessionId.value)
+      if (session && session.persona_slug === loaded.slug) {
+        rememberSession(loaded.slug, session.session_id)
+        messages.value = session.messages.map((message) => ({
+          role: message.role,
+          content: stripThinkBlocks(message.content || ''),
+        }))
+        return
+      }
+      rememberSession(loaded.slug, '')
+    }
+
+    const latestSession = await loadLatestPersonaSession(loaded.slug)
+    if (latestSession) {
+      rememberSession(loaded.slug, latestSession.session_id)
+      messages.value = latestSession.messages.map((message) => ({
+        role: message.role,
+        content: stripThinkBlocks(message.content || ''),
+      }))
+    }
   } catch (error) {
     personaError.value = error instanceof Error ? error.message : '加载人格详情失败'
   } finally {
@@ -66,11 +130,15 @@ watch(personaId, (id) => {
 
 const rememberSession = (slug: string, value: string) => {
   sessionId.value = value
+  const sessionIndex = readSessionIndex()
   if (value) {
     sessionStorage.setItem(sessionStorageKey(slug), value)
+    sessionIndex[slug] = value
   } else {
     sessionStorage.removeItem(sessionStorageKey(slug))
+    delete sessionIndex[slug]
   }
+  writeSessionIndex(sessionIndex)
 }
 
 const sendMessage = async (preset?: string) => {

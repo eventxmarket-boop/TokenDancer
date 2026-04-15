@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.2.5 - 2026-04-15
+
+- Added session detail and latest-session APIs so chat history can be restored after re-entry.
+- Changed clear-context behavior to create a fresh session instead of deleting historical records.
+- Added backend regression tests for chat history persistence and session reset behavior.
+- Tightened the shared persona prompt with stronger answer-quality guidance.
+
 ## V1.2.4 - 2026-04-15
 
 - Extracted a shared backend text sanitizer for `<think>`, `<reasoning>`, and `<analysis>` blocks.

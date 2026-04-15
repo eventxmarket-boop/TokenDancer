@@ -15,6 +15,23 @@ export type ChatResponse = {
   latency_ms: number
 }
 
+export type ChatMessageRecord = {
+  role: 'assistant' | 'user'
+  content: string
+  model: string | null
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  latency_ms: number
+  created_at: string
+}
+
+export type ChatSessionDetail = {
+  session_id: string
+  persona_slug: string
+  messages: ChatMessageRecord[]
+}
+
 async function readErrorMessage(response: Response): Promise<string> {
   const text = await response.text()
 
@@ -66,4 +83,20 @@ export async function clearChatSession(sessionId: string): Promise<{ session_id:
   })
 
   return readJson<{ session_id: string; status: string }>(response)
+}
+
+export async function loadChatSession(sessionId: string): Promise<ChatSessionDetail | null> {
+  const response = await fetch(`${API_PREFIX}/sessions/${encodeURIComponent(sessionId)}`)
+  if (response.status === 404) {
+    return null
+  }
+  return readJson<ChatSessionDetail>(response)
+}
+
+export async function loadLatestPersonaSession(personaSlug: string): Promise<ChatSessionDetail | null> {
+  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(personaSlug)}/latest-session`)
+  if (response.status === 404) {
+    return null
+  }
+  return readJson<ChatSessionDetail>(response)
 }
