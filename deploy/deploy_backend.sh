@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ROOT_DIR}/backend"
-SERVICE_NAME="${SERVICE_NAME:-tokendancer-persona-api}"
+SERVICE_NAME="${SERVICE_NAME:-tokendancer-backend.service}"
 VENV_DIR="${VENV_DIR:-${BACKEND_DIR}/.venv}"
 PYTHON_BIN="${PYTHON_BIN:-${VENV_DIR}/bin/python}"
 

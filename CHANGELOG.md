@@ -1,5 +1,9 @@
 # Changelog
 
+## V1.0.3 - 2026-04-15
+
+- Updated the backend deployment script to restart the actual server unit `tokendancer-backend.service`.
+
 ## V1.0.2 - 2026-04-15
 
 - Made backend deployment skip legacy Alembic migrations by default so the persona station can be deployed against the current lightweight backend entrypoint.
