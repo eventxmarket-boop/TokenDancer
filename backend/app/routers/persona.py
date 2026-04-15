@@ -80,29 +80,36 @@ async def create_wizard_draft(payload: CreateWizardDraftRequest):
 @router.post("/persona-api/my-seeds", response_model=CreatedPersonaRecord)
 async def create_my_seed(payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
     try:
-        return save_created_persona(
+        seed = save_created_persona(
             db,
             payload.draft,
             source_type=payload.source_type,
             status=payload.status,
         )
+        db.commit()
+        return seed
     except CreatedPersonaError as exc:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.put("/persona-api/my-seeds/{seed_id}", response_model=CreatedPersonaRecord)
 async def update_my_seed(seed_id: int, payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
     try:
-        return save_created_persona(
+        seed = save_created_persona(
             db,
             payload.draft,
             record_id=seed_id,
             source_type=payload.source_type,
             status=payload.status,
         )
+        db.commit()
+        return seed
     except CreatedPersonaNotFoundError as exc:
+        db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CreatedPersonaError as exc:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

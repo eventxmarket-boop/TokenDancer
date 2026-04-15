@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.10 - 2026-04-16
+
+- Fixed Create wizard state pollution by prioritizing entry query params and honoring the reset flag before restoring any local snapshot.
+- Added `source_repo` to Create entry navigation so the selected source metadata stays aligned with the chosen card.
+- Completed the my-seeds backend round trip by committing create and update mutations before returning.
+- Added a regression test that verifies Create -> save -> list -> detail keeps the same persisted persona payload.
+
 ## V1.4.9 - 2026-04-16
 
 - Added a day/night theme toggle to the global shell and persisted the choice in local storage.

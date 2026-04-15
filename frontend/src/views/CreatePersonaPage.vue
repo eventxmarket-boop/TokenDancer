@@ -130,6 +130,7 @@ function buildWizardQuery(item: CreateCatalogItem) {
     group: item.group,
     slug: item.slug,
     name: item.name,
+    source_repo: item.source_repo,
     reset: '1',
   }
 }

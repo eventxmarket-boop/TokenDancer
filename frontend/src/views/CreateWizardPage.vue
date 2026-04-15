@@ -21,6 +21,7 @@ const createType = ref<CreateType>('self_persona')
 const inputMode = ref('')
 const selectedGroup = ref('')
 const selectedName = ref('')
+const selectedSourceRepo = ref('')
 
 const formState = reactive({
   name: '',
@@ -171,6 +172,7 @@ function saveStateSnapshot() {
     inputMode: inputMode.value,
     selectedGroup: selectedGroup.value,
     selectedName: selectedName.value,
+    selectedSourceRepo: selectedSourceRepo.value,
     formState: { ...formState },
   })
 }
@@ -182,6 +184,7 @@ function loadStateSnapshot() {
     inputMode?: string
     selectedGroup?: string
     selectedName?: string
+    selectedSourceRepo?: string
     formState?: Record<string, string>
   }>()
 
@@ -203,6 +206,7 @@ function loadStateSnapshot() {
 
   selectedGroup.value = snapshot.selectedGroup || selectedGroup.value
   selectedName.value = snapshot.selectedName || selectedName.value
+  selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
 
   if (snapshot.formState) {
     Object.assign(formState, snapshot.formState)
@@ -215,25 +219,61 @@ function applyQueryDefaults() {
   const queryType = normalizeType(route.query.type)
   const queryGroup = String(route.query.group || '').trim()
   const queryName = String(route.query.name || '').trim()
+  const querySourceRepo = String(route.query.source_repo || '').trim()
+
+  createType.value = queryType
+  selectedGroup.value = queryGroup
+  selectedName.value = queryName
+  selectedSourceRepo.value = querySourceRepo
+
+  if (createType.value === 'self_persona') {
+    inputMode.value = 'manual_profile'
+  } else if (createType.value === 'source_persona') {
+    inputMode.value = 'documents'
+  } else {
+    inputMode.value = 'colleague'
+  }
+
+  resetFormForType(createType.value)
+}
+
+function hasEntryQuery() {
+  return Boolean(
+    String(route.query.type || '').trim() ||
+      String(route.query.group || '').trim() ||
+      String(route.query.source_repo || '').trim() ||
+      String(route.query.name || '').trim(),
+  )
+}
+
+function initializeWizardState() {
   const reset = String(route.query.reset || '') === '1'
+  const hasEntry = hasEntryQuery()
 
   if (reset) {
     clearWizardState()
   }
 
-  createType.value = queryType
-  selectedGroup.value = queryGroup
-  selectedName.value = queryName
-
-  if (createType.value === 'self_persona') {
-    inputMode.value = inputMode.value || 'manual_profile'
-  } else if (createType.value === 'source_persona') {
-    inputMode.value = inputMode.value || 'documents'
-  } else {
-    inputMode.value = inputMode.value || 'colleague'
+  if (reset || hasEntry) {
+    step.value = 1
+    applyQueryDefaults()
+    saveStateSnapshot()
+    return
   }
 
+  const restored = loadStateSnapshot()
+  if (restored) {
+    return
+  }
+
+  step.value = 1
+  createType.value = 'self_persona'
+  inputMode.value = 'manual_profile'
+  selectedGroup.value = ''
+  selectedName.value = ''
+  selectedSourceRepo.value = ''
   resetFormForType(createType.value)
+  saveStateSnapshot()
 }
 
 function selectType(type: CreateType) {
@@ -284,13 +324,7 @@ watch([createType, inputMode, selectedGroup, selectedName], saveStateSnapshot)
 watch(formState, saveStateSnapshot, { deep: true })
 
 onMounted(() => {
-  const restored = loadStateSnapshot()
-  if (!restored) {
-    applyQueryDefaults()
-  } else if (String(route.query.reset || '') === '1') {
-    applyQueryDefaults()
-  }
-  saveStateSnapshot()
+  initializeWizardState()
 })
 </script>
 
