@@ -1,3 +1,9 @@
+## V1.4.22 - 2026-04-16
+
+- Added explicit source URL checks for the intimate relationship create paths.
+- Kept the intimate Create catalog normalized around the four main paths while preserving precise upstream repository mapping.
+- Added regression coverage to make sure the intimate catalog entries keep their source URLs aligned with `relationship-training-skill`, `xinyi`, `crush-skill`, `partner-skill`, `npy-skill`, `ex-skill`, `first-love-skill`, and `shuixian-skill`.
+
 ## V1.4.21 - 2026-04-16
 
 - Normalized the family relationship Create flow around `family_companion` and `reunion_persona` with explicit upstream source URLs.

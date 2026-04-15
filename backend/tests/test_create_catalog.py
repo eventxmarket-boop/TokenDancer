@@ -49,6 +49,36 @@ class CreateCatalogTests(unittest.TestCase):
         self.assertEqual(reunion_item["source_repo"], "reunion-skill")
         self.assertIn("https://github.com/yangdongchen66-boop/reunion-skill", reunion_item["source_urls"])
 
+        self.assertIn("relationship_intimate", groups)
+        intimate_items = groups["relationship_intimate"]["items"]
+        intimate_items_by_slug = {item["slug"]: item for item in intimate_items}
+        self.assertEqual(
+            intimate_items_by_slug["relationship_understanding"]["source_urls"],
+            [
+                "https://github.com/TammyTan516/relationship-training-skill",
+                "https://github.com/kroxchan/xinyi",
+            ],
+        )
+        self.assertEqual(
+            intimate_items_by_slug["message_simulation"]["source_urls"],
+            ["https://github.com/yyyyyyylll/crush-skill"],
+        )
+        self.assertEqual(
+            intimate_items_by_slug["partner_maintenance"]["source_urls"],
+            [
+                "https://github.com/NatalieCao323/partner-skill",
+                "https://github.com/wwwttlll/npy-skill",
+            ],
+        )
+        self.assertEqual(
+            intimate_items_by_slug["past_relation_mirror"]["source_urls"],
+            [
+                "https://github.com/titanwings/ex-skill",
+                "https://github.com/z969081067-commits/first-love-skill",
+                "https://github.com/Cyh29hao/shuixian-skill",
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

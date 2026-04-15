@@ -1,5 +1,5 @@
 {
-  "version": "V1.4.21",
+  "version": "V1.4.22",
   "updated_at": "2026-04-16",
   "groups": [
     {
@@ -165,6 +165,14 @@
           "create_type": "intimate_companion",
           "source_repo": "relationship-training-skill+xinyi",
           "repo_url": "https://github.com/kroxchan/xinyi",
+          "source_repos": [
+            "relationship-training-skill",
+            "xinyi"
+          ],
+          "source_urls": [
+            "https://github.com/TammyTan516/relationship-training-skill",
+            "https://github.com/kroxchan/xinyi"
+          ],
           "description": "理解对方表达、关系状态与沟通方式。",
           "input_modes": ["chat_history", "documents", "memory_notes"],
           "stage": "entry_only",
@@ -180,6 +188,12 @@
           "create_type": "intimate_companion",
           "source_repo": "crush-skill",
           "repo_url": "https://github.com/yyyyyyylll/crush-skill",
+          "source_repos": [
+            "crush-skill"
+          ],
+          "source_urls": [
+            "https://github.com/yyyyyyylll/crush-skill"
+          ],
           "description": "预测对方可能回复，模拟发送前后的对话分支。",
           "input_modes": ["chat_history", "memory_notes", "documents"],
           "stage": "entry_only",
@@ -195,6 +209,14 @@
           "create_type": "intimate_companion",
           "source_repo": "partner-skill+npy-skill",
           "repo_url": "https://github.com/NatalieCao323/partner-skill",
+          "source_repos": [
+            "partner-skill",
+            "npy-skill"
+          ],
+          "source_urls": [
+            "https://github.com/NatalieCao323/partner-skill",
+            "https://github.com/wwwttlll/npy-skill"
+          ],
           "description": "围绕伴侣关系的维护、陪伴与磨合创建人格模板。",
           "input_modes": ["manual_profile", "chat_history", "memory_notes"],
           "stage": "entry_only",
@@ -210,6 +232,16 @@
           "create_type": "intimate_companion",
           "source_repo": "ex-skill+first-love-skill+shuixian-skill",
           "repo_url": "https://github.com/titanwings/ex-skill",
+          "source_repos": [
+            "ex-skill",
+            "first-love-skill",
+            "shuixian-skill"
+          ],
+          "source_urls": [
+            "https://github.com/titanwings/ex-skill",
+            "https://github.com/z969081067-commits/first-love-skill",
+            "https://github.com/Cyh29hao/shuixian-skill"
+          ],
           "description": "整理过去关系、情绪复盘和自我镜像型陪伴。",
           "input_modes": ["chat_history", "documents", "memory_notes"],
           "stage": "entry_only",
