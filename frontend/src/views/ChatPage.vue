@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { clearChatSession, sendChatMessage } from '@/services/chatService'
 import { loadPersona, type Persona } from '@/services/personaService'
+import { stripThinkBlocks } from '@/utils/sanitizeMessage'
 
 type ChatMessage = {
   role: 'assistant' | 'user'
@@ -95,7 +96,7 @@ const sendMessage = async (preset?: string) => {
       message: text,
     })
     rememberSession(persona.value.slug, result.session_id)
-    messages.value.push({ role: 'assistant', content: result.reply })
+    messages.value.push({ role: 'assistant', content: stripThinkBlocks(result.reply || '') })
   } catch (error) {
     chatError.value = error instanceof Error ? error.message : '当前模型服务不可用，请稍后再试。'
   } finally {

@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.2.3 - 2026-04-15
+
+- Added backend reply sanitization to remove `<think>`, `<reasoning>`, and `<analysis>` blocks before responses reach the frontend.
+- Added a shared frontend message sanitizer as a second display-layer guard.
+- Extended the persona system prompt with an explicit "do not output reasoning process" constraint.
+
 ## V1.2.2 - 2026-04-15
 
 - Added a dedicated `tokendancer.xyz` nginx entry for the persona station.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -28,6 +29,17 @@ class LLMReply:
             "usage": self.usage,
             "latency_ms": self.latency_ms,
         }
+
+
+def strip_think_blocks(text: str) -> str:
+    if not text:
+        return text
+
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r"<reasoning>.*?</reasoning>", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r"<analysis>.*?</analysis>", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
 
 
 def _extract_content(payload: dict[str, Any]) -> str:
@@ -112,8 +124,11 @@ async def generate_reply(
         "total_tokens": int((usage_payload or {}).get("total_tokens") or 0),
     }
 
+    raw_content = _extract_content(payload)
+    clean_content = strip_think_blocks(raw_content)
+
     return LLMReply(
-        content=_extract_content(payload),
+        content=clean_content,
         model=str(payload.get("model") or model),
         usage=usage,
         latency_ms=latency_ms,
