@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   loadCreateCatalog,
@@ -8,21 +8,52 @@ import {
   type CreateCatalogResponse,
 } from '@/services/createCatalogService'
 
+type MainPathKey = 'self' | 'source' | 'work' | 'intimate' | 'family'
+
+type MainPathSection = {
+  key: MainPathKey
+  title: string
+  description: string
+  groupKeys: string[]
+}
+
+const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const catalog = ref<CreateCatalogResponse | null>(null)
-const selectedSlug = ref('')
-const router = useRouter()
+const expandedSection = ref<MainPathKey>('self')
 
-const groupOrder = [
-  'self',
-  'source',
-  'relationship_workplace',
-  'relationship_academia',
-  'relationship_intimate',
-  'relationship_family',
-  'digital_twin',
-  'protection',
+const mainPathSections: MainPathSection[] = [
+  {
+    key: 'self',
+    title: '创造自己',
+    description: '从你的思考方式、表达习惯和边界开始。',
+    groupKeys: ['self'],
+  },
+  {
+    key: 'source',
+    title: '从资料创建',
+    description: '从聊天记录、文档或其他资料中整理出一个人格雏形。',
+    groupKeys: ['source', 'digital_twin', 'protection'],
+  },
+  {
+    key: 'work',
+    title: '职场关系',
+    description: '把同事、老板、导师或老师的风格整理成一个可继续完善的人格。',
+    groupKeys: ['relationship_workplace', 'relationship_academia'],
+  },
+  {
+    key: 'intimate',
+    title: '亲密关系',
+    description: '从亲密关系里的表达方式、互动习惯和情绪逻辑出发。',
+    groupKeys: ['relationship_intimate'],
+  },
+  {
+    key: 'family',
+    title: '家庭关系',
+    description: '从熟悉的关心方式、说话方式和记忆片段中开始。',
+    groupKeys: ['relationship_family'],
+  },
 ]
 
 const inputModeLabels: Record<string, string> = {
@@ -36,127 +67,44 @@ const inputModeLabels: Record<string, string> = {
   personal_data: '个人数据',
   multi_platform_data: '多平台资料',
   memory_notes: '记忆笔记',
-  skill_file: '技能文件',
-}
-
-const sectionAnchors: Record<string, string> = {
-  self: 'create-self',
-  source: 'create-source',
-  relationship_workplace: 'create-relationship',
-  relationship_academia: 'create-relationship-academia',
-  relationship_intimate: 'create-relationship-intimate',
-  relationship_family: 'create-relationship-family',
-  digital_twin: 'create-digital-twin',
-  protection: 'create-protection',
-}
-
-const groupLabels: Record<string, string> = {
-  self: '自我人格',
-  source: '资料投喂创建',
-  relationship_workplace: '职场关系',
-  relationship_academia: '学术关系',
-  relationship_intimate: '亲密关系',
-  relationship_family: '家庭关系',
-  digital_twin: '数字分身',
-  protection: '隐私与防护',
-}
-
-const groupDescriptions: Record<string, string> = {
-  self: '从自己开始，把做事方式、回复方式和判断顺序整理成可用人格。',
-  source: '从聊天记录、PDF、音频、视频和文本里提炼更像的回应方式。',
-  relationship_workplace: '把同事和老板的工作关系整理成可以继续问的视角。',
-  relationship_academia: '把导师、师兄和老师的视角整理成可对话模板。',
-  relationship_intimate: '把亲密关系中的角色和互动模式整理成更细腻的模板。',
-  relationship_family: '把父母、妈妈和重逢场景整理成更细腻的关系人格。',
-  digital_twin: '做更高保真的长期数字分身或多平台蒸馏框架。',
-  protection: '资料脱敏、防蒸馏与边界保留，不让创建流程越界。',
+  skill_file: '资料内容',
 }
 
 const groups = computed(() => {
   const items = catalog.value?.groups ?? []
   return [...items].sort((left, right) => {
-    const leftOrder = groupOrder.indexOf(left.group)
-    const rightOrder = groupOrder.indexOf(right.group)
-    return (leftOrder === -1 ? 99 : leftOrder) - (rightOrder === -1 ? 99 : rightOrder)
+    const order: Record<string, number> = {
+      self: 0,
+      source: 1,
+      relationship_workplace: 2,
+      relationship_academia: 3,
+      relationship_intimate: 4,
+      relationship_family: 5,
+      digital_twin: 6,
+      protection: 7,
+    }
+    return (order[left.group] ?? 99) - (order[right.group] ?? 99)
   })
 })
 
-const allItems = computed(() => groups.value.flatMap((group) => group.items))
+const sectionViews = computed(() => {
+  const map = new Map(groups.value.map((group) => [group.group, group] as const))
 
-const selectedItem = computed(() => {
-  if (!allItems.value.length) {
-    return null
-  }
+  return mainPathSections.map((section) => {
+    const matchedGroups = section.groupKeys
+      .map((groupKey) => map.get(groupKey))
+      .filter((group): group is CreateCatalogGroup => Boolean(group))
 
-  return allItems.value.find((item) => item.slug === selectedSlug.value) ?? allItems.value[0]
+    const items = matchedGroups.flatMap((group) => group.items)
+
+    return {
+      ...section,
+      groups: matchedGroups,
+      items,
+      itemCount: items.length,
+    }
+  })
 })
-
-const totalItemCount = computed(() => allItems.value.length)
-
-const topZones = computed(() => [
-  {
-    key: 'self',
-    title: '自我人格',
-    description: '从你自己开始，先做做事方式，再做表达方式。',
-    target: sectionAnchors.self,
-    count: countItems(['self']),
-  },
-  {
-    key: 'source',
-    title: '资料投喂创建',
-    description: '聊天记录、文档、音频、视频都可以进入同一条创建路径。',
-    target: sectionAnchors.source,
-    count: countItems(['source']),
-  },
-  {
-    key: 'relationship',
-    title: '关系人格',
-    description: '同事、老板、导师、伴侣、父母等关系都能按分组拆开。',
-    target: sectionAnchors.relationship_workplace,
-    count: countItems([
-      'relationship_workplace',
-      'relationship_academia',
-      'relationship_intimate',
-      'relationship_family',
-    ]),
-  },
-  {
-    key: 'digital_twin',
-    title: '数字分身',
-    description: '高保真、长期、多平台的蒸馏入口留在这里。',
-    target: sectionAnchors.digital_twin,
-    count: countItems(['digital_twin']),
-  },
-  {
-    key: 'protection',
-    title: '隐私与防护',
-    description: '资料脱敏、防蒸馏和边界保留都归在这一区。',
-    target: sectionAnchors.protection,
-    count: countItems(['protection']),
-  },
-])
-
-const selectedInputModes = computed(() =>
-  (selectedItem.value?.input_modes ?? []).map((mode) => inputModeLabels[mode] || mode.replace(/_/g, ' ')),
-)
-
-function countItems(groupsToCount: string[]) {
-  return groups.value
-    .filter((group) => groupsToCount.includes(group.group))
-    .reduce((total, group) => total + group.items.length, 0)
-}
-
-function sectionId(group: CreateCatalogGroup) {
-  return sectionAnchors[group.group] || `create-${group.group}`
-}
-
-function getGroupLabel(group: string) {
-  return groupLabels[group] || group
-}
-
-function getGroupDescription(group: string) {
-  return groupDescriptions[group] || ''
-}
 
 function getWizardTypeForGroup(group: string) {
   if (group === 'self') {
@@ -190,33 +138,8 @@ function canOpenWizard(item: CreateCatalogItem) {
   return Boolean(getWizardTypeForGroup(item.group))
 }
 
-async function scrollToTarget(targetId: string) {
-  await nextTick()
-  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-async function focusItem(item: CreateCatalogItem) {
-  selectedSlug.value = item.slug
-  await nextTick()
-  document.getElementById('create-rail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function startSelectedCreation() {
-  if (!selectedItem.value) {
-    return
-  }
-
-  const item = selectedItem.value
-  const type = getWizardTypeForGroup(item.group)
-  if (!type) {
-    void focusItem(item)
-    return
-  }
-
-  void router.push({
-    path: '/create/wizard',
-    query: buildWizardQuery(item),
-  })
+function toggleSection(sectionKey: MainPathKey) {
+  expandedSection.value = sectionKey
 }
 
 function startCreation(item: CreateCatalogItem) {
@@ -238,7 +161,7 @@ const loadCatalog = async () => {
   try {
     catalog.value = await loadCreateCatalog()
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : '加载 Create 目录失败'
+    const message = cause instanceof Error ? cause.message : '加载 Create 内容失败'
     error.value = message
     catalog.value = null
   } finally {
@@ -246,239 +169,108 @@ const loadCatalog = async () => {
   }
 }
 
-watch(
-  allItems,
-  (items) => {
-    if (!items.length) {
-      return
-    }
-
-    if (!selectedSlug.value || !items.some((item) => item.slug === selectedSlug.value)) {
-      selectedSlug.value = items[0].slug
-    }
-  },
-  { immediate: true },
-)
-
 onMounted(() => {
   void loadCatalog()
 })
 </script>
 
 <template>
-  <section class="page-hero">
+  <section class="page-hero create-hero">
     <div class="hero-copy">
       <p class="eyebrow">Create</p>
-      <h1>创造一个人格，先从方法开始。</h1>
-      <p class="hero-text">
-        从自己、已有资料，或关系对象开始，创建一个可以继续完善的人格。
-      </p>
-
-      <div class="hero-metrics">
-        <span class="metric-chip"><strong>{{ totalItemCount }}</strong><span>能力项</span></span>
-        <span class="metric-chip"><strong>{{ groups.length }}</strong><span>能力分组</span></span>
-        <span class="metric-chip"><strong>{{ topZones.length }}</strong><span>主创建区</span></span>
-      </div>
-
-      <div class="hero-actions">
-        <button
-          class="primary-btn"
-          type="button"
-          @click="router.push({ path: '/create/wizard', query: { type: 'self_persona', reset: '1' } })"
-        >
-          创建自我人格
-        </button>
-        <button
-          class="secondary-btn"
-          type="button"
-          @click="router.push({ path: '/create/wizard', query: { type: 'source_persona', reset: '1' } })"
-        >
-          上传资料生成
-        </button>
-      </div>
-
-      <div class="inline-links">
-        <RouterLink class="text-link" to="/seed">去 Seed 选择现成人格</RouterLink>
-        <RouterLink class="text-link" to="/favorites">打开收藏人格</RouterLink>
-        <RouterLink class="text-link" to="/sessions">查看最近会话</RouterLink>
-      </div>
-    </div>
-
-    <div class="hero-band" id="create-rail">
-      <article class="hero-band__card">
-        <p class="eyebrow">创建主线</p>
-        <h3 class="hero-band__title">自我人格、资料创建、关系人格</h3>
-        <p class="hero-band__copy">先选一种创建路径，再开始补充信息。</p>
-      </article>
-
-      <article class="hero-band__card">
-        <p class="eyebrow">当前选择</p>
-        <template v-if="selectedItem">
-          <h3 class="hero-band__title">{{ selectedItem.name }}</h3>
-          <p class="hero-band__copy">{{ selectedItem.description }}</p>
-          <div class="tag-row">
-            <span v-for="mode in selectedInputModes" :key="mode" class="tag-chip">{{ mode }}</span>
-          </div>
-        </template>
-        <template v-else>
-          <h3 class="hero-band__title">请选择一个创建方式</h3>
-          <p class="hero-band__copy">点开下方卡片，就可以进入对应的创建向导。</p>
-        </template>
-      </article>
+      <h1>创造一个人格</h1>
+      <p class="hero-text">从自己、资料，或某种关系开始，创建一个可以继续完善的人格。</p>
     </div>
   </section>
 
-  <section class="section-card">
+  <section class="section-card create-accordion-shell">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Create 路线</p>
-        <h3>先看五条主创建路径，再进入细分能力。</h3>
+        <p class="eyebrow">创建路径</p>
+        <h3>先选一条主路径，再展开里面的内容。</h3>
       </div>
-      <p class="section-note">点击任意卡片，直接进入对应的创建路径。</p>
-    </div>
-
-    <div class="create-mode-grid">
-      <button
-        v-for="zone in topZones"
-        :key="zone.key"
-        class="create-mode-card"
-        type="button"
-        @click="scrollToTarget(zone.target)"
-      >
-        <p class="feature-card__label">{{ zone.key }}</p>
-        <h4>{{ zone.title }}</h4>
-        <p>{{ zone.description }}</p>
-        <div class="create-mode-card__meta">
-          <span class="status-pill">{{ zone.count }} 个模板</span>
-          <span class="text-link">查看分区</span>
-        </div>
-      </button>
-    </div>
-  </section>
-
-  <section class="section-card">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">能力目录</p>
-        <h3>按功能分区展开，每一组都有自己的创建方式。</h3>
-      </div>
-      <p class="section-note">这里展示的是可继续创建的能力入口。</p>
+      <p class="section-note">点击任意卡片，只展开这一组。</p>
     </div>
 
     <div v-if="loading" class="state-panel">
       <p class="eyebrow">加载中</p>
-      <h3>正在读取 Create 能力目录…</h3>
+      <h3>正在读取创建路径…</h3>
     </div>
 
     <div v-else-if="error" class="state-panel">
       <p class="eyebrow">加载失败</p>
-      <h3>Create 目录暂时不可用</h3>
+      <h3>Create 页面暂时不可用</h3>
       <p class="state-copy">{{ error }}</p>
       <button class="primary-btn" type="button" @click="loadCatalog">重试</button>
     </div>
 
-    <div v-else class="create-layout">
-      <div class="create-main">
-        <article
-          v-for="group in groups"
-          :key="group.group"
-          class="create-group"
-          :id="sectionId(group)"
-        >
-          <div class="create-group__head">
-            <div>
-              <p class="eyebrow">创建方式</p>
-              <h3>{{ group.label }}</h3>
-              <p class="section-note">{{ getGroupDescription(group.group) }}</p>
-            </div>
-            <span class="status-pill">{{ group.items.length }} 个入口</span>
+    <div v-else class="create-accordion">
+      <article
+        v-for="section in sectionViews"
+        :key="section.key"
+        class="create-accordion__section"
+        :class="{ active: expandedSection === section.key }"
+      >
+        <button class="create-accordion__trigger" type="button" @click="toggleSection(section.key)">
+          <div>
+            <p class="eyebrow">主路径</p>
+            <h3>{{ section.title }}</h3>
+            <p class="section-note">{{ section.description }}</p>
           </div>
+          <span class="status-pill">{{ section.itemCount }} 个入口</span>
+        </button>
 
-          <div class="create-card-grid">
-            <article
-              v-for="item in group.items"
-              :key="item.slug"
-              class="create-card"
-              :class="{ 'create-card--active': selectedItem?.slug === item.slug }"
-            >
-              <div class="create-card__head">
+        <transition name="accordion-slide">
+          <div v-if="expandedSection === section.key" class="create-accordion__panel">
+            <div v-for="group in section.groups" :key="group.group" class="create-subgroup">
+              <div class="create-subgroup__head">
                 <div>
-                  <p class="persona-category">{{ getGroupLabel(item.group) }}</p>
-                  <h4>{{ item.name }}</h4>
+                  <p class="eyebrow">{{ group.label }}</p>
+                  <h4>{{ group.label }}</h4>
                 </div>
+                <span class="status-pill">{{ group.items.length }} 个入口</span>
               </div>
 
-              <p class="create-card__copy">{{ item.description }}</p>
+              <p class="section-note">{{ group.description }}</p>
 
-              <div class="tag-row">
-                <span v-for="mode in item.input_modes" :key="mode" class="tag-chip">
-                  {{ inputModeLabels[mode] || mode.replace(/_/g, ' ') }}
-                </span>
-              </div>
-
-              <div class="create-card__actions">
-                <button
-                  v-if="canOpenWizard(item)"
-                  class="primary-btn"
-                  type="button"
-                  @click="startCreation(item)"
+              <div class="create-card-grid">
+                <article
+                  v-for="item in group.items"
+                  :key="item.slug"
+                  class="create-card create-card--compact"
                 >
-                  开始创建
-                </button>
-                <button v-else class="ghost-btn" type="button" @click="scrollToTarget(sectionId(group))">
-                  了解更多
-                </button>
-                <button class="ghost-btn" type="button" @click="focusItem(item)">查看说明</button>
+                  <div class="create-card__head">
+                    <div>
+                      <p class="persona-category">{{ group.label }}</p>
+                      <h4>{{ item.name }}</h4>
+                    </div>
+                  </div>
+
+                  <p class="create-card__copy">{{ item.description }}</p>
+
+                  <div class="tag-row">
+                    <span v-for="mode in item.input_modes" :key="mode" class="tag-chip">
+                      {{ inputModeLabels[mode] || mode.replace(/_/g, ' ') }}
+                    </span>
+                  </div>
+
+                  <div class="create-card__actions">
+                    <button
+                      v-if="canOpenWizard(item)"
+                      class="primary-btn"
+                      type="button"
+                      @click="startCreation(item)"
+                    >
+                      开始创建
+                    </button>
+                    <span v-else class="status-pill">更多方式</span>
+                  </div>
+                </article>
               </div>
-            </article>
-          </div>
-        </article>
-      </div>
-
-      <aside class="create-rail">
-        <div class="summary-panel">
-          <p class="eyebrow">创建说明</p>
-          <h3>先选一种创建方式，再开始填写信息。</h3>
-          <p class="state-copy">Create 会带你进入对应的创建向导，后续还能继续补充内容和完善结果。</p>
-
-          <ul class="summary-panel__list">
-            <li><span>主线 1</span><strong>从自己开始</strong></li>
-            <li><span>主线 2</span><strong>从资料或关系开始</strong></li>
-            <li><span>辅助</span><strong>数字分身与隐私保护</strong></li>
-          </ul>
-        </div>
-
-        <div class="summary-panel">
-          <p class="eyebrow">当前选择</p>
-          <template v-if="selectedItem">
-            <h3>{{ selectedItem.name }}</h3>
-            <p class="state-copy">{{ selectedItem.description }}</p>
-            <ul class="summary-panel__list">
-              <li><span>创建类别</span><strong>{{ getGroupLabel(selectedItem.group) }}</strong></li>
-              <li><span>适合输入</span><strong>{{ selectedInputModes.join(' · ') }}</strong></li>
-            </ul>
-            <div class="hero-actions">
-              <button class="primary-btn" type="button" @click="startSelectedCreation">开始创建</button>
-              <RouterLink class="secondary-btn" to="/seed">切到 Seed</RouterLink>
             </div>
-          </template>
-          <template v-else>
-            <h3>等待选择</h3>
-            <p class="state-copy">选中一个创建方式后，这里会显示它的说明和可用输入方式。</p>
-          </template>
-        </div>
-
-        <div class="summary-panel">
-          <p class="eyebrow">下一步</p>
-          <h3>先完成创建，再逐步补充更多能力。</h3>
-          <ul class="summary-panel__list">
-            <li><span>自我</span><strong>先从自己开始</strong></li>
-            <li><span>资料</span><strong>上传后继续完善</strong></li>
-            <li><span>关系</span><strong>从熟悉的对象开始</strong></li>
-            <li><span>保护</span><strong>保留你的边界</strong></li>
-          </ul>
-        </div>
-      </aside>
+          </div>
+        </transition>
+      </article>
     </div>
   </section>
 </template>

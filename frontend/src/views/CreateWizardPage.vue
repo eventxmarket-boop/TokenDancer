@@ -298,10 +298,8 @@ onMounted(() => {
   <section class="page-hero wizard-hero">
     <div class="hero-copy">
       <p class="eyebrow">创建向导</p>
-      <h1>先选类型，再填信息，最后生成一版人格雏形。</h1>
-      <p class="hero-text">
-        按步骤填写信息，先生成一版人格雏形，再继续补充成更贴近你的样子。
-      </p>
+      <h1>开始创建</h1>
+      <p class="hero-text">按步骤填写信息，先生成一版人格雏形，再继续补充成更贴近你的样子。</p>
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ step }}/4</strong><span>当前步骤</span></span>
@@ -314,13 +312,13 @@ onMounted(() => {
       <article class="hero-band__card">
         <p class="eyebrow">创建方式</p>
         <h3 class="hero-band__title">{{ currentTypeLabel }}</h3>
-        <p class="hero-band__copy">Create 页的卡片会把你带到这里，先把流程跑起来，再继续补充更多信息。</p>
+        <p class="hero-band__copy">先把路径选好，再开始填写信息。</p>
       </article>
 
       <article class="hero-band__card">
         <p class="eyebrow">说明</p>
-        <h3 class="hero-band__title">先完成一版可用结果</h3>
-        <p class="hero-band__copy">这一轮先支持自我人格、资料创建、关系人格三类入口。</p>
+        <h3 class="hero-band__title">先生成一版可继续完善的结果</h3>
+        <p class="hero-band__copy">你可以从自己、资料或关系开始。</p>
       </article>
     </div>
   </section>
@@ -573,7 +571,7 @@ onMounted(() => {
 
         <div class="summary-panel">
           <p class="eyebrow">当前支持</p>
-          <h3>三种创建方式已经可用。</h3>
+          <h3>从自己、资料或关系开始。</h3>
           <ul class="summary-panel__list">
             <li><span>1</span><strong>从自己开始</strong></li>
             <li><span>2</span><strong>从资料开始</strong></li>

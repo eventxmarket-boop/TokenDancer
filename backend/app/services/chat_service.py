@@ -15,6 +15,9 @@ from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
 
 
+CONTEXT_HISTORY_LIMIT = 20
+
+
 class ChatServiceError(RuntimeError):
     pass
 
@@ -151,7 +154,7 @@ def _get_or_create_session(db: Session, persona_slug: str, session_id: str | Non
     return session
 
 
-def _load_recent_history(db: Session, session_id: str, limit: int = 12) -> list[dict[str, str]]:
+def _load_recent_history(db: Session, session_id: str, limit: int = CONTEXT_HISTORY_LIMIT) -> list[dict[str, str]]:
     rows = (
         db.query(ChatMessage)
         .filter(ChatMessage.session_id == session_id)
@@ -160,6 +163,23 @@ def _load_recent_history(db: Session, session_id: str, limit: int = 12) -> list[
     )
     recent_rows = rows[-limit:] if limit > 0 else rows
     return [{"role": row.role, "content": row.content} for row in recent_rows]
+
+
+def summarize_older_messages(messages: list[dict[str, str]]) -> str | None:
+    # Reserved for a future summary layer; the current release still relies on recent-turn context.
+    if not messages:
+        return None
+    return None
+
+
+def build_context_messages(
+    persona: dict[str, object],
+    history: list[dict[str, str]],
+    user_message: str,
+) -> list[dict[str, str]]:
+    recent_history = history[-CONTEXT_HISTORY_LIMIT:] if CONTEXT_HISTORY_LIMIT > 0 else history
+    _ = summarize_older_messages(history[:-CONTEXT_HISTORY_LIMIT]) if len(history) > CONTEXT_HISTORY_LIMIT else None
+    return build_chat_messages(persona, recent_history, user_message)
 
 
 def _serialize_message(row: ChatMessage) -> dict[str, object]:
@@ -328,14 +348,14 @@ async def chat_with_persona(
         raise ChatServiceError("消息内容不能为空")
 
     session = _get_or_create_session(db, persona_slug, session_id)
-    history = _load_recent_history(db, session.session_id, limit=12)
+    history = _load_recent_history(db, session.session_id, limit=CONTEXT_HISTORY_LIMIT)
     if not (session.title or "").strip():
         first_user_message = next(
             (message["content"] for message in history if message.get("role") == "user" and str(message.get("content", "")).strip()),
             normalized_message,
         )
         session.title = _build_session_title(persona_name, first_user_message)
-    messages = build_chat_messages(persona, history, normalized_message)
+    messages = build_context_messages(persona, history, normalized_message)
 
     try:
         reply = await generate_reply(messages, db=db)

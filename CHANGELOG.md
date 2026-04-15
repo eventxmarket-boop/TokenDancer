@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.7 - 2026-04-16
+
+- Simplified the homepage subtitle to a single line and made the two central stickers interactive entry points.
+- Reworked the Create landing into five collapsible main paths instead of a flat catalog board.
+- Cleaned up Create wizard and result page language so they read more like product flows.
+- Raised the chat context window from 12 turns to 20 and split out the context assembly entry point for future summarization.
+
 ## V1.4.6 - 2026-04-16
 
 - Simplified the homepage subtitle so it now reads as a single concise product statement.

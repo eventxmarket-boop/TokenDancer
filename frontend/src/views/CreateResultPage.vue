@@ -193,27 +193,27 @@ watch(
         </article>
 
         <article class="draft-card">
-          <p class="eyebrow">Profile</p>
+          <p class="eyebrow">定位</p>
           <pre class="draft-preview">{{ editableDraft.profile }}</pre>
         </article>
 
         <article class="draft-card">
-          <p class="eyebrow">Mindset</p>
+          <p class="eyebrow">思考方式</p>
           <pre class="draft-preview">{{ editableDraft.mindset }}</pre>
         </article>
 
         <article class="draft-card">
-          <p class="eyebrow">Heuristics</p>
+          <p class="eyebrow">判断规则</p>
           <pre class="draft-preview">{{ editableDraft.heuristics }}</pre>
         </article>
 
         <article class="draft-card">
-          <p class="eyebrow">Expression</p>
+          <p class="eyebrow">表达风格</p>
           <pre class="draft-preview">{{ editableDraft.expression }}</pre>
         </article>
 
         <article class="draft-card">
-          <p class="eyebrow">Guardrails</p>
+          <p class="eyebrow">边界</p>
           <pre class="draft-preview">{{ editableDraft.guardrails }}</pre>
         </article>
       </div>
