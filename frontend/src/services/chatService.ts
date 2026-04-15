@@ -9,6 +9,7 @@ export type ChatUsage = {
 export type ChatResponse = {
   session_id: string
   persona_slug: string
+  title: string
   reply: string
   model: string
   usage: ChatUsage
@@ -29,7 +30,16 @@ export type ChatMessageRecord = {
 export type ChatSessionDetail = {
   session_id: string
   persona_slug: string
+  title: string
   messages: ChatMessageRecord[]
+}
+
+export type RecentSessionSummary = {
+  id: string
+  persona_slug: string
+  persona_name: string
+  title: string
+  updated_at: string
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
@@ -99,4 +109,9 @@ export async function loadLatestPersonaSession(personaSlug: string): Promise<Cha
     return null
   }
   return readJson<ChatSessionDetail>(response)
+}
+
+export async function loadRecentSessions(limit = 10): Promise<RecentSessionSummary[]> {
+  const response = await fetch(`${API_PREFIX}/sessions/recent?limit=${encodeURIComponent(String(limit))}`)
+  return readJson<RecentSessionSummary[]>(response)
 }

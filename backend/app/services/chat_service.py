@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from dataclasses import dataclass
 from uuid import uuid4
@@ -10,7 +11,7 @@ from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.base_mixins import utcnow
 from app.services.llm_gateway import generate_reply
-from app.services.persona_loader import load_persona_skill
+from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
 
 
@@ -26,6 +27,7 @@ class PersonaNotFoundError(ChatServiceError):
 class ChatResult:
     session_id: str
     persona_slug: str
+    title: str
     reply: str
     model: str
     usage: dict[str, int]
@@ -35,6 +37,7 @@ class ChatResult:
         return {
             "session_id": self.session_id,
             "persona_slug": self.persona_slug,
+            "title": self.title,
             "reply": self.reply,
             "model": self.model,
             "usage": self.usage,
@@ -64,6 +67,55 @@ class ChatMessageRecord:
             "latency_ms": self.latency_ms,
             "created_at": self.created_at,
         }
+
+
+@dataclass(slots=True)
+class RecentSessionRecord:
+    id: str
+    persona_slug: str
+    persona_name: str
+    title: str
+    updated_at: datetime
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "persona_slug": self.persona_slug,
+            "persona_name": self.persona_name,
+            "title": self.title,
+            "updated_at": self.updated_at,
+        }
+
+
+def _build_session_title(persona_name: str, source_text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", source_text or "").strip()
+    cleaned = cleaned.strip("。！？!?.,，；;：:、/\\|·`~\"' ")
+
+    fallback = f"{persona_name}对话" if persona_name.strip() else "新会话"
+    if not cleaned:
+        return fallback
+
+    title = cleaned[:18]
+    if len(cleaned) > 18:
+        title = title.rstrip("。！？!?.,，；;：:、/\\|·`~\"' ") + "…"
+
+    return title if len(title) >= 4 else fallback
+
+
+def _resolve_session_title(
+    session: ChatSession,
+    *,
+    persona_name: str | None = None,
+    first_user_message: str | None = None,
+) -> str:
+    title = (session.title or "").strip()
+    if title:
+        return title
+
+    return _build_session_title(
+        persona_name or session.persona_slug,
+        first_user_message or "",
+    )
 
 
 def _get_or_create_session(db: Session, persona_slug: str, session_id: str | None) -> ChatSession:
@@ -142,9 +194,20 @@ def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] |
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         .all()
     )
+    persona_summary = load_persona_summary(session.persona_slug) or {}
+    persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
+    first_user_message = next(
+        (row.content for row in rows if row.role == "user" and row.content.strip()),
+        "",
+    )
     return {
         "session_id": session.session_id,
         "persona_slug": session.persona_slug,
+        "title": _resolve_session_title(
+            session,
+            persona_name=persona_name,
+            first_user_message=first_user_message,
+        ),
         "messages": [_serialize_message(row) for row in rows],
     }
 
@@ -163,6 +226,54 @@ def get_latest_chat_session_for_persona(db: Session, persona_slug: str) -> dict[
     if session is None:
         return None
     return get_chat_session_detail(db, session.session_id)
+
+
+def get_recent_chat_sessions(db: Session, limit: int = 10) -> list[dict[str, object]]:
+    normalized_limit = max(1, min(int(limit or 10), 50))
+    sessions = (
+        db.query(ChatSession)
+        .order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc())
+        .limit(normalized_limit)
+        .all()
+    )
+
+    summaries: list[dict[str, object]] = []
+    for session in sessions:
+        has_messages = (
+            db.query(ChatMessage.id)
+            .filter(ChatMessage.session_id == session.session_id)
+            .first()
+        )
+        if has_messages is None:
+            continue
+
+        persona_summary = load_persona_summary(session.persona_slug) or {}
+        persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
+        first_user = (
+            db.query(ChatMessage.content)
+            .filter(
+                ChatMessage.session_id == session.session_id,
+                ChatMessage.role == "user",
+            )
+            .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
+            .first()
+        )
+        first_user_message = str(first_user[0]).strip() if first_user and first_user[0] else ""
+        summaries.append(
+            RecentSessionRecord(
+                id=session.session_id,
+                persona_slug=session.persona_slug,
+                persona_name=persona_name,
+                title=_resolve_session_title(
+                    session,
+                    persona_name=persona_name,
+                    first_user_message=first_user_message,
+                ),
+                updated_at=session.updated_at,
+            ).as_dict()
+        )
+
+    return summaries
 
 
 def _persist_messages(
@@ -209,12 +320,21 @@ async def chat_with_persona(
     if persona is None:
         raise PersonaNotFoundError(f"Persona not found: {persona_slug}")
 
+    persona_meta = persona.get("meta") or {}
+    persona_name = str(persona_meta.get("name") or persona_slug).strip()
+
     normalized_message = user_message.strip()
     if not normalized_message:
         raise ChatServiceError("消息内容不能为空")
 
     session = _get_or_create_session(db, persona_slug, session_id)
     history = _load_recent_history(db, session.session_id, limit=12)
+    if not (session.title or "").strip():
+        first_user_message = next(
+            (message["content"] for message in history if message.get("role") == "user" and str(message.get("content", "")).strip()),
+            normalized_message,
+        )
+        session.title = _build_session_title(persona_name, first_user_message)
     messages = build_chat_messages(persona, history, normalized_message)
 
     try:
@@ -229,6 +349,7 @@ async def chat_with_persona(
     return ChatResult(
         session_id=session.session_id,
         persona_slug=persona_slug,
+        title=(session.title or "").strip(),
         reply=str(reply.get("content", "")).strip(),
         model=str(reply.get("model", "")).strip(),
         usage=reply.get("usage", {}) if isinstance(reply.get("usage", {}), dict) else {

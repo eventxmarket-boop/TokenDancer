@@ -17,6 +17,7 @@ class ChatUsage(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     persona_slug: str
+    title: str = ""
     reply: str
     model: str
     usage: ChatUsage
@@ -42,4 +43,13 @@ class ChatMessageRecord(BaseModel):
 class ChatSessionDetailResponse(BaseModel):
     session_id: str
     persona_slug: str
+    title: str = ""
     messages: list[ChatMessageRecord] = Field(default_factory=list)
+
+
+class RecentSessionSummary(BaseModel):
+    id: str
+    persona_slug: str
+    persona_name: str
+    title: str
+    updated_at: datetime

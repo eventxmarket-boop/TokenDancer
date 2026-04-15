@@ -7,6 +7,7 @@ from app.schemas.chat import (
     ChatResponse,
     ChatSessionClearResponse,
     ChatSessionDetailResponse,
+    RecentSessionSummary,
 )
 from app.services.chat_service import (
     ChatServiceError,
@@ -15,6 +16,7 @@ from app.services.chat_service import (
     clear_chat_session,
     get_chat_session_detail,
     get_latest_chat_session_for_persona,
+    get_recent_chat_sessions,
 )
 from app.services.llm_gateway import LLMGatewayError
 from app.services.persona_loader import PersonaLoadError
@@ -48,6 +50,14 @@ def persona_chat_clear(session_id: str, db: Session = Depends(get_db)):
     except ChatServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ChatSessionClearResponse(session_id=new_session_id)
+
+
+@router.get("/persona-api/sessions/recent", response_model=list[RecentSessionSummary])
+def persona_recent_sessions(limit: int = 10, db: Session = Depends(get_db)):
+    try:
+        return get_recent_chat_sessions(db, limit=limit)
+    except ChatServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/persona-api/sessions/{session_id}", response_model=ChatSessionDetailResponse)

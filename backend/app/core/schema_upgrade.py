@@ -27,6 +27,9 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
         "key_switch_count": "INTEGER DEFAULT 0",
         "failure_chain_summary": "TEXT NULL",
     },
+    "chat_sessions": {
+        "title": "VARCHAR(120) NULL",
+    },
 }
 
 

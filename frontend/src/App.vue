@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const navItems = [
   { to: '/', label: '首页' },
-  { to: '/chat/paul_graham', label: '对话' },
+  { to: '/sessions', label: '最近会话' },
   { to: '/me', label: '我的' },
 ]
 </script>

@@ -52,6 +52,14 @@
 - Redirected the app root `/` to `/persona/` so the main site no longer falls through to the backend 404.
 - Kept the `/persona/` and `/persona-api/` subpath deployment model unchanged.
 
+## V1.3.0 - 2026-04-15
+
+- Deepened the `zhang_xue_feng` and `sun_justin` persona skill packs with richer mindset, heuristics, expression, examples, and guardrails.
+- Added a `title` field to `chat_sessions` and generated short titles from the first user message.
+- Added `GET /persona-api/sessions/recent` and a new recent sessions page for continuing prior conversations.
+- Connected the homepage and Me page to real recent-session data instead of static placeholders.
+- Strengthened the shared prompt constraints so replies emphasize judgment order, conditions, tradeoffs, and next steps.
+
 ## V1.2.7 - 2026-04-15
 
 - Hid recommended prompts after the first real message so they only appear in an empty conversation.

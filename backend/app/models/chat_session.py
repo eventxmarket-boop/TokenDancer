@@ -16,6 +16,7 @@ class ChatSession(Base):
 
     session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     persona_slug: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow

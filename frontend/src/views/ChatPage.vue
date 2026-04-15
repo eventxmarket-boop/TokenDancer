@@ -29,6 +29,7 @@ const chatError = ref('')
 const sessionId = ref('')
 
 const personaId = computed(() => String(route.params.id || ''))
+const sessionRouteId = computed(() => String(route.query.session_id || '').trim())
 const conversationMessages = computed(() =>
   messages.value.filter((message) => message.role === 'user' || message.role === 'assistant'),
 )
@@ -102,9 +103,10 @@ const loadConversation = async (id: string) => {
     }
 
     persona.value = loaded
+    const routeSessionId = sessionRouteId.value
     const storedSessionId = sessionStorage.getItem(sessionStorageKey(loaded.slug)) || ''
     const sessionIndex = readSessionIndex()
-    sessionId.value = storedSessionId || sessionIndex[loaded.slug] || ''
+    sessionId.value = routeSessionId || storedSessionId || sessionIndex[loaded.slug] || ''
 
     if (!sessionId.value) {
       const latestSession = await loadLatestPersonaSession(loaded.slug)
@@ -159,7 +161,7 @@ onMounted(() => {
   void loadConversation(personaId.value)
 })
 
-watch(personaId, (id) => {
+watch([personaId, sessionRouteId], ([id]) => {
   void loadConversation(id)
 })
 

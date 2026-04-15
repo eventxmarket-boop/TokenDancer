@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { loadRecentSessions, type RecentSessionSummary } from '@/services/chatService'
 import { listPersonas, type Persona } from '@/services/personaService'
 
 const personas = ref<Persona[]>([])
+const recentSessions = ref<RecentSessionSummary[]>([])
 const loading = ref(true)
+const recentLoading = ref(true)
 const error = ref('')
 
 const spotlight = computed(() => personas.value[0] ?? null)
+const sessionLink = (session: RecentSessionSummary) => ({
+  path: `/chat/${session.persona_slug}`,
+  query: { session_id: session.id },
+})
 
 const load = async () => {
   loading.value = true
@@ -23,8 +30,20 @@ const load = async () => {
   }
 }
 
+const loadRecent = async () => {
+  recentLoading.value = true
+  try {
+    recentSessions.value = await loadRecentSessions(3)
+  } catch {
+    recentSessions.value = []
+  } finally {
+    recentLoading.value = false
+  }
+}
+
 onMounted(() => {
   void load()
+  void loadRecent()
 })
 </script>
 
@@ -100,6 +119,42 @@ onMounted(() => {
           <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊天</RouterLink>
         </div>
       </article>
+    </div>
+  </section>
+
+  <section class="section-card">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">继续最近对话</p>
+        <h3>从上次聊到的位置继续。</h3>
+      </div>
+      <RouterLink class="text-link" to="/sessions">查看全部</RouterLink>
+    </div>
+
+    <div v-if="recentLoading" class="state-panel">
+      <p class="eyebrow">加载中</p>
+      <h3>正在读取最近会话…</h3>
+    </div>
+
+    <div v-else-if="recentSessions.length" class="recent-session-grid">
+      <RouterLink
+        v-for="session in recentSessions"
+        :key="session.id"
+        class="recent-session-card"
+        :to="sessionLink(session)"
+      >
+        <div class="recent-session-card__head">
+          <p class="persona-category">{{ session.persona_name }}</p>
+          <span class="recent-session-card__time">{{ new Date(session.updated_at).toLocaleString() }}</span>
+        </div>
+        <h4>{{ session.title }}</h4>
+        <p class="state-copy">{{ session.persona_slug }}</p>
+      </RouterLink>
+    </div>
+
+    <div v-else class="state-panel">
+      <p class="eyebrow">暂无最近会话</p>
+      <h3>开始一次聊天后，这里会出现继续入口。</h3>
     </div>
   </section>
 </template>

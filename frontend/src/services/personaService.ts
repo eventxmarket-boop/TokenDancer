@@ -52,11 +52,3 @@ export async function loadPersona(id: string): Promise<Persona | null> {
   }
   return readJson<Persona>(response)
 }
-
-export function getRecentSessionCards() {
-  return [
-    { personaId: 'zhang_xue_feng', title: '专业与就业怎么选？', time: '今天 09:12' },
-    { personaId: 'sun_justin', title: '一个项目怎么讲更有话题？', time: '昨天 18:40' },
-    { personaId: 'zhang_xue_feng', title: '现实约束下怎么做判断？', time: '昨天 12:08' },
-  ]
-}
