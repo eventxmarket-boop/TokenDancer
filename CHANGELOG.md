@@ -1,5 +1,9 @@
 # Changelog
 
+## V1.0.2 - 2026-04-15
+
+- Made backend deployment skip legacy Alembic migrations by default so the persona station can be deployed against the current lightweight backend entrypoint.
+
 ## V1.0.1 - 2026-04-15
 
 - Fixed the backend deployment script to use the project virtual environment when installing Python dependencies, avoiding the server's externally managed system Python.

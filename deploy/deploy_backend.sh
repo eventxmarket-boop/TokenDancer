@@ -15,7 +15,7 @@ fi
 
 "${PYTHON_BIN}" -m pip install -r requirements.txt
 
-if [ -f alembic.ini ]; then
+if [ "${RUN_MIGRATIONS:-0}" = "1" ] && [ -f alembic.ini ]; then
   "${PYTHON_BIN}" -m alembic upgrade head
 fi
 
