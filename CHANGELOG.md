@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.1 - 2026-04-16
+
+- Reworked the frontend into a more product-like landing experience with stronger visual hierarchy and spacing.
+- Split the product into clearer `Seed`, `Create`, and `Favorites` entry pages while keeping recent sessions accessible.
+- Upgraded page typography, card rhythm, and hero layouts so the interface feels more intentional and less flat.
+- Refined the homepage to emphasize the two core product lines first, then surfaced curated personas and recent sessions.
+
 ## V1.4.0 - 2026-04-16
 
 - Added a Seed selection page for browsing normalized persona packs from the curated seed layer.

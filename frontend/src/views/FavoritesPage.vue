@@ -48,32 +48,56 @@ const clearFavorites = () => {
   refreshFavorites()
 }
 
+const groups = computed(() => {
+  const map = new Map<string, Persona[]>()
+
+  for (const persona of favoritePersonas.value) {
+    const key = persona.seedGroup?.trim() || persona.category || '收藏'
+    const bucket = map.get(key) || []
+    bucket.push(persona)
+    map.set(key, bucket)
+  }
+
+  return Array.from(map.entries()).map(([group, items]) => ({ group, items }))
+})
+
 onMounted(() => {
   void load()
 })
 </script>
 
 <template>
-  <section class="hero-card">
+  <section class="page-hero">
     <div class="hero-copy">
       <p class="eyebrow">Favorites</p>
-      <h2>收藏常用人格，后面继续聊更顺手。</h2>
+      <h1>把常用人格收藏起来，后面继续聊更顺手。</h1>
       <p class="hero-text">
-        这里保存的是你在本地浏览器里收藏的人格。常用的视角可以先收进来，之后从这里直接进入详情或聊天。
+        收藏页保存的是你在本地浏览器里最常用的视角。常聊的人格不需要每次重新找，点一下就能回到详情或聊天。
       </p>
+
+      <div class="hero-metrics">
+        <span class="metric-chip"><strong>{{ favoritePersonas.length }}</strong><span>已收藏</span></span>
+        <span class="metric-chip"><strong>{{ groups.length }}</strong><span>收藏分组</span></span>
+      </div>
+
       <div class="hero-actions">
-        <RouterLink class="primary-btn" to="/seed">去 Seed 选人格</RouterLink>
+        <RouterLink class="primary-btn" to="/seed">去 Seed 继续收藏</RouterLink>
         <RouterLink class="secondary-btn" to="/create">创造自我人格</RouterLink>
       </div>
     </div>
 
-    <div class="hero-visual favorites-visual">
-      <div class="floating-orb"></div>
-      <div class="spotlight-card">
-        <p class="spotlight-card__label">本地收藏</p>
-        <h3>{{ favoritePersonas.length }} 个人格</h3>
-        <p>收藏状态不需要登录，先把产品闭环跑顺。</p>
-      </div>
+    <div class="hero-band">
+      <article class="hero-band__card">
+        <p class="eyebrow">本地存储</p>
+        <h3 class="hero-band__title">不需要登录也能记住收藏</h3>
+        <p class="hero-band__copy">收藏状态先存浏览器本地，产品闭环更轻，也更适合当前阶段。</p>
+      </article>
+
+      <article class="hero-band__card">
+        <p class="eyebrow">快捷动作</p>
+        <h3 class="hero-band__title">直接进详情 / 直接开聊</h3>
+        <p class="hero-band__copy">收藏页不是终点，而是一个复用入口，帮助你更快回到常聊人格。</p>
+      </article>
     </div>
   </section>
 
@@ -81,7 +105,7 @@ onMounted(() => {
     <div class="section-head">
       <div>
         <p class="eyebrow">收藏列表</p>
-        <h3>只保留你常用的视角。</h3>
+        <h3>按分组查看你常用的视角。</h3>
       </div>
       <div class="hero-actions">
         <RouterLink class="text-link" to="/seed">继续收藏</RouterLink>
@@ -101,35 +125,46 @@ onMounted(() => {
       <button class="primary-btn" type="button" @click="load">重试</button>
     </div>
 
-    <div v-else-if="!favoritePersonas.length" class="state-panel">
-      <p class="eyebrow">暂无收藏</p>
+    <div v-else-if="!favoritePersonas.length" class="empty-panel">
+      <div class="empty-panel__icon">♡</div>
       <h3>你还没有收藏过人格。</h3>
-      <p class="state-copy">去 Seed 页面点一下收藏，常用人格就会出现在这里。</p>
+      <p class="empty-panel__copy">去 Seed 页面点一下收藏，常用人格就会出现在这里。</p>
+      <RouterLink class="primary-btn" to="/seed">去 Seed 选择人格</RouterLink>
     </div>
 
-    <div v-else class="persona-grid">
-      <article v-for="persona in favoritePersonas" :key="persona.slug" class="persona-card">
-        <div class="persona-card__top">
-          <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
-          <div class="persona-card__meta">
-            <p class="persona-category">{{ persona.seedGroup || persona.category }}</p>
-            <h4>{{ persona.name }}</h4>
-            <p class="persona-intro">{{ persona.intro }}</p>
+    <div v-else class="group-stack">
+      <article v-for="group in groups" :key="group.group" class="seed-group">
+        <div class="seed-group__head">
+          <div>
+            <p class="eyebrow">收藏分组</p>
+            <h3>{{ group.group }}</h3>
           </div>
+          <span class="status-pill">{{ group.items.length }} 个</span>
         </div>
 
-        <div class="tag-row">
-          <span v-for="tag in persona.tags" :key="tag" class="tag-chip">{{ tag }}</span>
-        </div>
+        <div class="persona-grid">
+          <article v-for="persona in group.items" :key="persona.slug" class="persona-card persona-card--featured">
+            <div class="persona-card__top">
+              <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
+              <div class="persona-card__meta">
+                <p class="persona-category">{{ persona.seedSource || persona.category }}</p>
+                <h4>{{ persona.name }}</h4>
+                <p class="persona-intro">{{ persona.intro }}</p>
+              </div>
+            </div>
 
-        <div class="persona-card__foot">
-          <div class="persona-actions persona-actions--stack">
-            <RouterLink class="text-link" :to="`/character/${persona.slug}`">查看详情</RouterLink>
-            <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊天</RouterLink>
-            <button class="chip-btn chip-btn--active" type="button" @click="toggleFavorite(persona.slug)">
-              取消收藏
-            </button>
-          </div>
+            <div class="tag-row">
+              <span v-for="tag in persona.tags" :key="tag" class="tag-chip">{{ tag }}</span>
+            </div>
+
+            <div class="persona-actions persona-actions--stack">
+              <RouterLink class="text-link" :to="`/character/${persona.slug}`">查看详情</RouterLink>
+              <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊天</RouterLink>
+              <button class="chip-btn chip-btn--active" type="button" @click="toggleFavorite(persona.slug)">
+                取消收藏
+              </button>
+            </div>
+          </article>
         </div>
       </article>
     </div>

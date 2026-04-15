@@ -1,5 +1,19 @@
 :root {
   color-scheme: light;
+  --font-sans:
+    "Avenir Next",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Segoe UI",
+    sans-serif;
+  --font-display:
+    "Iowan Old Style",
+    "Baskerville",
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Songti SC",
+    serif;
   --bg: #fff8f2;
   --bg-strong: #fff2ea;
   --panel: rgba(255, 255, 255, 0.86);
@@ -29,17 +43,21 @@ body,
 body {
   margin: 0;
   color: var(--text);
-  font-family:
-    "Avenir Next",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans SC",
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
   background:
     radial-gradient(circle at top left, rgba(255, 185, 171, 0.45), transparent 28%),
     radial-gradient(circle at 85% 12%, rgba(204, 169, 255, 0.2), transparent 22%),
     linear-gradient(180deg, #fff9f4 0%, #fff6f0 55%, #fff1e7 100%);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -128,7 +146,15 @@ textarea {
 .hero-card h2,
 .section-card h3,
 .detail-card h2,
-.chat-panel h2 {
+.chat-panel h2,
+.page-hero h1,
+.page-hero h2,
+.page-hero h3,
+.feature-panel h3,
+.feature-panel h4,
+.persona-card h4,
+.session-card h4,
+.create-module h4 {
   margin: 0;
 }
 
@@ -182,10 +208,66 @@ textarea {
   border-radius: var(--radius-xl);
 }
 
+.page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+  gap: 20px;
+  padding: 30px;
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 15% 25%, rgba(255, 222, 212, 0.82), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(221, 201, 255, 0.4), transparent 22%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.84), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(220, 180, 161, 0.16);
+  box-shadow: 0 24px 60px rgba(184, 127, 101, 0.14);
+}
+
 .hero-copy {
   display: grid;
   gap: 16px;
   align-content: center;
+}
+
+.page-hero .hero-copy {
+  gap: 18px;
+}
+
+.page-hero__eyebrow,
+.page-hero .eyebrow {
+  color: #c35e49;
+}
+
+.page-hero h1,
+.page-hero h2 {
+  font-size: clamp(2.3rem, 4.6vw, 4.4rem);
+  line-height: 1.02;
+}
+
+.page-hero .hero-text {
+  max-width: 56ch;
+  font-size: 1.04rem;
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(184, 143, 118, 0.14);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.metric-chip strong {
+  color: var(--accent-deep);
 }
 
 .hero-text,
@@ -343,6 +425,44 @@ textarea {
   gap: 14px;
 }
 
+.hero-band {
+  display: grid;
+  gap: 14px;
+}
+
+.hero-band__card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+  box-shadow: 0 14px 32px rgba(176, 119, 97, 0.1);
+}
+
+.hero-band__card::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 159, 138, 0.28), rgba(227, 209, 255, 0.35));
+}
+
+.hero-band__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.hero-band__copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .primary-btn,
 .secondary-btn,
 .ghost-btn,
@@ -465,6 +585,10 @@ textarea {
   margin-top: 18px;
 }
 
+.feature-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .feature-card {
   display: grid;
   gap: 10px;
@@ -475,6 +599,11 @@ textarea {
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease;
+}
+
+.feature-card--large {
+  min-height: 220px;
+  padding: 22px;
 }
 
 .feature-card:hover {
@@ -502,6 +631,10 @@ textarea {
   margin-top: 18px;
 }
 
+.group-stack--dense {
+  margin-top: 0;
+}
+
 .seed-group {
   display: grid;
   gap: 16px;
@@ -516,6 +649,55 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.seed-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.seed-main,
+.seed-side {
+  display: grid;
+  gap: 16px;
+}
+
+.seed-side {
+  position: sticky;
+  top: 18px;
+}
+
+.summary-panel {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+}
+
+.summary-panel h3,
+.summary-panel h4 {
+  margin: 0;
+}
+
+.summary-panel__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-panel__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(184, 143, 118, 0.12);
+  color: var(--muted);
 }
 
 .persona-card__top {
@@ -533,6 +715,11 @@ textarea {
 .persona-card__foot {
   display: grid;
   gap: 12px;
+}
+
+.persona-card--featured {
+  padding: 20px;
+  box-shadow: 0 18px 38px rgba(176, 119, 97, 0.1);
 }
 
 .section-head,
@@ -830,11 +1017,106 @@ textarea {
   margin-top: 18px;
 }
 
+.session-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.14fr) minmax(280px, 0.86fr);
+  gap: 18px;
+}
+
+.session-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.session-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.session-card--compact {
+  padding: 14px;
+  gap: 10px;
+}
+
+.session-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(176, 119, 97, 0.12);
+}
+
+.session-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.session-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.session-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.session-card__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.empty-panel {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 28px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(220, 180, 161, 0.18);
+  text-align: center;
+}
+
+.empty-panel__icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 159, 138, 0.95), rgba(255, 224, 217, 0.95));
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow: 0 16px 28px rgba(234, 127, 102, 0.18);
+}
+
+.empty-panel__copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 40ch;
+}
+
 .create-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
+}
+
+.create-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .create-module {
@@ -867,6 +1149,10 @@ textarea {
   display: grid;
   gap: 12px;
   margin-top: 18px;
+}
+
+.roadmap-list--stacked {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .roadmap-step {
@@ -904,6 +1190,19 @@ textarea {
   color: var(--muted);
 }
 
+.persona-hero-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(184, 143, 118, 0.16);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .mobile-nav {
   position: fixed;
   left: 50%;
@@ -921,10 +1220,13 @@ textarea {
 }
 
 @media (max-width: 900px) {
+  .page-hero,
   .hero-card,
   .detail-layout,
   .chat-layout,
-  .profile-layout {
+  .profile-layout,
+  .seed-layout,
+  .session-layout {
     grid-template-columns: 1fr;
   }
 
@@ -948,6 +1250,10 @@ textarea {
   .form-grid {
     grid-template-columns: 1fr;
   }
+
+  .seed-side {
+    position: static;
+  }
 }
 
 @media (max-width: 640px) {
@@ -961,6 +1267,7 @@ textarea {
 
   .hero-card,
   .section-card,
+  .page-hero,
   .detail-card,
   .chat-panel {
     padding: 18px;
