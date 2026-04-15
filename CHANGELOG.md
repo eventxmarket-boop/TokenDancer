@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.5 - 2026-04-16
+
+- Reworked the homepage into a minimal entry screen with two central stickers and two primary actions.
+- Kept the top-right text navigation visible for Home, Seed, Favorites, Create, and Me.
+- Removed the homepage's previous flat content sections so the layout feels more focused and less crowded.
+- Tightened the homepage's visual hierarchy so the page reads like an entry point, not a content board.
+
 ## V1.4.4 - 2026-04-16
 
 - Cleaned up Create-facing frontend copy so it reads like a normal product page instead of a development screen.
