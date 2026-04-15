@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.15 - 2026-04-16
+
+- Switched the `zhang_xue_feng` research provider to a Baidu-first flow for Chinese education scenarios.
+- Added Chinese education query normalization, results ranking, and concise facts-summary generation.
+- Kept `stub`, `baidu`, and `custom` provider modes while removing DuckDuckGo from the primary path.
+- Strengthened official-source priority and graceful fallback behavior when research returns no reliable facts.
+
 ## V1.4.14 - 2026-04-16
 
 - Added a research-first split for the `zhang_xue_feng` persona so education and career questions can be classified before answering.
