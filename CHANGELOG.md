@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.40 - 2026-04-16
+
+- Reverted the Me page from stacked cards back to a flat three-card layout.
+- Kept the hover feedback but removed the overlap and lift behavior that made the personal-center entries feel inconsistent.
+- Preserved the same three entries while simplifying the interaction model.
+
 ## V1.4.39 - 2026-04-16
 
 - Strengthened the Favorites card lift and click response so all three Me page cards now feel interactive.
