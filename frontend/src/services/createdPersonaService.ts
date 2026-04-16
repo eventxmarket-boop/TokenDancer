@@ -7,6 +7,7 @@ export type CreatedPersonaSummary = {
   slug: string
   name: string
   persona_type: string
+  family_subtype?: string
   summary: string
   status: string
   source_type: string

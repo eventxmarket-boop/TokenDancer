@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.33 - 2026-04-16
+
+- Fixed the frontend type definitions so family companion `family_subtype` is accepted by the create wizard and my-seeds / result surfaces.
+- Kept the self-persona display normalization in place so the create flow continues to show `自我主线` instead of reintroducing `我的人格`.
+- This is a follow-up deployment fix after the `V1.4.32` UI label cleanup.
+
 ## V1.4.32 - 2026-04-16
 
 - Unified the visible self-persona display labels across the create flow so the first-load UI no longer reintroduces `我的人格` from query defaults or older saved labels.

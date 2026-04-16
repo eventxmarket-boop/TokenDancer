@@ -11,6 +11,7 @@ export type CreateWizardPayload = {
   display_name: string
   create_mode: string
   input_mode: string
+  family_subtype?: string
   input_modes: string[]
   schema_key: string
   form_data: Record<string, unknown>
@@ -26,6 +27,7 @@ export type CreateWizardDraftMeta = {
   create_type: string
   create_mode: string
   input_mode: string
+  family_subtype: string
   input_modes: string[]
   group: string
   display_name: string
@@ -217,6 +219,7 @@ export type CreateWizardDraft = {
   expression: string
   guardrails: string
   relationship_type?: string
+  family_subtype?: string
   raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | Record<string, unknown> | null
   emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
