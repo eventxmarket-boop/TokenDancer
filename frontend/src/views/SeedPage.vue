@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { loadSeedPersonas, type Persona } from '@/services/personaService'
 import { getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
 
@@ -10,6 +10,21 @@ const favoriteSlugs = ref<string[]>(getFavoriteSlugs())
 const listSectionRef = ref<HTMLElement | null>(null)
 const featuredSectionRef = ref<HTMLElement | null>(null)
 const groupSectionRef = ref<HTMLElement | null>(null)
+const featuredExpanded = ref(false)
+
+const displayLabelMap: Record<string, string> = {
+  self: '我的人格',
+  source: '从资料创建',
+  work: '职场关系',
+  intimate: '亲密关系',
+  family: '家人陪伴',
+  digital_twin: '数字分身',
+  protection: '防护',
+  relationship_workplace: '职场关系',
+  relationship_academia: '校园关系',
+  relationship_intimate: '亲密关系',
+  relationship_family: '家人陪伴',
+}
 
 const refreshFavorites = () => {
   favoriteSlugs.value = getFavoriteSlugs()
@@ -48,14 +63,37 @@ const featuredPersonas = computed(() => seedPersonas.value.filter((persona) => p
 
 const isFavorite = (slug: string) => favoriteSet.value.has(slug)
 
-const scrollToSection = (target: 'list' | 'featured' | 'groups') => {
+const formatLabel = (value: string | undefined | null) => {
+  const raw = String(value || '').trim()
+  if (!raw) {
+    return '未分组'
+  }
+  if (/[\u4e00-\u9fff]/.test(raw)) {
+    return raw
+  }
+  return displayLabelMap[raw] || '未分组'
+}
+
+const scrollToSection = async (target: 'list' | 'featured' | 'groups') => {
   const el =
     target === 'featured'
       ? featuredSectionRef.value
       : target === 'groups'
         ? groupSectionRef.value
         : listSectionRef.value
+  if (target === 'featured' && !featuredExpanded.value) {
+    featuredExpanded.value = true
+    await nextTick()
+  }
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const toggleFeaturedPreview = async () => {
+  featuredExpanded.value = !featuredExpanded.value
+  if (featuredExpanded.value) {
+    await nextTick()
+    featuredSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 const toggleFavorite = (slug: string) => {
@@ -89,6 +127,9 @@ onMounted(() => {
       <div class="hero-actions">
         <RouterLink class="primary-btn" to="/create">去创建</RouterLink>
         <RouterLink class="secondary-btn" to="/favorites">打开收藏</RouterLink>
+        <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">
+          {{ featuredExpanded ? '收起' : '预览' }}
+        </button>
       </div>
     </div>
   </section>
@@ -125,8 +166,8 @@ onMounted(() => {
           <article v-for="group in groups" :key="group.group" class="seed-group">
             <div class="seed-group__head">
               <div>
-                <p class="eyebrow">Seed Group</p>
-                <h3>{{ group.group }}</h3>
+                <p class="eyebrow">分组</p>
+                <h3>{{ formatLabel(group.group) }}</h3>
               </div>
               <span class="status-pill">{{ group.personas.length }} 个</span>
             </div>
@@ -136,7 +177,7 @@ onMounted(() => {
                 <div class="persona-card__top">
                   <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
                   <div class="persona-card__meta">
-                    <p class="persona-category">{{ persona.seedGroup || persona.category }}</p>
+                    <p class="persona-category">{{ formatLabel(persona.seedGroup || persona.category) }}</p>
                     <h4>{{ persona.name }}</h4>
                     <p class="persona-intro">{{ persona.intro }}</p>
                   </div>
@@ -172,36 +213,50 @@ onMounted(() => {
       </div>
 
       <aside class="seed-side">
-        <article ref="featuredSectionRef" class="summary-panel">
-          <p class="eyebrow">精选推荐</p>
-          <h3>优先看这些人格。</h3>
-          <div class="summary-panel__list">
-            <div
-              v-for="persona in featuredPersonas.slice(0, 4)"
-              :key="persona.slug"
-              class="session-card session-card--compact"
-            >
-              <div class="session-card__top">
-                <div>
-                  <p class="persona-category">{{ persona.seedGroup || persona.category }}</p>
-                  <h4 class="session-card__title">{{ persona.name }}</h4>
+        <article ref="featuredSectionRef" class="summary-panel summary-panel--featured">
+          <div class="seed-featured__head">
+            <div>
+              <p class="eyebrow">精选推荐</p>
+              <h3>推荐人格</h3>
+            </div>
+            <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">
+              {{ featuredExpanded ? '收起' : '预览' }}
+            </button>
+          </div>
+
+          <template v-if="featuredExpanded">
+            <div class="summary-panel__list">
+              <div
+                v-for="persona in featuredPersonas.slice(0, 4)"
+                :key="persona.slug"
+                class="session-card session-card--compact"
+              >
+                <div class="session-card__top">
+                  <div>
+                    <p class="persona-category">{{ formatLabel(persona.seedGroup || persona.category) }}</p>
+                    <h4 class="session-card__title">{{ persona.name }}</h4>
+                  </div>
+                  <span class="status-pill">{{ formatLabel(persona.seedGroup || persona.category) }}</span>
                 </div>
-                <span class="status-pill">{{ persona.seedGroup || persona.category }}</span>
-              </div>
-              <div class="session-card__actions">
-                <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊</RouterLink>
-                <button
-                  v-if="persona.isFavoritable !== false"
-                  class="chip-btn"
-                  :class="{ 'chip-btn--active': isFavorite(persona.slug) }"
-                  type="button"
-                  @click="toggleFavorite(persona.slug)"
-                >
-                  {{ isFavorite(persona.slug) ? '已收藏' : '收藏' }}
-                </button>
+                <div class="session-card__actions">
+                  <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊</RouterLink>
+                  <button
+                    v-if="persona.isFavoritable !== false"
+                    class="chip-btn"
+                    :class="{ 'chip-btn--active': isFavorite(persona.slug) }"
+                    type="button"
+                    @click="toggleFavorite(persona.slug)"
+                  >
+                    {{ isFavorite(persona.slug) ? '已收藏' : '收藏' }}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+
+            <div class="seed-featured__foot">
+              <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">收起</button>
+            </div>
+          </template>
         </article>
       </aside>
     </div>

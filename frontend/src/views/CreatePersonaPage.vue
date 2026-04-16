@@ -21,7 +21,7 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const catalog = ref<CreateCatalogResponse | null>(null)
-const expandedSection = ref<MainPathKey>('self')
+const expandedSection = ref<MainPathKey | null>('self')
 
 const mainPathSections: MainPathSection[] = [
   {
@@ -56,18 +56,73 @@ const mainPathSections: MainPathSection[] = [
   },
 ]
 
-const inputModeLabels: Record<string, string> = {
-  manual_profile: '手动资料',
+const displayLabelMap: Record<string, string> = {
+  'self-skill': '我的人格',
+  'nuwa-skill': '我的人格',
+  'forge-skill': '我的人格',
+  'digital-life': '我的人格',
+  'self-skill+nuwa-skill+forge-skill+digital-life': '我的人格',
+  'colleague-skill': '同事',
+  'boss-skills': '老板',
+  supervisor: '导师',
+  'senpai-skill': '师兄',
+  'professor-skill': '大学老师',
+  Professor_skill: '大学老师',
+  'ex-skill': '前任',
+  'relationship-training-skill': '关系训练',
+  relationship_understanding: '关系理解',
+  message_simulation: '消息模拟',
+  partner_maintenance: '关系维护',
+  past_relation_mirror: '过去关系 / 自我镜像',
+  'npy-skill': '理想伴侣',
+  'crush-skill': '暧昧消息',
+  'partner-skill': '伴侣维护',
+  'first-love-skill': '初恋',
+  'shuixian-skill': '自我镜像',
+  xinyi: '关系理解',
+  colleague: '同事',
+  boss: '老板',
+  senpai: '师兄',
+  professor_a: '大学老师',
+  professor_b: '大学老师',
+  'parents-skills': '父母',
+  'reunion-skill': '重逢人格',
+  MamaSkill: '妈妈',
+  'MamaSkill+parents-skills+darwin-skill': '妈妈',
+  'parents-skills+MamaSkill': '妈妈',
+  mother: '妈妈',
+  parents: '父母',
+  other_family: '其他家人',
+  mama: '妈妈',
+  reunion: '重逢人格',
+  'digital-twin-skill': '数字分身',
+  'immortal-skill': '数字分身',
+  'anti-distill': '防护',
+  manual_profile: '手动填写',
   chat_history: '聊天记录',
   documents: '文档',
   video: '视频',
   pdf: 'PDF',
   audio: '音频',
   digital_traces: '数字痕迹',
-  personal_data: '个人数据',
+  personal_data: '个人资料',
   multi_platform_data: '多平台资料',
   memory_notes: '记忆笔记',
   skill_file: '资料内容',
+  image_notes: '图片说明',
+  voice_notes: '语音说明',
+  text_materials: '文本材料',
+  diary_notes: '日记',
+  letter_notes: '信件',
+  photo_notes: '照片说明',
+  conflict_text: '冲突片段',
+  draft_message_text: '待发送消息',
+  recent_context_text: '最近上下文',
+  reply_style_samples_text: '回复样本',
+  relationship_status_text: '关系状态',
+  interaction_patterns_text: '互动样本',
+  history_text: '历史材料',
+  expression_samples_text: '表达样本',
 }
 
 const schemaKeyBySourceRepo: Record<string, string> = {
@@ -237,7 +292,17 @@ function canOpenWizard(item: CreateCatalogItem) {
 }
 
 function toggleSection(sectionKey: MainPathKey) {
-  expandedSection.value = sectionKey
+  expandedSection.value = expandedSection.value === sectionKey ? null : sectionKey
+}
+
+function collapseSection(sectionKey: MainPathKey) {
+  if (expandedSection.value === sectionKey) {
+    expandedSection.value = null
+  }
+}
+
+function getDisplayLabel(value: string) {
+  return displayLabelMap[value] || value.replace(/[_-]+/g, ' ')
 }
 
 function startCreation(item: CreateCatalogItem) {
@@ -277,7 +342,7 @@ onMounted(() => {
     <div class="hero-copy">
       <p class="eyebrow">Create</p>
       <h1>创造一个人格</h1>
-      <p class="hero-text">从自己、资料，或某种关系开始，创建一个可以继续完善的人格。</p>
+      <p class="hero-text">从自己、资料，或某种关系开始，创建一个人格。</p>
     </div>
   </section>
 
@@ -287,7 +352,7 @@ onMounted(() => {
         <p class="eyebrow">创建路径</p>
         <h3>先选一条主路径，再展开里面的内容。</h3>
       </div>
-      <p class="section-note">点击任意卡片，只展开这一组。</p>
+      <p class="section-note">点击任意卡片，开始创建。</p>
     </div>
 
     <div v-if="loading" class="state-panel">
@@ -320,6 +385,9 @@ onMounted(() => {
 
         <transition name="accordion-slide">
           <div v-if="expandedSection === section.key" class="create-accordion__panel">
+            <div class="create-accordion__panel-head">
+              <button class="secondary-btn" type="button" @click="collapseSection(section.key)">收起</button>
+            </div>
             <div v-for="group in section.groups" :key="group.group" class="create-subgroup">
               <div class="create-subgroup__head">
                 <div>
@@ -348,7 +416,7 @@ onMounted(() => {
 
                   <div class="tag-row">
                     <span v-for="mode in item.input_modes" :key="mode" class="tag-chip">
-                      {{ inputModeLabels[mode] || mode.replace(/_/g, ' ') }}
+                      {{ getDisplayLabel(mode) }}
                     </span>
                   </div>
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.4.29 - 2026-04-16
+
+- Optimized the frontend interaction and style polish across the wizard, Seed, my page, and create surfaces.
+- Improved placeholder readability in forms and kept night-mode text contrast easier to read.
+- Centered the my-page cards and unified their text alignment.
+- Normalized create-page wording around `我的人格` and removed repeated mixed-language labels from the display layer.
+- Made Seed recommendations collapsed by default with a working `预览 / 收起` interaction.
+- Kept Seed category pills and labels from exposing raw slug-like internal identifiers.
+
 ## V1.4.28 - 2026-04-16
 
 - 收口 Create 向导页、首页、Seed 页、我的页中的开发中间态说明。

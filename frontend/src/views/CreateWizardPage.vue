@@ -1355,12 +1355,6 @@ watch(
     <div class="hero-copy">
       <p class="eyebrow">创建向导</p>
       <h1>开始创建</h1>
-
-      <div class="hero-metrics">
-        <span class="metric-chip"><strong>{{ step }}/4</strong><span>当前步骤</span></span>
-        <span class="metric-chip"><strong>{{ currentTypeLabel }}</strong><span>创建类型</span></span>
-        <span class="metric-chip"><strong>{{ selectedInputLabel }}</strong><span>输入方式</span></span>
-      </div>
     </div>
   </section>
 
