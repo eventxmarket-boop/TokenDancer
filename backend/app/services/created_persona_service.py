@@ -41,7 +41,7 @@ _INTIMATE_MODE_LABELS = {
     "relationship_management": "关系经营",
     "relationship_understanding": "关系经营",
     "relationship_maintenance": "关系经营",
-    "message_simulation": "消息模拟",
+    "message_simulation": "关系经营",
     "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
 }
@@ -437,6 +437,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         analysis_focus = _normalize_text(getattr(draft, "analysis_focus", ""))
         understanding_weight = float(getattr(draft, "understanding_weight", 0.0) or 0.0)
         maintenance_weight = float(getattr(draft, "maintenance_weight", 0.0) or 0.0)
+        message_push_weight = float(getattr(draft, "message_push_weight", 0.0) or 0.0)
         profile_name = _normalize_text(
             profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", "")
         )
@@ -490,6 +491,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
                 analysis_focus and f"重心：{analysis_focus}",
                 f"理解{understanding_weight:.2f}",
                 f"维护{maintenance_weight:.2f}",
+                f"推进{message_push_weight:.2f}",
             ]
             if part
         ]
@@ -636,6 +638,7 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
         "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
         "understanding_weight": float(getattr(draft, "understanding_weight", 0.0) or 0.0),
         "maintenance_weight": float(getattr(draft, "maintenance_weight", 0.0) or 0.0),
+        "message_push_weight": float(getattr(draft, "message_push_weight", 0.0) or 0.0),
         "summary": record.summary,
         "material_summary": material_summary,
         "status": record.status,
@@ -664,6 +667,7 @@ def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
         "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
         "understanding_weight": float(getattr(draft, "understanding_weight", 0.0) or 0.0),
         "maintenance_weight": float(getattr(draft, "maintenance_weight", 0.0) or 0.0),
+        "message_push_weight": float(getattr(draft, "message_push_weight", 0.0) or 0.0),
         "summary": record.summary,
         "material_summary": material_summary,
         "status": record.status,

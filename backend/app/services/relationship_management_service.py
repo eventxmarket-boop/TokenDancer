@@ -26,6 +26,25 @@ UNDERSTANDING_HINTS = (
     "为什么",
 )
 
+MESSAGE_PUSH_HINTS = (
+    "要不要发",
+    "怎么回",
+    "回这条",
+    "这句要不要发",
+    "发出去",
+    "发送前",
+    "发送前预演",
+    "先练一遍",
+    "表白",
+    "推进",
+    "暧昧",
+    "关键节点",
+    "候选回复",
+    "消息模拟",
+    "发这条",
+    "怎么说",
+)
+
 MAINTENANCE_HINTS = (
     "维护",
     "经营",
@@ -77,30 +96,41 @@ def infer_relationship_management_focus(*values: Any) -> dict[str, float | str]:
     if not text:
         return {
             "analysis_focus": "balanced",
-            "understanding_weight": 0.5,
-            "maintenance_weight": 0.5,
+            "understanding_weight": 0.33,
+            "maintenance_weight": 0.33,
+            "message_push_weight": 0.34,
         }
 
     lower_text = text.lower()
     understanding_hits = sum(1 for hint in UNDERSTANDING_HINTS if hint in lower_text)
     maintenance_hits = sum(1 for hint in MAINTENANCE_HINTS if hint in lower_text)
+    message_push_hits = sum(1 for hint in MESSAGE_PUSH_HINTS if hint in lower_text)
 
-    if understanding_hits == 0 and maintenance_hits == 0:
+    if understanding_hits == 0 and maintenance_hits == 0 and message_push_hits == 0:
         return {
             "analysis_focus": "balanced",
-            "understanding_weight": 0.5,
-            "maintenance_weight": 0.5,
+            "understanding_weight": 0.33,
+            "maintenance_weight": 0.33,
+            "message_push_weight": 0.34,
         }
 
-    understanding_score = 0.5 + (understanding_hits * 0.12) + (1 if "关系理解" in text else 0) * 0.08
-    maintenance_score = 0.5 + (maintenance_hits * 0.12) + (1 if "关系经营" in text or "关系维护" in text else 0) * 0.08
-    total = understanding_score + maintenance_score
+    understanding_score = 0.45 + (understanding_hits * 0.12) + (1 if "关系理解" in text else 0) * 0.08
+    maintenance_score = 0.45 + (maintenance_hits * 0.12) + (1 if "关系经营" in text or "关系维护" in text else 0) * 0.08
+    message_push_score = 0.4 + (message_push_hits * 0.13) + (
+        1 if any(keyword in lower_text for keyword in ("发送", "推进", "表白", "预演", "回复", "发出去")) else 0
+    ) * 0.1
+    total = understanding_score + maintenance_score + message_push_score
     understanding_weight = round(understanding_score / total, 2)
     maintenance_weight = round(maintenance_score / total, 2)
+    message_push_weight = round(message_push_score / total, 2)
 
-    if abs(understanding_weight - maintenance_weight) < 0.12:
+    top_weight = max(understanding_weight, maintenance_weight, message_push_weight)
+    sorted_weights = sorted([understanding_weight, maintenance_weight, message_push_weight], reverse=True)
+    if len(sorted_weights) >= 2 and (sorted_weights[0] - sorted_weights[1]) < 0.12:
         focus = "balanced"
-    elif understanding_weight > maintenance_weight:
+    elif top_weight == message_push_weight:
+        focus = "message_push"
+    elif top_weight == understanding_weight:
         focus = "understanding"
     else:
         focus = "maintenance"
@@ -109,6 +139,7 @@ def infer_relationship_management_focus(*values: Any) -> dict[str, float | str]:
         "analysis_focus": focus,
         "understanding_weight": understanding_weight,
         "maintenance_weight": maintenance_weight,
+        "message_push_weight": message_push_weight,
     }
 
 
@@ -134,6 +165,7 @@ def build_relationship_management_profile(
         analysis_focus=_normalize_text(focus.get("analysis_focus")),
         understanding_weight=float(focus.get("understanding_weight") or 0.0),
         maintenance_weight=float(focus.get("maintenance_weight") or 0.0),
+        message_push_weight=float(focus.get("message_push_weight") or 0.0),
     )
 
 
@@ -146,6 +178,7 @@ def build_relationship_management_memory_base(
     relationship_context: str,
     raw_materials: dict[str, Any],
     focus: dict[str, float | str],
+    message_push_cues: list[str] | None = None,
 ) -> RelationshipManagementMemoryBase:
     return RelationshipManagementMemoryBase(
         relationship_memory=[item for item in relationship_memory if _normalize_text(item)],
@@ -156,6 +189,8 @@ def build_relationship_management_memory_base(
         analysis_focus=_normalize_text(focus.get("analysis_focus")),
         understanding_weight=float(focus.get("understanding_weight") or 0.0),
         maintenance_weight=float(focus.get("maintenance_weight") or 0.0),
+        message_push_weight=float(focus.get("message_push_weight") or 0.0),
+        message_push_cues=[item for item in (message_push_cues or []) if _normalize_text(item)],
         raw_materials=raw_materials or {},
     )
 
@@ -189,6 +224,12 @@ def _memory_pool(memory_base: dict[str, Any]) -> dict[str, list[str]]:
             memory_base.get("rewrite_targets"),
             memory_base.get("maintenance_goals"),
         ),
+        "message_push_cues": _merge_unique_lines(
+            memory_base.get("message_push_cues"),
+            memory_base.get("candidate_reply_cues"),
+            memory_base.get("rewrite_targets"),
+            memory_base.get("maintenance_goals"),
+        ),
     }
 
 
@@ -210,13 +251,21 @@ def select_relationship_management_memory_layers(
     stage = "balanced"
     if any(keyword in trigger_lower for keyword in ("难过", "失落", "焦虑", "压力", "委屈", "崩溃", "心累")):
         stage = "light"
+    elif any(keyword in trigger_lower for keyword in ("要不要发", "怎么回", "回这条", "发出去", "发送前", "表白", "推进", "关键节点", "消息模拟")):
+        stage = "push"
     elif any(keyword in trigger_lower for keyword in ("理解", "什么意思", "为什么", "怎么想", "雷区", "信号", "分析")):
         stage = "medium"
     elif any(keyword in trigger_lower for keyword in ("长期", "维持", "经营", "修复", "磨合", "伴侣", "相处")):
         stage = "deep"
 
     if stage == "light":
-        selected = pool["style_samples"][:2] or pool["candidate_reply_cues"][:2] or pool["relationship_memory"][:1]
+        selected = pool["style_samples"][:2] or pool["message_push_cues"][:2] or pool["candidate_reply_cues"][:2] or pool["relationship_memory"][:1]
+    elif stage == "push":
+        selected = (
+            pool["message_push_cues"][:2]
+            + pool["candidate_reply_cues"][:1]
+            + pool["style_samples"][:1]
+        )
     elif stage == "medium":
         selected = (
             pool["interaction_samples"][:2]
@@ -244,6 +293,7 @@ def select_relationship_management_memory_layers(
         "interaction_samples": pool["interaction_samples"],
         "style_samples": pool["style_samples"],
         "candidate_reply_cues": pool["candidate_reply_cues"],
+        "message_push_cues": pool["message_push_cues"],
     }
 
 
@@ -275,6 +325,7 @@ def build_relationship_management_context(
         memory_base.get("interaction_samples"),
         memory_base.get("style_samples"),
         memory_base.get("candidate_reply_cues"),
+        memory_base.get("message_push_cues"),
     )
     selected = select_relationship_management_memory_layers(memory_base, emotional_state, user_message, history=history)
     lines: list[str] = [
@@ -282,6 +333,7 @@ def build_relationship_management_context(
         f"分析重心：{focus['analysis_focus']}",
         f"理解权重：{focus['understanding_weight']}",
         f"维护权重：{focus['maintenance_weight']}",
+        f"发送推进权重：{focus.get('message_push_weight', 0.0)}",
         f"当前情绪状态：{emotional_state}",
         f"当前用户消息：{_normalize_text(user_message)}",
     ]
@@ -305,7 +357,9 @@ def build_relationship_management_context(
     if selected.get("selected_memories"):
         lines.append("当前召回：")
         lines.extend(f"- {item}" for item in selected["selected_memories"][:4])
+    if selected.get("message_push_cues"):
+        lines.append("消息推进线索：")
+        lines.extend(f"- {item}" for item in selected["message_push_cues"][:4])
     if boundaries:
         lines.append(f"边界提醒：{boundaries}")
     return "\n".join(lines).strip()
-

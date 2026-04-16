@@ -156,6 +156,7 @@ class CreateWizardDraft(BaseModel):
     intimate_message_simulation: dict[str, Any] | None = None
     intimate_relationship_maintenance: dict[str, Any] | None = None
     intimate_past_relationship: dict[str, Any] | None = None
+    message_push_weight: float = 0.0
 
 
 class CreateWizardDraftResponse(BaseModel):

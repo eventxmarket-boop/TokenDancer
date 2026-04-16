@@ -16,6 +16,7 @@ class RelationshipManagementProfile(BaseModel):
     analysis_focus: str = ""
     understanding_weight: float = 0.0
     maintenance_weight: float = 0.0
+    message_push_weight: float = 0.0
 
 
 class RelationshipManagementMemoryBase(BaseModel):
@@ -27,4 +28,6 @@ class RelationshipManagementMemoryBase(BaseModel):
     analysis_focus: str = ""
     understanding_weight: float = 0.0
     maintenance_weight: float = 0.0
+    message_push_weight: float = 0.0
+    message_push_cues: list[str] = Field(default_factory=list)
     raw_materials: dict[str, Any] = Field(default_factory=dict)

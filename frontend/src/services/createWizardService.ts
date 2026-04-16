@@ -8,6 +8,8 @@ const RELATIONSHIP_MANAGEMENT_MODE_ALIASES = new Set([
   'relationship_understanding',
   'relationship_maintenance',
   'partner_maintenance',
+  'message_simulation',
+  'crush',
 ])
 
 export function normalizeIntimateCompanionInputMode(value: string) {
@@ -269,6 +271,7 @@ export type RelationshipManagementProfile = {
   analysis_focus: string
   understanding_weight: number
   maintenance_weight: number
+  message_push_weight: number
 }
 
 export type RelationshipManagementMemoryBase = {
@@ -276,10 +279,12 @@ export type RelationshipManagementMemoryBase = {
   interaction_samples: string[]
   style_samples: string[]
   candidate_reply_cues: string[]
+  message_push_cues: string[]
   relationship_context: string
   analysis_focus: string
   understanding_weight: number
   maintenance_weight: number
+  message_push_weight: number
   raw_materials: Record<string, unknown>
 }
 
@@ -402,6 +407,7 @@ export type CreateWizardDraft = {
   analysis_focus?: string
   understanding_weight?: number
   maintenance_weight?: number
+  message_push_weight?: number
 }
 
 export type CreateWizardDraftResponse = {

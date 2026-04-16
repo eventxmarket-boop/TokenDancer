@@ -50,7 +50,7 @@ const inputModeLabels: Record<string, string> = {
   relationship_management: '关系经营',
   relationship_understanding: '关系经营',
   relationship_maintenance: '关系经营',
-  message_simulation: '消息模拟',
+  message_simulation: '关系经营',
   partner_maintenance: '关系经营',
   past_relation_mirror: '过去关系 / 自我镜像',
 }
@@ -550,6 +550,7 @@ const intimateRelationshipProfile = computed<RelationshipManagementProfile | nul
     analysis_focus: normalizeText(record.analysis_focus || draft.value?.analysis_focus || ''),
     understanding_weight: Number(record.understanding_weight ?? draft.value?.understanding_weight ?? 0) || 0,
     maintenance_weight: Number(record.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) || 0,
+    message_push_weight: Number(record.message_push_weight ?? draft.value?.message_push_weight ?? 0) || 0,
   }
 })
 
@@ -585,6 +586,8 @@ const intimateMemoryBase = computed<RelationshipManagementMemoryBase | null>(() 
     analysis_focus: normalizeText(record.analysis_focus || draft.value?.analysis_focus || ''),
     understanding_weight: Number(record.understanding_weight ?? draft.value?.understanding_weight ?? 0) || 0,
     maintenance_weight: Number(record.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) || 0,
+    message_push_weight: Number(record.message_push_weight ?? draft.value?.message_push_weight ?? 0) || 0,
+    message_push_cues: normalizeStringList(record.message_push_cues || record.candidate_reply_cues || record.rewrite_targets),
     raw_materials:
       (record.raw_materials as Record<string, unknown>) ||
       (draft.value?.raw_materials as Record<string, unknown>) ||
@@ -840,9 +843,19 @@ const intimateProfileLines = computed(() => {
   }
 
   return [
-    { label: '当前重心', value: profile.analysis_focus || draft.value?.analysis_focus || '平衡型' },
+    {
+      label: '当前重心',
+      value:
+        ({
+          understanding: '理解型',
+          maintenance: '维护型',
+          balanced: '平衡型',
+          message_push: '发送推进型',
+        }[profile.analysis_focus || draft.value?.analysis_focus || ''] || profile.analysis_focus || draft.value?.analysis_focus || '平衡型'),
+    },
     { label: '理解权重', value: String(profile.understanding_weight ?? draft.value?.understanding_weight ?? 0) },
     { label: '维护权重', value: String(profile.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) },
+    { label: '推进权重', value: String(profile.message_push_weight ?? draft.value?.message_push_weight ?? 0) },
     { label: '关系类型', value: profile.relationship_type || '未填写' },
     { label: '对象称呼', value: profile.name || '未填写' },
     { label: '关系阶段', value: profile.relationship_stage || '未填写' },
@@ -864,6 +877,7 @@ const intimateMemoryLines = computed(() => {
     { label: '互动样本', value: memory.interaction_samples?.length ? `${memory.interaction_samples.length} 条` : '未填写' },
     { label: '风格样本', value: memory.style_samples?.length ? `${memory.style_samples.length} 条` : '未填写' },
     { label: '建议线索', value: memory.candidate_reply_cues?.length ? `${memory.candidate_reply_cues.length} 条` : '未填写' },
+    { label: '消息推进线索', value: memory.message_push_cues?.length ? `${memory.message_push_cues.length} 条` : '未填写' },
   ]
 })
 

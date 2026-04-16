@@ -56,12 +56,14 @@ INTIMATE_UNDERSTANDING_SOURCE_REPO = "relationship-training-skill+xinyi"
 INTIMATE_SIMULATION_SOURCE_REPO = "crush-skill"
 INTIMATE_PARTNER_SOURCE_REPO = "partner-skill+npy-skill"
 INTIMATE_PAST_RELATION_SOURCE_REPO = "ex-skill+first-love-skill+shuixian-skill"
-INTIMATE_MANAGEMENT_SOURCE_REPO = "relationship-training-skill+xinyi+partner-skill+npy-skill"
+INTIMATE_MANAGEMENT_SOURCE_REPO = "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill"
 INTIMATE_MANAGEMENT_MODES = {
     "relationship_management",
     "relationship_understanding",
     "relationship_maintenance",
     "partner_maintenance",
+    "message_simulation",
+    "crush",
 }
 
 CREATE_TYPE_LABELS = {
@@ -160,10 +162,10 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "relationship-training-skill": "relationship_management",
     "xinyi": "relationship_management",
     INTIMATE_UNDERSTANDING_SOURCE_REPO: "relationship_management",
-    "crush-skill": "message_simulation",
+    "crush-skill": "relationship_management",
     "partner-skill": "relationship_management",
     "npy-skill": "relationship_management",
-    INTIMATE_SIMULATION_SOURCE_REPO: "message_simulation",
+    INTIMATE_SIMULATION_SOURCE_REPO: "relationship_management",
     INTIMATE_PARTNER_SOURCE_REPO: "relationship_management",
     "ex-skill": "past_relation_mirror",
     "first-love-skill": "past_relation_mirror",
@@ -189,10 +191,10 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     "relationship-training-skill": "intimate_companion_relationship_management",
     "xinyi": "intimate_companion_relationship_management",
     INTIMATE_UNDERSTANDING_SOURCE_REPO: "intimate_companion_relationship_management",
-    "crush-skill": "intimate_companion_message_simulation",
+    "crush-skill": "intimate_companion_relationship_management",
     "partner-skill": "intimate_companion_relationship_management",
     "npy-skill": "intimate_companion_relationship_management",
-    INTIMATE_SIMULATION_SOURCE_REPO: "intimate_companion_message_simulation",
+    INTIMATE_SIMULATION_SOURCE_REPO: "intimate_companion_relationship_management",
     INTIMATE_PARTNER_SOURCE_REPO: "intimate_companion_relationship_management",
     "ex-skill": "intimate_companion_past_relation_mirror",
     "first-love-skill": "intimate_companion_past_relation_mirror",
@@ -263,7 +265,7 @@ RELATIONSHIP_LABELS = {
     "relationship_management": "关系经营",
     "relationship_understanding": "关系经营",
     "relationship_maintenance": "关系经营",
-    "message_simulation": "消息模拟",
+    "message_simulation": "关系经营",
     "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
     "parents": "父母",
@@ -295,7 +297,7 @@ INPUT_MODE_LABELS = {
     },
     "intimate_companion": {
         "relationship_management": "关系经营",
-        "message_simulation": "消息模拟",
+        "message_simulation": "关系经营",
         "past_relation_mirror": "过去关系 / 自我镜像",
     },
     "family_companion": {
@@ -2324,7 +2326,7 @@ def _build_intimate_companion_draft(
     input_mode: str = "",
 ) -> dict[str, Any]:
     mode = _normalize_text(input_mode) or "relationship_management"
-    if mode in {"relationship_understanding", "relationship_maintenance", "partner_maintenance"}:
+    if mode in {"relationship_understanding", "relationship_maintenance", "partner_maintenance", "message_simulation"}:
         mode = "relationship_management"
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
@@ -2415,6 +2417,15 @@ def _build_intimate_companion_draft(
             raw_materials["relationship_status_text"],
         ),
     )
+    base_message_push_cues = _merge_unique_lines(
+        _clean_lines(form_data.get("relationship_goals")),
+        _collect_material_lines(
+            raw_materials["draft_message_text"],
+            raw_materials["reply_style_samples_text"],
+            raw_materials["relationship_status_text"],
+            raw_materials["interaction_patterns_text"],
+        ),
+    )
     base_key_memories = _merge_unique_lines(
         _clean_lines(form_data.get("key_memories")),
         _collect_material_lines(
@@ -2453,6 +2464,7 @@ def _build_intimate_companion_draft(
         raw_materials["ocr_extracted_texts"],
         raw_materials["image_notes_text"],
         raw_materials["voice_notes_text"],
+        raw_materials["draft_message_text"],
     )
     relationship_management_profile = build_relationship_management_profile(
         relationship_type=relation_type,
@@ -2512,6 +2524,7 @@ def _build_intimate_companion_draft(
         ),
         raw_materials=raw_materials,
         focus=relationship_management_focus,
+        message_push_cues=base_message_push_cues,
     )
     relationship_profile = relationship_management_profile.model_dump()
     management_memory_payload = relationship_management_memory_base.model_dump()
@@ -2543,6 +2556,7 @@ def _build_intimate_companion_draft(
                 f"当前重心：{relationship_management_focus['analysis_focus']}",
                 f"理解权重：{relationship_management_focus['understanding_weight']}",
                 f"维护权重：{relationship_management_focus['maintenance_weight']}",
+                f"发送推进权重：{relationship_management_focus.get('message_push_weight', 0.0)}",
                 f"说话风格：{tone}",
             ]
         )
@@ -2567,6 +2581,7 @@ def _build_intimate_companion_draft(
             "analysis_focus": relationship_management_focus["analysis_focus"],
             "understanding_weight": relationship_management_focus["understanding_weight"],
             "maintenance_weight": relationship_management_focus["maintenance_weight"],
+            "message_push_weight": relationship_management_focus.get("message_push_weight", 0.0),
             "intimate_memory_base": management_memory_payload,
             "intimate_understanding": {
                 "relationship_context": relationship_management_memory_base.relationship_context,
@@ -2582,116 +2597,11 @@ def _build_intimate_companion_draft(
                 "conversation_samples": relationship_management_memory_base.relationship_memory,
                 "raw_materials": raw_materials,
             },
-            "raw_materials": raw_materials,
-            "name": name,
-        }
-
-    if mode == "message_simulation":
-        target_persona_profile = {
-            "relationship_type": relation_type,
-            "name": name,
-            "speech_style": tone,
-            "response_temperature": response_temperature,
-            "boundaries": boundaries,
-            "stage": relationship_stage,
-        }
-        conversation_context = {
-            "recent_context": _normalize_text(raw_materials["recent_context_text"])
-            or _normalize_text(form_data.get("chat_history_summary")),
-            "current_message": _normalize_text(raw_materials["draft_message_text"])
-            or _normalize_text(form_data.get("conversation_samples")),
-            "relationship_stage": relationship_stage,
-        }
-        reply_style_samples = _merge_unique_lines(
-            _clean_lines(form_data.get("conversation_samples")),
-            _collect_material_lines(
-                raw_materials["reply_style_samples_text"],
-                raw_materials["chat_history_text"],
-            ),
-            _document_snippets(raw_materials["uploaded_text_documents"]),
-        )
-        simulation_preferences = {
-            "candidate_count": 3,
-            "tone": tone,
-            "response_temperature": response_temperature,
-            "mode": mode,
-        }
-        memory_base = IntimateCompanionMemoryBase(
-            conversation_samples=_merge_unique_lines(
-                base_conversation_samples,
-                reply_style_samples,
-            ),
-            interaction_rules=_merge_unique_lines(base_interaction_rules, ["先给 2~4 个候选回复，再给建议发送版本"]),
-            relationship_goals=_merge_unique_lines(base_relationship_goals, ["更像对方的表达节奏"]),
-            key_memories=base_key_memories,
-            relationship_context=_material_summary_from_parts(
-                relation_type,
-                relationship_stage,
-                tone,
-                raw_materials["chat_history_text"],
-            ),
-            misunderstanding_points=base_memory_fragments,
-            rewrite_targets=base_relationship_goals,
-            target_persona_profile=target_persona_profile,
-            conversation_context=conversation_context,
-            reply_style_samples=reply_style_samples,
-            simulation_preferences=simulation_preferences,
-            interaction_patterns=base_interaction_rules,
-            maintenance_goals=[],
-            relationship_memory=base_key_memories,
-            expression_samples=base_expression_samples,
-            response_temperature=response_temperature,
-            boundaries=_clean_lines(boundaries),
-        )
-        profile = (
-            f"消息模拟定位：{relation_type}\n"
-            f"对象名称：{name}\n"
-            f"说话风格：{tone}\n"
-            f"回复温度：{response_temperature}\n"
-            f"用途：输入当前消息和最近上下文，预测 2~4 个候选回复。"
-        )
-        mindset = _format_bullets(
-            [
-                "先看最近上下文，再判断对方可能的回复节奏",
-                "先保留对方一贯的说话习惯，再做候选分支",
-                "信息不足时先补聊天样本和语气样本",
-            ]
-        )
-        heuristics = _format_bullets(
-            [
-                "优先给出多个候选回复，再给建议版本",
-                "候选回复尽量贴近对方样本里的语气",
-                "不要把单条消息误判成全部关系状态",
-            ]
-        )
-        expression = _format_bullets(
-            [
-                f"候选回复语气：{tone}",
-                f"回复温度：{response_temperature}",
-                "输出要像发送前预演，而不是泛建议",
-            ]
-        )
-        guardrails = _format_bullets(
-            [
-                f"边界要求：{boundaries}",
-                "不伪造未确认的回复",
-                "不把候选分支写成唯一真相",
-            ]
-        )
-        return {
-            "profile": profile,
-            "mindset": mindset,
-            "heuristics": heuristics,
-            "expression": expression,
-            "guardrails": guardrails,
-            "relationship_type": relation_type,
-            "relationship_profile": target_persona_profile,
-            "intimate_memory_base": memory_base.model_dump(),
             "intimate_message_simulation": {
-                "target_persona_profile": target_persona_profile,
-                "conversation_context": conversation_context,
-                "reply_style_samples": reply_style_samples,
-                "simulation_preferences": simulation_preferences,
+                "message_push_cues": relationship_management_memory_base.message_push_cues,
+                "candidate_reply_cues": relationship_management_memory_base.candidate_reply_cues,
+                "relationship_memory": relationship_management_memory_base.relationship_memory,
+                "message_push_weight": relationship_management_memory_base.message_push_weight,
                 "raw_materials": raw_materials,
             },
             "raw_materials": raw_materials,
@@ -3048,12 +2958,16 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
             "relationship_understanding",
             "relationship_maintenance",
             "partner_maintenance",
+            "message_simulation",
+            "crush",
         }:
             normalized_input_mode = "relationship_management"
         if normalized_schema_key in {
             "intimate_companion_relationship_understanding",
             "intimate_companion_relationship_maintenance",
             "intimate_companion_partner_maintenance",
+            "intimate_companion_message_simulation",
+            "intimate_companion_crush",
         } or normalized_input_mode == "relationship_management":
             normalized_schema_key = "intimate_companion_relationship_management"
     form_data = payload.get("form_data") or {}
@@ -3157,6 +3071,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "analysis_focus": content.get("analysis_focus", ""),
         "understanding_weight": content.get("understanding_weight", 0.0),
         "maintenance_weight": content.get("maintenance_weight", 0.0),
+        "message_push_weight": content.get("message_push_weight", 0.0),
         "intimate_memory_base": content.get("intimate_memory_base"),
         "intimate_understanding": content.get("intimate_understanding"),
         "intimate_message_simulation": content.get("intimate_message_simulation"),

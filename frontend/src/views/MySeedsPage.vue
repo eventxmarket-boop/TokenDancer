@@ -46,6 +46,7 @@ function seedFocusLabel(seed: CreatedPersonaSummary) {
   if (focus === 'understanding') return '理解型'
   if (focus === 'maintenance') return '维护型'
   if (focus === 'balanced') return '平衡型'
+  if (focus === 'message_push') return '发送推进型'
   return focus || '平衡型'
 }
 
@@ -166,7 +167,9 @@ onMounted(() => {
                 <span v-if="seed.entry_label" class="tag-chip">{{ seed.entry_label }}</span>
                 <span v-if="seed.analysis_focus" class="tag-chip">{{ seedFocusLabel(seed) }}</span>
                 <span v-if="normalizePersonaType(seed.persona_type) === 'intimate_companion'" class="tag-chip">
-                  理解{{ formatWeight(seed.understanding_weight) || '0.00' }} / 维护{{ formatWeight(seed.maintenance_weight) || '0.00' }}
+                  理解{{ formatWeight(seed.understanding_weight) || '0.00' }} /
+                  维护{{ formatWeight(seed.maintenance_weight) || '0.00' }} /
+                  推进{{ formatWeight(seed.message_push_weight) || '0.00' }}
                 </span>
                 <span v-if="normalizePersonaType(seed.persona_type) === 'family_companion' && seed.family_subtype" class="tag-chip">
                   {{ familySubtypeLabels[seed.family_subtype] || seed.family_subtype }}

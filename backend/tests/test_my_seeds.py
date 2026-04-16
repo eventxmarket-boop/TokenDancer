@@ -745,9 +745,10 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("material_summary", saved)
                 self.assertTrue(saved["material_summary"])
                 self.assertEqual(saved["entry_label"], "关系经营")
-                self.assertIn(saved["analysis_focus"], {"understanding", "maintenance", "balanced"})
+                self.assertIn(saved["analysis_focus"], {"understanding", "maintenance", "balanced", "message_push"})
                 self.assertGreaterEqual(saved["understanding_weight"], 0.0)
                 self.assertGreaterEqual(saved["maintenance_weight"], 0.0)
+                self.assertGreaterEqual(saved["message_push_weight"], 0.0)
 
                 detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
@@ -759,9 +760,10 @@ class MySeedsTests(unittest.TestCase):
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_image_documents"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
-                self.assertIn(detail["analysis_focus"], {"understanding", "maintenance", "balanced"})
+                self.assertIn(detail["analysis_focus"], {"understanding", "maintenance", "balanced", "message_push"})
                 self.assertGreaterEqual(detail["understanding_weight"], 0.0)
                 self.assertGreaterEqual(detail["maintenance_weight"], 0.0)
+                self.assertGreaterEqual(detail["message_push_weight"], 0.0)
                 self.assertEqual(detail["material_summary"], saved["material_summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)

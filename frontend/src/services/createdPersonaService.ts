@@ -14,6 +14,7 @@ export type CreatedPersonaSummary = {
   analysis_focus?: string
   understanding_weight?: number
   maintenance_weight?: number
+  message_push_weight?: number
   user_id?: number | null
   summary: string
   material_summary?: string

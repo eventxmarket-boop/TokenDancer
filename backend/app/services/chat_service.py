@@ -24,7 +24,6 @@ from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
 from app.services.family_companion_service import build_family_companion_context
 from app.services.intimate_companion_service import build_intimate_companion_context
-from app.services.message_simulation_service import build_message_simulation_context
 from app.services.relationship_management_service import build_relationship_management_context
 from app.services.past_relationship_service import build_past_relationship_context
 from app.services.reunion_persona_service import build_reunion_persona_context
@@ -554,10 +553,12 @@ async def chat_with_persona(
             "relationship_management",
             "relationship_understanding",
             "partner_maintenance",
+            "relationship_maintenance",
+            "message_push",
         }:
             aux_context = build_relationship_management_context(persona, history, normalized_message)
         elif intimate_mode == "message_simulation":
-            aux_context = build_message_simulation_context(persona, history, normalized_message)
+            aux_context = build_relationship_management_context(persona, history, normalized_message)
         elif intimate_mode == "past_relation_mirror":
             aux_context = build_past_relationship_context(persona, history, normalized_message)
         else:

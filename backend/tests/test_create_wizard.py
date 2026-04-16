@@ -746,11 +746,68 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
         self.assertIsNotNone(body["draft"]["intimate_understanding"])
-        self.assertIn(body["draft"]["analysis_focus"], {"understanding", "maintenance", "balanced"})
+        self.assertIn(body["draft"]["analysis_focus"], {"understanding", "maintenance", "balanced", "message_push"})
         self.assertGreaterEqual(body["draft"]["understanding_weight"], 0.0)
         self.assertGreaterEqual(body["draft"]["maintenance_weight"], 0.0)
+        self.assertGreaterEqual(body["draft"]["message_push_weight"], 0.0)
         self.assertIn("关系经营", body["draft"]["profile"])
         self.assertIn("关系经营", body["draft"]["relationship_management_profile"]["relationship_type"])
+
+    def test_create_wizard_draft_endpoint_prefers_message_push_for_send_before_preview_language(self):
+        payload = {
+            "create_type": "intimate_companion",
+            "group": "relationship_intimate",
+            "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill",
+            "display_name": "关系经营",
+            "input_mode": "relationship_management",
+            "schema_key": "intimate_companion_relationship_management",
+            "form_data": {
+                "relationship_type": "关系经营",
+                "persona_name": "关系经营",
+                "relationship_stage": "现在更像是要决定这句要不要发",
+                "speech_style": "自然、贴近、带一点熟悉感",
+                "response_temperature": "先给候选，再做发送前预演",
+                "catchphrases": "这句要不要发\n先练一遍",
+                "relation_boundaries": "不越界，不替对方下结论",
+                "conversation_samples": "这句要不要发？\n先帮我看看 TA 可能怎么回",
+                "interaction_rules": "发送前先预演对方反应",
+                "relationship_goals": "先练一遍再发出去\n关键节点措辞建议",
+                "key_memories": "暧昧推进时常用的说法",
+                "raw_materials": {
+                    "chat_history_text": "这句要不要发？\n先帮我看看 TA 可能怎么回",
+                    "memory_notes_text": "先练一遍再发出去",
+                    "text_materials_text": "关键节点措辞建议",
+                    "uploaded_text_documents": [
+                        {"filename": "push-notes.txt", "content": "先练一遍再发出去"},
+                    ],
+                    "uploaded_image_documents": [],
+                    "ocr_extracted_texts": [],
+                    "image_notes_text": "",
+                    "voice_notes_text": "",
+                    "draft_message_text": "这句要不要发",
+                    "recent_context_text": "先练一遍",
+                    "reply_style_samples_text": "先练一遍再决定",
+                    "relationship_status_text": "准备发送",
+                    "interaction_patterns_text": "发送前预演",
+                    "history_text": "暧昧推进时常用的说法",
+                    "expression_samples_text": "这句要不要发\n先练一遍",
+                },
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["meta"]["create_type"], "intimate_companion")
+        self.assertEqual(body["draft"]["meta"]["input_mode"], "relationship_management")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "intimate_companion_relationship_management")
+        self.assertEqual(body["draft"]["analysis_focus"], "message_push")
+        self.assertGreater(body["draft"]["message_push_weight"], body["draft"]["understanding_weight"])
+        self.assertGreater(body["draft"]["message_push_weight"], body["draft"]["maintenance_weight"])
+        self.assertTrue(body["draft"]["relationship_management_memory_base"]["message_push_cues"])
+        self.assertIn("发送推进权重", body["draft"]["expression"])
 
     def test_create_wizard_draft_endpoint_normalizes_legacy_intimate_modes(self):
         for legacy_mode in ("relationship_understanding", "relationship_maintenance"):

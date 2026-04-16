@@ -40,19 +40,23 @@ const INTIMATE_CANONICAL_SOURCE_REPOS = new Set([
   'xinyi',
   'partner-skill',
   'npy-skill',
+  'crush-skill',
 ])
 const INTIMATE_CANONICAL_SOURCE_URLS = new Set([
   'https://github.com/TammyTan516/relationship-training-skill',
   'https://github.com/kroxchan/xinyi',
   'https://github.com/NatalieCao323/partner-skill',
   'https://github.com/wwwttlll/npy-skill',
+  'https://github.com/yyyyyyylll/crush-skill',
 ])
 
 function normalizeIntimateCatalogSlug(value: string) {
   if (
     value === 'relationship_understanding' ||
     value === 'relationship_maintenance' ||
-    value === 'partner_maintenance'
+    value === 'partner_maintenance' ||
+    value === 'message_simulation' ||
+    value === 'crush'
   ) {
     return INTIMATE_CANONICAL_SLUG
   }
@@ -83,7 +87,7 @@ function normalizeIntimateCatalogItem(item: CreateCatalogItem): CreateCatalogIte
   const canonicalSourceRepo = normalizedSourceRepos.find((repo) => INTIMATE_CANONICAL_SOURCE_REPOS.has(repo))
     || item.source_repo
     || normalizedSourceRepos[0]
-    || 'relationship-training-skill+xinyi+partner-skill+npy-skill'
+    || 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill'
 
   const canonicalRepoUrl = normalizedSourceUrls.find((url) => INTIMATE_CANONICAL_SOURCE_URLS.has(url))
     || item.repo_url

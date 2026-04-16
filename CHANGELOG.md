@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.50 - 2026-04-17
+
+- Merged the intimate understanding and maintenance paths into one visible relationship-management entry and absorbed crush-skill as the message-push / send-preview layer.
+- Normalized legacy relationship-management aliases so the create wizard no longer renders duplicate relationship-management cards.
+- Preserved understanding, maintenance, balanced, and message-push runtime weights while keeping the existing intimate chat flow intact.
+- Surfaced message-push weights and cues in Create result and My Seeds views.
+
 ## V1.4.49a - 2026-04-17
 
 - Removed the duplicated relationship-management choices from the create-wizard selection step.

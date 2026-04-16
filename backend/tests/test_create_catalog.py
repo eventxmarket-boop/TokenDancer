@@ -55,29 +55,18 @@ class CreateCatalogTests(unittest.TestCase):
         self.assertIn("relationship_management", intimate_items_by_slug)
         self.assertEqual(
             set(intimate_items_by_slug),
-            {"relationship_management", "message_simulation", "past_relation_mirror"},
+            {"relationship_management", "past_relation_mirror"},
         )
-        self.assertEqual(
-            intimate_items_by_slug["relationship_management"]["source_urls"],
-            [
-                "https://github.com/TammyTan516/relationship-training-skill",
-                "https://github.com/kroxchan/xinyi",
-                "https://github.com/NatalieCao323/partner-skill",
-                "https://github.com/wwwttlll/npy-skill",
-            ],
-        )
-        self.assertEqual(
-            intimate_items_by_slug["message_simulation"]["source_urls"],
-            ["https://github.com/yyyyyyylll/crush-skill"],
-        )
-        self.assertEqual(
-            intimate_items_by_slug["past_relation_mirror"]["source_urls"],
-            [
-                "https://github.com/titanwings/ex-skill",
-                "https://github.com/z969081067-commits/first-love-skill",
-                "https://github.com/Cyh29hao/shuixian-skill",
-            ],
-        )
+        self.assertEqual(intimate_items_by_slug["relationship_management"]["name"], "关系经营")
+        self.assertIn("https://github.com/TammyTan516/relationship-training-skill", intimate_items_by_slug["relationship_management"]["source_urls"])
+        self.assertIn("https://github.com/kroxchan/xinyi", intimate_items_by_slug["relationship_management"]["source_urls"])
+        self.assertIn("https://github.com/NatalieCao323/partner-skill", intimate_items_by_slug["relationship_management"]["source_urls"])
+        self.assertIn("https://github.com/wwwttlll/npy-skill", intimate_items_by_slug["relationship_management"]["source_urls"])
+        self.assertIn("https://github.com/yyyyyyylll/crush-skill", intimate_items_by_slug["relationship_management"]["source_urls"])
+        self.assertNotIn("message_simulation", intimate_items_by_slug)
+        self.assertIn("https://github.com/titanwings/ex-skill", intimate_items_by_slug["past_relation_mirror"]["source_urls"])
+        self.assertIn("https://github.com/z969081067-commits/first-love-skill", intimate_items_by_slug["past_relation_mirror"]["source_urls"])
+        self.assertIn("https://github.com/Cyh29hao/shuixian-skill", intimate_items_by_slug["past_relation_mirror"]["source_urls"])
 
 
 if __name__ == "__main__":
