@@ -81,6 +81,7 @@ export type FamilyCompanionRawMaterials = {
   text_materials_text: string
   uploaded_text_documents: TextMaterialDocument[]
   image_notes_text: string
+  photo_notes_text: string
   voice_notes_text: string
 }
 

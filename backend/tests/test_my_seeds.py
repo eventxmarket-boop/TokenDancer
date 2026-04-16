@@ -178,6 +178,15 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("emotion_rules", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["emotion_rules"]["summary"])
                 self.assertIn("raw_materials", detail["draft_payload"])
+                self.assertEqual(
+                    detail["draft_payload"]["raw_materials"]["chat_history_text"],
+                    "妈总是提醒我按时吃饭和休息",
+                )
+                self.assertIn(
+                    "小时候一起写作业",
+                    " ".join(detail["draft_payload"]["memory_base"]["memory_fragments"]),
+                )
+                self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}")

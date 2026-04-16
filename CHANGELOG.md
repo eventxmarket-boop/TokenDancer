@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.26 - 2026-04-16
+
+- Fixed the family-companion wizard so the material input layer is visible in the frontend template.
+- Added visible family material controls for chat history, memory notes, text materials, and uploaded text files.
+- Ensured family draft submission writes raw materials through the frontend payload.
+- Surfaced material extraction summaries in the Create result view so users can see what was distilled.
+- Strengthened create and my-seeds regression coverage for family raw-material round-tripping.
+
 ## V1.4.25 - 2026-04-16
 
 - Made the family-companion path explicitly carry extracted emotion rules alongside persona and memory data.

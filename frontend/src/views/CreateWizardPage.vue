@@ -1165,6 +1165,7 @@ function buildFamilyRawMaterials() {
     text_materials_text: formState.text_materials,
     uploaded_text_documents: familyUploadedTextDocuments.value,
     image_notes_text: formState.image_notes,
+    photo_notes_text: formState.image_notes,
     voice_notes_text: formState.voice_notes,
   }
 }
@@ -1501,42 +1502,88 @@ watch(
               <p class="eyebrow">材料输入层</p>
               <div v-if="!isReunionPersona" class="form-grid">
                 <label class="form-field">
-                  <span>聊天记录摘要</span>
-                  <textarea v-model="formState.chat_history_summary" class="field-input wizard-textarea" rows="4" placeholder="把关键聊天记录先整理一下"></textarea>
+                  <span>聊天记录粘贴框</span>
+                  <textarea
+                    v-model="formState.chat_history_summary"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="把关键聊天记录、称呼方式、关心语气直接贴进来"
+                  ></textarea>
                 </label>
                 <label class="form-field">
-                  <span>记忆片段</span>
-                  <textarea v-model="formState.memory_fragments" class="field-input wizard-textarea" rows="4" placeholder="一句一句整理出最有记忆感的片段"></textarea>
+                  <span>回忆片段 / 记忆笔记</span>
+                  <textarea
+                    v-model="formState.memory_fragments"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="把最像家人的片段、提醒、安慰话整理进来"
+                  ></textarea>
                 </label>
               </div>
 
               <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>文本材料补充</span>
+                  <textarea
+                    v-model="formState.text_materials"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="可直接粘贴文字材料、家书、聊天摘录或家庭说明"
+                  ></textarea>
+                </label>
                 <label class="form-field">
                   <span>上传 txt / md / csv</span>
                   <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleFamilyMaterialFileChange" />
                   <small class="field-hint">
                     {{
                       familyUploadedTextDocuments.length
-                        ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ')
-                        : (familyMaterialFileName || '可把文本材料追加到文本材料和记忆片段里')
+                        ? `${familyUploadedTextDocuments.length} 个文件：${familyUploadedTextDocuments.map((item) => item.filename).join(' / ')}`
+                        : (familyMaterialFileName || '上传后会自动读取文本内容并补进记忆库')
                     }}
                   </small>
                 </label>
-                <label class="form-field">
-                  <span>文本材料</span>
-                  <textarea v-model="formState.text_materials" class="field-input wizard-textarea" rows="4" placeholder="可直接粘贴文字材料"></textarea>
-                </label>
+              </div>
+
+              <div v-if="!isReunionPersona && familyUploadedTextDocuments.length" class="summary-panel summary-panel--compact">
+                <p class="eyebrow">已上传文件</p>
+                <h3>文件会被一起提炼进记忆库</h3>
+                <ul class="summary-panel__list">
+                  <li v-for="item in familyUploadedTextDocuments" :key="item.filename">
+                    <span>{{ item.filename }}</span>
+                    <strong>{{ item.content.slice(0, 48) || '已读取' }}</strong>
+                  </li>
+                </ul>
               </div>
 
               <div v-if="!isReunionPersona" class="form-grid">
                 <label class="form-field">
-                  <span>照片 / 截图备注</span>
-                  <textarea v-model="formState.image_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录图片或截图里的关键信息"></textarea>
+                  <span>图片说明</span>
+                  <textarea
+                    v-model="formState.image_notes"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="先用文字记录图片或截图里的关键信息"
+                  ></textarea>
                 </label>
                 <label class="form-field">
-                  <span>语音备注</span>
-                  <textarea v-model="formState.voice_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录语音里的关键信息"></textarea>
+                  <span>语音说明</span>
+                  <textarea
+                    v-model="formState.voice_notes"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="先用文字记录语音里的关键信息"
+                  ></textarea>
                 </label>
+              </div>
+
+              <div v-if="!isReunionPersona && familyUploadedTextDocuments.length" class="summary-panel summary-panel--compact">
+                <p class="eyebrow">已上传文件</p>
+                <ul class="summary-panel__list">
+                  <li v-for="item in familyUploadedTextDocuments" :key="item.filename">
+                    <span>{{ item.filename }}</span>
+                    <strong>{{ item.content.slice(0, 48) || '已读取' }}</strong>
+                  </li>
+                </ul>
               </div>
 
               <div v-if="isReunionPersona" class="form-grid">

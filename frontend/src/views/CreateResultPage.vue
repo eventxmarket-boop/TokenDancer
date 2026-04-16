@@ -209,15 +209,15 @@ function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 
   if (mode === 'family') {
     const documents = normalizeDocuments(record.uploaded_text_documents)
     return [
-      { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
-      { label: '记忆片段', value: excerptText(record.memory_notes_text) || '未填写' },
-      { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
+      { label: '聊天记录摘要', value: excerptText(record.chat_history_text) || '未填写' },
+      { label: '回忆笔记摘要', value: excerptText(record.memory_notes_text) || '未填写' },
+      { label: '文本材料摘要', value: excerptText(record.text_materials_text) || '未填写' },
       {
-        label: '上传文件',
-        value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
+        label: '已上传材料文件数',
+        value: documents.length ? `${documents.length} 个` : '0 个',
       },
-      { label: '图片备注', value: excerptText(record.image_notes_text) || '未填写' },
-      { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
+      { label: '图片说明摘要', value: excerptText(record.image_notes_text) || '未填写' },
+      { label: '语音说明摘要', value: excerptText(record.voice_notes_text) || '未填写' },
     ]
   }
 
@@ -259,7 +259,41 @@ const familyRawMaterials = computed(() => {
   return payload
 })
 
-const familyMaterialLines = computed(() => buildMaterialLines(familyRawMaterials.value, 'family'))
+const familyMaterialSummaryLines = computed(() => {
+  const profile = familyPersonaProfile.value
+  const memory = familyMemoryBase.value
+  const rawMaterials = familyRawMaterials.value
+  const documents = normalizeDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_text_documents)
+  return [
+    {
+      label: '聊天记录摘要',
+      value:
+        memory?.chat_history_summary ||
+        excerptText((rawMaterials as Record<string, unknown> | null)?.chat_history_text) ||
+        '未填写',
+    },
+    {
+      label: '共同经历摘要',
+      value: memory?.shared_events?.join(' / ') || '未填写',
+    },
+    {
+      label: '常说的话摘要',
+      value: memory?.important_advice?.join(' / ') || profile?.catchphrases?.join(' / ') || '未填写',
+    },
+    {
+      label: '典型安慰方式',
+      value: profile?.comfort_style || '未填写',
+    },
+    {
+      label: '关心方式',
+      value: memory?.daily_habits?.join(' / ') || '未填写',
+    },
+    {
+      label: '已上传材料文件数',
+      value: documents.length ? `${documents.length} 个` : '0 个',
+    },
+  ]
+})
 
 const reunionRawMaterials = computed(() => {
   const payload = editableDraft.raw_materials || draft.value?.raw_materials
@@ -799,10 +833,11 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
-          <p class="eyebrow">材料输入层</p>
+          <p class="eyebrow">材料提炼摘要</p>
           <h3>已基于输入材料生成记忆库</h3>
+          <p class="state-copy">系统已经把聊天记录、回忆笔记和上传文件提炼成可继续聊天的记忆层。</p>
           <div class="family-grid">
-            <div v-for="line in familyMaterialLines" :key="line.label" class="family-grid__item">
+            <div v-for="line in familyMaterialSummaryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

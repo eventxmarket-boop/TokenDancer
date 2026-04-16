@@ -146,6 +146,15 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["emotion_rules"]["summary"])
         self.assertTrue(body["draft"]["emotion_rules"]["response_sequence"])
         self.assertIn("raw_materials", body["draft"])
+        self.assertEqual(body["draft"]["raw_materials"]["chat_history_text"], "妈总是提醒我按时吃饭和休息")
+        self.assertIn(
+            "小时候一起写作业",
+            " ".join(body["draft"]["memory_base"]["memory_fragments"]),
+        )
+        self.assertIn(
+            "先照顾好自己",
+            " ".join(body["draft"]["memory_base"]["important_advice"]),
+        )
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertIn("家人陪伴", body["draft"]["profile"])
         self.assertIn("妈妈", body["draft"]["profile"])
