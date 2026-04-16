@@ -2113,7 +2113,7 @@ watch(
             </div>
 
             <div class="summary-panel">
-              <p class="eyebrow">表单预览</p>
+              <p class="eyebrow">表单内容</p>
               <template v-if="createType === 'self_unified'">
                 <h3>{{ formState.name || '未填写名称' }}</h3>
                 <ul class="summary-panel__list">

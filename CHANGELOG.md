@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.30 - 2026-04-16
+
+- Further reduced duplicate self-persona wording in the Create flow so only one visible `我的人格` entry remains.
+- Moved the Seed featured recommendations out of the top-right sidebar and made them expand below the main list via `精选推荐 / 收起`.
+- Removed internal version/source/status disclosures from persona detail, favorites, and recent-session surfaces.
+- Improved my-page centering, card hover feedback, and global night-mode placeholder readability.
+- Kept all UI changes frontend-only and aligned the visible labels to Chinese.
+
 ## V1.4.29 - 2026-04-16
 
 - Optimized the frontend interaction and style polish across the wizard, Seed, my page, and create surfaces.

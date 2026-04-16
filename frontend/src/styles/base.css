@@ -1050,15 +1050,14 @@ html[data-theme='night'] .my-entry-card {
   align-items: start;
 }
 
+.seed-layout--stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .seed-main,
 .seed-side {
   display: grid;
   gap: 16px;
-}
-
-.seed-side {
-  position: sticky;
-  top: 18px;
 }
 
 .summary-panel {
@@ -1072,6 +1071,10 @@ html[data-theme='night'] .my-entry-card {
 
 .summary-panel--featured {
   gap: 14px;
+}
+
+.summary-panel--featured-inline {
+  margin-top: 18px;
 }
 
 .seed-featured__head {

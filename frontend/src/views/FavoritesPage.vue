@@ -114,7 +114,6 @@ onMounted(() => {
                 <div class="persona-card__top">
                   <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
                   <div class="persona-card__meta">
-                    <p class="persona-category">{{ persona.seedSource || persona.category }}</p>
                     <h4>{{ persona.name }}</h4>
                     <p class="persona-intro">{{ persona.intro }}</p>
                   </div>

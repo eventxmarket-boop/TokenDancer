@@ -100,7 +100,6 @@ onMounted(() => {
             <p class="persona-category">{{ session.persona_name }}</p>
             <h4 class="session-card__title">{{ session.title }}</h4>
           </div>
-          <span class="status-pill">{{ session.persona_slug }}</span>
         </div>
         <div class="session-card__actions">
           <span class="session-card__meta">{{ new Date(session.updated_at).toLocaleString() }}</span>

@@ -128,7 +128,7 @@ onMounted(() => {
         <RouterLink class="primary-btn" to="/create">去创建</RouterLink>
         <RouterLink class="secondary-btn" to="/favorites">打开收藏</RouterLink>
         <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">
-          {{ featuredExpanded ? '收起' : '预览' }}
+          {{ featuredExpanded ? '收起' : '精选推荐' }}
         </button>
       </div>
     </div>
@@ -142,7 +142,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="seed-layout">
+    <div class="seed-layout seed-layout--stack">
       <div ref="listSectionRef" class="seed-main">
         <div v-if="loading" class="state-panel">
           <p class="eyebrow">加载中</p>
@@ -169,29 +169,19 @@ onMounted(() => {
                 <p class="eyebrow">分组</p>
                 <h3>{{ formatLabel(group.group) }}</h3>
               </div>
-              <span class="status-pill">{{ group.personas.length }} 个</span>
             </div>
 
             <div class="persona-grid">
-              <article v-for="persona in group.personas" :key="persona.slug" class="persona-card persona-card--featured">
+              <article v-for="persona in group.personas" :key="persona.slug" class="persona-card persona-card--featured persona-card--seed">
                 <div class="persona-card__top">
                   <div class="persona-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
                   <div class="persona-card__meta">
-                    <p class="persona-category">{{ formatLabel(persona.seedGroup || persona.category) }}</p>
                     <h4>{{ persona.name }}</h4>
                     <p class="persona-intro">{{ persona.intro }}</p>
                   </div>
                 </div>
 
-                <div class="tag-row">
-                  <span v-if="persona.isFeatured" class="tag-chip">精选</span>
-                  <span v-for="tag in persona.tags" :key="tag" class="tag-chip">{{ tag }}</span>
-                </div>
-
                 <div class="persona-card__foot">
-                  <div class="tag-row">
-                    <span v-for="topic in persona.topics" :key="topic" class="tag-chip">{{ topic }}</span>
-                  </div>
                   <div class="persona-actions persona-actions--stack">
                     <RouterLink class="text-link" :to="`/character/${persona.slug}`">查看详情</RouterLink>
                     <RouterLink class="text-link" :to="`/chat/${persona.slug}`">开始聊天</RouterLink>
@@ -211,54 +201,47 @@ onMounted(() => {
           </article>
         </div>
       </div>
+    </div>
 
-      <aside class="seed-side">
-        <article ref="featuredSectionRef" class="summary-panel summary-panel--featured">
-          <div class="seed-featured__head">
+    <article v-if="featuredExpanded" ref="featuredSectionRef" class="summary-panel summary-panel--featured summary-panel--featured-inline">
+      <div class="seed-featured__head">
+        <div>
+          <p class="eyebrow">精选推荐</p>
+          <h3>推荐人格</h3>
+        </div>
+        <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">收起</button>
+      </div>
+
+      <div class="summary-panel__list">
+        <div
+          v-for="persona in featuredPersonas.slice(0, 4)"
+          :key="persona.slug"
+          class="session-card session-card--compact"
+        >
+          <div class="session-card__top">
             <div>
-              <p class="eyebrow">精选推荐</p>
-              <h3>推荐人格</h3>
+              <h4 class="session-card__title">{{ persona.name }}</h4>
             </div>
-            <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">
-              {{ featuredExpanded ? '收起' : '预览' }}
+          </div>
+          <p class="persona-intro">{{ persona.intro }}</p>
+          <div class="session-card__actions">
+            <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊</RouterLink>
+            <button
+              v-if="persona.isFavoritable !== false"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': isFavorite(persona.slug) }"
+              type="button"
+              @click="toggleFavorite(persona.slug)"
+            >
+              {{ isFavorite(persona.slug) ? '已收藏' : '收藏' }}
             </button>
           </div>
+        </div>
+      </div>
 
-          <template v-if="featuredExpanded">
-            <div class="summary-panel__list">
-              <div
-                v-for="persona in featuredPersonas.slice(0, 4)"
-                :key="persona.slug"
-                class="session-card session-card--compact"
-              >
-                <div class="session-card__top">
-                  <div>
-                    <p class="persona-category">{{ formatLabel(persona.seedGroup || persona.category) }}</p>
-                    <h4 class="session-card__title">{{ persona.name }}</h4>
-                  </div>
-                  <span class="status-pill">{{ formatLabel(persona.seedGroup || persona.category) }}</span>
-                </div>
-                <div class="session-card__actions">
-                  <RouterLink class="text-link" :to="`/chat/${persona.slug}`">直接聊</RouterLink>
-                  <button
-                    v-if="persona.isFavoritable !== false"
-                    class="chip-btn"
-                    :class="{ 'chip-btn--active': isFavorite(persona.slug) }"
-                    type="button"
-                    @click="toggleFavorite(persona.slug)"
-                  >
-                    {{ isFavorite(persona.slug) ? '已收藏' : '收藏' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="seed-featured__foot">
-              <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">收起</button>
-            </div>
-          </template>
-        </article>
-      </aside>
-    </div>
+      <div class="seed-featured__foot">
+        <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">收起</button>
+      </div>
+    </article>
   </section>
 </template>

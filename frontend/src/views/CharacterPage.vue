@@ -85,7 +85,7 @@ watch(slug, () => {
     <div class="section-card">
       <p class="eyebrow">未找到</p>
       <h2>没有找到这个人格。</h2>
-      <p class="state-copy">请确认链接里的 slug 是否存在。</p>
+      <p class="state-copy">请确认链接是否存在。</p>
       <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
     </div>
   </section>
@@ -95,7 +95,6 @@ watch(slug, () => {
       <div class="detail-header">
         <div class="detail-avatar">{{ persona.avatar || persona.name.slice(0, 2) }}</div>
         <div>
-          <p class="eyebrow">{{ persona.category }}</p>
           <h2>{{ persona.name }}</h2>
           <p class="hero-text">{{ persona.intro }}</p>
         </div>
@@ -140,16 +139,6 @@ watch(slug, () => {
         <ul class="question-list">
           <li v-for="question in persona.recommendedQuestions" :key="question">{{ question }}</li>
         </ul>
-      </div>
-      <div class="mini-panel">
-        <p class="eyebrow">版本状态</p>
-        <p class="side-title">{{ persona.version }}</p>
-        <p>{{ persona.status }}</p>
-      </div>
-      <div class="mini-panel" v-if="persona.seedSource || persona.seedGroup">
-        <p class="eyebrow">种子来源</p>
-        <p class="side-title">{{ persona.seedGroup || persona.category }}</p>
-        <p>{{ persona.seedSource || '本地整理' }}</p>
       </div>
     </aside>
   </section>

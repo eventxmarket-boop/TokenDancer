@@ -253,7 +253,7 @@ const clearConversation = async () => {
     <div class="section-card">
       <p class="eyebrow">未找到</p>
       <h2>没有找到这个人格。</h2>
-      <p class="state-copy">请确认链接里的 slug 是否存在。</p>
+      <p class="state-copy">请确认链接是否存在。</p>
       <RouterLink class="primary-btn" to="/">返回首页</RouterLink>
     </div>
   </section>

@@ -26,7 +26,7 @@ const expandedSection = ref<MainPathKey | null>('self')
 const mainPathSections: MainPathSection[] = [
   {
     key: 'self',
-    title: '我的人格',
+    title: '自我主线',
     description: '从你的做事方式、表达习惯、思考路径和生活痕迹出发。',
     groupKeys: ['self'],
   },
@@ -389,7 +389,7 @@ onMounted(() => {
               <button class="secondary-btn" type="button" @click="collapseSection(section.key)">收起</button>
             </div>
             <div v-for="group in section.groups" :key="group.group" class="create-subgroup">
-              <div class="create-subgroup__head">
+              <div v-if="section.key !== 'self'" class="create-subgroup__head">
                 <div>
                   <p class="eyebrow">{{ group.label }}</p>
                   <h4>{{ group.label }}</h4>
@@ -397,7 +397,7 @@ onMounted(() => {
                 <span class="status-pill">{{ group.items.length }} 个入口</span>
               </div>
 
-              <p class="section-note">{{ group.description }}</p>
+              <p v-if="section.key !== 'self'" class="section-note">{{ group.description }}</p>
 
               <div class="create-card-grid">
                 <article
@@ -407,7 +407,7 @@ onMounted(() => {
                 >
                   <div class="create-card__head">
                     <div>
-                      <p class="persona-category">{{ group.label }}</p>
+                      <p v-if="section.key !== 'self'" class="persona-category">{{ group.label }}</p>
                       <h4>{{ item.name }}</h4>
                     </div>
                   </div>
