@@ -270,6 +270,92 @@ def _guided_answers_summary(guided_answers: Any) -> str:
     return f"引导补充：{len(filled)} 项 / {filled[0][:24]}"
 
 
+def _reunion_layer_summary(memory: Any) -> str:
+    if memory is None:
+        return ""
+
+    episodic = _clean_lines(_object_value(memory, "episodic_memories"))
+    semantic = _clean_lines(_object_value(memory, "semantic_memories"))
+    procedural = _clean_lines(_object_value(memory, "procedural_memories"))
+    legacy = _clean_lines(_object_value(memory, "legacy_summary"))
+    episodic_count = _normalize_text(_object_value(memory, "episodic_count"))
+    semantic_count = _normalize_text(_object_value(memory, "semantic_count"))
+    procedural_count = _normalize_text(_object_value(memory, "procedural_count"))
+    if episodic or semantic or procedural or episodic_count or semantic_count or procedural_count:
+        summary = f"三层记忆：E{episodic_count or len(episodic)} / S{semantic_count or len(semantic)} / P{procedural_count or len(procedural)}"
+        if legacy:
+            summary += f"；旧版摘要：{legacy[0]}"
+        return summary
+    return ""
+
+
+def _reunion_guided_summary(guided_answers: Any) -> str:
+    if guided_answers is None:
+        return ""
+
+    fields = [
+        _normalize_text(_object_value(guided_answers, "recall_scenes")),
+        _normalize_text(_object_value(guided_answers, "how_they_addressed_you")),
+        _normalize_text(_object_value(guided_answers, "repeated_phrases")),
+        _normalize_text(_object_value(guided_answers, "most_characteristic_moment")),
+        _normalize_text(_object_value(guided_answers, "deepest_impression")),
+        _normalize_text(_object_value(guided_answers, "care_style")),
+        _normalize_text(_object_value(guided_answers, "typical_reminders")),
+        _normalize_text(_object_value(guided_answers, "most_important_shared_memory")),
+    ]
+    filled = [item for item in fields if item]
+    if not filled:
+        return ""
+    return f"引导补充：{len(filled)} 项 / {filled[0][:24]}"
+
+
+def _reunion_policy_summary(policy: Any) -> str:
+    if not isinstance(policy, dict):
+        return ""
+
+    parts: list[str] = []
+    mode = _normalize_text(policy.get("mode"))
+    if mode:
+        parts.append(f"检索模式：{mode}")
+    if policy.get("progressive_recall") is not None:
+        parts.append(f"渐进式回忆：{'是' if policy.get('progressive_recall') else '否'}")
+    max_items = _normalize_text(policy.get("max_memory_items"))
+    if max_items:
+        parts.append(f"召回上限：{max_items}")
+    priority_rules = _clean_lines(policy.get("priority_rules"))
+    if priority_rules:
+        parts.append("优先规则：" + " / ".join(priority_rules[:3]))
+    fallback_rules = _clean_lines(policy.get("fallback_rules"))
+    if fallback_rules:
+        parts.append("降级规则：" + " / ".join(fallback_rules[:2]))
+    return "；".join(parts[:4])
+
+
+def _reunion_safety_summary(safety: Any) -> str:
+    if not isinstance(safety, dict):
+        return ""
+
+    parts: list[str] = []
+    protection = _clean_lines(safety.get("emotional_protection"))
+    if protection:
+        parts.append("情绪护栏：" + " / ".join(protection[:3]))
+    boundaries = _clean_lines(safety.get("boundaries"))
+    if boundaries:
+        parts.append("边界：" + " / ".join(boundaries[:2]))
+    toggles = []
+    if safety.get("avoid_dependency_language"):
+        toggles.append("避免依赖")
+    if safety.get("avoid_claiming_certainty"):
+        toggles.append("避免确定性")
+    if safety.get("avoid_afterlife_claims"):
+        toggles.append("避免超自然")
+    if safety.get("de_escalate_distress"):
+        toggles.append("高 distress 降温")
+    if toggles:
+        parts.append("护栏状态：" + " / ".join(toggles))
+    return "；".join(parts[:4])
+
+
 def _emotion_rules_summary(emotion_rules: Any) -> str:
     if not isinstance(emotion_rules, dict):
         return ""
@@ -444,6 +530,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         memory = draft.reunion_memory_base or {}
         policy = draft.reunion_memory_retrieval_policy or {}
         safety = draft.reunion_safety_guardrails or {}
+        guided_answers = getattr(draft, "reunion_guided_memory_answers", None)
         raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
         relationship_type = _normalize_text(
@@ -460,19 +547,31 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             memories.extend(_clean_lines(memory.get("voice_notes")))
             memories.extend(_clean_lines(memory.get("memory_fragments")))
             memories.extend(_clean_lines(memory.get("shared_memories")))
-        safety_notes = []
-        if isinstance(safety, dict):
-            safety_notes.extend(_clean_lines(safety.get("boundaries")))
-            safety_notes.extend(_clean_lines(safety.get("emotional_protection")))
-        summary_parts = [part for part in [profile_name, relationship_type, tone, retrieval_mode] if part]
+            memories.extend(_clean_lines(memory.get("episodic_memories")))
+            memories.extend(_clean_lines(memory.get("semantic_memories")))
+            memories.extend(_clean_lines(memory.get("procedural_memories")))
+        layer_summary = _reunion_layer_summary(memory)
+        guided_summary = _reunion_guided_summary(guided_answers)
+        policy_summary = _reunion_policy_summary(policy)
+        safety_summary = _reunion_safety_summary(safety)
+        if guided_summary:
+            summary_parts = [part for part in [profile_name, relationship_type, tone, guided_summary, retrieval_mode] if part]
+        else:
+            summary_parts = [part for part in [profile_name, relationship_type, tone, retrieval_mode] if part]
         if raw_materials_summary:
             summary_parts.append(raw_materials_summary)
-        if summary_parts or memories or safety_notes:
+        if layer_summary:
+            summary_parts.append(layer_summary)
+        if policy_summary:
+            summary_parts.append(policy_summary)
+        if safety_summary:
+            summary_parts.append(safety_summary)
+        if summary_parts or memories or safety_summary:
             combined = " · ".join(summary_parts)
-            extras = memories or safety_notes
+            extras = memories
             if extras:
                 combined = f"{combined} / {extras[0]}" if combined else extras[0]
-            return combined[:120]
+            return combined[:160]
 
     pieces = [draft.profile, draft.mindset, draft.heuristics]
     for piece in pieces:

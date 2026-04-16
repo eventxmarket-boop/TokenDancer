@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.47 - 2026-04-17
+
+- Upgraded the reunion persona path with progressive recall, layered memory, and safety guardrails.
+- Added guided recollection prompts for reunion creation so low-material paths can still build a richer memory base.
+- Adjusted reunion summary generation so guided recollection remains visible in saved Seeds instead of being truncated away.
+- Kept reunion as its own branch while routing OCR and shared upload materials into the reunion distillation chain.
+
 ## V1.4.46 - 2026-04-17
 
 - Added a shared material capability layer across all creation flows.

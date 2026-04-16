@@ -16,6 +16,7 @@ from app.schemas.intimate_companion import (
     IntimateCompanionRelationshipProfile,
 )
 from app.schemas.reunion_persona import (
+    ReunionPersonaGuidedMemoryAnswers,
     ReunionPersonaMemoryBase,
     ReunionPersonaProfile,
     ReunionPersonaRetrievalPolicy,
@@ -1551,6 +1552,454 @@ def merge_family_memories(
     )
 
 
+def _normalize_reunion_guided_memory_answers(value: Any) -> dict[str, str]:
+    if isinstance(value, ReunionPersonaGuidedMemoryAnswers):
+        return value.model_dump()
+    if not isinstance(value, dict):
+        return {}
+
+    normalized = {
+        "recall_scenes": _normalize_text(value.get("recall_scenes")),
+        "how_they_addressed_you": _normalize_text(value.get("how_they_addressed_you")),
+        "repeated_phrases": _normalize_text(value.get("repeated_phrases")),
+        "most_characteristic_moment": _normalize_text(value.get("most_characteristic_moment")),
+        "deepest_impression": _normalize_text(value.get("deepest_impression")),
+        "care_style": _normalize_text(value.get("care_style")),
+        "typical_reminders": _normalize_text(value.get("typical_reminders")),
+        "most_important_shared_memory": _normalize_text(value.get("most_important_shared_memory")),
+    }
+    return {key: value for key, value in normalized.items() if value}
+
+
+def _reunion_memory_layer_for_line(line: str, source_key: str = "") -> str:
+    text = _normalize_text(line)
+    if not text:
+        return "semantic"
+
+    episodic_hints = (
+        "那天",
+        "那次",
+        "当时",
+        "以前",
+        "以前我们",
+        "曾经",
+        "一起",
+        "见面",
+        "门口",
+        "回家",
+        "过年",
+        "生日",
+        "散步",
+        "记得",
+        "重逢",
+        "再见",
+        "告别",
+        "纪念",
+    )
+    semantic_hints = (
+        "一直",
+        "总是",
+        "觉得",
+        "看法",
+        "提醒",
+        "希望",
+        "重要",
+        "习惯",
+        "价值",
+        "长期",
+        "稳定",
+        "关系",
+    )
+    procedural_hints = (
+        "怎么叫",
+        "称呼",
+        "口头禅",
+        "安慰",
+        "照顾",
+        "关心",
+        "提醒",
+        "叮嘱",
+        "语气",
+        "节奏",
+        "表达",
+    )
+
+    scores = {
+        "episodic": 0,
+        "semantic": 0,
+        "procedural": 0,
+    }
+    if any(hint in text for hint in episodic_hints):
+        scores["episodic"] += 3
+    if any(hint in text for hint in semantic_hints):
+        scores["semantic"] += 3
+    if any(hint in text for hint in procedural_hints):
+        scores["procedural"] += 3
+
+    if source_key in {"chat_history_summary", "memory_fragments", "shared_memories", "recall_scenes", "most_characteristic_moment", "most_important_shared_memory"}:
+        scores["episodic"] += 2
+    if source_key in {"diary_notes", "letter_notes", "photo_notes"}:
+        scores["episodic"] += 1
+    if source_key in {"voice_notes", "care_style", "how_they_addressed_you", "repeated_phrases", "typical_reminders"}:
+        scores["procedural"] += 2
+    if source_key in {"deepest_impression"}:
+        scores["semantic"] += 1
+
+    if "先别急" in text or "慢慢来" in text or "注意休息" in text:
+        scores["procedural"] += 2
+    if "我们" in text or "一起" in text or "小时候" in text or "曾经" in text:
+        scores["episodic"] += 1
+    if "提醒" in text or "觉得" in text or "一直" in text:
+        scores["semantic"] += 1
+
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    return ranked[0][0] if ranked else "semantic"
+
+
+def _reunion_memory_base_dict(
+    *,
+    episodic_memories: Any = None,
+    semantic_memories: Any = None,
+    procedural_memories: Any = None,
+    legacy_summary: Any = None,
+    chat_history_summary: Any = "",
+    diary_notes: Any = None,
+    letter_notes: Any = None,
+    photo_notes: Any = None,
+    voice_notes: Any = None,
+    memory_fragments: Any = None,
+    shared_memories: Any = None,
+    guided_memory_answers: Any = None,
+) -> dict[str, Any]:
+    episodic = _merge_unique_lines(episodic_memories)
+    semantic = _merge_unique_lines(semantic_memories)
+    procedural = _merge_unique_lines(procedural_memories)
+    legacy = _merge_unique_lines(legacy_summary)
+    diary_notes = _merge_unique_lines(diary_notes)
+    letter_notes = _merge_unique_lines(letter_notes)
+    photo_notes = _merge_unique_lines(photo_notes)
+    voice_notes = _merge_unique_lines(voice_notes)
+    memory_fragments = _merge_unique_lines(memory_fragments)
+    shared_memories = _merge_unique_lines(shared_memories)
+    guided_answers = _normalize_reunion_guided_memory_answers(guided_memory_answers)
+
+    episodic = _merge_unique_lines(episodic, memory_fragments, shared_memories)
+    semantic = _merge_unique_lines(semantic, diary_notes, letter_notes)
+    procedural = _merge_unique_lines(procedural, photo_notes, voice_notes)
+    legacy = _merge_unique_lines(
+        legacy,
+        episodic[:2],
+        semantic[:2],
+        procedural[:2],
+        _clean_lines(chat_history_summary),
+    )
+
+    return {
+        "episodic_memories": episodic,
+        "semantic_memories": semantic,
+        "procedural_memories": procedural,
+        "legacy_summary": legacy,
+        "episodic_count": len(episodic),
+        "semantic_count": len(semantic),
+        "procedural_count": len(procedural),
+        "chat_history_summary": _normalize_text(chat_history_summary),
+        "diary_notes": diary_notes,
+        "letter_notes": letter_notes,
+        "photo_notes": photo_notes,
+        "voice_notes": voice_notes,
+        "memory_fragments": memory_fragments,
+        "shared_memories": shared_memories,
+        "guided_memory_answers": guided_answers,
+    }
+
+
+def extract_reunion_memory_base_from_materials(
+    persona_form: dict[str, Any],
+    memory_form: dict[str, Any],
+    raw_materials: dict[str, Any],
+) -> dict[str, Any]:
+    _ = persona_form or {}
+    memory_form = memory_form or {}
+    raw_materials = raw_materials or {}
+
+    chat_history_summary = _normalize_text(raw_materials.get("chat_history_text") or memory_form.get("chat_history_summary"))
+    diary_notes = _clean_lines(raw_materials.get("diary_text") or memory_form.get("diary_notes"))
+    letter_notes = _clean_lines(raw_materials.get("letter_text") or memory_form.get("letter_notes"))
+    photo_notes = _clean_lines(raw_materials.get("photo_notes_text") or memory_form.get("photo_notes"))
+    voice_notes = _clean_lines(raw_materials.get("voice_notes_text") or memory_form.get("voice_notes"))
+    memory_fragments = _clean_lines(raw_materials.get("memory_notes_text") or memory_form.get("memory_fragments"))
+    uploaded_text_documents = _document_snippets(raw_materials.get("uploaded_text_documents", []))
+    ocr_extracted_texts = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
+    guided_answers = _normalize_reunion_guided_memory_answers(
+        memory_form.get("guided_memory_answers")
+        or raw_materials.get("guided_memory_answers")
+        or memory_form.get("reunion_guided_memory_answers")
+        or raw_materials.get("reunion_guided_memory_answers")
+    )
+
+    episodic_memories: list[str] = []
+    semantic_memories: list[str] = []
+    procedural_memories: list[str] = []
+    legacy_summary: list[str] = []
+    shared_memories: list[str] = []
+
+    material_lines = _merge_unique_lines(
+        chat_history_summary,
+        memory_form.get("chat_history_summary"),
+        diary_notes,
+        letter_notes,
+        photo_notes,
+        voice_notes,
+        memory_fragments,
+        uploaded_text_documents,
+        ocr_extracted_texts,
+        raw_materials.get("image_notes_text") or memory_form.get("image_notes"),
+    )
+
+    for line in material_lines:
+        layer = _reunion_memory_layer_for_line(line, "materials")
+        if layer == "episodic":
+            episodic_memories.append(line)
+            shared_memories.append(line)
+        elif layer == "procedural":
+            procedural_memories.append(line)
+        else:
+            semantic_memories.append(line)
+        if any(keyword in line for keyword in ("记得", "以前", "从前", "过去", "曾经", "重逢", "再见", "怀念", "想念")):
+            legacy_summary.append(line)
+
+    for field, value in guided_answers.items():
+        lines = _clean_lines(value)
+        if not lines:
+            continue
+        for line in lines:
+            layer = _reunion_memory_layer_for_line(line, field)
+            if layer == "episodic":
+                episodic_memories.append(line)
+                shared_memories.append(line)
+            elif layer == "procedural":
+                procedural_memories.append(line)
+            else:
+                semantic_memories.append(line)
+            legacy_summary.append(line)
+
+    return {
+        "memory_base": _reunion_memory_base_dict(
+            episodic_memories=episodic_memories,
+            semantic_memories=semantic_memories,
+            procedural_memories=procedural_memories,
+            legacy_summary=legacy_summary,
+            chat_history_summary=chat_history_summary,
+            diary_notes=diary_notes,
+            letter_notes=letter_notes,
+            photo_notes=photo_notes,
+            voice_notes=voice_notes,
+            memory_fragments=memory_fragments,
+            shared_memories=shared_memories,
+            guided_memory_answers=guided_answers,
+        ),
+        "guided_memory_answers": guided_answers,
+    }
+
+
+def extract_reunion_memory_base_from_guided_answers(
+    persona_form: dict[str, Any],
+    guided_answers: dict[str, Any],
+    raw_materials: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    _ = persona_form or {}
+    raw_materials = raw_materials or {}
+    answers = _normalize_reunion_guided_memory_answers(guided_answers)
+    if not answers:
+        return {
+            "memory_base": _reunion_memory_base_dict(
+                chat_history_summary=_normalize_text(raw_materials.get("chat_history_text")),
+                guided_memory_answers={},
+            ),
+            "guided_memory_answers": {},
+        }
+
+    episodic_memories: list[str] = []
+    semantic_memories: list[str] = []
+    procedural_memories: list[str] = []
+    legacy_summary: list[str] = []
+    shared_memories: list[str] = []
+
+    source_map = {
+        "recall_scenes": ("episodic", episodic_memories),
+        "how_they_addressed_you": ("procedural", procedural_memories),
+        "repeated_phrases": ("procedural", procedural_memories),
+        "most_characteristic_moment": ("episodic", episodic_memories),
+        "deepest_impression": ("semantic", semantic_memories),
+        "care_style": ("procedural", procedural_memories),
+        "typical_reminders": ("semantic", semantic_memories),
+        "most_important_shared_memory": ("episodic", episodic_memories),
+    }
+
+    for field, value in answers.items():
+        lines = _clean_lines(value)
+        if not lines:
+            continue
+        layer_name, bucket = source_map.get(field, ("semantic", semantic_memories))
+        bucket.extend(lines)
+        legacy_summary.extend(lines)
+        if layer_name == "episodic":
+            shared_memories.extend(lines)
+
+    return {
+        "memory_base": _reunion_memory_base_dict(
+            episodic_memories=episodic_memories,
+            semantic_memories=semantic_memories,
+            procedural_memories=procedural_memories,
+            legacy_summary=legacy_summary,
+            chat_history_summary=_normalize_text(raw_materials.get("chat_history_text")),
+            shared_memories=shared_memories,
+            guided_memory_answers=answers,
+        ),
+        "guided_memory_answers": answers,
+    }
+
+
+def merge_reunion_memories(
+    material_memory_base: dict[str, Any] | None,
+    guided_memory_base: dict[str, Any] | None,
+) -> dict[str, Any]:
+    material_memory_base = material_memory_base or {}
+    guided_memory_base = guided_memory_base or {}
+    return _reunion_memory_base_dict(
+        episodic_memories=_merge_unique_lines(
+            material_memory_base.get("episodic_memories"),
+            guided_memory_base.get("episodic_memories"),
+        ),
+        semantic_memories=_merge_unique_lines(
+            material_memory_base.get("semantic_memories"),
+            guided_memory_base.get("semantic_memories"),
+        ),
+        procedural_memories=_merge_unique_lines(
+            material_memory_base.get("procedural_memories"),
+            guided_memory_base.get("procedural_memories"),
+        ),
+        legacy_summary=_merge_unique_lines(
+            material_memory_base.get("legacy_summary"),
+            guided_memory_base.get("legacy_summary"),
+        ),
+        chat_history_summary=_normalize_text(
+            material_memory_base.get("chat_history_summary") or guided_memory_base.get("chat_history_summary")
+        ),
+        diary_notes=_merge_unique_lines(
+            material_memory_base.get("diary_notes"),
+            guided_memory_base.get("diary_notes"),
+        ),
+        letter_notes=_merge_unique_lines(
+            material_memory_base.get("letter_notes"),
+            guided_memory_base.get("letter_notes"),
+        ),
+        photo_notes=_merge_unique_lines(
+            material_memory_base.get("photo_notes"),
+            guided_memory_base.get("photo_notes"),
+        ),
+        voice_notes=_merge_unique_lines(
+            material_memory_base.get("voice_notes"),
+            guided_memory_base.get("voice_notes"),
+        ),
+        memory_fragments=_merge_unique_lines(
+            material_memory_base.get("memory_fragments"),
+            guided_memory_base.get("memory_fragments"),
+        ),
+        shared_memories=_merge_unique_lines(
+            material_memory_base.get("shared_memories"),
+            guided_memory_base.get("shared_memories"),
+        ),
+        guided_memory_answers={
+            **_normalize_reunion_guided_memory_answers(guided_memory_base.get("guided_memory_answers")),
+            **_normalize_reunion_guided_memory_answers(material_memory_base.get("guided_memory_answers")),
+        },
+    )
+
+
+def build_reunion_memory_retrieval_policy(
+    form_data: dict[str, Any],
+    guided_answers: dict[str, Any] | None,
+    memory_base: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    guided_answers = _normalize_reunion_guided_memory_answers(guided_answers or {})
+    memory_base = memory_base or {}
+    shared_count = len(_clean_lines(memory_base.get("shared_memories")))
+    episodic_count = len(_clean_lines(memory_base.get("episodic_memories")))
+    semantic_count = len(_clean_lines(memory_base.get("semantic_memories")))
+    procedural_count = len(_clean_lines(memory_base.get("procedural_memories")))
+    max_items = 4 if episodic_count + semantic_count + procedural_count < 12 else 3
+    priority_rules = _clean_lines(form_data.get("priority_rules")) or [
+        "先看最近对话，再看共同经历",
+        "遇到具体场景，优先召回 episodic 记忆",
+        "情绪较重时，优先召回 procedural 安抚方式",
+    ]
+    if guided_answers:
+        priority_rules = _merge_unique_lines(
+            priority_rules,
+            [
+                f"优先使用引导补充里最像真实相处方式的片段：{next(iter(guided_answers.values()), '')}",
+            ],
+        )
+    fallback_rules = _clean_lines(form_data.get("fallback_rules")) or [
+        "记忆不足时先稳住当前情绪",
+        "不要一次塞太多回忆",
+        "不编造未确认细节",
+    ]
+    mode = _normalize_text(form_data.get("retrieval_mode")) or "渐进式回忆"
+    return {
+        "mode": mode,
+        "progressive_recall": True,
+        "priority_rules": priority_rules,
+        "fallback_rules": fallback_rules,
+        "max_memory_items": max_items if shared_count or episodic_count or semantic_count or procedural_count else 4,
+        "emotion_weight": 0.35,
+        "topic_weight": 0.35,
+        "layer_weight": 0.2,
+        "safety_weight": 0.1,
+    }
+
+
+def build_reunion_safety_guardrails(
+    form_data: dict[str, Any],
+    raw_materials: dict[str, Any] | None = None,
+    guided_answers: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    raw_materials = raw_materials or {}
+    guided_answers = _normalize_reunion_guided_memory_answers(guided_answers or {})
+    boundaries = _clean_lines(form_data.get("safety_boundaries")) or [
+        "不激进刺激",
+        "不替现实关系下结论",
+    ]
+    emotional_protection = _clean_lines(form_data.get("emotional_protection")) or [
+        "先接住情绪，再慢慢回忆",
+        "避免高压追问",
+    ]
+    avoid_triggers = _clean_lines(form_data.get("avoid_triggers")) or [
+        "不要把空白补成确定事实",
+        "不要一次抛出过多强刺激回忆",
+    ]
+    if _normalize_text(raw_materials.get("chat_history_text")):
+        emotional_protection = _merge_unique_lines(emotional_protection, ["先以近期聊天情绪为主，不急着深入旧事"])
+    if guided_answers:
+        avoid_triggers = _merge_unique_lines(avoid_triggers, ["引导补充只作为辅助，不替代现实关系边界"])
+    return {
+        "boundaries": boundaries,
+        "emotional_protection": emotional_protection,
+        "avoid_triggers": avoid_triggers,
+        "avoid_dependency_language": True,
+        "avoid_claiming_certainty": True,
+        "avoid_afterlife_claims": True,
+        "de_escalate_distress": True,
+    }
+
+
 def build_family_companion_draft(
     form_data: dict[str, Any],
     display_name: str = "",
@@ -1684,6 +2133,7 @@ def _build_reunion_persona_draft(
     form_data: dict[str, Any],
     display_name: str = "",
     input_mode: str = "",
+    guided_memory_answers: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
@@ -1697,33 +2147,14 @@ def _build_reunion_persona_draft(
     remembrance_style = _normalize_text(form_data.get("remembrance_style")) or "先慢慢回忆，再一点点靠近。"
     comfort_style = _normalize_text(form_data.get("comfort_style")) or "先稳住情绪，再带着记忆慢慢说。"
     boundaries = _normalize_text(form_data.get("boundaries")) or "不激进刺激，不越界替代现实。"
-    diary_notes = _clean_lines(form_data.get("diary_notes"))
-    letter_notes = _clean_lines(form_data.get("letter_notes"))
-    photo_notes = _clean_lines(form_data.get("photo_notes"))
-    voice_notes = _clean_lines(form_data.get("voice_notes"))
-    memory_fragments = _clean_lines(form_data.get("memory_fragments"))
-    shared_memories = _clean_lines(form_data.get("shared_memories"))
     retrieval_mode = _normalize_text(form_data.get("retrieval_mode")) or "渐进式回忆"
-    priority_rules = _clean_lines(form_data.get("priority_rules")) or [
-        "优先从最近的对话和回忆片段开始",
-        "优先提取和当前情绪有关的记忆",
-    ]
-    fallback_rules = _clean_lines(form_data.get("fallback_rules")) or [
-        "当记忆不足时，先稳住当前情绪",
-        "不编造没有记录的具体细节",
-    ]
-    safety_boundaries = _clean_lines(form_data.get("safety_boundaries")) or [
-        "不激进刺激情绪",
-        "不替现实关系下结论",
-    ]
-    emotional_protection = _clean_lines(form_data.get("emotional_protection")) or [
-        "先接住情绪，再慢慢回忆",
-        "避免反复追问高压细节",
-    ]
-    avoid_triggers = _clean_lines(form_data.get("avoid_triggers")) or [
-        "不要把空白补成确定事实",
-        "不要一次性抛出过多强刺激回忆",
-    ]
+    reunion_guided_answers = _normalize_reunion_guided_memory_answers(
+        guided_memory_answers
+        or form_data.get("reunion_guided_memory_answers")
+        or raw_materials_input.get("reunion_guided_memory_answers")
+        or form_data.get("guided_memory_answers")
+        or raw_materials_input.get("guided_memory_answers")
+    )
 
     raw_materials = _raw_materials_payload(
         chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
@@ -1741,22 +2172,6 @@ def _build_reunion_persona_draft(
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
     raw_materials = _run_ocr_for_raw_materials(raw_materials)
-    material_lines = _merge_unique_lines(
-        raw_materials["chat_history_text"],
-        raw_materials["diary_text"],
-        raw_materials["letter_text"],
-        raw_materials["memory_notes_text"],
-        raw_materials["photo_notes_text"],
-        raw_materials["voice_notes_text"],
-        _clean_lines(
-            [
-                item.get("ocr_text")
-                for item in raw_materials.get("ocr_extracted_texts", [])
-                if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
-            ]
-        ),
-        [doc.get("content", "") for doc in raw_materials["uploaded_text_documents"]],
-    )
 
     if not raw_materials["chat_history_text"]:
         raw_materials["chat_history_text"] = _select_material_summary(
@@ -1766,20 +2181,6 @@ def _build_reunion_persona_draft(
             raw_materials["memory_notes_text"],
         )
 
-    for line in material_lines:
-        if any(keyword in line for keyword in ("记得", "以前", "从前", "过去", "曾经", "重逢", "再见", "怀念", "想念")):
-            shared_memories.append(line)
-        else:
-            memory_fragments.append(line)
-
-    diary_notes = _merge_unique_lines(diary_notes)
-    letter_notes = _merge_unique_lines(letter_notes)
-    photo_notes = _merge_unique_lines(photo_notes)
-    voice_notes = _merge_unique_lines(voice_notes)
-    memory_fragments = _merge_unique_lines(memory_fragments, _document_snippets(raw_materials["uploaded_text_documents"]))
-    shared_memories = _merge_unique_lines(shared_memories)
-    chat_history_summary = _normalize_text(raw_materials["chat_history_text"])
-
     persona_profile = ReunionPersonaProfile(
         relationship_type=relation_type,
         name=name,
@@ -1788,26 +2189,44 @@ def _build_reunion_persona_draft(
         comfort_style=comfort_style,
         boundaries=boundaries,
     )
-    memory_base = ReunionPersonaMemoryBase(
-        chat_history_summary=chat_history_summary,
-        diary_notes=diary_notes,
-        letter_notes=letter_notes,
-        photo_notes=photo_notes,
-        voice_notes=voice_notes,
-        memory_fragments=memory_fragments,
-        shared_memories=shared_memories,
+    material_extraction = extract_reunion_memory_base_from_materials(form_data, form_data, raw_materials)
+    guided_extraction = extract_reunion_memory_base_from_guided_answers(form_data, reunion_guided_answers, raw_materials)
+    memory_base = ReunionPersonaMemoryBase.model_validate(
+        merge_reunion_memories(
+            material_extraction.get("memory_base") or {},
+            guided_extraction.get("memory_base") or {},
+        )
     )
-    memory_retrieval_policy = ReunionPersonaRetrievalPolicy(
-        mode=retrieval_mode,
-        progressive_recall=True,
-        priority_rules=priority_rules,
-        fallback_rules=fallback_rules,
+    memory_retrieval_policy = ReunionPersonaRetrievalPolicy.model_validate(
+        build_reunion_memory_retrieval_policy(
+            {
+                "retrieval_mode": retrieval_mode,
+                "priority_rules": form_data.get("priority_rules"),
+                "fallback_rules": form_data.get("fallback_rules"),
+            },
+            guided_extraction.get("guided_memory_answers") or reunion_guided_answers,
+            memory_base.model_dump(),
+        )
     )
-    safety_guardrails = ReunionPersonaSafetyGuardrails(
-        boundaries=safety_boundaries,
-        emotional_protection=emotional_protection,
-        avoid_triggers=avoid_triggers,
+    safety_guardrails = ReunionPersonaSafetyGuardrails.model_validate(
+        build_reunion_safety_guardrails(
+            {
+                "safety_boundaries": form_data.get("safety_boundaries"),
+                "emotional_protection": form_data.get("emotional_protection"),
+                "avoid_triggers": form_data.get("avoid_triggers"),
+            },
+            raw_materials,
+            guided_extraction.get("guided_memory_answers") or reunion_guided_answers,
+        )
     )
+    chat_history_summary = _normalize_text(memory_base.chat_history_summary or raw_materials.get("chat_history_text"))
+    legacy_summary = _merge_unique_lines(
+        memory_base.legacy_summary,
+        [chat_history_summary] if chat_history_summary else [],
+    )
+    episodic_count = len(_clean_lines(memory_base.episodic_memories))
+    semantic_count = len(_clean_lines(memory_base.semantic_memories))
+    procedural_count = len(_clean_lines(memory_base.procedural_memories))
 
     profile = (
         f"重逢人格定位：{relation_type}\n"
@@ -1852,10 +2271,17 @@ def _build_reunion_persona_draft(
         "guardrails": guardrails,
         "relationship_type": relation_type,
         "reunion_persona_profile": persona_profile.model_dump(),
-        "reunion_memory_base": memory_base.model_dump(),
+        "reunion_memory_base": {
+            **memory_base.model_dump(),
+            "legacy_summary": legacy_summary,
+            "episodic_count": episodic_count,
+            "semantic_count": semantic_count,
+            "procedural_count": procedural_count,
+        },
         "reunion_memory_retrieval_policy": memory_retrieval_policy.model_dump(),
         "reunion_safety_guardrails": safety_guardrails.model_dump(),
         "raw_materials": raw_materials,
+        "reunion_guided_memory_answers": guided_extraction.get("guided_memory_answers") or reunion_guided_answers,
         "name": name,
     }
 
@@ -2562,6 +2988,12 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     form_guided_memory_answers = _normalize_guided_memory_answers(form_data.get("guided_memory_answers"))
     if form_guided_memory_answers:
         guided_memory_answers = {**form_guided_memory_answers, **guided_memory_answers}
+    reunion_guided_memory_answers = _normalize_reunion_guided_memory_answers(payload.get("reunion_guided_memory_answers"))
+    form_reunion_guided_memory_answers = _normalize_reunion_guided_memory_answers(
+        form_data.get("reunion_guided_memory_answers")
+    )
+    if form_reunion_guided_memory_answers:
+        reunion_guided_memory_answers = {**form_reunion_guided_memory_answers, **reunion_guided_memory_answers}
 
     if normalized_create_type == "self_unified":
         content = _build_self_draft(form_data, normalized_display_name)
@@ -2575,7 +3007,12 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
             guided_memory_answers,
         )
     elif normalized_create_type == "reunion_persona":
-        content = _build_reunion_persona_draft(form_data, normalized_display_name, normalized_input_mode)
+        content = _build_reunion_persona_draft(
+            form_data,
+            normalized_display_name,
+            normalized_input_mode,
+            reunion_guided_memory_answers,
+        )
     elif normalized_create_type == "intimate_companion":
         content = _build_intimate_companion_draft(form_data, normalized_display_name, normalized_input_mode)
     else:
@@ -2620,6 +3057,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "material_summary": material_summary,
         "raw_materials": content.get("raw_materials"),
         "guided_memory_answers": content.get("guided_memory_answers"),
+        "reunion_guided_memory_answers": content.get("reunion_guided_memory_answers"),
         "emotion_rules": content.get("emotion_rules"),
         "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),

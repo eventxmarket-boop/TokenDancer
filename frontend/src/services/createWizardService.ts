@@ -23,6 +23,7 @@ export type CreateWizardPayload = {
     | SelfPersonaRawMaterials
     | Record<string, unknown>
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers
+  reunion_guided_memory_answers?: ReunionPersonaGuidedMemoryAnswers
 }
 
 export type CreateWizardDraftMeta = {
@@ -172,6 +173,13 @@ export type ReunionPersonaProfile = {
 }
 
 export type ReunionPersonaMemoryBase = {
+  episodic_memories: string[]
+  semantic_memories: string[]
+  procedural_memories: string[]
+  legacy_summary: string[]
+  episodic_count: number
+  semantic_count: number
+  procedural_count: number
   chat_history_summary: string
   diary_notes: string[]
   letter_notes: string[]
@@ -179,6 +187,7 @@ export type ReunionPersonaMemoryBase = {
   voice_notes: string[]
   memory_fragments: string[]
   shared_memories: string[]
+  guided_memory_answers: Record<string, string>
 }
 
 export type ReunionPersonaRawMaterials = {
@@ -232,12 +241,32 @@ export type ReunionPersonaRetrievalPolicy = {
   progressive_recall: boolean
   priority_rules: string[]
   fallback_rules: string[]
+  max_memory_items: number
+  emotion_weight: number
+  topic_weight: number
+  layer_weight: number
+  safety_weight: number
 }
 
 export type ReunionPersonaSafetyGuardrails = {
   boundaries: string[]
   emotional_protection: string[]
   avoid_triggers: string[]
+  avoid_dependency_language: boolean
+  avoid_claiming_certainty: boolean
+  avoid_afterlife_claims: boolean
+  de_escalate_distress: boolean
+}
+
+export type ReunionPersonaGuidedMemoryAnswers = {
+  recall_scenes: string
+  how_they_addressed_you: string
+  repeated_phrases: string
+  most_characteristic_moment: string
+  deepest_impression: string
+  care_style: string
+  typical_reminders: string
+  most_important_shared_memory: string
 }
 
 export type SelfPersonaUnifiedLayer = {
@@ -303,6 +332,7 @@ export type CreateWizardDraft = {
     | Record<string, unknown>
     | null
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers | null
+  reunion_guided_memory_answers?: ReunionPersonaGuidedMemoryAnswers | null
   emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null

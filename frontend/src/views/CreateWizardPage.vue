@@ -85,6 +85,14 @@ const formState = reactive({
   text_materials: '',
   image_notes: '',
   voice_notes: '',
+  reunion_guided_recall_scenes: '',
+  reunion_guided_how_they_addressed_you: '',
+  reunion_guided_repeated_phrases: '',
+  reunion_guided_most_characteristic_moment: '',
+  reunion_guided_deepest_impression: '',
+  reunion_guided_care_style: '',
+  reunion_guided_typical_reminders: '',
+  reunion_guided_most_important_shared_memory: '',
   guided_most_common_topics: '',
   guided_comfort_style: '',
   guided_most_characteristic_event: '',
@@ -1244,6 +1252,19 @@ function buildFamilyGuidedMemoryAnswers() {
   }
 }
 
+function buildReunionGuidedMemoryAnswers() {
+  return {
+    recall_scenes: formState.reunion_guided_recall_scenes,
+    how_they_addressed_you: formState.reunion_guided_how_they_addressed_you,
+    repeated_phrases: formState.reunion_guided_repeated_phrases,
+    most_characteristic_moment: formState.reunion_guided_most_characteristic_moment,
+    deepest_impression: formState.reunion_guided_deepest_impression,
+    care_style: formState.reunion_guided_care_style,
+    typical_reminders: formState.reunion_guided_typical_reminders,
+    most_important_shared_memory: formState.reunion_guided_most_important_shared_memory,
+  }
+}
+
 function buildReunionRawMaterials() {
   return { ...reunionMaterialState.value }
 }
@@ -1327,6 +1348,8 @@ async function generateDraft() {
               : undefined,
       guided_memory_answers:
         createType.value === 'family_companion' ? buildFamilyGuidedMemoryAnswers() : undefined,
+      reunion_guided_memory_answers:
+        createType.value === 'reunion_persona' ? buildReunionGuidedMemoryAnswers() : undefined,
       form_data:
         createType.value === 'self_unified'
           ? { ...formState, ...selfUnifiedPayload }
@@ -1340,6 +1363,7 @@ async function generateDraft() {
               ? {
                   ...formState,
                   raw_materials: buildReunionRawMaterials(),
+                  reunion_guided_memory_answers: buildReunionGuidedMemoryAnswers(),
                 }
               : createType.value === 'intimate_companion'
                 ? {
@@ -1674,6 +1698,96 @@ watch(
                 path-type="reunion"
                 :supports-guided-prompts="false"
               />
+
+              <template v-if="isReunionPersona">
+                <p class="eyebrow">补充回忆（可选）</p>
+                <p class="section-note section-note--subtle">
+                  没有完整材料也没关系，可以先用几个安静的问题补充这段重逢记忆。
+                </p>
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>你最容易在什么场景想起 ta</span>
+                    <textarea
+                      v-model="formState.reunion_guided_recall_scenes"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：路过旧街道、看到某张照片、听到某首歌"
+                    ></textarea>
+                  </label>
+                  <label class="form-field">
+                    <span>ta 最常怎么称呼你</span>
+                    <textarea
+                      v-model="formState.reunion_guided_how_they_addressed_you"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：名字的昵称、熟悉的称呼"
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>ta 反复说过的话</span>
+                    <textarea
+                      v-model="formState.reunion_guided_repeated_phrases"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="把常见的话整理出来"
+                    ></textarea>
+                  </label>
+                  <label class="form-field">
+                    <span>哪件小事最像 ta</span>
+                    <textarea
+                      v-model="formState.reunion_guided_most_characteristic_moment"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：某个动作、习惯或回应方式"
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>ta 给你最深的印象是什么</span>
+                    <textarea
+                      v-model="formState.reunion_guided_deepest_impression"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：安静、细心、克制、温柔"
+                    ></textarea>
+                  </label>
+                  <label class="form-field">
+                    <span>ta 最常表达关心的方式</span>
+                    <textarea
+                      v-model="formState.reunion_guided_care_style"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：提醒你吃饭、问你近况、陪你走一段"
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>哪些提醒最像 ta</span>
+                    <textarea
+                      v-model="formState.reunion_guided_typical_reminders"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：注意休息、慢慢来、先稳住"
+                    ></textarea>
+                  </label>
+                  <label class="form-field">
+                    <span>你最想保留的共同记忆</span>
+                    <textarea
+                      v-model="formState.reunion_guided_most_important_shared_memory"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="例如：一起走过的一段路、某次见面"
+                    ></textarea>
+                  </label>
+                </div>
+              </template>
             </div>
           </template>
 

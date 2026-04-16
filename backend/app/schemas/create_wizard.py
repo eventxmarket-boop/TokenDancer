@@ -14,6 +14,7 @@ from app.schemas.intimate_companion import (
     IntimateCompanionRelationshipProfile,
 )
 from app.schemas.reunion_persona import (
+    ReunionPersonaGuidedMemoryAnswers,
     ReunionPersonaMemoryBase,
     ReunionPersonaProfile,
     ReunionPersonaRetrievalPolicy,
@@ -90,6 +91,9 @@ class CreateWizardDraftRequest(BaseModel):
     raw_materials: CreateWizardRawMaterials = Field(default_factory=CreateWizardRawMaterials)
     form_data: dict[str, Any] = Field(default_factory=dict)
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers = Field(default_factory=FamilyCompanionGuidedMemoryAnswers)
+    reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers = Field(
+        default_factory=ReunionPersonaGuidedMemoryAnswers
+    )
 
 
 class CreateWizardDraftMeta(BaseModel):
@@ -128,6 +132,7 @@ class CreateWizardDraft(BaseModel):
     family_subtype: str = ""
     raw_materials: dict[str, Any] | None = None
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers | None = None
+    reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers | None = None
     emotion_rules: dict[str, Any] | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None

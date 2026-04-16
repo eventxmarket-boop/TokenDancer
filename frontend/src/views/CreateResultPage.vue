@@ -604,6 +604,37 @@ const reunionMemoryBase = computed<ReunionPersonaMemoryBase | null>(() => {
   return payload
 })
 
+const reunionGuidedSummary = computed(() => {
+  const memory = reunionMemoryBase.value
+  if (!memory) {
+    return ''
+  }
+
+  const guided = memory.guided_memory_answers
+  if (!guided || typeof guided !== 'object') {
+    return ''
+  }
+
+  const ordered = [
+    guided.recall_scenes,
+    guided.how_they_addressed_you,
+    guided.repeated_phrases,
+    guided.most_characteristic_moment,
+    guided.deepest_impression,
+    guided.care_style,
+    guided.typical_reminders,
+    guided.most_important_shared_memory,
+  ]
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+
+  if (!ordered.length) {
+    return ''
+  }
+
+  return `引导补充：${ordered.length} 项 / ${ordered[0]}`
+})
+
 const reunionRetrievalPolicy = computed<ReunionPersonaRetrievalPolicy | null>(() => {
   const payload = editableDraft.reunion_memory_retrieval_policy || draft.value?.reunion_memory_retrieval_policy
   if (!payload || typeof payload !== 'object') {
@@ -646,6 +677,8 @@ const reunionMemoryLines = computed(() => {
   const safety = reunionSafetyGuardrails.value
 
   return [
+    { label: '三层记忆', value: `E${memory.episodic_count || memory.episodic_memories?.length || 0} / S${memory.semantic_count || memory.semantic_memories?.length || 0} / P${memory.procedural_count || memory.procedural_memories?.length || 0}` },
+    { label: '引导补充', value: reunionGuidedSummary.value || '未填写' },
     { label: '聊天摘要', value: memory.chat_history_summary || '未填写' },
     { label: '日记 / 信件', value: memory.diary_notes?.join(' / ') || '未填写' },
     { label: '书信文本', value: memory.letter_notes?.join(' / ') || '未填写' },

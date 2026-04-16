@@ -583,6 +583,16 @@ class CreateWizardTests(unittest.TestCase):
                 "letter_notes": "一封旧信里的话",
                 "memory_fragments": "记忆片段 A\n记忆片段 B",
                 "shared_memories": "共同经历的一件事\n共同记得的一句话",
+                "reunion_guided_memory_answers": {
+                    "recall_scenes": "路过旧街道时最容易想起",
+                    "how_they_addressed_you": "总是用很熟悉的昵称叫你",
+                    "repeated_phrases": "先慢慢来\n记得吃饭",
+                    "most_characteristic_moment": "会安静地陪你走一段路",
+                    "deepest_impression": "克制但很温柔",
+                    "care_style": "先问近况，再慢慢安慰",
+                    "typical_reminders": "注意休息\n别太累",
+                    "most_important_shared_memory": "一起在门口见面的那次",
+                },
                 "priority_rules": "优先当前情绪相关记忆\n优先最近对话",
                 "fallback_rules": "记忆不足时先稳住情绪\n不编造细节",
                 "safety_boundaries": "不做激进刺激\n不替现实关系下结论",
@@ -637,10 +647,22 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIsNotNone(body["draft"]["reunion_memory_base"])
         self.assertIsNotNone(body["draft"]["reunion_memory_retrieval_policy"])
         self.assertIsNotNone(body["draft"]["reunion_safety_guardrails"])
+        self.assertIn("reunion_guided_memory_answers", body["draft"])
+        self.assertEqual(body["draft"]["reunion_guided_memory_answers"]["recall_scenes"], "路过旧街道时最容易想起")
+        self.assertTrue(body["draft"]["reunion_memory_base"]["episodic_memories"])
+        self.assertTrue(body["draft"]["reunion_memory_base"]["semantic_memories"])
+        self.assertTrue(body["draft"]["reunion_memory_base"]["procedural_memories"])
+        self.assertGreaterEqual(body["draft"]["reunion_memory_base"]["episodic_count"], 1)
+        self.assertGreaterEqual(body["draft"]["reunion_memory_base"]["semantic_count"], 1)
+        self.assertGreaterEqual(body["draft"]["reunion_memory_base"]["procedural_count"], 1)
         self.assertIn("raw_materials", body["draft"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
+        self.assertIn("reunion_guided_memory_answers", body["draft"])
+        self.assertTrue(
+            any("路过旧街道" in item or "先慢慢来" in item for item in body["draft"]["reunion_memory_base"]["legacy_summary"])
+        )
         self.assertIn("重逢人格", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_intimate_companion_draft(self):
