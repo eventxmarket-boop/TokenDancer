@@ -12,7 +12,6 @@ function activateSticker(sticker: 'create' | 'seed') {
   <section class="home-landing">
     <div class="home-landing__body">
       <div class="home-landing__copy">
-        <p class="eyebrow">人格小屋</p>
         <p class="hero-text">从自己开始，或者先从一个对话开始。</p>
       </div>
 

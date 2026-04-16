@@ -51,13 +51,12 @@ watch(
     <div class="ambient ambient-one"></div>
     <div class="ambient ambient-two"></div>
     <header class="topbar">
-      <div class="brand-lockup">
+      <RouterLink class="brand-lockup brand-lockup--link" to="/" aria-label="返回首页">
         <div class="brand-mark">T</div>
         <div>
           <p class="eyebrow">Tokendancer</p>
-          <h1>人格小屋</h1>
         </div>
-      </div>
+      </RouterLink>
 
       <div class="topbar__actions">
         <nav class="desktop-nav" aria-label="主导航">

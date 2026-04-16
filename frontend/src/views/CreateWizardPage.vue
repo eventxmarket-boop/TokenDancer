@@ -1351,31 +1351,16 @@ watch(
 </script>
 
 <template>
-  <section class="page-hero wizard-hero">
+  <section class="page-hero page-hero--single wizard-hero">
     <div class="hero-copy">
       <p class="eyebrow">创建向导</p>
       <h1>开始创建</h1>
-      <p class="hero-text">按步骤填写信息，先生成一版人格雏形，再继续补充成更贴近你的样子。</p>
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ step }}/4</strong><span>当前步骤</span></span>
         <span class="metric-chip"><strong>{{ currentTypeLabel }}</strong><span>创建类型</span></span>
         <span class="metric-chip"><strong>{{ selectedInputLabel }}</strong><span>输入方式</span></span>
       </div>
-    </div>
-
-    <div class="hero-band">
-      <article class="hero-band__card">
-        <p class="eyebrow">创建方式</p>
-        <h3 class="hero-band__title">{{ currentTypeLabel }}</h3>
-        <p class="hero-band__copy">先把路径选好，再开始填写信息。</p>
-      </article>
-
-      <article class="hero-band__card">
-        <p class="eyebrow">说明</p>
-        <h3 class="hero-band__title">先生成一版可继续完善的结果</h3>
-        <p class="hero-band__copy">你可以从自己、资料或关系开始。</p>
-      </article>
     </div>
   </section>
 
@@ -2077,8 +2062,8 @@ watch(
             </label>
           </div>
 
-          <div v-else class="wizard-form">
-            <div class="form-grid">
+        <div v-else class="wizard-form">
+          <div class="form-grid">
               <label class="form-field">
                 <span>关系类型</span>
                 <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="同事 / 导师 / 父母 / 伴侣" />
@@ -2119,9 +2104,7 @@ watch(
               <p class="eyebrow">第 4 步</p>
               <h3>{{ isSelfUnified ? '生成结果' : isFamilyCompanion ? '生成结果' : '确认并生成结果' }}</h3>
             </div>
-            <p class="section-note">
-              {{ isSelfUnified ? '先看一眼 5 层结果，再保存成可继续完善的版本。' : isFamilyCompanion ? '把这一版保存成可继续完善的结果。' : '先看一眼，再生成第一版结果。' }}
-            </p>
+            <p class="section-note">{{ isSelfUnified ? '先看结果，再保存。' : isFamilyCompanion ? '先看结果，再保存。' : '先看结果，再生成。' }}</p>
           </div>
 
           <div class="wizard-review">
@@ -2192,28 +2175,6 @@ watch(
         </div>
       </div>
 
-      <aside class="wizard-rail">
-        <div class="summary-panel">
-          <p class="eyebrow">当前状态</p>
-          <h3>按步骤填完就能看到第一版结果。</h3>
-          <p class="state-copy">这版向导先帮你把信息整理成清晰的人格雏形，方便你先看轮廓。</p>
-          <ul class="summary-panel__list">
-            <li><span>类型</span><strong>{{ currentTypeLabel }}</strong></li>
-            <li><span>输入方式</span><strong>{{ selectedInputLabel }}</strong></li>
-            <li><span>状态</span><strong>可继续完善</strong></li>
-          </ul>
-        </div>
-
-        <div class="summary-panel">
-          <p class="eyebrow">当前支持</p>
-          <h3>从自己、资料或关系开始。</h3>
-          <ul class="summary-panel__list">
-            <li><span>1</span><strong>从自己开始</strong></li>
-            <li><span>2</span><strong>从资料开始</strong></li>
-            <li><span>3</span><strong>从关系开始</strong></li>
-          </ul>
-        </div>
-      </aside>
     </div>
   </section>
 </template>

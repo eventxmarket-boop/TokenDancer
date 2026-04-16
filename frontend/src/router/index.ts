@@ -75,8 +75,8 @@ const router = createRouter({
 })
 
 router.afterEach((to) => {
-  const pageTitle = String(to.meta.title || '人格小屋')
-  document.title = `${pageTitle} - 人格小屋`
+  const pageTitle = String(to.meta.title || 'Tokendancer')
+  document.title = `${pageTitle} - Tokendancer`
 })
 
 export default router

@@ -39,7 +39,7 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'work',
     title: '职场关系',
-    description: '把同事、老板、导师或老师的风格整理成一个可继续完善的人格。',
+    description: '把同事、老板、导师或老师的风格整理出来。',
     groupKeys: ['relationship_workplace', 'relationship_academia'],
   },
   {

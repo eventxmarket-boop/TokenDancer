@@ -726,11 +726,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="page-hero wizard-hero">
+  <section class="page-hero page-hero--single wizard-hero">
     <div class="hero-copy">
       <p class="eyebrow">创建结果</p>
       <h1>你的人格雏形已经生成。</h1>
-      <p class="hero-text">这是第一版结果。你可以继续补充内容，让它更完整、更贴近真实使用场景。</p>
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ typeLabel }}</strong><span>人格类型</span></span>
@@ -755,19 +754,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="hero-band">
-      <article class="hero-band__card">
-        <p class="eyebrow">后续动作</p>
-        <h3 class="hero-band__title">后面可以继续完善成正式人格</h3>
-        <p class="hero-band__copy">这一版结果先收好，后面还可以继续补充信息。</p>
-      </article>
-
-      <article class="hero-band__card">
-        <p class="eyebrow">保存状态</p>
-        <h3 class="hero-band__title">这版结果已可复用</h3>
-        <p class="hero-band__copy">保存后可以继续回到向导修改，也能留作后续完善的起点。</p>
-      </article>
-    </div>
   </section>
 
   <section class="section-card" ref="editorAnchor">

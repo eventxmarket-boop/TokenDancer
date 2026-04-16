@@ -1,5 +1,14 @@
 # Changelog
 
+## V1.4.28 - 2026-04-16
+
+- 收口 Create 向导页、首页、Seed 页、我的页中的开发中间态说明。
+- 删除无实际意义的解释文案与状态说明。
+- 首页品牌区支持点击返回主页，顶部不再展示“人格小屋”。
+- Seed 卡片改为只显示人格名字，不再展示 skill slug。
+- Seed 页统计贴片支持点击跳转到对应区块。
+- 整体优化前台信息密度与页面整洁度。
+
 ## V1.4.27 - 2026-04-16
 
 - Fixed the family-companion wizard so the material input layer is rendered directly in the template.
