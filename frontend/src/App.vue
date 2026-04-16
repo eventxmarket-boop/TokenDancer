@@ -6,7 +6,7 @@ const navItems = [
   { to: '/seed', label: 'Seed' },
   { to: '/favorites', label: '收藏' },
   { to: '/create', label: '创建' },
-  { to: '/me', label: '我的' },
+  { to: '/me', label: '个人' },
 ]
 
 const themeKey = 'persona-theme-mode'

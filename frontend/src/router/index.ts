@@ -65,7 +65,7 @@ const router = createRouter({
       component: MySeedsPage,
       meta: { title: '我创建的 Seed' },
     },
-    { path: '/me', name: 'me', component: MePage, meta: { title: '我的' } },
+    { path: '/me', name: 'me', component: MePage, meta: { title: '个人中心' } },
     { path: '/admin', name: 'admin', component: AdminPage, meta: { title: '后台设置' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

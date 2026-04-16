@@ -249,7 +249,8 @@ const sectionViews = computed(() => {
       ...section,
       groups: matchedGroups,
       items,
-      itemCount: items.length,
+      primaryItem: items[0] || null,
+      itemCount: section.key === 'self' ? 1 : items.length,
     }
   })
 })
@@ -315,6 +316,17 @@ function startCreation(item: CreateCatalogItem) {
     path: '/create/wizard',
     query: buildWizardQuery(item),
   })
+}
+
+function getSectionPrimaryItem(section: (typeof sectionViews.value)[number]) {
+  return section.primaryItem || section.items[0] || null
+}
+
+function startSectionCreation(section: (typeof sectionViews.value)[number]) {
+  const item = getSectionPrimaryItem(section)
+  if (item) {
+    startCreation(item)
+  }
 }
 
 const loadCatalog = async () => {
@@ -400,8 +412,30 @@ onMounted(() => {
               <p v-if="section.key !== 'self'" class="section-note">{{ group.description }}</p>
 
               <div class="create-card-grid">
+                <article v-if="section.key === 'self'" class="create-card create-card--compact create-card--single">
+                  <div class="create-card__head">
+                    <div>
+                      <h4>我的人格</h4>
+                    </div>
+                  </div>
+
+                  <p class="create-card__copy">从做事方式、表达习惯、思考路径和生活痕迹中，创建一个更完整的自己。</p>
+
+                  <div class="tag-row">
+                    <span v-for="mode in getSectionPrimaryItem(section)?.input_modes || []" :key="mode" class="tag-chip">
+                      {{ getDisplayLabel(mode) }}
+                    </span>
+                  </div>
+
+                  <div class="create-card__actions">
+                    <button v-if="getSectionPrimaryItem(section)" class="primary-btn" type="button" @click="startSectionCreation(section)">
+                      开始创建
+                    </button>
+                  </div>
+                </article>
+
                 <article
-                  v-for="item in group.items"
+                  v-for="item in section.key === 'self' ? [] : group.items"
                   :key="item.slug"
                   class="create-card create-card--compact"
                 >

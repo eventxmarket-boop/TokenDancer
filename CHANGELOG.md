@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.31 - 2026-04-16
+
+- Fixed the first-load stale UI issue by setting `/persona/` and `/persona/index.html` to `no-store` while keeping hashed assets cacheable.
+- Simplified the visible self-persona create path so `我的人格` is shown as a single entry instead of repeating multiple times.
+- Renamed the top navigation `我的` entry to `个人` to reduce repeated wording in the shell chrome.
+- Kept the UI polish focused on front-end structure and cache behavior without changing backend persona logic.
+
 ## V1.4.30 - 2026-04-16
 
 - Further reduced duplicate self-persona wording in the Create flow so only one visible `我的人格` entry remains.
