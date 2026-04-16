@@ -659,6 +659,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
+        self.assertIn("recall_stage", body["draft"]["reunion_memory_retrieval_policy"])
+        self.assertIn(body["draft"]["reunion_memory_retrieval_policy"]["recall_stage"], {"light", "medium", "deep"})
         self.assertIn("reunion_guided_memory_answers", body["draft"])
         self.assertTrue(
             any("路过旧街道" in item or "先慢慢来" in item for item in body["draft"]["reunion_memory_base"]["legacy_summary"])

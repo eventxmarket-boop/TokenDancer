@@ -555,6 +555,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertTrue(saved["material_summary"])
                 self.assertIn("引导补充", saved["summary"])
                 self.assertIn("三层记忆", saved["summary"])
+                self.assertIn("回忆档位", saved["summary"])
                 self.assertIn("重逢人格", saved["summary"])
 
                 list_response = client.get("/persona-api/my-seeds", headers=headers)
@@ -584,6 +585,11 @@ class MySeedsTests(unittest.TestCase):
                     "路过旧街道时最容易想起",
                 )
                 self.assertIsNotNone(detail["draft_payload"]["reunion_memory_retrieval_policy"])
+                self.assertIn("recall_stage", detail["draft_payload"]["reunion_memory_retrieval_policy"])
+                self.assertIn(
+                    detail["draft_payload"]["reunion_memory_retrieval_policy"]["recall_stage"],
+                    {"light", "medium", "deep"},
+                )
                 self.assertIsNotNone(detail["draft_payload"]["reunion_safety_guardrails"])
                 self.assertEqual(detail["material_summary"], saved["material_summary"])
 

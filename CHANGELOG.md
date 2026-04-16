@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.48 - 2026-04-17
+
+- Calibrated reunion chat into light, medium, and deep progressive recall stages so memory comes back more gradually.
+- Tightened reunion safety guardrails to keep certainty claims, dependency reinforcement, and supernatural wording out of replies.
+- Tuned reunion layered-memory retrieval so procedural, episodic, and semantic memories are recalled in a more context-aware order.
+- Kept OCR, guided recollection, and shared upload materials in the reunion creation chain while making their chat-facing behavior more restrained.
+- Surfaced recall stage and guardrail summaries more clearly in reunion result and My Seeds views.
+
 ## V1.4.47 - 2026-04-17
 
 - Upgraded the reunion persona path with progressive recall, layered memory, and safety guardrails.

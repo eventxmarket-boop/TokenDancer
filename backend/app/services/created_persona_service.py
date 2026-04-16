@@ -319,6 +319,9 @@ def _reunion_policy_summary(policy: Any) -> str:
         parts.append(f"检索模式：{mode}")
     if policy.get("progressive_recall") is not None:
         parts.append(f"渐进式回忆：{'是' if policy.get('progressive_recall') else '否'}")
+    recall_stage = _normalize_text(policy.get("recall_stage"))
+    if recall_stage:
+        parts.append(f"回忆档位：{recall_stage}")
     max_items = _normalize_text(policy.get("max_memory_items"))
     if max_items:
         parts.append(f"召回上限：{max_items}")
@@ -555,17 +558,24 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         policy_summary = _reunion_policy_summary(policy)
         safety_summary = _reunion_safety_summary(safety)
         if guided_summary:
-            summary_parts = [part for part in [profile_name, relationship_type, tone, guided_summary, retrieval_mode] if part]
+            summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
         else:
-            summary_parts = [part for part in [profile_name, relationship_type, tone, retrieval_mode] if part]
-        if raw_materials_summary:
-            summary_parts.append(raw_materials_summary)
+            summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
         if layer_summary:
             summary_parts.append(layer_summary)
+        if guided_summary:
+            summary_parts.append(guided_summary)
+        if retrieval_mode:
+            summary_parts.append(retrieval_mode)
+        recall_stage = _normalize_text(_object_value(policy, "recall_stage"))
+        if recall_stage:
+            summary_parts.append(f"回忆档位：{recall_stage}")
         if policy_summary:
             summary_parts.append(policy_summary)
         if safety_summary:
             summary_parts.append(safety_summary)
+        if raw_materials_summary:
+            summary_parts.append(raw_materials_summary)
         if summary_parts or memories or safety_summary:
             combined = " · ".join(summary_parts)
             extras = memories

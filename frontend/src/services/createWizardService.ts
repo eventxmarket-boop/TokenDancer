@@ -239,6 +239,7 @@ export type SelfPersonaRawMaterials = UniversalCreateWizardRawMaterials
 export type ReunionPersonaRetrievalPolicy = {
   mode: string
   progressive_recall: boolean
+  recall_stage: string
   priority_rules: string[]
   fallback_rules: string[]
   max_memory_items: number

@@ -1934,7 +1934,15 @@ def build_reunion_memory_retrieval_policy(
     episodic_count = len(_clean_lines(memory_base.get("episodic_memories")))
     semantic_count = len(_clean_lines(memory_base.get("semantic_memories")))
     procedural_count = len(_clean_lines(memory_base.get("procedural_memories")))
-    max_items = 4 if episodic_count + semantic_count + procedural_count < 12 else 3
+    total_count = episodic_count + semantic_count + procedural_count
+    max_items = 4 if total_count < 12 else 3
+    guided_count = len([_normalize_text(item) for item in guided_answers.values() if _normalize_text(item)])
+    if total_count <= 3 and guided_count <= 1:
+        recall_stage = "light"
+    elif total_count >= 8 and guided_count >= 3:
+        recall_stage = "deep"
+    else:
+        recall_stage = "medium" if total_count or guided_count else "light"
     priority_rules = _clean_lines(form_data.get("priority_rules")) or [
         "先看最近对话，再看共同经历",
         "遇到具体场景，优先召回 episodic 记忆",
@@ -1956,6 +1964,7 @@ def build_reunion_memory_retrieval_policy(
     return {
         "mode": mode,
         "progressive_recall": True,
+        "recall_stage": recall_stage,
         "priority_rules": priority_rules,
         "fallback_rules": fallback_rules,
         "max_memory_items": max_items if shared_count or episodic_count or semantic_count or procedural_count else 4,

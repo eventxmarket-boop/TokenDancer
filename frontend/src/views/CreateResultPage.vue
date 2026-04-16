@@ -687,6 +687,7 @@ const reunionMemoryLines = computed(() => {
     { label: '记忆片段', value: memory.memory_fragments?.join(' / ') || '未填写' },
     { label: '共同记忆', value: memory.shared_memories?.join(' / ') || '未填写' },
     { label: '检索模式', value: policy?.mode || '未填写' },
+    { label: '回忆档位', value: policy?.recall_stage || '未填写' },
     { label: '优先规则', value: policy?.priority_rules?.join(' / ') || '未填写' },
     { label: '安全护栏', value: safety?.emotional_protection?.join(' / ') || '未填写' },
   ]

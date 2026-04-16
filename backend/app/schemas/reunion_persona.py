@@ -44,6 +44,7 @@ class ReunionPersonaGuidedMemoryAnswers(BaseModel):
 class ReunionPersonaRetrievalPolicy(BaseModel):
     mode: str = ""
     progressive_recall: bool = True
+    recall_stage: str = ""
     priority_rules: list[str] = Field(default_factory=list)
     fallback_rules: list[str] = Field(default_factory=list)
     max_memory_items: int = 4
