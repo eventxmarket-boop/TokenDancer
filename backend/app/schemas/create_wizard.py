@@ -13,6 +13,10 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.relationship_management import (
+    RelationshipManagementMemoryBase,
+    RelationshipManagementProfile,
+)
 from app.schemas.reunion_persona import (
     ReunionPersonaGuidedMemoryAnswers,
     ReunionPersonaMemoryBase,
@@ -133,6 +137,9 @@ class CreateWizardDraft(BaseModel):
     raw_materials: dict[str, Any] | None = None
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers | None = None
     reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers | None = None
+    analysis_focus: str = ""
+    understanding_weight: float = 0.0
+    maintenance_weight: float = 0.0
     emotion_rules: dict[str, Any] | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None
@@ -141,6 +148,8 @@ class CreateWizardDraft(BaseModel):
     reunion_memory_base: ReunionPersonaMemoryBase | None = None
     reunion_memory_retrieval_policy: ReunionPersonaRetrievalPolicy | None = None
     reunion_safety_guardrails: ReunionPersonaSafetyGuardrails | None = None
+    relationship_management_profile: RelationshipManagementProfile | None = None
+    relationship_management_memory_base: RelationshipManagementMemoryBase | None = None
     relationship_profile: IntimateCompanionRelationshipProfile | None = None
     intimate_memory_base: IntimateCompanionMemoryBase | None = None
     intimate_understanding: dict[str, Any] | None = None

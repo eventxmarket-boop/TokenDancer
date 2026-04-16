@@ -25,7 +25,7 @@ _PERSONA_TYPE_LABELS = {
     "self_persona": "我的人格",
     "source_persona": "资料",
     "relationship_persona": "关系",
-    "intimate_companion": "亲密关系",
+    "intimate_companion": "关系经营",
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
 }
@@ -38,9 +38,10 @@ _SELF_UNIFIED_ALIASES = {
 }
 
 _INTIMATE_MODE_LABELS = {
-    "relationship_understanding": "关系理解",
+    "relationship_management": "关系经营",
+    "relationship_understanding": "关系经营",
     "message_simulation": "消息模拟",
-    "partner_maintenance": "关系维护",
+    "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
 }
 
@@ -423,8 +424,8 @@ def _build_summary(draft: CreateWizardDraft) -> str:
                 return " / ".join(parts)[:120]
 
     if _normalize_text(draft.meta.create_type) == "intimate_companion":
-        profile = draft.relationship_profile or {}
-        memory = draft.intimate_memory_base or {}
+        profile = draft.relationship_management_profile or draft.relationship_profile or {}
+        memory = draft.relationship_management_memory_base or draft.intimate_memory_base or {}
         understanding = getattr(draft, "intimate_understanding", None) or {}
         simulation = getattr(draft, "intimate_message_simulation", None) or {}
         maintenance = getattr(draft, "intimate_relationship_maintenance", None) or {}
@@ -432,6 +433,9 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         input_mode = _normalize_text(getattr(draft.meta, "input_mode", ""))
         mode_label = _INTIMATE_MODE_LABELS.get(input_mode, input_mode)
+        analysis_focus = _normalize_text(getattr(draft, "analysis_focus", ""))
+        understanding_weight = float(getattr(draft, "understanding_weight", 0.0) or 0.0)
+        maintenance_weight = float(getattr(draft, "maintenance_weight", 0.0) or 0.0)
         profile_name = _normalize_text(
             profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", "")
         )
@@ -474,7 +478,20 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         if isinstance(mirror, dict):
             path_notes.extend(_clean_lines(mirror.get("relationship_memory")))
             path_notes.extend(_clean_lines(mirror.get("expression_samples")))
-        summary_parts = [part for part in [mode_label, profile_name, relationship_type, stage, tone] if part]
+        summary_parts = [
+            part
+            for part in [
+                mode_label,
+                profile_name,
+                relationship_type,
+                stage,
+                tone,
+                analysis_focus and f"重心：{analysis_focus}",
+                f"理解{understanding_weight:.2f}",
+                f"维护{maintenance_weight:.2f}",
+            ]
+            if part
+        ]
         if raw_materials_summary:
             summary_parts.append(raw_materials_summary)
         if summary_parts or memories or path_notes:
@@ -609,7 +626,15 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
+        "entry_label": _INTIMATE_MODE_LABELS.get(
+            _normalize_text(getattr(draft.meta, "input_mode", "")),
+            _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type),
+        ),
+        "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
+        "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
+        "understanding_weight": float(getattr(draft, "understanding_weight", 0.0) or 0.0),
+        "maintenance_weight": float(getattr(draft, "maintenance_weight", 0.0) or 0.0),
         "summary": record.summary,
         "material_summary": material_summary,
         "status": record.status,
@@ -629,7 +654,15 @@ def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
+        "entry_label": _INTIMATE_MODE_LABELS.get(
+            _normalize_text(getattr(draft.meta, "input_mode", "")),
+            _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type),
+        ),
+        "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
+        "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
+        "understanding_weight": float(getattr(draft, "understanding_weight", 0.0) or 0.0),
+        "maintenance_weight": float(getattr(draft, "maintenance_weight", 0.0) or 0.0),
         "summary": record.summary,
         "material_summary": material_summary,
         "status": record.status,
@@ -787,6 +820,8 @@ def load_created_persona_summary(
         "slug": record.slug,
         "name": record.name,
         "category": display_type,
+        "entry_label": _INTIMATE_MODE_LABELS.get(_normalize_text(getattr(draft.meta, "input_mode", "")), display_type),
+        "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "avatar": None,
         "intro": intro or (profile[:80] if profile else record.summary),
         "profile": draft.profile,

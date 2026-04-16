@@ -137,9 +137,9 @@ const typeCards = [
   },
   {
     type: 'intimate_companion' as const,
-    title: '亲密关系',
-    description: '从关系理解、消息模拟、关系维护或过去关系开始创建。',
-    hint: '从亲密关系开始',
+    title: '关系经营',
+    description: '先看清关系，再调整表达、改善相处、继续经营。',
+    hint: '从关系经营开始',
   },
 ]
 
@@ -165,9 +165,10 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     professor_b: '大学老师（模板 B）',
   },
   intimate_companion: {
-    relationship_understanding: '关系理解',
+    relationship_management: '关系经营',
+    relationship_understanding: '关系经营',
     message_simulation: '消息模拟',
-    partner_maintenance: '关系维护',
+    partner_maintenance: '关系经营',
     past_relation_mirror: '过去关系 / 自我镜像',
   },
   family_companion: {
@@ -205,13 +206,13 @@ const inputModeBySourceRepo: Record<string, string> = {
   'digital-twin-skill': 'multi_source',
   'immortal-skill': 'multi_source',
   'anti-distill': 'documents',
-  'relationship-training-skill': 'relationship_understanding',
-  xinyi: 'relationship_understanding',
-  'relationship-training-skill+xinyi': 'relationship_understanding',
+  'relationship-training-skill': 'relationship_management',
+  xinyi: 'relationship_management',
+  'relationship-training-skill+xinyi': 'relationship_management',
   'crush-skill': 'message_simulation',
-  'partner-skill': 'partner_maintenance',
-  'npy-skill': 'partner_maintenance',
-  'partner-skill+npy-skill': 'partner_maintenance',
+  'partner-skill': 'relationship_management',
+  'npy-skill': 'relationship_management',
+  'partner-skill+npy-skill': 'relationship_management',
   'ex-skill': 'past_relation_mirror',
   'first-love-skill': 'past_relation_mirror',
   'shuixian-skill': 'past_relation_mirror',
@@ -243,9 +244,9 @@ const sourceRepoByInputMode: Record<string, string> = {
   mama: 'MamaSkill',
   mother: 'MamaSkill+parents-skills+darwin-skill',
   other_family: 'MamaSkill+parents-skills+darwin-skill',
-  relationship_understanding: 'relationship-training-skill+xinyi',
+  relationship_management: 'relationship-training-skill+xinyi+partner-skill+npy-skill',
   message_simulation: 'crush-skill',
-  partner_maintenance: 'partner-skill+npy-skill',
+  partner_maintenance: 'relationship-training-skill+xinyi+partner-skill+npy-skill',
   past_relation_mirror: 'ex-skill+first-love-skill+shuixian-skill',
 }
 
@@ -262,13 +263,13 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'senpai-skill': 'relationship_academia_senpai',
   'professor-skill': 'relationship_academia_professor_a',
   Professor_skill: 'relationship_academia_professor_b',
-  'relationship-training-skill': 'intimate_companion_relationship_understanding',
-  xinyi: 'intimate_companion_relationship_understanding',
-  'relationship-training-skill+xinyi': 'intimate_companion_relationship_understanding',
+  'relationship-training-skill': 'intimate_companion_relationship_management',
+  xinyi: 'intimate_companion_relationship_management',
+  'relationship-training-skill+xinyi': 'intimate_companion_relationship_management',
   'crush-skill': 'intimate_companion_message_simulation',
-  'partner-skill': 'intimate_companion_partner_maintenance',
-  'npy-skill': 'intimate_companion_partner_maintenance',
-  'partner-skill+npy-skill': 'intimate_companion_partner_maintenance',
+  'partner-skill': 'intimate_companion_relationship_management',
+  'npy-skill': 'intimate_companion_relationship_management',
+  'partner-skill+npy-skill': 'intimate_companion_relationship_management',
   'ex-skill': 'intimate_companion_past_relation_mirror',
   'first-love-skill': 'intimate_companion_past_relation_mirror',
   'shuixian-skill': 'intimate_companion_past_relation_mirror',
@@ -412,7 +413,7 @@ const currentTypeLabel = computed(() => {
     return '重逢人格'
   }
   if (createType.value === 'intimate_companion') {
-    return '亲密关系'
+    return '关系经营'
   }
   if (createType.value === 'family_companion') {
     return '家人陪伴'
@@ -521,7 +522,7 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
     return 'chat_history'
   }
   if (createTypeValue === 'intimate_companion') {
-    return 'relationship_understanding'
+    return 'relationship_management'
   }
 
   return 'colleague'
@@ -535,7 +536,7 @@ function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, input
     return `reunion_persona_${inputModeValue || 'chat_history'}`
   }
   if (createTypeValue === 'intimate_companion') {
-    return `intimate_companion_${inputModeValue || 'relationship_understanding'}`
+    return `intimate_companion_${inputModeValue || 'relationship_management'}`
   }
   if (sourceRepo && schemaKeyBySourceRepo[sourceRepo]) {
     return schemaKeyBySourceRepo[sourceRepo]
@@ -578,7 +579,7 @@ function getDefaultSourceRepoForType(type: CreateType) {
     return 'reunion-skill'
   }
   if (type === 'intimate_companion') {
-    return 'relationship-training-skill+xinyi'
+    return 'relationship-training-skill+xinyi+partner-skill+npy-skill'
   }
   return 'colleague-skill'
 }
@@ -597,7 +598,7 @@ function getDefaultDisplayNameForType(type: CreateType) {
     return '重逢人格'
   }
   if (type === 'intimate_companion') {
-    return '亲密关系'
+    return '关系经营'
   }
   return '关系人格'
 }
@@ -662,6 +663,7 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
     return 'relationship_academia'
   }
   if (
+    mode === 'relationship_management' ||
     mode === 'relationship_understanding' ||
     mode === 'message_simulation' ||
     mode === 'partner_maintenance' ||
@@ -711,9 +713,9 @@ function getInputModeNote(type: CreateType, mode: string) {
   }
 
   if (type === 'intimate_companion') {
-    if (mode === 'relationship_understanding') return '适合先理解对方表达和关系状态。'
+    if (mode === 'relationship_management' || mode === 'relationship_understanding') return '适合先看清关系、调整表达、改善相处。'
     if (mode === 'message_simulation') return '适合先预测对方回复，再看怎么发。'
-    if (mode === 'partner_maintenance') return '适合伴侣关系维护与磨合。'
+    if (mode === 'partner_maintenance') return '适合伴侣关系经营与磨合。'
     if (mode === 'past_relation_mirror') return '适合回看过去关系和自我镜像。'
   }
 
@@ -736,6 +738,7 @@ function getInputModeNote(type: CreateType, mode: string) {
 
 function getRelationshipLabel(mode: string) {
   return (
+    (mode === 'relationship_management' ? '关系经营' : '') ||
     inputModeLabels.relationship_persona[mode] ||
     inputModeLabels.intimate_companion[mode] ||
     inputModeLabels.family_companion[mode] ||
@@ -911,8 +914,8 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   }
 
   if (type === 'intimate_companion') {
-    formState.relationship_type = getRelationshipLabel(mode) || displayName || '亲密关系'
-    formState.persona_name = displayName || getRelationshipLabel(mode) || '亲密关系'
+    formState.relationship_type = getRelationshipLabel(mode) || displayName || '关系经营'
+    formState.persona_name = displayName || getRelationshipLabel(mode) || '关系经营'
     formState.relationship_stage = getRelationshipLabel(mode) || '关系阶段待补充'
     formState.speech_style = '自然、贴近、带一点熟悉感。'
     formState.response_temperature = '先接住情绪，再顺着回应。'
@@ -1051,9 +1054,25 @@ function loadStateSnapshot() {
   }
 
   if (createType.value === 'relationship_persona') {
-    const intimateModes = new Set(['relationship_understanding', 'message_simulation', 'partner_maintenance', 'past_relation_mirror'])
+    const intimateModes = new Set([
+      'relationship_management',
+      'relationship_understanding',
+      'message_simulation',
+      'partner_maintenance',
+      'past_relation_mirror',
+    ])
     const familyModes = new Set(['mother', 'parents', 'other_family'])
-    const intimateSources = new Set(['relationship-training-skill+xinyi', 'crush-skill', 'partner-skill+npy-skill', 'ex-skill+first-love-skill+shuixian-skill'])
+    const intimateSources = new Set([
+      'relationship-training-skill+xinyi+partner-skill+npy-skill',
+      'relationship-training-skill+xinyi',
+      'relationship-training-skill',
+      'xinyi',
+      'partner-skill+npy-skill',
+      'partner-skill',
+      'npy-skill',
+      'crush-skill',
+      'ex-skill+first-love-skill+shuixian-skill',
+    ])
     const familySources = new Set(['MamaSkill', 'parents-skills', 'MamaSkill+parents-skills+darwin-skill', 'parents-skills+MamaSkill'])
     const reunionSources = new Set(['reunion-skill'])
 
@@ -1069,9 +1088,15 @@ function loadStateSnapshot() {
       } else if (inputMode.value === 'crush') {
         inputMode.value = 'message_simulation'
       } else if (inputMode.value === 'partner' || inputMode.value === 'ideal_partner') {
-        inputMode.value = 'partner_maintenance'
+        inputMode.value = 'relationship_management'
       } else if (inputMode.value === 'relationship_training' || inputMode.value === 'relationship_interpreter') {
-        inputMode.value = 'relationship_understanding'
+        inputMode.value = 'relationship_management'
+      } else if (
+        !inputMode.value ||
+        inputMode.value === 'relationship_understanding' ||
+        inputMode.value === 'partner_maintenance'
+      ) {
+        inputMode.value = 'relationship_management'
       }
     } else if (reunionSources.has(selectedSourceRepo.value) || inputMode.value === 'reunion' || selectedSchemaKey.value?.startsWith('reunion_persona_')) {
       createType.value = 'reunion_persona'
@@ -1197,7 +1222,7 @@ function selectType(type: CreateType) {
   } else if (type === 'reunion_persona') {
     inputMode.value = 'chat_history'
   } else if (type === 'intimate_companion') {
-    inputMode.value = 'relationship_understanding'
+    inputMode.value = 'relationship_management'
   } else {
     inputMode.value = 'colleague'
   }
@@ -1221,6 +1246,13 @@ function selectInputMode(mode: string) {
     } else if (createType.value === 'reunion_persona') {
       selectedSourceRepo.value = 'reunion-skill'
       selectedName.value = selectedName.value || '重逢人格'
+    } else if (createType.value === 'intimate_companion') {
+      const normalizedMode = mode === 'partner_maintenance' || mode === 'relationship_understanding'
+        ? 'relationship_management'
+        : mode
+      inputMode.value = normalizedMode
+      selectedSourceRepo.value = sourceRepoByInputMode[normalizedMode] || 'relationship-training-skill+xinyi+partner-skill+npy-skill'
+      selectedName.value = getRelationshipLabel(normalizedMode) || selectedName.value
     } else {
       selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
       selectedName.value = getRelationshipLabel(mode) || selectedName.value
@@ -2024,7 +2056,7 @@ watch(
             <div class="form-grid">
               <label class="form-field">
                 <span>关系类型</span>
-                <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="关系理解 / 消息模拟 / 关系维护 / 过去关系" />
+                <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="关系经营 / 消息模拟 / 过去关系 / 自我镜像" />
               </label>
               <label class="form-field">
                 <span>对方名称 / 称呼</span>

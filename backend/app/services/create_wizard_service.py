@@ -15,6 +15,10 @@ from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
 )
+from app.schemas.relationship_management import (
+    RelationshipManagementMemoryBase,
+    RelationshipManagementProfile,
+)
 from app.schemas.reunion_persona import (
     ReunionPersonaGuidedMemoryAnswers,
     ReunionPersonaMemoryBase,
@@ -23,6 +27,11 @@ from app.schemas.reunion_persona import (
     ReunionPersonaSafetyGuardrails,
 )
 from app.services import ocr_service
+from app.services.relationship_management_service import (
+    build_relationship_management_memory_base,
+    build_relationship_management_profile,
+    infer_relationship_management_focus,
+)
 from app.services.self_persona_unified_service import build_self_persona_draft
 
 
@@ -47,6 +56,12 @@ INTIMATE_UNDERSTANDING_SOURCE_REPO = "relationship-training-skill+xinyi"
 INTIMATE_SIMULATION_SOURCE_REPO = "crush-skill"
 INTIMATE_PARTNER_SOURCE_REPO = "partner-skill+npy-skill"
 INTIMATE_PAST_RELATION_SOURCE_REPO = "ex-skill+first-love-skill+shuixian-skill"
+INTIMATE_MANAGEMENT_SOURCE_REPO = "relationship-training-skill+xinyi+partner-skill+npy-skill"
+INTIMATE_MANAGEMENT_MODES = {
+    "relationship_management",
+    "relationship_understanding",
+    "partner_maintenance",
+}
 
 CREATE_TYPE_LABELS = {
     "self_unified": "我的人格",
@@ -54,7 +69,7 @@ CREATE_TYPE_LABELS = {
     "relationship_persona": "关系人格",
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
-    "intimate_companion": "亲密关系",
+    "intimate_companion": "关系经营",
 }
 
 CREATE_TYPE_CONFIG = {
@@ -95,15 +110,17 @@ CREATE_TYPE_CONFIG = {
     },
     "intimate_companion": {
         "group": "relationship_intimate",
-        "source_repo": INTIMATE_UNDERSTANDING_SOURCE_REPO,
-        "repo_url": "https://github.com/kroxchan/xinyi",
+        "source_repo": INTIMATE_MANAGEMENT_SOURCE_REPO,
+        "repo_url": "https://github.com/TammyTan516/relationship-training-skill",
         "source_repos": [
-            INTIMATE_UNDERSTANDING_SOURCE_REPO,
+            "relationship-training-skill",
+            "xinyi",
+            "partner-skill",
+            "npy-skill",
             INTIMATE_SIMULATION_SOURCE_REPO,
-            INTIMATE_PARTNER_SOURCE_REPO,
             INTIMATE_PAST_RELATION_SOURCE_REPO,
         ],
-        "source_hint": "亲密关系模板",
+        "source_hint": "关系经营模板",
     },
 }
 
@@ -121,13 +138,13 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "professor-skill": "professor_a",
     "Professor_skill": "professor_b",
     "ex-skill": "ex",
-    "relationship-training-skill": "relationship_training",
+    "relationship-training-skill": "relationship_management",
     "npy-skill": "ideal_partner",
     "crush-skill": "crush",
-    "partner-skill": "partner",
+    "partner-skill": "relationship_management",
     "first-love-skill": "first_love",
     "shuixian-skill": "self_mirror",
-    "xinyi": "relationship_interpreter",
+    "xinyi": "relationship_management",
     "parents-skills": "parents",
     FAMILY_COMPANION_SOURCE_REPO: "mother",
     LEGACY_FAMILY_COMPANION_SOURCE_REPO: "mother",
@@ -137,14 +154,16 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "digital-twin-skill": "multi_source",
     "immortal-skill": "multi_source",
     "anti-distill": "documents",
-    "relationship-training-skill": "relationship_understanding",
-    "xinyi": "relationship_understanding",
-    INTIMATE_UNDERSTANDING_SOURCE_REPO: "relationship_understanding",
+    INTIMATE_MANAGEMENT_SOURCE_REPO: "relationship_management",
+    "relationship-training-skill+xinyi+partner-skill+npy-skill": "relationship_management",
+    "relationship-training-skill": "relationship_management",
+    "xinyi": "relationship_management",
+    INTIMATE_UNDERSTANDING_SOURCE_REPO: "relationship_management",
     "crush-skill": "message_simulation",
-    "partner-skill": "partner_maintenance",
-    "npy-skill": "partner_maintenance",
+    "partner-skill": "relationship_management",
+    "npy-skill": "relationship_management",
     INTIMATE_SIMULATION_SOURCE_REPO: "message_simulation",
-    INTIMATE_PARTNER_SOURCE_REPO: "partner_maintenance",
+    INTIMATE_PARTNER_SOURCE_REPO: "relationship_management",
     "ex-skill": "past_relation_mirror",
     "first-love-skill": "past_relation_mirror",
     "shuixian-skill": "past_relation_mirror",
@@ -164,14 +183,16 @@ SCHEMA_KEY_BY_SOURCE_REPO = {
     "senpai-skill": "relationship_academia_senpai",
     "professor-skill": "relationship_academia_professor_a",
     "Professor_skill": "relationship_academia_professor_b",
-    "relationship-training-skill": "intimate_companion_relationship_understanding",
-    "xinyi": "intimate_companion_relationship_understanding",
-    INTIMATE_UNDERSTANDING_SOURCE_REPO: "intimate_companion_relationship_understanding",
+    INTIMATE_MANAGEMENT_SOURCE_REPO: "intimate_companion_relationship_management",
+    "relationship-training-skill+xinyi+partner-skill+npy-skill": "intimate_companion_relationship_management",
+    "relationship-training-skill": "intimate_companion_relationship_management",
+    "xinyi": "intimate_companion_relationship_management",
+    INTIMATE_UNDERSTANDING_SOURCE_REPO: "intimate_companion_relationship_management",
     "crush-skill": "intimate_companion_message_simulation",
-    "partner-skill": "intimate_companion_partner_maintenance",
-    "npy-skill": "intimate_companion_partner_maintenance",
+    "partner-skill": "intimate_companion_relationship_management",
+    "npy-skill": "intimate_companion_relationship_management",
     INTIMATE_SIMULATION_SOURCE_REPO: "intimate_companion_message_simulation",
-    INTIMATE_PARTNER_SOURCE_REPO: "intimate_companion_partner_maintenance",
+    INTIMATE_PARTNER_SOURCE_REPO: "intimate_companion_relationship_management",
     "ex-skill": "intimate_companion_past_relation_mirror",
     "first-love-skill": "intimate_companion_past_relation_mirror",
     "shuixian-skill": "intimate_companion_past_relation_mirror",
@@ -238,9 +259,10 @@ RELATIONSHIP_LABELS = {
     "first_love": "初恋",
     "self_mirror": "自我镜像伴侣",
     "relationship_interpreter": "关系理解辅助",
-    "relationship_understanding": "关系理解",
+    "relationship_management": "关系经营",
+    "relationship_understanding": "关系经营",
     "message_simulation": "消息模拟",
-    "partner_maintenance": "关系维护",
+    "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
     "parents": "父母",
     "mother": "妈妈",
@@ -270,9 +292,10 @@ INPUT_MODE_LABELS = {
         "professor_b": "大学老师（模板 B）",
     },
     "intimate_companion": {
-        "relationship_understanding": "关系理解",
+        "relationship_management": "关系经营",
+        "relationship_understanding": "关系经营",
         "message_simulation": "消息模拟",
-        "partner_maintenance": "关系维护",
+        "partner_maintenance": "关系经营",
         "past_relation_mirror": "过去关系 / 自我镜像",
     },
     "family_companion": {
@@ -873,7 +896,7 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
     if create_type == "reunion_persona":
         return "chat_history"
     if create_type == "intimate_companion":
-        return "relationship_understanding"
+        return "relationship_management"
     return "colleague"
 
 
@@ -1019,7 +1042,7 @@ def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, dis
     if create_type == "reunion_persona":
         return f"reunion_persona_{input_mode or 'chat_history'}"
     if create_type == "intimate_companion":
-        return f"intimate_companion_{input_mode or 'relationship_understanding'}"
+        return f"intimate_companion_{input_mode or 'relationship_management'}"
     if source_repo and source_repo in SCHEMA_KEY_BY_SOURCE_REPO:
         return SCHEMA_KEY_BY_SOURCE_REPO[source_repo]
     fallback = f"{create_type}_{input_mode or 'default'}"
@@ -2300,13 +2323,15 @@ def _build_intimate_companion_draft(
     display_name: str = "",
     input_mode: str = "",
 ) -> dict[str, Any]:
-    mode = _normalize_text(input_mode) or "relationship_understanding"
+    mode = _normalize_text(input_mode) or "relationship_management"
+    if mode in {"relationship_understanding", "partner_maintenance"}:
+        mode = "relationship_management"
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(mode, "")
         or _normalize_text(display_name)
-        or "亲密关系"
+        or "关系经营"
     )
     name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
     relationship_stage = _normalize_text(form_data.get("relationship_stage")) or "关系阶段待补充"
@@ -2407,93 +2432,118 @@ def _build_intimate_companion_draft(
         ),
     )
 
-    if mode == "relationship_understanding":
-        relationship_profile = {
-            "relationship_type": relation_type,
-            "name": name,
-            "relationship_stage": relationship_stage,
-            "tone": tone,
-            "response_temperature": response_temperature,
-            "catchphrases": catchphrases,
-            "boundaries": boundaries,
-        }
-        conversation_samples = _merge_unique_lines(
+    relationship_management_focus = infer_relationship_management_focus(
+        relation_type,
+        name,
+        relationship_stage,
+        tone,
+        response_temperature,
+        catchphrases,
+        boundaries,
+        form_data.get("purpose"),
+        form_data.get("decision_logic"),
+        form_data.get("conversation_samples"),
+        form_data.get("interaction_rules"),
+        form_data.get("relationship_goals"),
+        form_data.get("key_memories"),
+        raw_materials["chat_history_text"],
+        raw_materials["memory_notes_text"],
+        raw_materials["text_materials_text"],
+        raw_materials["uploaded_text_documents"],
+        raw_materials["ocr_extracted_texts"],
+        raw_materials["image_notes_text"],
+        raw_materials["voice_notes_text"],
+    )
+    relationship_management_profile = build_relationship_management_profile(
+        relationship_type=relation_type,
+        name=name,
+        relationship_stage=relationship_stage,
+        tone=tone,
+        response_temperature=response_temperature,
+        catchphrases=catchphrases,
+        boundaries=boundaries,
+        focus=relationship_management_focus,
+    )
+    relationship_management_memory_base = build_relationship_management_memory_base(
+        relationship_memory=_merge_unique_lines(
+            base_key_memories,
+            _collect_material_lines(
+                raw_materials["chat_history_text"],
+                raw_materials["memory_notes_text"],
+                raw_materials["text_materials_text"],
+                raw_materials["ocr_extracted_texts"],
+            ),
+            _document_snippets(raw_materials["uploaded_text_documents"]),
+        ),
+        interaction_samples=_merge_unique_lines(
             base_conversation_samples,
             _collect_material_lines(
                 raw_materials["chat_history_text"],
                 raw_materials["memory_notes_text"],
                 raw_materials["text_materials_text"],
-            ),
-            _document_snippets(raw_materials["uploaded_text_documents"]),
-        )
-        misunderstanding_points = _merge_unique_lines(
-            base_memory_fragments,
-            _collect_material_lines(
                 raw_materials["conflict_text"],
                 raw_materials["recent_context_text"],
+                raw_materials["draft_message_text"],
+                raw_materials["ocr_extracted_texts"],
             ),
-        )
-        rewrite_targets = _merge_unique_lines(
+            _document_snippets(raw_materials["uploaded_text_documents"]),
+        ),
+        style_samples=_merge_unique_lines(
+            base_expression_samples,
+            _collect_material_lines(
+                raw_materials["reply_style_samples_text"],
+                raw_materials["interaction_patterns_text"],
+                raw_materials["expression_samples_text"],
+            ),
+        ),
+        candidate_reply_cues=_merge_unique_lines(
             base_relationship_goals,
             _collect_material_lines(
                 raw_materials["draft_message_text"],
-                raw_materials["reply_style_samples_text"],
+                raw_materials["relationship_status_text"],
+                raw_materials["interaction_patterns_text"],
             ),
-        )
-        memory_base = IntimateCompanionMemoryBase(
-            conversation_samples=conversation_samples,
-            interaction_rules=_merge_unique_lines(base_interaction_rules, ["先看关系阶段，再判断沟通卡点"]),
-            relationship_goals=base_relationship_goals,
-            key_memories=base_key_memories,
-            relationship_context=_material_summary_from_parts(
-                relation_type,
-                relationship_stage,
-                tone,
-                raw_materials["chat_history_text"],
-            ),
-            misunderstanding_points=misunderstanding_points,
-            rewrite_targets=rewrite_targets,
-            target_persona_profile=relationship_profile,
-            conversation_context={
-                "relationship_stage": relationship_stage,
-                "focus": relationship_context["focus"],
-                "mode": mode,
-            },
-            reply_style_samples=base_expression_samples,
-            simulation_preferences={},
-            interaction_patterns=base_interaction_rules,
-            maintenance_goals=base_relationship_goals,
-            relationship_memory=base_key_memories,
-            expression_samples=base_expression_samples,
-            response_temperature=response_temperature,
-            boundaries=_clean_lines(boundaries),
-        )
+        ),
+        relationship_context=_material_summary_from_parts(
+            relation_type,
+            relationship_stage,
+            tone,
+            raw_materials["chat_history_text"],
+        ),
+        raw_materials=raw_materials,
+        focus=relationship_management_focus,
+    )
+    relationship_profile = relationship_management_profile.model_dump()
+    management_memory_payload = relationship_management_memory_base.model_dump()
+
+    if mode == "relationship_management":
         profile = (
-            f"亲密关系定位：{relation_type}\n"
+            f"关系经营定位：{relation_type}\n"
             f"对象名称：{name}\n"
             f"关系阶段：{relationship_stage}\n"
             f"说话风格：{tone}\n"
-            f"用途：输入聊天样本、冲突片段和待改写消息，先看理解和改写方向。"
+            f"用途：根据材料自动判断更偏理解、维护还是平衡，再给关系经营建议。"
         )
         mindset = _format_bullets(
             [
-                "先看关系阶段和沟通卡点，再判断对方表达的意思",
-                "先把误解点和改写目标理清，再给建议",
-                "信息不足时先补聊天样本和冲突片段",
+                "先判断这段关系更偏理解、维护还是平衡",
+                "先看关系信号和互动样本，再决定回应策略",
+                "信息不足时先补材料，再给建议",
             ]
         )
         heuristics = _format_bullets(
             [
-                "优先识别关系阶段、情绪状态与沟通意图",
-                "改写建议要贴近真实聊天样本",
-                "不要把单条消息直接推成全部关系结论",
+                "优先根据材料自动判断理解侧或维护侧权重",
+                "理解和维护不是二选一，而是按场景动态调整",
+                "不要把单条消息误判成整段关系的全部结论",
             ]
         )
         expression = _format_bullets(
             [
-                f"理解视角：{relationship_context['focus']}",
+                f"当前重心：{relationship_management_focus['analysis_focus']}",
+                f"理解权重：{relationship_management_focus['understanding_weight']}",
+                f"维护权重：{relationship_management_focus['maintenance_weight']}",
                 f"说话风格：{tone}",
-                "回答要像先分析关系，再给改写建议",
             ]
         )
         guardrails = _format_bullets(
@@ -2501,6 +2551,7 @@ def _build_intimate_companion_draft(
                 f"边界要求：{boundaries}",
                 "不伪造未确认的关系事实",
                 "不把推测写成确定判断",
+                "不把维护建议写成唯一标准答案",
             ]
         )
         return {
@@ -2511,12 +2562,24 @@ def _build_intimate_companion_draft(
             "guardrails": guardrails,
             "relationship_type": relation_type,
             "relationship_profile": relationship_profile,
-            "intimate_memory_base": memory_base.model_dump(),
+            "relationship_management_profile": relationship_management_profile.model_dump(),
+            "relationship_management_memory_base": management_memory_payload,
+            "analysis_focus": relationship_management_focus["analysis_focus"],
+            "understanding_weight": relationship_management_focus["understanding_weight"],
+            "maintenance_weight": relationship_management_focus["maintenance_weight"],
+            "intimate_memory_base": management_memory_payload,
             "intimate_understanding": {
-                "relationship_context": relationship_context,
-                "conversation_samples": conversation_samples,
-                "misunderstanding_points": misunderstanding_points,
-                "rewrite_targets": rewrite_targets,
+                "relationship_context": relationship_management_memory_base.relationship_context,
+                "conversation_samples": relationship_management_memory_base.interaction_samples,
+                "misunderstanding_points": relationship_management_memory_base.interaction_samples[:4],
+                "rewrite_targets": relationship_management_memory_base.candidate_reply_cues,
+                "raw_materials": raw_materials,
+            },
+            "intimate_relationship_maintenance": {
+                "relationship_profile": relationship_profile,
+                "interaction_patterns": relationship_management_memory_base.interaction_samples,
+                "maintenance_goals": relationship_management_memory_base.candidate_reply_cues,
+                "conversation_samples": relationship_management_memory_base.relationship_memory,
                 "raw_materials": raw_materials,
             },
             "raw_materials": raw_materials,
@@ -2692,11 +2755,11 @@ def _build_intimate_companion_draft(
             boundaries=_clean_lines(boundaries),
         )
         profile = (
-            f"关系维护定位：{relation_type}\n"
+            f"关系经营定位：{relation_type}\n"
             f"对象名称：{name}\n"
             f"关系阶段：{relationship_stage}\n"
             f"说话风格：{tone}\n"
-            f"用途：围绕伴侣关系维护、磨合和沟通修复整理人格。"
+            f"用途：围绕关系经营、磨合和沟通修复整理人格。"
         )
         mindset = _format_bullets(
             [
@@ -2907,7 +2970,7 @@ def _build_intimate_companion_draft(
     )
 
     profile = (
-        f"亲密关系定位：{relation_type}\n"
+        f"关系经营定位：{relation_type}\n"
         f"称呼：{name}\n"
         f"关系阶段：{relationship_stage}\n"
         f"说话风格：{tone}\n"
@@ -2974,6 +3037,11 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         normalized_source_repo,
         _normalize_text(payload.get("schema_key")),
     )
+    if normalized_create_type == "intimate_companion" and normalized_input_mode in {
+        "relationship_understanding",
+        "partner_maintenance",
+    }:
+        normalized_input_mode = "relationship_management"
     normalized_schema_key = _normalize_text(payload.get("schema_key")) or _resolve_schema_key(
         normalized_create_type,
         normalized_source_repo,
@@ -3076,6 +3144,11 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "reunion_memory_retrieval_policy": content.get("reunion_memory_retrieval_policy"),
         "reunion_safety_guardrails": content.get("reunion_safety_guardrails"),
         "relationship_profile": content.get("relationship_profile"),
+        "relationship_management_profile": content.get("relationship_management_profile"),
+        "relationship_management_memory_base": content.get("relationship_management_memory_base"),
+        "analysis_focus": content.get("analysis_focus", ""),
+        "understanding_weight": content.get("understanding_weight", 0.0),
+        "maintenance_weight": content.get("maintenance_weight", 0.0),
         "intimate_memory_base": content.get("intimate_memory_base"),
         "intimate_understanding": content.get("intimate_understanding"),
         "intimate_message_simulation": content.get("intimate_message_simulation"),

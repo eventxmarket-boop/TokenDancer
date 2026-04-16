@@ -20,7 +20,12 @@ class CreatedPersonaSummary(BaseModel):
     slug: str
     name: str
     persona_type: str
+    entry_label: str = ""
+    input_mode: str = ""
     family_subtype: str = ""
+    analysis_focus: str = ""
+    understanding_weight: float = 0.0
+    maintenance_weight: float = 0.0
     summary: str
     material_summary: str = ""
     status: str

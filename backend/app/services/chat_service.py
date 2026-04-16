@@ -24,9 +24,8 @@ from app.services.persona_loader import load_persona_skill, load_persona_summary
 from app.services.prompt_builder import build_chat_messages
 from app.services.family_companion_service import build_family_companion_context
 from app.services.intimate_companion_service import build_intimate_companion_context
-from app.services.intimate_understanding_service import build_intimate_understanding_context
 from app.services.message_simulation_service import build_message_simulation_context
-from app.services.relationship_maintenance_service import build_relationship_maintenance_context
+from app.services.relationship_management_service import build_relationship_management_context
 from app.services.past_relationship_service import build_past_relationship_context
 from app.services.reunion_persona_service import build_reunion_persona_context
 from app.services.zhangxuefeng_research import (
@@ -551,16 +550,18 @@ async def chat_with_persona(
         aux_context = build_reunion_persona_context(persona, history, normalized_message)
     elif is_intimate_companion:
         intimate_mode = str(persona_meta.get("input_mode") or "").strip()
-        if intimate_mode == "relationship_understanding":
-            aux_context = build_intimate_understanding_context(persona, history, normalized_message)
+        if intimate_mode in {
+            "relationship_management",
+            "relationship_understanding",
+            "partner_maintenance",
+        }:
+            aux_context = build_relationship_management_context(persona, history, normalized_message)
         elif intimate_mode == "message_simulation":
             aux_context = build_message_simulation_context(persona, history, normalized_message)
-        elif intimate_mode == "partner_maintenance":
-            aux_context = build_relationship_maintenance_context(persona, history, normalized_message)
         elif intimate_mode == "past_relation_mirror":
             aux_context = build_past_relationship_context(persona, history, normalized_message)
         else:
-            aux_context = build_intimate_companion_context(persona, history, normalized_message)
+            aux_context = build_relationship_management_context(persona, history, normalized_message)
 
     messages = build_context_messages(
         persona,

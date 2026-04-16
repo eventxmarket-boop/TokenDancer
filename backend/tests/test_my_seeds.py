@@ -669,12 +669,12 @@ class MySeedsTests(unittest.TestCase):
             "create_type": "intimate_companion",
             "group": "relationship_intimate",
             "source_repo": "relationship-training-skill+xinyi",
-            "display_name": "关系理解",
-            "input_mode": "relationship_understanding",
-            "schema_key": "intimate_companion_relationship_understanding",
+            "display_name": "关系经营",
+            "input_mode": "relationship_management",
+            "schema_key": "intimate_companion_relationship_management",
             "form_data": {
-                "relationship_type": "关系理解",
-                "persona_name": "关系理解",
+                "relationship_type": "关系经营",
+                "persona_name": "关系经营",
                 "relationship_stage": "关系有点紧张，需要先看表达方式",
                 "speech_style": "自然、贴近、带一点熟悉感",
                 "response_temperature": "先接住情绪，再顺着回应",
@@ -744,24 +744,31 @@ class MySeedsTests(unittest.TestCase):
                 created_id = saved["id"]
                 self.assertIn("material_summary", saved)
                 self.assertTrue(saved["material_summary"])
+                self.assertEqual(saved["entry_label"], "关系经营")
+                self.assertIn(saved["analysis_focus"], {"understanding", "maintenance", "balanced"})
+                self.assertGreaterEqual(saved["understanding_weight"], 0.0)
+                self.assertGreaterEqual(saved["maintenance_weight"], 0.0)
 
                 detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
                 detail = detail_response.json()
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "intimate_companion")
-                self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "intimate_companion_relationship_understanding")
-                self.assertEqual(detail["draft_payload"]["relationship_type"], "关系理解")
+                self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "intimate_companion_relationship_management")
+                self.assertEqual(detail["draft_payload"]["relationship_type"], "关系经营")
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_image_documents"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
+                self.assertIn(detail["analysis_focus"], {"understanding", "maintenance", "balanced"})
+                self.assertGreaterEqual(detail["understanding_weight"], 0.0)
+                self.assertGreaterEqual(detail["maintenance_weight"], 0.0)
                 self.assertEqual(detail["material_summary"], saved["material_summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
-                self.assertIn("亲密关系", persona.get("category", ""))
+                self.assertIn("关系经营", persona.get("category", ""))
 
                 with patch("app.services.chat_service.generate_reply") as fake_reply:
                     fake_reply.return_value = {

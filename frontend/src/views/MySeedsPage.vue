@@ -12,7 +12,7 @@ const typeLabels: Record<string, string> = {
   self_unified: '自我主线',
   source_persona: '资料',
   relationship_persona: '关系',
-  intimate_companion: '亲密关系',
+  intimate_companion: '关系经营',
   family_companion: '家人陪伴',
   reunion_persona: '重逢人格',
 }
@@ -29,6 +29,24 @@ function displaySeedName(seed: CreatedPersonaSummary) {
     return '自我主线'
   }
   return name
+}
+
+function formatWeight(value?: number | null) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return ''
+  }
+  return value.toFixed(2)
+}
+
+function seedFocusLabel(seed: CreatedPersonaSummary) {
+  if (normalizePersonaType(seed.persona_type) !== 'intimate_companion') {
+    return ''
+  }
+  const focus = String(seed.analysis_focus || '').trim()
+  if (focus === 'understanding') return '理解型'
+  if (focus === 'maintenance') return '维护型'
+  if (focus === 'balanced') return '平衡型'
+  return focus || '平衡型'
 }
 
 function normalizePersonaType(type: string) {
@@ -145,6 +163,11 @@ onMounted(() => {
 
               <div class="tag-row">
                 <span class="tag-chip">{{ typeLabels[normalizePersonaType(seed.persona_type)] || normalizePersonaType(seed.persona_type) }}</span>
+                <span v-if="seed.entry_label" class="tag-chip">{{ seed.entry_label }}</span>
+                <span v-if="seed.analysis_focus" class="tag-chip">{{ seedFocusLabel(seed) }}</span>
+                <span v-if="normalizePersonaType(seed.persona_type) === 'intimate_companion'" class="tag-chip">
+                  理解{{ formatWeight(seed.understanding_weight) || '0.00' }} / 维护{{ formatWeight(seed.maintenance_weight) || '0.00' }}
+                </span>
                 <span v-if="normalizePersonaType(seed.persona_type) === 'family_companion' && seed.family_subtype" class="tag-chip">
                   {{ familySubtypeLabels[seed.family_subtype] || seed.family_subtype }}
                 </span>

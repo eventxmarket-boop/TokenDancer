@@ -672,12 +672,12 @@ class CreateWizardTests(unittest.TestCase):
             "create_type": "intimate_companion",
             "group": "relationship_intimate",
             "source_repo": "relationship-training-skill+xinyi",
-            "display_name": "关系理解",
-            "input_mode": "relationship_understanding",
-            "schema_key": "intimate_companion_relationship_understanding",
+            "display_name": "关系经营",
+            "input_mode": "relationship_management",
+            "schema_key": "intimate_companion_relationship_management",
             "form_data": {
-                "relationship_type": "关系理解",
-                "persona_name": "关系理解",
+                "relationship_type": "关系经营",
+                "persona_name": "关系经营",
                 "relationship_stage": "关系有点紧张，需要先看表达方式",
                 "speech_style": "自然、贴近、带一点熟悉感",
                 "response_temperature": "先接住情绪，再顺着回应",
@@ -733,19 +733,24 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["meta"]["create_type"], "intimate_companion")
         self.assertEqual(body["draft"]["meta"]["group"], "relationship_intimate")
         self.assertEqual(body["draft"]["meta"]["source_repo"], "relationship-training-skill+xinyi")
-        self.assertEqual(body["draft"]["meta"]["display_name"], "关系理解")
-        self.assertEqual(body["draft"]["meta"]["input_mode"], "relationship_understanding")
-        self.assertEqual(body["draft"]["meta"]["schema_key"], "intimate_companion_relationship_understanding")
-        self.assertEqual(body["draft"]["relationship_type"], "关系理解")
+        self.assertEqual(body["draft"]["meta"]["display_name"], "关系经营")
+        self.assertEqual(body["draft"]["meta"]["input_mode"], "relationship_management")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "intimate_companion_relationship_management")
+        self.assertEqual(body["draft"]["relationship_type"], "关系经营")
         self.assertIsNotNone(body["draft"]["relationship_profile"])
+        self.assertIsNotNone(body["draft"]["relationship_management_profile"])
         self.assertIsNotNone(body["draft"]["intimate_memory_base"])
+        self.assertIsNotNone(body["draft"]["relationship_management_memory_base"])
         self.assertIn("raw_materials", body["draft"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
         self.assertIsNotNone(body["draft"]["intimate_understanding"])
-        self.assertIn("亲密关系", body["draft"]["profile"])
-        self.assertIn("关系理解", body["draft"]["profile"])
+        self.assertIn(body["draft"]["analysis_focus"], {"understanding", "maintenance", "balanced"})
+        self.assertGreaterEqual(body["draft"]["understanding_weight"], 0.0)
+        self.assertGreaterEqual(body["draft"]["maintenance_weight"], 0.0)
+        self.assertIn("关系经营", body["draft"]["profile"])
+        self.assertIn("关系经营", body["draft"]["relationship_management_profile"]["relationship_type"])
 
     def test_create_wizard_draft_endpoint_rejects_unsupported_type(self):
         payload = {

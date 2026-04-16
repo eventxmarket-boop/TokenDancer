@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.49 - 2026-04-17
+
+- Merged the relationship understanding and relationship maintenance paths into a single relationship management entry.
+- Kept understanding-side and maintenance-side skills under one runtime with dynamic weighting from uploaded materials.
+- Unified relationship memory, interaction samples, style samples, and reply cues under the relationship management object model.
+- Surfaced relationship management focus and weights in Create result and My Seeds views.
+
 ## V1.4.48 - 2026-04-17
 
 - Calibrated reunion chat into light, medium, and deep progressive recall stages so memory comes back more gradually.

@@ -234,6 +234,31 @@ export type IntimateCompanionRawMaterials = {
   expression_samples_text: string
 }
 
+export type RelationshipManagementProfile = {
+  relationship_type: string
+  name: string
+  relationship_stage: string
+  tone: string
+  response_temperature: string
+  catchphrases: string[]
+  boundaries: string
+  analysis_focus: string
+  understanding_weight: number
+  maintenance_weight: number
+}
+
+export type RelationshipManagementMemoryBase = {
+  relationship_memory: string[]
+  interaction_samples: string[]
+  style_samples: string[]
+  candidate_reply_cues: string[]
+  relationship_context: string
+  analysis_focus: string
+  understanding_weight: number
+  maintenance_weight: number
+  raw_materials: Record<string, unknown>
+}
+
 export type SelfPersonaRawMaterials = UniversalCreateWizardRawMaterials
 
 export type ReunionPersonaRetrievalPolicy = {
@@ -348,6 +373,11 @@ export type CreateWizardDraft = {
   intimate_message_simulation?: Record<string, unknown> | null
   intimate_relationship_maintenance?: Record<string, unknown> | null
   intimate_past_relationship?: Record<string, unknown> | null
+  relationship_management_profile?: RelationshipManagementProfile | null
+  relationship_management_memory_base?: RelationshipManagementMemoryBase | null
+  analysis_focus?: string
+  understanding_weight?: number
+  maintenance_weight?: number
 }
 
 export type CreateWizardDraftResponse = {

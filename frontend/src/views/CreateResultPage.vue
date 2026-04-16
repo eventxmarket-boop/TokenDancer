@@ -10,13 +10,13 @@ import {
   type FamilyCompanionGuidedMemoryAnswers,
   type FamilyCompanionEmotionRules,
   type FamilyCompanionPersonaProfile,
-  type IntimateCompanionMemoryBase,
-  type IntimateCompanionRelationshipProfile,
   type ReunionPersonaMemoryBase,
   type ReunionPersonaProfile,
   type ReunionPersonaRetrievalPolicy,
   type ReunionPersonaSafetyGuardrails,
   type SelfPersonaUnifiedDraft,
+  type RelationshipManagementProfile,
+  type RelationshipManagementMemoryBase,
 } from '@/services/createWizardService'
 import {
   loadMySeed,
@@ -47,9 +47,10 @@ const inputModeLabels: Record<string, string> = {
   partner: '伴侣',
   mother: '妈妈',
   other_family: '其他家人',
-  relationship_understanding: '关系理解',
+  relationship_management: '关系经营',
+  relationship_understanding: '关系经营',
   message_simulation: '消息模拟',
-  partner_maintenance: '关系维护',
+  partner_maintenance: '关系经营',
   past_relation_mirror: '过去关系 / 自我镜像',
 }
 
@@ -109,6 +110,8 @@ const editableDraft = reactive<CreateWizardDraft>({
   reunion_safety_guardrails: null,
   relationship_profile: null,
   intimate_memory_base: null,
+  relationship_management_profile: null,
+  relationship_management_memory_base: null,
 })
 
 const typeLabel = computed(() => {
@@ -130,7 +133,7 @@ const typeLabel = computed(() => {
     return '重逢人格'
   }
   if (type === 'intimate_companion') {
-    return '亲密关系'
+    return '关系经营'
   }
   return '关系人格'
 })
@@ -525,20 +528,67 @@ const familyEmotionRules = computed<FamilyCompanionEmotionRules | null>(() => {
   return payload as FamilyCompanionEmotionRules
 })
 
-const intimateRelationshipProfile = computed<IntimateCompanionRelationshipProfile | null>(() => {
-  const payload = editableDraft.relationship_profile || draft.value?.relationship_profile
+const intimateRelationshipProfile = computed<RelationshipManagementProfile | null>(() => {
+  const payload =
+    editableDraft.relationship_management_profile ||
+    draft.value?.relationship_management_profile ||
+    editableDraft.relationship_profile ||
+    draft.value?.relationship_profile
   if (!payload || typeof payload !== 'object') {
     return null
   }
-  return payload
+  const record = payload as Record<string, unknown>
+  return {
+    relationship_type: normalizeText(record.relationship_type),
+    name: normalizeText(record.name),
+    relationship_stage: normalizeText(record.relationship_stage),
+    tone: normalizeText(record.tone),
+    response_temperature: normalizeText(record.response_temperature),
+    catchphrases: normalizeStringList(record.catchphrases),
+    boundaries: normalizeText(record.boundaries),
+    analysis_focus: normalizeText(record.analysis_focus || draft.value?.analysis_focus || ''),
+    understanding_weight: Number(record.understanding_weight ?? draft.value?.understanding_weight ?? 0) || 0,
+    maintenance_weight: Number(record.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) || 0,
+  }
 })
 
-const intimateMemoryBase = computed<IntimateCompanionMemoryBase | null>(() => {
-  const payload = editableDraft.intimate_memory_base || draft.value?.intimate_memory_base
+const intimateMemoryBase = computed<RelationshipManagementMemoryBase | null>(() => {
+  const payload =
+    editableDraft.relationship_management_memory_base ||
+    draft.value?.relationship_management_memory_base ||
+    editableDraft.intimate_memory_base ||
+    draft.value?.intimate_memory_base
   if (!payload || typeof payload !== 'object') {
     return null
   }
-  return payload
+  const record = payload as Record<string, unknown>
+  return {
+    relationship_memory: normalizeStringList(
+      record.relationship_memory || record.key_memories || record.conversation_samples || record.shared_memories,
+    ),
+    interaction_samples: normalizeStringList(
+      record.interaction_samples ||
+        record.interaction_rules ||
+        record.conversation_samples ||
+        record.misunderstanding_points ||
+        record.rewrite_targets ||
+        record.interaction_patterns,
+    ),
+    style_samples: normalizeStringList(
+      record.style_samples || record.reply_style_samples || record.expression_samples || record.maintenance_goals,
+    ),
+    candidate_reply_cues: normalizeStringList(
+      record.candidate_reply_cues || record.rewrite_targets || record.maintenance_goals,
+    ),
+    relationship_context: normalizeText(record.relationship_context),
+    analysis_focus: normalizeText(record.analysis_focus || draft.value?.analysis_focus || ''),
+    understanding_weight: Number(record.understanding_weight ?? draft.value?.understanding_weight ?? 0) || 0,
+    maintenance_weight: Number(record.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) || 0,
+    raw_materials:
+      (record.raw_materials as Record<string, unknown>) ||
+      (draft.value?.raw_materials as Record<string, unknown>) ||
+      {},
+  }
 })
 
 const familyProfileLines = computed(() => {
@@ -789,6 +839,9 @@ const intimateProfileLines = computed(() => {
   }
 
   return [
+    { label: '当前重心', value: profile.analysis_focus || draft.value?.analysis_focus || '平衡型' },
+    { label: '理解权重', value: String(profile.understanding_weight ?? draft.value?.understanding_weight ?? 0) },
+    { label: '维护权重', value: String(profile.maintenance_weight ?? draft.value?.maintenance_weight ?? 0) },
     { label: '关系类型', value: profile.relationship_type || '未填写' },
     { label: '对象称呼', value: profile.name || '未填写' },
     { label: '关系阶段', value: profile.relationship_stage || '未填写' },
@@ -806,10 +859,10 @@ const intimateMemoryLines = computed(() => {
   }
 
   return [
-    { label: '对话样本', value: memory.conversation_samples?.join(' / ') || '未填写' },
-    { label: '互动规则', value: memory.interaction_rules?.join(' / ') || '未填写' },
-    { label: '关系目标', value: memory.relationship_goals?.join(' / ') || '未填写' },
-    { label: '关键记忆', value: memory.key_memories?.join(' / ') || '未填写' },
+    { label: '关系记忆', value: memory.relationship_memory?.join(' / ') || '未填写' },
+    { label: '互动样本', value: memory.interaction_samples?.length ? `${memory.interaction_samples.length} 条` : '未填写' },
+    { label: '风格样本', value: memory.style_samples?.length ? `${memory.style_samples.length} 条` : '未填写' },
+    { label: '建议线索', value: memory.candidate_reply_cues?.length ? `${memory.candidate_reply_cues.length} 条` : '未填写' },
   ]
 })
 
