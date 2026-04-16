@@ -175,6 +175,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
                 self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "family_companion_mother")
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "妈妈")
+                self.assertIn("emotion_rules", detail["draft_payload"])
+                self.assertTrue(detail["draft_payload"]["emotion_rules"]["summary"])
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 

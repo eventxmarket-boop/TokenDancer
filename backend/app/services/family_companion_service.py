@@ -65,6 +65,11 @@ def _memory_sources(memory_base: dict[str, Any]) -> list[str]:
     return [item for item in items if item]
 
 
+def _emotion_rules_payload(persona: dict[str, Any]) -> dict[str, Any]:
+    emotion_rules = persona.get("emotion_rules") or {}
+    return emotion_rules if isinstance(emotion_rules, dict) else {}
+
+
 def retrieve_relevant_memories(
     memory_base: dict[str, Any],
     emotional_state: str,
@@ -109,7 +114,10 @@ def build_family_reply_context(
     emotional_state: str,
     memories: list[str],
     user_message: str,
+    *,
+    emotion_rules: dict[str, Any] | None = None,
 ) -> str:
+    emotion_rules = emotion_rules if isinstance(emotion_rules, dict) else {}
     tone = _normalize_text(persona_profile.get("tone"))
     comfort_style = _normalize_text(persona_profile.get("comfort_style"))
     celebration_style = _normalize_text(persona_profile.get("celebration_style"))
@@ -125,7 +133,16 @@ def build_family_reply_context(
         "寻求建议": "先安抚，再给具体建议",
         "日常聊天": "自然、熟悉、轻松",
     }
+    rule_temperature_map = emotion_rules.get("response_temperature_map")
+    if isinstance(rule_temperature_map, dict):
+        mapped_temperature = _normalize_text(rule_temperature_map.get(emotional_state))
+        if mapped_temperature:
+            temperature_map[emotional_state] = mapped_temperature
     temperature = temperature_map.get(emotional_state, "自然、熟悉、轻松")
+    emotion_summary = _normalize_text(emotion_rules.get("summary"))
+    response_sequence = _clean_lines(emotion_rules.get("response_sequence"))
+    memory_priority_rules = _clean_lines(emotion_rules.get("memory_priority_rules"))
+    boundary_rules = _clean_lines(emotion_rules.get("boundary_rules"))
 
     parts = [
         f"当前情绪状态：{emotional_state}",
@@ -150,6 +167,17 @@ def build_family_reply_context(
         parts.append(f"聊天记录摘要：{chat_history_summary}")
     if boundaries:
         parts.append(f"边界提醒：{boundaries}")
+    if emotion_summary:
+        parts.append(f"情绪规则摘要：{emotion_summary}")
+    if response_sequence:
+        parts.append("回复顺序：")
+        parts.extend(f"- {item}" for item in response_sequence[:4])
+    if memory_priority_rules:
+        parts.append("记忆优先级：")
+        parts.extend(f"- {item}" for item in memory_priority_rules[:4])
+    if boundary_rules:
+        parts.append("规则边界：")
+        parts.extend(f"- {item}" for item in boundary_rules[:4])
     parts.append(f"当前用户消息：{_normalize_text(user_message)}")
     return "\n".join(parts).strip()
 
@@ -166,4 +194,11 @@ def build_family_companion_context(
 
     emotional_state = detect_emotional_state(user_message, history)
     memories = retrieve_relevant_memories(memory_base, emotional_state, user_message)
-    return build_family_reply_context(persona_profile, emotional_state, memories, user_message)
+    emotion_rules = _emotion_rules_payload(persona)
+    return build_family_reply_context(
+        persona_profile,
+        emotional_state,
+        memories,
+        user_message,
+        emotion_rules=emotion_rules,
+    )

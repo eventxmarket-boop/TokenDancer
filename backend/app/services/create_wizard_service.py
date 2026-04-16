@@ -611,58 +611,56 @@ def _build_relationship_draft(
     }
 
 
-def _build_family_companion_draft(
-    form_data: dict[str, Any],
-    display_name: str = "",
-    input_mode: str = "",
+def extract_family_memory_base_from_materials(
+    persona_form: dict[str, Any],
+    memory_form: dict[str, Any],
+    raw_materials: dict[str, Any],
 ) -> dict[str, Any]:
-    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
+    persona_form = persona_form or {}
+    memory_form = memory_form or {}
+    raw_materials = raw_materials or {}
+
     relation_type = (
-        _normalize_text(form_data.get("relationship_type"))
-        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
-        or _normalize_text(display_name)
+        _normalize_text(persona_form.get("relationship_type"))
+        or _normalize_text(persona_form.get("persona_name"))
         or "家人陪伴"
     )
-    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
-    tone = _normalize_text(form_data.get("speech_style")) or "温和、亲近、稳一点。"
-    catchphrases = _clean_lines(form_data.get("catchphrases")) or ["先把情绪放一放", "别着急，慢慢来"]
-    comfort_style = _normalize_text(form_data.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
-    celebration_style = _normalize_text(form_data.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
-    boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。"
-    shared_events = _clean_lines(form_data.get("shared_events")) or ["小时候一起吃饭的场景", "你难过时被安慰的瞬间"]
-    important_advice = _clean_lines(form_data.get("important_advice")) or ["先照顾好自己", "遇到事先稳住再做决定"]
-    daily_habits = _clean_lines(form_data.get("daily_habits")) or ["会关心你吃饭没", "会提醒你注意休息"]
-    emotional_triggers = _clean_lines(form_data.get("emotional_triggers"))
-    memory_fragments = _clean_lines(form_data.get("memory_fragments"))
-    text_materials = _clean_lines(form_data.get("text_materials"))
-    image_notes = _clean_lines(form_data.get("image_notes"))
-    voice_notes = _clean_lines(form_data.get("voice_notes"))
+    tone = _normalize_text(persona_form.get("speech_style")) or "温和、亲近、稳一点。"
+    comfort_style = _normalize_text(persona_form.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
+    celebration_style = _normalize_text(persona_form.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
+    boundaries = _normalize_text(persona_form.get("relation_boundaries") or persona_form.get("boundaries")) or "不碰隐私边界，不越界替你做决定。"
 
-    raw_materials = _raw_materials_payload(
-        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
-        memory_notes_text=raw_materials_input.get("memory_notes_text")
-        or form_data.get("memory_fragments")
-        or form_data.get("memory_notes"),
-        text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
-        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
-        or form_data.get("uploaded_text_documents"),
-        image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
-        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
-    )
+    shared_events = _clean_lines(memory_form.get("shared_events") or persona_form.get("shared_events")) or [
+        "小时候一起吃饭的场景",
+        "你难过时被安慰的瞬间",
+    ]
+    important_advice = _clean_lines(memory_form.get("important_advice") or persona_form.get("important_advice")) or [
+        "先照顾好自己",
+        "遇到事先稳住再做决定",
+    ]
+    daily_habits = _clean_lines(memory_form.get("daily_habits") or persona_form.get("daily_habits")) or [
+        "会关心你吃饭没",
+        "会提醒你注意休息",
+    ]
+    emotional_triggers = _clean_lines(memory_form.get("emotional_triggers") or persona_form.get("emotional_triggers"))
+    memory_fragments = _clean_lines(memory_form.get("memory_fragments") or persona_form.get("memory_fragments"))
+    text_materials = _clean_lines(memory_form.get("text_materials") or persona_form.get("text_materials"))
+    image_notes = _clean_lines(memory_form.get("image_notes") or persona_form.get("image_notes"))
+    voice_notes = _clean_lines(memory_form.get("voice_notes") or persona_form.get("voice_notes"))
+
     material_lines = _merge_unique_lines(
-        raw_materials["chat_history_text"],
-        raw_materials["memory_notes_text"],
-        raw_materials["text_materials_text"],
-        raw_materials["image_notes_text"],
-        raw_materials["voice_notes_text"],
-        [doc.get("content", "") for doc in raw_materials["uploaded_text_documents"]],
+        raw_materials.get("chat_history_text"),
+        raw_materials.get("memory_notes_text"),
+        raw_materials.get("text_materials_text"),
+        raw_materials.get("image_notes_text"),
+        raw_materials.get("voice_notes_text"),
+        [doc.get("content", "") for doc in raw_materials.get("uploaded_text_documents", []) if isinstance(doc, dict)],
     )
-
-    if not raw_materials["chat_history_text"]:
+    if not raw_materials.get("chat_history_text"):
         raw_materials["chat_history_text"] = _select_material_summary(
-            form_data.get("chat_history_summary"),
-            raw_materials["memory_notes_text"],
-            raw_materials["text_materials_text"],
+            memory_form.get("chat_history_summary") or persona_form.get("chat_history_summary"),
+            raw_materials.get("memory_notes_text"),
+            raw_materials.get("text_materials_text"),
         )
 
     for line in material_lines:
@@ -681,21 +679,12 @@ def _build_family_companion_draft(
     important_advice = _merge_unique_lines(important_advice)
     daily_habits = _merge_unique_lines(daily_habits)
     emotional_triggers = _merge_unique_lines(emotional_triggers)
-    memory_fragments = _merge_unique_lines(memory_fragments, _document_snippets(raw_materials["uploaded_text_documents"]))
-    text_materials = _merge_unique_lines(text_materials, _document_snippets(raw_materials["uploaded_text_documents"]))
+    memory_fragments = _merge_unique_lines(memory_fragments, _document_snippets(raw_materials.get("uploaded_text_documents", [])))
+    text_materials = _merge_unique_lines(text_materials, _document_snippets(raw_materials.get("uploaded_text_documents", [])))
     image_notes = _merge_unique_lines(image_notes)
     voice_notes = _merge_unique_lines(voice_notes)
-    chat_history_summary = _normalize_text(raw_materials["chat_history_text"])
+    chat_history_summary = _normalize_text(raw_materials.get("chat_history_text"))
 
-    persona_profile = FamilyCompanionPersonaProfile(
-        relationship_type=relation_type,
-        name=name,
-        tone=tone,
-        catchphrases=catchphrases,
-        comfort_style=comfort_style,
-        celebration_style=celebration_style,
-        boundaries=boundaries,
-    )
     memory_base = FamilyCompanionMemoryBase(
         shared_events=shared_events,
         important_advice=important_advice,
@@ -706,6 +695,86 @@ def _build_family_companion_draft(
         text_materials=text_materials,
         image_notes=image_notes,
         voice_notes=voice_notes,
+    )
+    emotion_rules = {
+        "summary": "先判断情绪，再提取记忆，再用家人的方式回应",
+        "emotion_state_priority": [
+            "难过 / 失落",
+            "焦虑 / 压力",
+            "开心 / 分享喜悦",
+            "寻求建议",
+            "日常聊天",
+        ],
+        "response_sequence": [
+            "先接住当前情绪",
+            "再调用熟悉记忆",
+            "再给温和回应或建议",
+        ],
+        "response_temperature_map": {
+            "难过 / 失落": "温暖、稳定、先接情绪",
+            "焦虑 / 压力": "安抚但不空泛，先帮对方稳住",
+            "开心 / 分享喜悦": "跟着高兴，顺着把好消息说完整",
+            "寻求建议": "先安抚，再给具体建议",
+            "日常聊天": "自然、熟悉、轻松",
+        },
+        "memory_priority_rules": [
+            "优先使用从材料里提炼出的共同经历",
+            "优先引用常说的话和典型关心方式",
+            "优先贴近当前消息涉及的情绪关键词",
+        ],
+        "boundary_rules": _merge_unique_lines(
+            [boundaries],
+            ["不伪造不确定的家庭事实", "不把关心变成控制"],
+        ),
+    }
+    return {
+        "memory_base": memory_base.model_dump(),
+        "emotion_rules": emotion_rules,
+    }
+
+
+def build_family_companion_draft(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+) -> dict[str, Any]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
+    relation_type = (
+        _normalize_text(form_data.get("relationship_type"))
+        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or _normalize_text(display_name)
+        or "家人陪伴"
+    )
+    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
+    tone = _normalize_text(form_data.get("speech_style")) or "温和、亲近、稳一点。"
+    catchphrases = _clean_lines(form_data.get("catchphrases")) or ["先把情绪放一放", "别着急，慢慢来"]
+    comfort_style = _normalize_text(form_data.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
+    celebration_style = _normalize_text(form_data.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
+    boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。"
+
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
+        memory_notes_text=raw_materials_input.get("memory_notes_text")
+        or form_data.get("memory_fragments")
+        or form_data.get("memory_notes"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
+        or form_data.get("uploaded_text_documents"),
+        image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
+    )
+    extraction = extract_family_memory_base_from_materials(form_data, form_data, raw_materials)
+    memory_base = FamilyCompanionMemoryBase.model_validate(extraction["memory_base"])
+    emotion_rules = extraction["emotion_rules"]
+
+    persona_profile = FamilyCompanionPersonaProfile(
+        relationship_type=relation_type,
+        name=name,
+        tone=tone,
+        catchphrases=catchphrases,
+        comfort_style=comfort_style,
+        celebration_style=celebration_style,
+        boundaries=boundaries,
     )
 
     profile = (
@@ -751,6 +820,7 @@ def _build_family_companion_draft(
         "relationship_type": relation_type,
         "persona_profile": persona_profile.model_dump(),
         "memory_base": memory_base.model_dump(),
+        "emotion_rules": emotion_rules,
         "raw_materials": raw_materials,
         "name": name,
     }
@@ -1605,7 +1675,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     elif normalized_create_type == "source_persona":
         content = _build_source_draft(form_data, normalized_display_name)
     elif normalized_create_type == "family_companion":
-        content = _build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
+        content = build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
     elif normalized_create_type == "reunion_persona":
         content = _build_reunion_persona_draft(form_data, normalized_display_name, normalized_input_mode)
     elif normalized_create_type == "intimate_companion":
@@ -1647,6 +1717,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "guardrails": content["guardrails"],
         "relationship_type": content.get("relationship_type", ""),
         "raw_materials": content.get("raw_materials"),
+        "emotion_rules": content.get("emotion_rules"),
         "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),
         "memory_base": content.get("memory_base"),

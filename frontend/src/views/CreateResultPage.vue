@@ -7,6 +7,7 @@ import {
   saveLatestDraft,
   type CreateWizardDraft,
   type FamilyCompanionMemoryBase,
+  type FamilyCompanionEmotionRules,
   type FamilyCompanionPersonaProfile,
   type IntimateCompanionMemoryBase,
   type IntimateCompanionRelationshipProfile,
@@ -80,6 +81,7 @@ const editableDraft = reactive<CreateWizardDraft>({
   guardrails: '',
   relationship_type: '',
   raw_materials: null,
+  emotion_rules: null,
   self_persona_unified: {
     create_mode: 'standard',
     input_modes: [],
@@ -173,6 +175,31 @@ function normalizeDocuments(value: unknown) {
     .filter(Boolean) as Array<{ filename: string; content: string }>
 }
 
+function normalizeStringList(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeText(item)).filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(/\n+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  return []
+}
+
+function normalizeStringMap(value: unknown) {
+  if (!value || typeof value !== 'object') {
+    return []
+  }
+  return Object.entries(value as Record<string, unknown>)
+    .map(([key, item]) => {
+      const normalized = normalizeText(item)
+      return normalized ? `${key}：${normalized}` : ''
+    })
+    .filter(Boolean)
+}
+
 function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 'intimate') {
   if (!rawMaterials || typeof rawMaterials !== 'object') {
     return []
@@ -262,6 +289,14 @@ const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
   return payload
 })
 
+const familyEmotionRules = computed<FamilyCompanionEmotionRules | null>(() => {
+  const payload = editableDraft.emotion_rules || draft.value?.emotion_rules
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload as FamilyCompanionEmotionRules
+})
+
 const intimateRelationshipProfile = computed<IntimateCompanionRelationshipProfile | null>(() => {
   const payload = editableDraft.relationship_profile || draft.value?.relationship_profile
   if (!payload || typeof payload !== 'object') {
@@ -311,6 +346,22 @@ const familyMemoryLines = computed(() => {
     { label: '文本材料', value: memory.text_materials?.join(' / ') || '未填写' },
     { label: '图片备注', value: memory.image_notes?.join(' / ') || '未填写' },
     { label: '语音备注', value: memory.voice_notes?.join(' / ') || '未填写' },
+  ]
+})
+
+const familyEmotionLines = computed(() => {
+  const rules = familyEmotionRules.value
+  if (!rules) {
+    return []
+  }
+
+  return [
+    { label: '规则摘要', value: rules.summary || '未填写' },
+    { label: '情绪优先级', value: normalizeStringList(rules.emotion_state_priority).join(' / ') || '未填写' },
+    { label: '回复顺序', value: normalizeStringList(rules.response_sequence).join(' / ') || '未填写' },
+    { label: '记忆优先级', value: normalizeStringList(rules.memory_priority_rules).join(' / ') || '未填写' },
+    { label: '边界规则', value: normalizeStringList(rules.boundary_rules).join(' / ') || '未填写' },
+    { label: '温度映射', value: normalizeStringMap(rules.response_temperature_map).join(' / ') || '未填写' },
   ]
 })
 
@@ -731,6 +782,16 @@ onMounted(() => {
           <p class="eyebrow">记忆层</p>
           <div class="family-grid">
             <div v-for="line in familyMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
+          <p class="eyebrow">情绪规则</p>
+          <div class="family-grid">
+            <div v-for="line in familyEmotionLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

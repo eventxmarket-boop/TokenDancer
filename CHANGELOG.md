@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.25 - 2026-04-16
+
+- Made the family-companion path explicitly carry extracted emotion rules alongside persona and memory data.
+- Added a dedicated family material-to-memory extraction helper so raw materials are converted into a structured memory base before saving.
+- Surfaced family emotion-rule summaries in the Create result and created-seed summary flow.
+- Ensured family chat context consumes persona profile, memory base, and emotion rules together.
+
 ## V1.4.24 - 2026-04-16
 
 - Expanded the intimate-relationship Create paths so they can ingest pasted materials and uploaded text documents instead of relying only on hand-filled fields.

@@ -62,6 +62,7 @@ class CreateWizardDraft(BaseModel):
     guardrails: str
     relationship_type: str = ""
     raw_materials: dict[str, Any] | None = None
+    emotion_rules: dict[str, Any] | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None
     memory_base: FamilyCompanionMemoryBase | None = None

@@ -131,6 +131,30 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
     return "；".join(parts[:4])
 
 
+def _emotion_rules_summary(emotion_rules: Any) -> str:
+    if not isinstance(emotion_rules, dict):
+        return ""
+
+    parts: list[str] = []
+    summary = _normalize_text(emotion_rules.get("summary"))
+    if summary:
+        parts.append(summary)
+
+    sequence = _clean_lines(emotion_rules.get("response_sequence"))
+    if sequence:
+        parts.append("回复顺序：" + " / ".join(sequence[:3]))
+
+    priority = _clean_lines(emotion_rules.get("emotion_state_priority"))
+    if priority:
+        parts.append("情绪优先级：" + " / ".join(priority[:4]))
+
+    boundary_rules = _clean_lines(emotion_rules.get("boundary_rules"))
+    if boundary_rules:
+        parts.append("边界规则：" + " / ".join(boundary_rules[:3]))
+
+    return "；".join(parts[:4])
+
+
 def _normalize_persona_type(value: Any) -> str:
     persona_type = _normalize_text(value) or "self_unified"
     if persona_type in _SELF_UNIFIED_ALIASES:
@@ -227,7 +251,9 @@ def _build_summary(draft: CreateWizardDraft) -> str:
     if _normalize_text(draft.meta.create_type) == "family_companion":
         profile = draft.persona_profile or {}
         memory = draft.memory_base or {}
+        emotion_rules = getattr(draft, "emotion_rules", None)
         raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
+        emotion_rules_summary = _emotion_rules_summary(emotion_rules)
         profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
         relationship_type = _normalize_text(
             profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
@@ -245,6 +271,8 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
         if raw_materials_summary:
             summary_parts.append(raw_materials_summary)
+        if emotion_rules_summary:
+            summary_parts.append(emotion_rules_summary)
         if summary_parts or memories:
             combined = " · ".join(summary_parts)
             if memories:

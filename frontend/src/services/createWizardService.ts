@@ -61,6 +61,15 @@ export type FamilyCompanionMemoryBase = {
   voice_notes: string[]
 }
 
+export type FamilyCompanionEmotionRules = {
+  summary: string
+  emotion_state_priority: string[]
+  response_sequence: string[]
+  response_temperature_map: Record<string, string>
+  memory_priority_rules: string[]
+  boundary_rules: string[]
+}
+
 export type TextMaterialDocument = {
   filename: string
   content: string
@@ -188,6 +197,7 @@ export type CreateWizardDraft = {
   guardrails: string
   relationship_type?: string
   raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | Record<string, unknown> | null
+  emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
