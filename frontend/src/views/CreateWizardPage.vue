@@ -2267,12 +2267,14 @@ watch(
   display: block;
   margin-top: 0.18rem;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .inline-actions {
   display: inline-flex;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .ghost-button {
@@ -2281,6 +2283,7 @@ watch(
   color: var(--text);
   border-radius: 999px;
   padding: 0.62rem 1rem;
+  min-height: 42px;
   cursor: pointer;
   transition:
     transform 0.18s ease,
@@ -2297,5 +2300,26 @@ watch(
 .ghost-button--small {
   padding: 0.42rem 0.78rem;
   font-size: 0.84rem;
+  min-height: 36px;
+}
+
+@media (max-width: 640px) {
+  .inline-meta {
+    margin-top: 0.1rem;
+    display: inline-block;
+  }
+
+  .inline-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ghost-button {
+    width: 100%;
+  }
+
+  .ghost-button--small {
+    width: auto;
+  }
 }
 </style>

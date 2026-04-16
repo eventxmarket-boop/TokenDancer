@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.41 - 2026-04-16
+
+- Upgraded the H5 frontend for mobile browsing and touch interaction.
+- Improved spacing, card rhythm, button sizing, form readability, and night-mode contrast across the main pages.
+- Kept all APIs, routes, fields, business logic, and skill flows unchanged.
+
 ## V1.4.40 - 2026-04-16
 
 - Reverted the Me page from stacked cards back to a flat three-card layout.
