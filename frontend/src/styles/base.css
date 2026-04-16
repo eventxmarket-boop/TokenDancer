@@ -979,6 +979,7 @@ html[data-theme='night'] .my-entry-card {
   text-decoration: none;
   cursor: pointer;
   outline: none;
+  isolation: isolate;
   --entry-shift-x: 0px;
   --entry-shift-y: 0px;
   --entry-rotate: 0deg;
@@ -1004,6 +1005,10 @@ html[data-theme='night'] .my-entry-card {
   --entry-shift-y: 14px;
   --entry-rotate: 8deg;
   --entry-z: 3;
+}
+
+.my-entry-link--active {
+  z-index: 20;
 }
 
 .my-entry-card {
@@ -1056,7 +1061,7 @@ html[data-theme='night'] .my-entry-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 241, 0.96));
   border-color: rgba(234, 127, 102, 0.28);
   box-shadow: 0 30px 68px rgba(184, 127, 101, 0.2);
-  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 10px), 0) rotate(0deg) scale(1.05);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 16px), 0) rotate(0deg) scale(1.06);
 }
 
 .my-entry-card--inactive {
@@ -1068,6 +1073,11 @@ html[data-theme='night'] .my-entry-card {
   border-color: rgba(234, 127, 102, 0.26);
   box-shadow: 0 28px 62px rgba(184, 127, 101, 0.18);
   transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 8px), 0) rotate(0deg) scale(1.03);
+}
+
+.my-entry-link--active:hover .my-entry-card,
+.my-entry-link--active:focus-visible .my-entry-card {
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 18px), 0) rotate(0deg) scale(1.07);
 }
 
 .my-entry-link:hover .my-entry-card__tag,
@@ -1089,6 +1099,10 @@ html[data-theme='night'] .my-entry-link:hover .my-entry-card,
 html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
   background: linear-gradient(180deg, rgba(51, 41, 65, 0.98), rgba(29, 23, 38, 0.96));
   border-color: rgba(255, 177, 156, 0.26);
+}
+
+html[data-theme='night'] .my-entry-link--active {
+  z-index: 20;
 }
 
 .my-seeds-group-stack {

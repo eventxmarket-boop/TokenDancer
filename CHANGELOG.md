@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.36 - 2026-04-16
+
+- Raised the active personal-center card to the top of the stack so the selected entry is easier to inspect.
+- Kept the semi-overlapped Me page layout while improving z-index behavior on hover and selection.
+- Preserved the existing product scope and only adjusted the front-end interaction polish.
+
 ## V1.4.35 - 2026-04-16
 
 - Restyled the personal center cards into a semi-overlapped stack that matches the homepage sticker pattern.

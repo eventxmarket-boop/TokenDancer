@@ -74,7 +74,10 @@ function activateEntry(entryKey: EntryKey) {
             v-for="entry in myEntries"
             :key="entry.to"
             class="my-entry-link"
-            :class="[`my-entry-link--${entry.key}`]"
+            :class="[
+              `my-entry-link--${entry.key}`,
+              { 'my-entry-link--active': selectedEntry === entry.key },
+            ]"
             :to="entry.to"
             @mouseenter="activateEntry(entry.key)"
             @focus="activateEntry(entry.key)"
