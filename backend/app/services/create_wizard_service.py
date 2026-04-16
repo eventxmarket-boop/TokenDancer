@@ -346,6 +346,40 @@ def _normalize_documents(value: Any) -> list[dict[str, str]]:
     return documents
 
 
+def _normalize_image_documents(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    documents: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            mime_type = _normalize_text(item.get("mime_type") or item.get("type")) or "image/*"
+            try:
+                size = int(item.get("size") or 0)
+            except (TypeError, ValueError):
+                size = 0
+            data_url = _normalize_text(item.get("data_url") or item.get("preview_url") or item.get("url"))
+        else:
+            filename = _normalize_text(item)
+            mime_type = "image/*"
+            size = 0
+            data_url = ""
+
+        if not filename and not data_url and not size:
+            continue
+
+        document = {
+            "filename": filename,
+            "mime_type": mime_type,
+            "size": max(size, 0),
+        }
+        if data_url:
+            document["data_url"] = data_url
+        documents.append(document)
+    return documents
+
+
 def _excerpt_text(value: Any, limit: int = 120) -> str:
     text = _normalize_text(value)
     if not text:
@@ -376,12 +410,31 @@ def _select_material_summary(*parts: Any) -> str:
     return " / ".join(snippets[:3])
 
 
+def _has_meaningful_raw_materials(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for item in value.values():
+        if isinstance(item, list):
+            if item:
+                return True
+            continue
+        if isinstance(item, dict):
+            if item:
+                return True
+            continue
+        if _normalize_text(item):
+            return True
+    return False
+
+
 def _raw_materials_payload(
     *,
     chat_history_text: Any = "",
     memory_notes_text: Any = "",
     text_materials_text: Any = "",
     uploaded_text_documents: Any = None,
+    uploaded_image_documents: Any = None,
     image_notes_text: Any = "",
     voice_notes_text: Any = "",
     diary_text: Any = "",
@@ -401,6 +454,7 @@ def _raw_materials_payload(
         "memory_notes_text": _normalize_text(memory_notes_text),
         "text_materials_text": _normalize_text(text_materials_text),
         "uploaded_text_documents": _normalize_documents(uploaded_text_documents),
+        "uploaded_image_documents": _normalize_image_documents(uploaded_image_documents),
         "image_notes_text": _normalize_text(image_notes_text),
         "voice_notes_text": _normalize_text(voice_notes_text),
         "diary_text": _normalize_text(diary_text),
@@ -1250,6 +1304,8 @@ def build_family_companion_draft(
         text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
         uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
         or form_data.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents")
+        or form_data.get("uploaded_image_documents"),
         image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
@@ -2175,6 +2231,13 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     form_data = payload.get("form_data") or {}
     if not isinstance(form_data, dict):
         raise CreateWizardError("form_data must be an object")
+    payload_raw_materials = payload.get("raw_materials")
+    if isinstance(payload_raw_materials, dict) and _has_meaningful_raw_materials(payload_raw_materials):
+        merged_raw_materials = {}
+        if isinstance(form_data.get("raw_materials"), dict):
+            merged_raw_materials.update(form_data.get("raw_materials") or {})
+        merged_raw_materials.update(payload_raw_materials)
+        form_data = {**form_data, "raw_materials": merged_raw_materials}
     family_subtype = _normalize_text(payload.get("family_subtype")) or _normalize_text(form_data.get("family_subtype"))
     if normalized_create_type == "family_companion" and family_subtype:
         form_data = {**form_data, "family_subtype": family_subtype}

@@ -176,6 +176,14 @@ class MySeedsTests(unittest.TestCase):
                     "uploaded_text_documents": [
                         {"filename": "family-notes.txt", "content": "回家吃饭，别太晚"},
                     ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "family-photo.jpg",
+                            "mime_type": "image/jpeg",
+                            "size": 2048,
+                            "data_url": "data:image/jpeg;base64,ZmFrZQ==",
+                        }
+                    ],
                     "image_notes_text": "老照片说明",
                     "photo_notes_text": "老照片说明",
                     "voice_notes_text": "语音提醒片段",
@@ -204,6 +212,7 @@ class MySeedsTests(unittest.TestCase):
                 saved = save_response.json()
                 created_id = saved["id"]
                 self.assertIn("family-notes.txt", saved["summary"])
+                self.assertIn("图片材料", saved["summary"])
 
                 list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
@@ -251,6 +260,14 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(
                     detail["draft_payload"]["raw_materials"]["uploaded_text_documents"][0]["filename"],
                     "family-notes.txt",
+                )
+                self.assertEqual(
+                    detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["filename"],
+                    "family-photo.jpg",
+                )
+                self.assertEqual(
+                    detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["mime_type"],
+                    "image/jpeg",
                 )
                 self.assertIn(
                     "小时候一起写作业",

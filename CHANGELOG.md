@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.44 - 2026-04-17
+
+- Added mobile-friendly family companion photo upload support in the create wizard.
+- Kept text uploads intact while allowing image files to be selected from album or camera on mobile.
+- Preserved image notes as the primary distilled source and carried uploaded image metadata through raw materials, result summaries, and My Seeds.
+- Added regression coverage for family image materials without changing the existing family companion business flow.
+
 ## V1.4.43 - 2026-04-17
 
 - Extended family memory from a flat summary into layered episodic, semantic, and procedural memories.

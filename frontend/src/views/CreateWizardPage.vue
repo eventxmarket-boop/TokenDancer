@@ -7,6 +7,7 @@ import {
   saveLatestDraft,
   saveWizardState,
   submitCreateDraft,
+  type UploadedImageDocument,
   type TextMaterialDocument,
 } from '@/services/createWizardService'
 
@@ -321,6 +322,7 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 
 const memoryEvidenceFileName = ref('')
 const familyMaterialFileName = ref('')
+const familyUploadedImageDocuments = ref<UploadedImageDocument[]>([])
 const reunionMaterialFileName = ref('')
 const intimateMaterialFileName = ref('')
 const familyUploadedTextDocuments = ref<TextMaterialDocument[]>([])
@@ -624,6 +626,55 @@ function appendTextToFormField(field: keyof typeof formState, content: string) {
   formState[field] = appended
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      resolve(String(reader.result || ''))
+    }
+    reader.onerror = () => {
+      reject(new Error(`读取文件失败：${file.name}`))
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function isImageFile(file: File) {
+  if (file.type && file.type.startsWith('image/')) {
+    return true
+  }
+  return /\.(jpg|jpeg|png|webp)$/i.test(file.name)
+}
+
+function guessImageMimeType(file: File) {
+  if (file.type && file.type.startsWith('image/')) {
+    return file.type
+  }
+  if (/\.jpe?g$/i.test(file.name)) {
+    return 'image/jpeg'
+  }
+  if (/\.png$/i.test(file.name)) {
+    return 'image/png'
+  }
+  if (/\.webp$/i.test(file.name)) {
+    return 'image/webp'
+  }
+  return 'image/*'
+}
+
+function formatFileSize(size: number) {
+  if (!Number.isFinite(size) || size <= 0) {
+    return '0 KB'
+  }
+  if (size < 1024) {
+    return `${size} B`
+  }
+  if (size < 1024 * 1024) {
+    return `${Math.max(Math.round(size / 1024), 1)} KB`
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function handleFamilyMaterialFileChange(event: Event) {
   const target = event.target as HTMLInputElement | null
   const file = target?.files?.[0]
@@ -650,11 +701,50 @@ function handleFamilyMaterialFileChange(event: Event) {
   target.value = ''
 }
 
+async function handleFamilyImageFileChange(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const files = Array.from(target?.files || [])
+  if (!files.length) {
+    return
+  }
+
+  const imageFiles = files.filter(isImageFile)
+  if (!imageFiles.length) {
+    if (target) {
+      target.value = ''
+    }
+    return
+  }
+
+  const documents = await Promise.all(
+    imageFiles.map(async (file) => ({
+      filename: file.name,
+      mime_type: guessImageMimeType(file),
+      size: file.size,
+      data_url: await readFileAsDataUrl(file),
+    })),
+  )
+
+  familyUploadedImageDocuments.value = [...familyUploadedImageDocuments.value, ...documents]
+  saveStateSnapshot()
+  if (target) {
+    target.value = ''
+  }
+}
+
 function removeFamilyUploadedTextDocument(index: number) {
   if (index < 0 || index >= familyUploadedTextDocuments.value.length) {
     return
   }
   familyUploadedTextDocuments.value = familyUploadedTextDocuments.value.filter((_, itemIndex) => itemIndex !== index)
+  saveStateSnapshot()
+}
+
+function removeFamilyUploadedImageDocument(index: number) {
+  if (index < 0 || index >= familyUploadedImageDocuments.value.length) {
+    return
+  }
+  familyUploadedImageDocuments.value = familyUploadedImageDocuments.value.filter((_, itemIndex) => itemIndex !== index)
   saveStateSnapshot()
 }
 
@@ -912,6 +1002,7 @@ function clearFormState() {
 function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
   familyMaterialFileName.value = ''
+  familyUploadedImageDocuments.value = []
   reunionMaterialFileName.value = ''
   intimateMaterialFileName.value = ''
   familyUploadedTextDocuments.value = []
@@ -1048,6 +1139,7 @@ function saveStateSnapshot() {
     selectedSourceRepo: selectedSourceRepo.value,
     selectedSchemaKey: selectedSchemaKey.value,
     familyUploadedTextDocuments: familyUploadedTextDocuments.value,
+    familyUploadedImageDocuments: familyUploadedImageDocuments.value,
     reunionUploadedTextDocuments: reunionUploadedTextDocuments.value,
     intimateUploadedTextDocuments: intimateUploadedTextDocuments.value,
     formState: { ...formState },
@@ -1067,6 +1159,7 @@ function loadStateSnapshot() {
     selectedSourceRepo?: string
     selectedSchemaKey?: string
     familyUploadedTextDocuments?: TextMaterialDocument[]
+    familyUploadedImageDocuments?: UploadedImageDocument[]
     reunionUploadedTextDocuments?: TextMaterialDocument[]
     intimateUploadedTextDocuments?: TextMaterialDocument[]
     formState?: Record<string, string>
@@ -1108,6 +1201,9 @@ function loadStateSnapshot() {
   selectedSchemaKey.value = snapshot.selectedSchemaKey || selectedSchemaKey.value
   if (Array.isArray(snapshot.familyUploadedTextDocuments)) {
     familyUploadedTextDocuments.value = snapshot.familyUploadedTextDocuments
+  }
+  if (Array.isArray(snapshot.familyUploadedImageDocuments)) {
+    familyUploadedImageDocuments.value = snapshot.familyUploadedImageDocuments
   }
   if (Array.isArray(snapshot.reunionUploadedTextDocuments)) {
     reunionUploadedTextDocuments.value = snapshot.reunionUploadedTextDocuments
@@ -1309,6 +1405,7 @@ function buildFamilyRawMaterials() {
     memory_notes_text: familyMemoryNotesText.value,
     text_materials_text: familyTextMaterialsText.value,
     uploaded_text_documents: familyUploadedTextDocuments.value,
+    uploaded_image_documents: familyUploadedImageDocuments.value,
     image_notes_text: familyImageNotesText.value,
     photo_notes_text: familyImageNotesText.value,
     voice_notes_text: familyVoiceNotesText.value,
@@ -1404,6 +1501,14 @@ async function generateDraft() {
       family_subtype: createType.value === 'family_companion' ? inputMode.value : '',
       input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
+      raw_materials:
+        createType.value === 'family_companion'
+          ? buildFamilyRawMaterials()
+          : createType.value === 'reunion_persona'
+            ? buildReunionRawMaterials()
+            : createType.value === 'intimate_companion'
+              ? buildIntimateRawMaterials()
+              : undefined,
       guided_memory_answers:
         createType.value === 'family_companion' ? buildFamilyGuidedMemoryAnswers() : undefined,
       form_data:
@@ -1687,6 +1792,53 @@ watch(
                     }}
                   </small>
                 </label>
+              </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>照片 / 相册上传</span>
+                  <input
+                    class="field-input"
+                    type="file"
+                    accept="image/*,.jpg,.jpeg,.png,.webp"
+                    multiple
+                    @change="handleFamilyImageFileChange"
+                  />
+                  <small class="field-hint">
+                    {{
+                      familyUploadedImageDocuments.length
+                        ? `${familyUploadedImageDocuments.length} 张照片：${familyUploadedImageDocuments.map((item) => item.filename).join(' / ')}`
+                        : '可从相册选择或直接拍照，图片会作为材料资产保存'
+                    }}
+                  </small>
+                </label>
+                <label class="form-field">
+                  <span>图片说明</span>
+                  <textarea
+                    v-model="familyImageNotesText"
+                    class="field-input wizard-textarea"
+                    rows="5"
+                    placeholder="先用文字记录图片或截图里的关键信息"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div v-if="!isReunionPersona && familyUploadedImageDocuments.length" class="summary-panel summary-panel--compact">
+                <p class="eyebrow">已上传图片</p>
+                <h3>相册和照片会作为材料资产保存</h3>
+                <ul class="summary-panel__list">
+                  <li v-for="(item, index) in familyUploadedImageDocuments" :key="`${item.filename}-${index}`">
+                    <span>
+                      {{ item.filename }}
+                      <small class="inline-meta">{{ item.mime_type }} · {{ formatFileSize(item.size) }}</small>
+                    </span>
+                    <strong class="inline-actions">
+                      <button class="ghost-button ghost-button--small" type="button" @click="removeFamilyUploadedImageDocument(index)">
+                        删除
+                      </button>
+                    </strong>
+                  </li>
+                </ul>
               </div>
 
               <div v-if="!isReunionPersona && familyUploadedTextDocuments.length" class="summary-panel summary-panel--compact">
@@ -2080,6 +2232,7 @@ watch(
                 <li><span>{{ createType === 'reunion_persona' ? '日记 / 信件' : '记忆片段' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.diary_notes || formState.letter_notes || '未填写') : (familyMemoryNotesText || '未填写') }}</strong></li>
                 <li><span>{{ createType === 'reunion_persona' ? '口述回忆' : '文本材料' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.voice_notes || '未填写') : (familyTextMaterialsText || '未填写') }}</strong></li>
                 <li><span>上传文件</span><strong>{{ createType === 'reunion_persona' ? (reunionUploadedTextDocuments.length ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ') : (reunionMaterialFileName || '未上传')) : (familyUploadedTextDocuments.length ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ') : (familyMaterialFileName || '未上传')) }}</strong></li>
+                <li><span>照片 / 相册</span><strong>{{ createType === 'reunion_persona' ? (formState.photo_notes || '未填写') : (familyUploadedImageDocuments.length ? `${familyUploadedImageDocuments.length} 张：${familyUploadedImageDocuments.map((item) => item.filename).join(' / ')}` : '未上传') }}</strong></li>
               </ul>
             </div>
           </div>

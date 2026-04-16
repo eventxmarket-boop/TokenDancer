@@ -81,6 +81,40 @@ def _normalize_documents(value: Any) -> list[dict[str, str]]:
     return documents
 
 
+def _normalize_image_documents(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    documents: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            mime_type = _normalize_text(item.get("mime_type") or item.get("type")) or "image/*"
+            try:
+                size = int(item.get("size") or 0)
+            except (TypeError, ValueError):
+                size = 0
+            data_url = _normalize_text(item.get("data_url") or item.get("preview_url") or item.get("url"))
+        else:
+            filename = _normalize_text(item)
+            mime_type = "image/*"
+            size = 0
+            data_url = ""
+
+        if not filename and not data_url and not size:
+            continue
+
+        document = {
+            "filename": filename,
+            "mime_type": mime_type,
+            "size": max(size, 0),
+        }
+        if data_url:
+            document["data_url"] = data_url
+        documents.append(document)
+    return documents
+
+
 def _excerpt_text(value: Any, limit: int = 48) -> str:
     text = _normalize_text(value)
     if not text:
@@ -112,6 +146,10 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
     if text_notes:
         parts.append(f"文本材料：{text_notes}")
 
+    image_documents = _normalize_image_documents(raw_materials.get("uploaded_image_documents"))
+    if image_documents:
+        parts.append(f"图片材料：{len(image_documents)} 张")
+
     documents = _normalize_documents(raw_materials.get("uploaded_text_documents"))
     if documents:
         doc_items: list[str] = []
@@ -130,16 +168,15 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
         else:
             parts.append(f"文件材料：{len(documents)} 份")
 
-    extra_notes = _excerpt_text(
-        raw_materials.get("image_notes_text")
-        or raw_materials.get("photo_notes_text")
-        or raw_materials.get("voice_notes_text"),
-        30,
-    )
-    if extra_notes:
-        parts.append(f"备注：{extra_notes}")
+    image_notes = _excerpt_text(raw_materials.get("image_notes_text") or raw_materials.get("photo_notes_text"), 30)
+    if image_notes:
+        parts.append(f"图片说明：{image_notes}")
 
-    return "；".join(parts[:4])
+    voice_notes = _excerpt_text(raw_materials.get("voice_notes_text"), 30)
+    if voice_notes:
+        parts.append(f"语音说明：{voice_notes}")
+
+    return "；".join(parts[:5])
 
 
 def _object_value(value: Any, key: str) -> Any:

@@ -217,6 +217,25 @@ function normalizeDocuments(value: unknown) {
     .filter(Boolean) as Array<{ filename: string; content: string }>
 }
 
+function normalizeImageDocuments(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      const filename = normalizeText(record.filename || record.name)
+      const mimeType = normalizeText(record.mime_type || record.type)
+      const size = Number(record.size || 0)
+      return filename || mimeType || size ? { filename, mimeType, size } : null
+    })
+    .filter(Boolean) as Array<{ filename: string; mimeType: string; size: number }>
+}
+
 function normalizeStringList(value: unknown) {
   if (Array.isArray(value)) {
     return value.map((item) => normalizeText(item)).filter(Boolean)
@@ -315,6 +334,7 @@ const familyMaterialSummaryLines = computed(() => {
   const rawMaterials = familyRawMaterials.value
   const guidedAnswers = familyGuidedAnswers.value
   const documents = normalizeDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_text_documents)
+  const imageDocuments = normalizeImageDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_image_documents)
   return [
     {
       label: '子类型侧重',
@@ -376,6 +396,17 @@ const familyMaterialSummaryLines = computed(() => {
     {
       label: '已上传材料文件数',
       value: documents.length ? `${documents.length} 个` : '0 个',
+    },
+    {
+      label: '已上传图片数',
+      value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张',
+    },
+    {
+      label: '图片说明',
+      value:
+        excerptText((rawMaterials as Record<string, unknown> | null)?.image_notes_text) ||
+        excerptText((rawMaterials as Record<string, unknown> | null)?.photo_notes_text) ||
+        '未填写',
     },
   ]
 })

@@ -15,6 +15,7 @@ export type CreateWizardPayload = {
   input_modes: string[]
   schema_key: string
   form_data: Record<string, unknown>
+  raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | IntimateCompanionRawMaterials | Record<string, unknown>
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers
 }
 
@@ -91,11 +92,19 @@ export type TextMaterialDocument = {
   content: string
 }
 
+export type UploadedImageDocument = {
+  filename: string
+  mime_type: string
+  size: number
+  data_url?: string
+}
+
 export type FamilyCompanionRawMaterials = {
   chat_history_text: string
   memory_notes_text: string
   text_materials_text: string
   uploaded_text_documents: TextMaterialDocument[]
+  uploaded_image_documents: UploadedImageDocument[]
   image_notes_text: string
   photo_notes_text: string
   voice_notes_text: string

@@ -22,6 +22,24 @@ from app.schemas.reunion_persona import (
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
 
 
+class FamilyCompanionUploadedImageDocument(BaseModel):
+    filename: str = ""
+    mime_type: str = ""
+    size: int = 0
+    data_url: str = ""
+
+
+class FamilyCompanionRawMaterials(BaseModel):
+    chat_history_text: str = ""
+    memory_notes_text: str = ""
+    text_materials_text: str = ""
+    uploaded_text_documents: list[dict[str, Any]] = Field(default_factory=list)
+    uploaded_image_documents: list[FamilyCompanionUploadedImageDocument] = Field(default_factory=list)
+    image_notes_text: str = ""
+    photo_notes_text: str = ""
+    voice_notes_text: str = ""
+
+
 class CreateWizardDraftRequest(BaseModel):
     create_type: str
     group: str = ""
@@ -32,6 +50,7 @@ class CreateWizardDraftRequest(BaseModel):
     family_subtype: str = ""
     input_modes: list[str] = Field(default_factory=list)
     schema_key: str = ""
+    raw_materials: FamilyCompanionRawMaterials = Field(default_factory=FamilyCompanionRawMaterials)
     form_data: dict[str, Any] = Field(default_factory=dict)
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers = Field(default_factory=FamilyCompanionGuidedMemoryAnswers)
 
