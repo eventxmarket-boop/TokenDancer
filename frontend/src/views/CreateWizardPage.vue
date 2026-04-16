@@ -8,6 +8,7 @@ import {
   saveLatestDraft,
   saveWizardState,
   submitCreateDraft,
+  normalizeCreateWizardInputMode,
   type CreateWizardRawMaterials,
   type UploadedImageDocument,
   type TextMaterialDocument,
@@ -143,6 +144,12 @@ const typeCards = [
   },
 ]
 
+const intimateModeCards = [
+  ['relationship_management', '关系经营'],
+  ['message_simulation', '消息模拟'],
+  ['past_relation_mirror', '过去关系 / 自我镜像'],
+] as const
+
 const inputModeLabels: Record<CreateType, Record<string, string>> = {
   self_unified: {
     manual_profile: '手动填写',
@@ -166,9 +173,7 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
   },
   intimate_companion: {
     relationship_management: '关系经营',
-    relationship_understanding: '关系经营',
     message_simulation: '消息模拟',
-    partner_maintenance: '关系经营',
     past_relation_mirror: '过去关系 / 自我镜像',
   },
   family_companion: {
@@ -298,7 +303,13 @@ const stepLabels = computed(() =>
     : ['选择类型', '选择方式', '填写信息', '生成结果'],
 )
 
-const currentInputs = computed(() => Object.entries(inputModeLabels[createType.value] || {}))
+const currentInputs = computed(() => {
+  if (createType.value === 'intimate_companion') {
+    return intimateModeCards
+  }
+
+  return Object.entries(inputModeLabels[createType.value] || {})
+})
 
 const selfModeCards = [
   {
@@ -501,11 +512,11 @@ function inferCreateTypeFromQuery() {
 
 function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schemaKey: string) {
   if (schemaKey && schemaKey in inputModeLabels[createTypeValue]) {
-    return schemaKey
+    return normalizeCreateWizardInputMode(createTypeValue, schemaKey)
   }
 
   if (sourceRepo && inputModeBySourceRepo[sourceRepo]) {
-    return inputModeBySourceRepo[sourceRepo]
+    return normalizeCreateWizardInputMode(createTypeValue, inputModeBySourceRepo[sourceRepo])
   }
 
   if (createTypeValue === 'self_unified') {
@@ -529,14 +540,15 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
 }
 
 function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, inputModeValue: string, displayName: string) {
+  const normalizedInputMode = normalizeCreateWizardInputMode(createTypeValue, inputModeValue)
   if (createTypeValue === 'family_companion') {
-    return `family_companion_${inputModeValue || 'mother'}`
+    return `family_companion_${normalizedInputMode || 'mother'}`
   }
   if (createTypeValue === 'reunion_persona') {
-    return `reunion_persona_${inputModeValue || 'chat_history'}`
+    return `reunion_persona_${normalizedInputMode || 'chat_history'}`
   }
   if (createTypeValue === 'intimate_companion') {
-    return `intimate_companion_${inputModeValue || 'relationship_management'}`
+    return `intimate_companion_${normalizedInputMode || 'relationship_management'}`
   }
   if (sourceRepo && schemaKeyBySourceRepo[sourceRepo]) {
     return schemaKeyBySourceRepo[sourceRepo]
@@ -713,9 +725,15 @@ function getInputModeNote(type: CreateType, mode: string) {
   }
 
   if (type === 'intimate_companion') {
-    if (mode === 'relationship_management' || mode === 'relationship_understanding') return '适合先看清关系、调整表达、改善相处。'
+    if (
+      mode === 'relationship_management' ||
+      mode === 'relationship_understanding' ||
+      mode === 'relationship_maintenance' ||
+      mode === 'partner_maintenance'
+    ) {
+      return '适合先看清关系、调整表达、改善相处，并根据材料动态偏向理解、维护或发送前预演。'
+    }
     if (mode === 'message_simulation') return '适合先预测对方回复，再看怎么发。'
-    if (mode === 'partner_maintenance') return '适合伴侣关系经营与磨合。'
     if (mode === 'past_relation_mirror') return '适合回看过去关系和自我镜像。'
   }
 
@@ -737,10 +755,16 @@ function getInputModeNote(type: CreateType, mode: string) {
 }
 
 function getRelationshipLabel(mode: string) {
+  const intimateLegacyLabel = {
+    relationship_understanding: '关系经营',
+    relationship_maintenance: '关系经营',
+    partner_maintenance: '关系经营',
+  } as const
   return (
     (mode === 'relationship_management' ? '关系经营' : '') ||
     inputModeLabels.relationship_persona[mode] ||
     inputModeLabels.intimate_companion[mode] ||
+    intimateLegacyLabel[mode as keyof typeof intimateLegacyLabel] ||
     inputModeLabels.family_companion[mode] ||
     inputModeLabels.reunion_persona[mode] ||
     '关系人格'
@@ -1017,10 +1041,10 @@ function loadStateSnapshot() {
   }
 
   if (snapshot.inputMode) {
-    inputMode.value = snapshot.inputMode
+    inputMode.value = normalizeCreateWizardInputMode(createType.value, snapshot.inputMode)
   }
   if (createType.value === 'family_companion' && snapshot.familySubtype) {
-    inputMode.value = snapshot.familySubtype
+    inputMode.value = normalizeCreateWizardInputMode(createType.value, snapshot.familySubtype)
   }
 
   if (Array.isArray(snapshot.selfInputModes) && snapshot.selfInputModes.length > 0) {
@@ -1094,7 +1118,8 @@ function loadStateSnapshot() {
       } else if (
         !inputMode.value ||
         inputMode.value === 'relationship_understanding' ||
-        inputMode.value === 'partner_maintenance'
+        inputMode.value === 'partner_maintenance' ||
+        inputMode.value === 'relationship_maintenance'
       ) {
         inputMode.value = 'relationship_management'
       }
@@ -1150,7 +1175,7 @@ function applyQueryDefaults() {
   selectedName.value = defaults.displayName
   selectedSourceRepo.value = defaults.sourceRepo
   selectedSchemaKey.value = defaults.schemaKey
-  inputMode.value = defaults.inputMode
+  inputMode.value = normalizeCreateWizardInputMode(createType.value, defaults.inputMode)
   selfInputModes.value = createType.value === 'self_unified' ? ['manual_profile'] : [defaults.inputMode || 'manual_profile']
 
   resetFormForType(createType.value, selectedName.value, inputMode.value)
@@ -1232,8 +1257,9 @@ function selectType(type: CreateType) {
 }
 
 function selectInputMode(mode: string) {
-  inputMode.value = mode
-  selectedGroup.value = resolveGroupForTypeAndMode(createType.value, mode)
+  const normalizedMode = normalizeCreateWizardInputMode(createType.value, mode)
+  inputMode.value = normalizedMode
+  selectedGroup.value = resolveGroupForTypeAndMode(createType.value, normalizedMode)
   if (
     createType.value === 'relationship_persona' ||
     createType.value === 'family_companion' ||
@@ -1247,21 +1273,17 @@ function selectInputMode(mode: string) {
       selectedSourceRepo.value = 'reunion-skill'
       selectedName.value = selectedName.value || '重逢人格'
     } else if (createType.value === 'intimate_companion') {
-      const normalizedMode = mode === 'partner_maintenance' || mode === 'relationship_understanding'
-        ? 'relationship_management'
-        : mode
-      inputMode.value = normalizedMode
       selectedSourceRepo.value = sourceRepoByInputMode[normalizedMode] || 'relationship-training-skill+xinyi+partner-skill+npy-skill'
       selectedName.value = getRelationshipLabel(normalizedMode) || selectedName.value
     } else {
-      selectedSourceRepo.value = sourceRepoByInputMode[mode] || selectedSourceRepo.value
-      selectedName.value = getRelationshipLabel(mode) || selectedName.value
+      selectedSourceRepo.value = sourceRepoByInputMode[normalizedMode] || selectedSourceRepo.value
+      selectedName.value = getRelationshipLabel(normalizedMode) || selectedName.value
     }
   } else if (createType.value === 'self_unified') {
     selfInputModes.value = Array.from(new Set([...(selfInputModes.value || []), mode]))
   }
-  selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, mode, selectedName.value)
-  resetFormForType(createType.value, selectedName.value, mode)
+  selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, normalizedMode, selectedName.value)
+  resetFormForType(createType.value, selectedName.value, normalizedMode)
   step.value = createType.value === 'family_companion' || createType.value === 'reunion_persona' ? 2 : 3
 }
 

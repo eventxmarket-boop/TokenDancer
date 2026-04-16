@@ -49,6 +49,7 @@ const inputModeLabels: Record<string, string> = {
   other_family: '其他家人',
   relationship_management: '关系经营',
   relationship_understanding: '关系经营',
+  relationship_maintenance: '关系经营',
   message_simulation: '消息模拟',
   partner_maintenance: '关系经营',
   past_relation_mirror: '过去关系 / 自我镜像',

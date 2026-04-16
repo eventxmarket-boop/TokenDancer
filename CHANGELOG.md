@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.49a - 2026-04-17
+
+- Removed the duplicated relationship-management choices from the create-wizard selection step.
+- Normalized legacy relationship-understanding and relationship-maintenance keys into one canonical relationship management entry.
+- Kept the underlying understanding, maintenance, and message-push runtime behavior intact while cleaning up the visible selection surface.
+
 ## V1.4.49 - 2026-04-17
 
 - Merged the relationship understanding and relationship maintenance paths into a single relationship management entry.

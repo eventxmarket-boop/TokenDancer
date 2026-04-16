@@ -752,6 +752,52 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("关系经营", body["draft"]["profile"])
         self.assertIn("关系经营", body["draft"]["relationship_management_profile"]["relationship_type"])
 
+    def test_create_wizard_draft_endpoint_normalizes_legacy_intimate_modes(self):
+        for legacy_mode in ("relationship_understanding", "relationship_maintenance"):
+            with self.subTest(legacy_mode=legacy_mode):
+                payload = {
+                    "create_type": "intimate_companion",
+                    "group": "relationship_intimate",
+                    "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill",
+                    "display_name": "关系经营",
+                    "input_mode": legacy_mode,
+                    "schema_key": f"intimate_companion_{legacy_mode}",
+                    "form_data": {
+                        "relationship_type": "关系经营",
+                        "persona_name": "关系经营",
+                        "relationship_stage": "需要先看清关系",
+                        "speech_style": "自然、贴近、带一点熟悉感",
+                        "response_temperature": "先接住情绪，再顺着回应",
+                        "catchphrases": "我在听\n先别急",
+                        "relation_boundaries": "不越界，不替对方下结论",
+                        "conversation_samples": "你今天过得怎么样？",
+                        "interaction_rules": "先回应情绪，再进入内容本身",
+                        "relationship_goals": "让沟通更顺畅",
+                        "key_memories": "常聊的话题",
+                        "raw_materials": {
+                            "chat_history_text": "你今天过得怎么样？",
+                            "memory_notes_text": "常聊的话题",
+                            "text_materials_text": "补充文本材料",
+                            "uploaded_text_documents": [],
+                            "uploaded_image_documents": [],
+                            "ocr_extracted_texts": [],
+                            "image_notes_text": "",
+                            "voice_notes_text": "",
+                        },
+                    },
+                }
+
+                with TestClient(app) as client:
+                    response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["draft"]["meta"]["create_type"], "intimate_companion")
+                self.assertEqual(body["draft"]["meta"]["input_mode"], "relationship_management")
+                self.assertEqual(body["draft"]["meta"]["schema_key"], "intimate_companion_relationship_management")
+                self.assertEqual(body["draft"]["relationship_type"], "关系经营")
+                self.assertIn("关系经营", body["draft"]["profile"])
+
     def test_create_wizard_draft_endpoint_rejects_unsupported_type(self):
         payload = {
             "create_type": "digital_twin",

@@ -3,6 +3,30 @@ const API_PREFIX = '/persona-api'
 const WIZARD_STATE_KEY = 'persona-create-wizard-state'
 const DRAFT_KEY = 'persona-create-latest-draft'
 const SAVED_DRAFTS_KEY = 'persona-create-saved-drafts'
+const RELATIONSHIP_MANAGEMENT_CANONICAL_MODE = 'relationship_management'
+const RELATIONSHIP_MANAGEMENT_MODE_ALIASES = new Set([
+  'relationship_understanding',
+  'relationship_maintenance',
+  'partner_maintenance',
+])
+
+export function normalizeIntimateCompanionInputMode(value: string) {
+  const mode = String(value || '').trim()
+  if (!mode) {
+    return RELATIONSHIP_MANAGEMENT_CANONICAL_MODE
+  }
+  if (RELATIONSHIP_MANAGEMENT_MODE_ALIASES.has(mode)) {
+    return RELATIONSHIP_MANAGEMENT_CANONICAL_MODE
+  }
+  return mode
+}
+
+export function normalizeCreateWizardInputMode(createType: string, inputMode: string) {
+  if (createType === 'intimate_companion') {
+    return normalizeIntimateCompanionInputMode(inputMode)
+  }
+  return String(inputMode || '').trim()
+}
 
 export type CreateWizardPayload = {
   create_type: string

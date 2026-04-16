@@ -60,6 +60,7 @@ INTIMATE_MANAGEMENT_SOURCE_REPO = "relationship-training-skill+xinyi+partner-ski
 INTIMATE_MANAGEMENT_MODES = {
     "relationship_management",
     "relationship_understanding",
+    "relationship_maintenance",
     "partner_maintenance",
 }
 
@@ -261,6 +262,7 @@ RELATIONSHIP_LABELS = {
     "relationship_interpreter": "关系理解辅助",
     "relationship_management": "关系经营",
     "relationship_understanding": "关系经营",
+    "relationship_maintenance": "关系经营",
     "message_simulation": "消息模拟",
     "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
@@ -293,9 +295,7 @@ INPUT_MODE_LABELS = {
     },
     "intimate_companion": {
         "relationship_management": "关系经营",
-        "relationship_understanding": "关系经营",
         "message_simulation": "消息模拟",
-        "partner_maintenance": "关系经营",
         "past_relation_mirror": "过去关系 / 自我镜像",
     },
     "family_companion": {
@@ -2324,7 +2324,7 @@ def _build_intimate_companion_draft(
     input_mode: str = "",
 ) -> dict[str, Any]:
     mode = _normalize_text(input_mode) or "relationship_management"
-    if mode in {"relationship_understanding", "partner_maintenance"}:
+    if mode in {"relationship_understanding", "relationship_maintenance", "partner_maintenance"}:
         mode = "relationship_management"
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
@@ -3037,17 +3037,25 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         normalized_source_repo,
         _normalize_text(payload.get("schema_key")),
     )
-    if normalized_create_type == "intimate_companion" and normalized_input_mode in {
-        "relationship_understanding",
-        "partner_maintenance",
-    }:
-        normalized_input_mode = "relationship_management"
     normalized_schema_key = _normalize_text(payload.get("schema_key")) or _resolve_schema_key(
         normalized_create_type,
         normalized_source_repo,
         normalized_input_mode,
         normalized_display_name,
     )
+    if normalized_create_type == "intimate_companion":
+        if normalized_input_mode in {
+            "relationship_understanding",
+            "relationship_maintenance",
+            "partner_maintenance",
+        }:
+            normalized_input_mode = "relationship_management"
+        if normalized_schema_key in {
+            "intimate_companion_relationship_understanding",
+            "intimate_companion_relationship_maintenance",
+            "intimate_companion_partner_maintenance",
+        } or normalized_input_mode == "relationship_management":
+            normalized_schema_key = "intimate_companion_relationship_management"
     form_data = payload.get("form_data") or {}
     if not isinstance(form_data, dict):
         raise CreateWizardError("form_data must be an object")

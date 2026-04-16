@@ -54,6 +54,10 @@ class CreateCatalogTests(unittest.TestCase):
         intimate_items_by_slug = {item["slug"]: item for item in intimate_items}
         self.assertIn("relationship_management", intimate_items_by_slug)
         self.assertEqual(
+            set(intimate_items_by_slug),
+            {"relationship_management", "message_simulation", "past_relation_mirror"},
+        )
+        self.assertEqual(
             intimate_items_by_slug["relationship_management"]["source_urls"],
             [
                 "https://github.com/TammyTan516/relationship-training-skill",
