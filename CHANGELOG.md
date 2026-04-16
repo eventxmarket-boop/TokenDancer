@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.27 - 2026-04-16
+
+- Fixed the family-companion wizard so the material input layer is rendered directly in the template.
+- Exposed family chat-history, memory-notes, text-material, image-note, and voice-note fields as visible controls.
+- Added explicit family uploaded-file listing and delete actions in the wizard template.
+- Kept family raw-material submission and result summaries aligned with the same persisted object.
+- Strengthened family create and my-seeds regression coverage for raw-material round-tripping.
+
 ## V1.4.26 - 2026-04-16
 
 - Fixed the family-companion wizard so the material input layer is visible in the frontend template.

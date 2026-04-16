@@ -312,6 +312,36 @@ const intimateMaterialFileName = ref('')
 const familyUploadedTextDocuments = ref<TextMaterialDocument[]>([])
 const reunionUploadedTextDocuments = ref<TextMaterialDocument[]>([])
 const intimateUploadedTextDocuments = ref<TextMaterialDocument[]>([])
+const familyChatHistoryText = computed({
+  get: () => formState.chat_history_summary,
+  set: (value: string) => {
+    formState.chat_history_summary = value
+  },
+})
+const familyMemoryNotesText = computed({
+  get: () => formState.memory_fragments,
+  set: (value: string) => {
+    formState.memory_fragments = value
+  },
+})
+const familyTextMaterialsText = computed({
+  get: () => formState.text_materials,
+  set: (value: string) => {
+    formState.text_materials = value
+  },
+})
+const familyImageNotesText = computed({
+  get: () => formState.image_notes,
+  set: (value: string) => {
+    formState.image_notes = value
+  },
+})
+const familyVoiceNotesText = computed({
+  get: () => formState.voice_notes,
+  set: (value: string) => {
+    formState.voice_notes = value
+  },
+})
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
@@ -604,6 +634,14 @@ function handleFamilyMaterialFileChange(event: Event) {
   }
   reader.readAsText(file)
   target.value = ''
+}
+
+function removeFamilyUploadedTextDocument(index: number) {
+  if (index < 0 || index >= familyUploadedTextDocuments.value.length) {
+    return
+  }
+  familyUploadedTextDocuments.value = familyUploadedTextDocuments.value.filter((_, itemIndex) => itemIndex !== index)
+  saveStateSnapshot()
 }
 
 function handleReunionMaterialFileChange(event: Event) {
@@ -1160,13 +1198,13 @@ function goStep(nextStep: number) {
 
 function buildFamilyRawMaterials() {
   return {
-    chat_history_text: formState.chat_history_summary,
-    memory_notes_text: formState.memory_fragments,
-    text_materials_text: formState.text_materials,
+    chat_history_text: familyChatHistoryText.value,
+    memory_notes_text: familyMemoryNotesText.value,
+    text_materials_text: familyTextMaterialsText.value,
     uploaded_text_documents: familyUploadedTextDocuments.value,
-    image_notes_text: formState.image_notes,
-    photo_notes_text: formState.image_notes,
-    voice_notes_text: formState.voice_notes,
+    image_notes_text: familyImageNotesText.value,
+    photo_notes_text: familyImageNotesText.value,
+    voice_notes_text: familyVoiceNotesText.value,
   }
 }
 
@@ -1504,7 +1542,7 @@ watch(
                 <label class="form-field">
                   <span>聊天记录粘贴框</span>
                   <textarea
-                    v-model="formState.chat_history_summary"
+                    v-model="familyChatHistoryText"
                     class="field-input wizard-textarea"
                     rows="5"
                     placeholder="把关键聊天记录、称呼方式、关心语气直接贴进来"
@@ -1513,7 +1551,7 @@ watch(
                 <label class="form-field">
                   <span>回忆片段 / 记忆笔记</span>
                   <textarea
-                    v-model="formState.memory_fragments"
+                    v-model="familyMemoryNotesText"
                     class="field-input wizard-textarea"
                     rows="5"
                     placeholder="把最像家人的片段、提醒、安慰话整理进来"
@@ -1525,7 +1563,7 @@ watch(
                 <label class="form-field">
                   <span>文本材料补充</span>
                   <textarea
-                    v-model="formState.text_materials"
+                    v-model="familyTextMaterialsText"
                     class="field-input wizard-textarea"
                     rows="5"
                     placeholder="可直接粘贴文字材料、家书、聊天摘录或家庭说明"
@@ -1533,7 +1571,12 @@ watch(
                 </label>
                 <label class="form-field">
                   <span>上传 txt / md / csv</span>
-                  <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleFamilyMaterialFileChange" />
+                  <input
+                    class="field-input"
+                    type="file"
+                    accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+                    @change="handleFamilyMaterialFileChange"
+                  />
                   <small class="field-hint">
                     {{
                       familyUploadedTextDocuments.length
@@ -1548,9 +1591,16 @@ watch(
                 <p class="eyebrow">已上传文件</p>
                 <h3>文件会被一起提炼进记忆库</h3>
                 <ul class="summary-panel__list">
-                  <li v-for="item in familyUploadedTextDocuments" :key="item.filename">
-                    <span>{{ item.filename }}</span>
-                    <strong>{{ item.content.slice(0, 48) || '已读取' }}</strong>
+                  <li v-for="(item, index) in familyUploadedTextDocuments" :key="`${item.filename}-${index}`">
+                    <span>
+                      {{ item.filename }}
+                      <small class="inline-meta">{{ Math.max(item.content.length, 1) }} 字</small>
+                    </span>
+                    <strong class="inline-actions">
+                      <button class="ghost-button ghost-button--small" type="button" @click="removeFamilyUploadedTextDocument(index)">
+                        删除
+                      </button>
+                    </strong>
                   </li>
                 </ul>
               </div>
@@ -1559,7 +1609,7 @@ watch(
                 <label class="form-field">
                   <span>图片说明</span>
                   <textarea
-                    v-model="formState.image_notes"
+                    v-model="familyImageNotesText"
                     class="field-input wizard-textarea"
                     rows="5"
                     placeholder="先用文字记录图片或截图里的关键信息"
@@ -1568,22 +1618,12 @@ watch(
                 <label class="form-field">
                   <span>语音说明</span>
                   <textarea
-                    v-model="formState.voice_notes"
+                    v-model="familyVoiceNotesText"
                     class="field-input wizard-textarea"
                     rows="5"
                     placeholder="先用文字记录语音里的关键信息"
                   ></textarea>
                 </label>
-              </div>
-
-              <div v-if="!isReunionPersona && familyUploadedTextDocuments.length" class="summary-panel summary-panel--compact">
-                <p class="eyebrow">已上传文件</p>
-                <ul class="summary-panel__list">
-                  <li v-for="item in familyUploadedTextDocuments" :key="item.filename">
-                    <span>{{ item.filename }}</span>
-                    <strong>{{ item.content.slice(0, 48) || '已读取' }}</strong>
-                  </li>
-                </ul>
               </div>
 
               <div v-if="isReunionPersona" class="form-grid">
@@ -1867,9 +1907,9 @@ watch(
               <p class="eyebrow">材料输入层</p>
               <h3>{{ createType === 'reunion_persona' ? '重逢材料' : '家人材料' }}</h3>
               <ul class="summary-panel__list">
-                <li><span>聊天记录</span><strong>{{ formState.chat_history_summary || '未填写' }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '日记 / 信件' : '记忆片段' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.diary_notes || formState.letter_notes || '未填写') : (formState.memory_fragments || '未填写') }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '口述回忆' : '文本材料' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.voice_notes || '未填写') : (formState.text_materials || '未填写') }}</strong></li>
+                <li><span>聊天记录</span><strong>{{ createType === 'reunion_persona' ? (formState.chat_history_summary || '未填写') : (familyChatHistoryText || '未填写') }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '日记 / 信件' : '记忆片段' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.diary_notes || formState.letter_notes || '未填写') : (familyMemoryNotesText || '未填写') }}</strong></li>
+                <li><span>{{ createType === 'reunion_persona' ? '口述回忆' : '文本材料' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.voice_notes || '未填写') : (familyTextMaterialsText || '未填写') }}</strong></li>
                 <li><span>上传文件</span><strong>{{ createType === 'reunion_persona' ? (reunionUploadedTextDocuments.length ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ') : (reunionMaterialFileName || '未上传')) : (familyUploadedTextDocuments.length ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ') : (familyMaterialFileName || '未上传')) }}</strong></li>
               </ul>
             </div>
@@ -2177,3 +2217,41 @@ watch(
     </div>
   </section>
 </template>
+
+<style scoped>
+.inline-meta {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.inline-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.62rem 1rem;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.ghost-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 159, 138, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.ghost-button--small {
+  padding: 0.42rem 0.78rem;
+  font-size: 0.84rem;
+}
+</style>

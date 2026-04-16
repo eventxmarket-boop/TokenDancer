@@ -123,6 +123,7 @@ class CreateWizardTests(unittest.TestCase):
                         {"filename": "family-notes.txt", "content": "回家吃饭，别太晚"},
                     ],
                     "image_notes_text": "老照片说明",
+                    "photo_notes_text": "老照片说明",
                     "voice_notes_text": "语音提醒片段",
                 },
             },
@@ -147,6 +148,13 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["emotion_rules"]["response_sequence"])
         self.assertIn("raw_materials", body["draft"])
         self.assertEqual(body["draft"]["raw_materials"]["chat_history_text"], "妈总是提醒我按时吃饭和休息")
+        self.assertIn("小时候一起写作业", body["draft"]["raw_materials"]["memory_notes_text"])
+        self.assertIn("晚上陪你散步", body["draft"]["raw_materials"]["memory_notes_text"])
+        self.assertIn("家书片段", body["draft"]["raw_materials"]["text_materials_text"])
+        self.assertIn("日常聊天摘录", body["draft"]["raw_materials"]["text_materials_text"])
+        self.assertEqual(body["draft"]["raw_materials"]["image_notes_text"], "老照片说明")
+        self.assertEqual(body["draft"]["raw_materials"]["voice_notes_text"], "语音提醒片段")
+        self.assertEqual(body["draft"]["raw_materials"]["uploaded_text_documents"][0]["filename"], "family-notes.txt")
         self.assertIn(
             "小时候一起写作业",
             " ".join(body["draft"]["memory_base"]["memory_fragments"]),

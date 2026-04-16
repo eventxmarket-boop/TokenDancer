@@ -835,7 +835,7 @@ onMounted(() => {
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
           <p class="eyebrow">材料提炼摘要</p>
           <h3>已基于输入材料生成记忆库</h3>
-          <p class="state-copy">系统已经把聊天记录、回忆笔记和上传文件提炼成可继续聊天的记忆层。</p>
+          <p class="state-copy">系统已经把聊天记录、回忆笔记、文本材料和上传文件提炼成可继续聊天的记忆层。</p>
           <div class="family-grid">
             <div v-for="line in familyMaterialSummaryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>

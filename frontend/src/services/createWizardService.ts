@@ -85,6 +85,26 @@ export type FamilyCompanionRawMaterials = {
   voice_notes_text: string
 }
 
+export type FamilyCompanionWizardFormData = {
+  relationship_type: string
+  persona_name: string
+  speech_style: string
+  catchphrases: string
+  comfort_style: string
+  celebration_style: string
+  relation_boundaries: string
+  shared_events: string
+  important_advice: string
+  daily_habits: string
+  emotional_triggers: string
+  chat_history_summary: string
+  memory_fragments: string
+  text_materials: string
+  image_notes: string
+  voice_notes: string
+  raw_materials: FamilyCompanionRawMaterials
+}
+
 export type ReunionPersonaProfile = {
   relationship_type: string
   name: string
