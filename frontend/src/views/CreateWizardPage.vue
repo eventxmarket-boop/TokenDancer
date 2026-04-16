@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import MaterialInputPanel from '@/components/shared/MaterialInputPanel.vue'
 import {
   clearWizardState,
   loadWizardState,
   saveLatestDraft,
   saveWizardState,
   submitCreateDraft,
+  type CreateWizardRawMaterials,
   type UploadedImageDocument,
   type TextMaterialDocument,
 } from '@/services/createWizardService'
@@ -320,42 +322,74 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
   deep: '深度模式',
 }
 
-const memoryEvidenceFileName = ref('')
+function createEmptyMaterialState(): CreateWizardRawMaterials {
+  return {
+    chat_history_text: '',
+    memory_notes_text: '',
+    text_materials_text: '',
+    uploaded_text_documents: [],
+    uploaded_image_documents: [],
+    ocr_extracted_texts: [],
+    image_notes_text: '',
+    photo_notes_text: '',
+    voice_notes_text: '',
+    diary_text: '',
+    letter_text: '',
+    conflict_text: '',
+    draft_message_text: '',
+    recent_context_text: '',
+    reply_style_samples_text: '',
+    relationship_status_text: '',
+    interaction_patterns_text: '',
+    history_text: '',
+    expression_samples_text: '',
+  }
+}
+
+const familyMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const reunionMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const intimateMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const selfMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const sourceMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const relationshipMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+
 const familyMaterialFileName = ref('')
-const familyUploadedImageDocuments = ref<UploadedImageDocument[]>([])
 const reunionMaterialFileName = ref('')
-const intimateMaterialFileName = ref('')
-const familyUploadedTextDocuments = ref<TextMaterialDocument[]>([])
-const reunionUploadedTextDocuments = ref<TextMaterialDocument[]>([])
-const intimateUploadedTextDocuments = ref<TextMaterialDocument[]>([])
+
+const familyUploadedTextDocuments = computed({
+  get: () => familyMaterialState.value.uploaded_text_documents,
+  set: (value: TextMaterialDocument[]) => {
+    familyMaterialState.value.uploaded_text_documents = value
+  },
+})
+const familyUploadedImageDocuments = computed({
+  get: () => familyMaterialState.value.uploaded_image_documents,
+  set: (value: UploadedImageDocument[]) => {
+    familyMaterialState.value.uploaded_image_documents = value
+  },
+})
 const familyChatHistoryText = computed({
-  get: () => formState.chat_history_summary,
+  get: () => familyMaterialState.value.chat_history_text,
   set: (value: string) => {
-    formState.chat_history_summary = value
+    familyMaterialState.value.chat_history_text = value
   },
 })
 const familyMemoryNotesText = computed({
-  get: () => formState.memory_fragments,
+  get: () => familyMaterialState.value.memory_notes_text,
   set: (value: string) => {
-    formState.memory_fragments = value
+    familyMaterialState.value.memory_notes_text = value
   },
 })
 const familyTextMaterialsText = computed({
-  get: () => formState.text_materials,
+  get: () => familyMaterialState.value.text_materials_text,
   set: (value: string) => {
-    formState.text_materials = value
+    familyMaterialState.value.text_materials_text = value
   },
 })
-const familyImageNotesText = computed({
-  get: () => formState.image_notes,
-  set: (value: string) => {
-    formState.image_notes = value
-  },
-})
-const familyVoiceNotesText = computed({
-  get: () => formState.voice_notes,
-  set: (value: string) => {
-    formState.voice_notes = value
+const reunionUploadedTextDocuments = computed({
+  get: () => reunionMaterialState.value.uploaded_text_documents,
+  set: (value: TextMaterialDocument[]) => {
+    reunionMaterialState.value.uploaded_text_documents = value
   },
 })
 
@@ -596,223 +630,6 @@ function toggleSelfInputMode(mode: string) {
   selectedSchemaKey.value = 'self_unified'
 }
 
-function handleSelfMemoryFileChange(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  const file = target?.files?.[0]
-  if (!file) {
-    return
-  }
-
-  memoryEvidenceFileName.value = file.name
-  const reader = new FileReader()
-  reader.onload = () => {
-    const content = String(reader.result || '').trim()
-    if (!content) {
-      return
-    }
-    if (!selfInputModes.value.includes('documents')) {
-      selfInputModes.value = Array.from(new Set([...selfInputModes.value, 'documents']))
-    }
-    const appended = [formState.memory_evidence_points, content].filter(Boolean).join('\n')
-    formState.memory_evidence_points = appended
-  }
-  reader.readAsText(file)
-  target.value = ''
-}
-
-function appendTextToFormField(field: keyof typeof formState, content: string) {
-  const current = String(formState[field] || '').trim()
-  const appended = [current, content.trim()].filter(Boolean).join('\n')
-  formState[field] = appended
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      resolve(String(reader.result || ''))
-    }
-    reader.onerror = () => {
-      reject(new Error(`读取文件失败：${file.name}`))
-    }
-    reader.readAsDataURL(file)
-  })
-}
-
-function isImageFile(file: File) {
-  if (file.type && file.type.startsWith('image/')) {
-    return true
-  }
-  return /\.(jpg|jpeg|png|webp)$/i.test(file.name)
-}
-
-function guessImageMimeType(file: File) {
-  if (file.type && file.type.startsWith('image/')) {
-    return file.type
-  }
-  if (/\.jpe?g$/i.test(file.name)) {
-    return 'image/jpeg'
-  }
-  if (/\.png$/i.test(file.name)) {
-    return 'image/png'
-  }
-  if (/\.webp$/i.test(file.name)) {
-    return 'image/webp'
-  }
-  return 'image/*'
-}
-
-function formatFileSize(size: number) {
-  if (!Number.isFinite(size) || size <= 0) {
-    return '0 KB'
-  }
-  if (size < 1024) {
-    return `${size} B`
-  }
-  if (size < 1024 * 1024) {
-    return `${Math.max(Math.round(size / 1024), 1)} KB`
-  }
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function handleFamilyMaterialFileChange(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  const file = target?.files?.[0]
-  if (!file) {
-    return
-  }
-
-  familyMaterialFileName.value = file.name
-  const reader = new FileReader()
-  reader.onload = () => {
-    const content = String(reader.result || '').trim()
-    if (!content) {
-      return
-    }
-    familyUploadedTextDocuments.value = [
-      ...familyUploadedTextDocuments.value,
-      { filename: file.name, content },
-    ]
-    appendTextToFormField('text_materials', content)
-    appendTextToFormField('memory_fragments', content)
-    saveStateSnapshot()
-  }
-  reader.readAsText(file)
-  target.value = ''
-}
-
-async function handleFamilyImageFileChange(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  const files = Array.from(target?.files || [])
-  if (!files.length) {
-    return
-  }
-
-  const imageFiles = files.filter(isImageFile)
-  if (!imageFiles.length) {
-    if (target) {
-      target.value = ''
-    }
-    return
-  }
-
-  const documents = await Promise.all(
-    imageFiles.map(async (file) => ({
-      filename: file.name,
-      mime_type: guessImageMimeType(file),
-      size: file.size,
-      data_url: await readFileAsDataUrl(file),
-      ocr_status: '待识别',
-      ocr_text: '',
-    })),
-  )
-
-  familyUploadedImageDocuments.value = [...familyUploadedImageDocuments.value, ...documents]
-  saveStateSnapshot()
-  if (target) {
-    target.value = ''
-  }
-}
-
-function removeFamilyUploadedTextDocument(index: number) {
-  if (index < 0 || index >= familyUploadedTextDocuments.value.length) {
-    return
-  }
-  familyUploadedTextDocuments.value = familyUploadedTextDocuments.value.filter((_, itemIndex) => itemIndex !== index)
-  saveStateSnapshot()
-}
-
-function removeFamilyUploadedImageDocument(index: number) {
-  if (index < 0 || index >= familyUploadedImageDocuments.value.length) {
-    return
-  }
-  familyUploadedImageDocuments.value = familyUploadedImageDocuments.value.filter((_, itemIndex) => itemIndex !== index)
-  saveStateSnapshot()
-}
-
-function handleReunionMaterialFileChange(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  const file = target?.files?.[0]
-  if (!file) {
-    return
-  }
-
-  reunionMaterialFileName.value = file.name
-  const reader = new FileReader()
-  reader.onload = () => {
-    const content = String(reader.result || '').trim()
-    if (!content) {
-      return
-    }
-    reunionUploadedTextDocuments.value = [
-      ...reunionUploadedTextDocuments.value,
-      { filename: file.name, content },
-    ]
-    appendTextToFormField('diary_notes', content)
-    appendTextToFormField('memory_fragments', content)
-    saveStateSnapshot()
-  }
-  reader.readAsText(file)
-  target.value = ''
-}
-
-function handleIntimateMaterialFileChange(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  const file = target?.files?.[0]
-  if (!file) {
-    return
-  }
-
-  intimateMaterialFileName.value = file.name
-  const reader = new FileReader()
-  reader.onload = () => {
-    const content = String(reader.result || '').trim()
-    if (!content) {
-      return
-    }
-    intimateUploadedTextDocuments.value = [
-      ...intimateUploadedTextDocuments.value,
-      { filename: file.name, content },
-    ]
-    appendTextToFormField('text_materials', content)
-    appendTextToFormField('memory_fragments', content)
-    if (createType.value === 'intimate_companion') {
-      if (inputMode.value === 'relationship_understanding' || inputMode.value === 'message_simulation') {
-        appendTextToFormField('chat_history_summary', content)
-      }
-      if (inputMode.value === 'partner_maintenance') {
-        appendTextToFormField('interaction_rules', content)
-      }
-      if (inputMode.value === 'past_relation_mirror') {
-        appendTextToFormField('key_memories', content)
-      }
-    }
-    saveStateSnapshot()
-  }
-  reader.readAsText(file)
-  target.value = ''
-}
-
 function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   if (type === 'self_unified') {
     return 'self'
@@ -1003,13 +820,14 @@ function clearFormState() {
 
 function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
+  familyMaterialState.value = createEmptyMaterialState()
+  reunionMaterialState.value = createEmptyMaterialState()
+  intimateMaterialState.value = createEmptyMaterialState()
+  selfMaterialState.value = createEmptyMaterialState()
+  sourceMaterialState.value = createEmptyMaterialState()
+  relationshipMaterialState.value = createEmptyMaterialState()
   familyMaterialFileName.value = ''
-  familyUploadedImageDocuments.value = []
   reunionMaterialFileName.value = ''
-  intimateMaterialFileName.value = ''
-  familyUploadedTextDocuments.value = []
-  reunionUploadedTextDocuments.value = []
-  intimateUploadedTextDocuments.value = []
 
   if (type === 'self_unified') {
     formState.name = displayName || '自我主线'
@@ -1140,10 +958,12 @@ function saveStateSnapshot() {
     selectedName: selectedName.value,
     selectedSourceRepo: selectedSourceRepo.value,
     selectedSchemaKey: selectedSchemaKey.value,
-    familyUploadedTextDocuments: familyUploadedTextDocuments.value,
-    familyUploadedImageDocuments: familyUploadedImageDocuments.value,
-    reunionUploadedTextDocuments: reunionUploadedTextDocuments.value,
-    intimateUploadedTextDocuments: intimateUploadedTextDocuments.value,
+    familyMaterialState: familyMaterialState.value,
+    reunionMaterialState: reunionMaterialState.value,
+    intimateMaterialState: intimateMaterialState.value,
+    selfMaterialState: selfMaterialState.value,
+    sourceMaterialState: sourceMaterialState.value,
+    relationshipMaterialState: relationshipMaterialState.value,
     formState: { ...formState },
   })
 }
@@ -1160,10 +980,12 @@ function loadStateSnapshot() {
     selectedName?: string
     selectedSourceRepo?: string
     selectedSchemaKey?: string
-    familyUploadedTextDocuments?: TextMaterialDocument[]
-    familyUploadedImageDocuments?: UploadedImageDocument[]
-    reunionUploadedTextDocuments?: TextMaterialDocument[]
-    intimateUploadedTextDocuments?: TextMaterialDocument[]
+    familyMaterialState?: CreateWizardRawMaterials
+    reunionMaterialState?: CreateWizardRawMaterials
+    intimateMaterialState?: CreateWizardRawMaterials
+    selfMaterialState?: CreateWizardRawMaterials
+    sourceMaterialState?: CreateWizardRawMaterials
+    relationshipMaterialState?: CreateWizardRawMaterials
     formState?: Record<string, string>
   }>()
 
@@ -1201,17 +1023,23 @@ function loadStateSnapshot() {
       : snapshot.selectedName || selectedName.value
   selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
   selectedSchemaKey.value = snapshot.selectedSchemaKey || selectedSchemaKey.value
-  if (Array.isArray(snapshot.familyUploadedTextDocuments)) {
-    familyUploadedTextDocuments.value = snapshot.familyUploadedTextDocuments
+  if (snapshot.familyMaterialState) {
+    familyMaterialState.value = snapshot.familyMaterialState
   }
-  if (Array.isArray(snapshot.familyUploadedImageDocuments)) {
-    familyUploadedImageDocuments.value = snapshot.familyUploadedImageDocuments
+  if (snapshot.reunionMaterialState) {
+    reunionMaterialState.value = snapshot.reunionMaterialState
   }
-  if (Array.isArray(snapshot.reunionUploadedTextDocuments)) {
-    reunionUploadedTextDocuments.value = snapshot.reunionUploadedTextDocuments
+  if (snapshot.intimateMaterialState) {
+    intimateMaterialState.value = snapshot.intimateMaterialState
   }
-  if (Array.isArray(snapshot.intimateUploadedTextDocuments)) {
-    intimateUploadedTextDocuments.value = snapshot.intimateUploadedTextDocuments
+  if (snapshot.selfMaterialState) {
+    selfMaterialState.value = snapshot.selfMaterialState
+  }
+  if (snapshot.sourceMaterialState) {
+    sourceMaterialState.value = snapshot.sourceMaterialState
+  }
+  if (snapshot.relationshipMaterialState) {
+    relationshipMaterialState.value = snapshot.relationshipMaterialState
   }
 
   if (createType.value === 'relationship_persona') {
@@ -1402,23 +1230,7 @@ function goStep(nextStep: number) {
 }
 
 function buildFamilyRawMaterials() {
-  return {
-    chat_history_text: familyChatHistoryText.value,
-    memory_notes_text: familyMemoryNotesText.value,
-    text_materials_text: familyTextMaterialsText.value,
-    uploaded_text_documents: familyUploadedTextDocuments.value,
-    uploaded_image_documents: familyUploadedImageDocuments.value,
-    ocr_extracted_texts: familyUploadedImageDocuments.value.map((item) => ({
-      filename: item.filename,
-      mime_type: item.mime_type,
-      size: item.size,
-      ocr_text: item.ocr_text || '',
-      ocr_status: item.ocr_status || '待识别',
-    })),
-    image_notes_text: familyImageNotesText.value,
-    photo_notes_text: familyImageNotesText.value,
-    voice_notes_text: familyVoiceNotesText.value,
-  }
+  return { ...familyMaterialState.value }
 }
 
 function buildFamilyGuidedMemoryAnswers() {
@@ -1433,34 +1245,23 @@ function buildFamilyGuidedMemoryAnswers() {
 }
 
 function buildReunionRawMaterials() {
-  return {
-    chat_history_text: formState.chat_history_summary,
-    diary_text: formState.diary_notes,
-    letter_text: formState.letter_notes,
-    memory_notes_text: formState.memory_fragments,
-    uploaded_text_documents: reunionUploadedTextDocuments.value,
-    photo_notes_text: formState.photo_notes,
-    voice_notes_text: formState.voice_notes,
-  }
+  return { ...reunionMaterialState.value }
 }
 
 function buildIntimateRawMaterials() {
-  return {
-    chat_history_text: formState.chat_history_summary,
-    memory_notes_text: formState.memory_fragments,
-    text_materials_text: formState.text_materials,
-    uploaded_text_documents: intimateUploadedTextDocuments.value,
-    image_notes_text: formState.image_notes,
-    voice_notes_text: formState.voice_notes,
-    conflict_text: formState.memory_fragments,
-    draft_message_text: formState.conversation_samples,
-    recent_context_text: formState.chat_history_summary,
-    reply_style_samples_text: formState.conversation_samples,
-    relationship_status_text: formState.relationship_stage,
-    interaction_patterns_text: formState.interaction_rules,
-    history_text: formState.key_memories,
-    expression_samples_text: formState.catchphrases,
-  }
+  return { ...intimateMaterialState.value }
+}
+
+function buildSelfRawMaterials() {
+  return { ...selfMaterialState.value }
+}
+
+function buildSourceRawMaterials() {
+  return { ...sourceMaterialState.value }
+}
+
+function buildRelationshipRawMaterials() {
+  return { ...relationshipMaterialState.value }
 }
 
 async function generateDraft() {
@@ -1511,12 +1312,18 @@ async function generateDraft() {
       input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
       raw_materials:
-        createType.value === 'family_companion'
+      createType.value === 'family_companion'
           ? buildFamilyRawMaterials()
           : createType.value === 'reunion_persona'
             ? buildReunionRawMaterials()
             : createType.value === 'intimate_companion'
               ? buildIntimateRawMaterials()
+              : createType.value === 'self_unified'
+                ? buildSelfRawMaterials()
+                : createType.value === 'source_persona'
+                  ? buildSourceRawMaterials()
+                  : createType.value === 'relationship_persona'
+                    ? buildRelationshipRawMaterials()
               : undefined,
       guided_memory_answers:
         createType.value === 'family_companion' ? buildFamilyGuidedMemoryAnswers() : undefined,
@@ -1539,7 +1346,17 @@ async function generateDraft() {
                     ...formState,
                     raw_materials: buildIntimateRawMaterials(),
                   }
-              : { ...formState },
+                : createType.value === 'source_persona'
+                  ? {
+                      ...formState,
+                      raw_materials: buildSourceRawMaterials(),
+                    }
+                  : createType.value === 'relationship_persona'
+                    ? {
+                        ...formState,
+                        raw_materials: buildRelationshipRawMaterials(),
+                      }
+                : { ...formState },
     })
 
     saveLatestDraft(draft)
@@ -1753,125 +1570,12 @@ watch(
                 </label>
               </div>
 
-              <p class="eyebrow">材料输入层</p>
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>聊天记录粘贴框</span>
-                  <textarea
-                    v-model="familyChatHistoryText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="把关键聊天记录、称呼方式、关心语气直接贴进来"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>回忆片段 / 记忆笔记</span>
-                  <textarea
-                    v-model="familyMemoryNotesText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="把最像家人的片段、提醒、安慰话整理进来"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>文本材料补充</span>
-                  <textarea
-                    v-model="familyTextMaterialsText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="可直接粘贴文字材料、家书、聊天摘录或家庭说明"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>上传 txt / md / csv</span>
-                  <input
-                    class="field-input"
-                    type="file"
-                    accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
-                    @change="handleFamilyMaterialFileChange"
-                  />
-                  <small class="field-hint">
-                    {{
-                      familyUploadedTextDocuments.length
-                        ? `${familyUploadedTextDocuments.length} 个文件：${familyUploadedTextDocuments.map((item) => item.filename).join(' / ')}`
-                        : (familyMaterialFileName || '上传后会自动读取文本内容并补进记忆库')
-                    }}
-                  </small>
-                </label>
-              </div>
-
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>照片 / 相册上传</span>
-                  <input
-                    class="field-input"
-                    type="file"
-                    accept="image/*,.jpg,.jpeg,.png,.webp"
-                    multiple
-                    @change="handleFamilyImageFileChange"
-                  />
-                  <small class="field-hint">
-                    可上传聊天记录截图或照片，系统会尝试提取图片中的文字；若识别不完整，请补充图片说明。
-                  </small>
-                  <small class="field-hint">
-                    {{
-                      familyUploadedImageDocuments.length
-                        ? `${familyUploadedImageDocuments.length} 张照片：${familyUploadedImageDocuments.map((item) => item.filename).join(' / ')}`
-                        : '可从相册选择或直接拍照，图片会作为材料资产保存'
-                    }}
-                  </small>
-                </label>
-                <label class="form-field">
-                  <span>图片说明</span>
-                  <textarea
-                    v-model="familyImageNotesText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="先用文字记录图片或截图里的关键信息"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div v-if="!isReunionPersona && familyUploadedImageDocuments.length" class="summary-panel summary-panel--compact">
-                <p class="eyebrow">已上传图片</p>
-                <h3>相册和照片会作为材料资产保存</h3>
-                <ul class="summary-panel__list">
-                  <li v-for="(item, index) in familyUploadedImageDocuments" :key="`${item.filename}-${index}`">
-                    <span>
-                      {{ item.filename }}
-                      <small class="inline-meta">
-                        {{ item.mime_type }} · {{ formatFileSize(item.size) }} · {{ item.ocr_status || '待识别' }}
-                      </small>
-                    </span>
-                    <strong class="inline-actions">
-                      <button class="ghost-button ghost-button--small" type="button" @click="removeFamilyUploadedImageDocument(index)">
-                        删除
-                      </button>
-                    </strong>
-                  </li>
-                </ul>
-              </div>
-
-              <div v-if="!isReunionPersona && familyUploadedTextDocuments.length" class="summary-panel summary-panel--compact">
-                <p class="eyebrow">已上传文件</p>
-                <h3>文件会被一起提炼进记忆库</h3>
-                <ul class="summary-panel__list">
-                  <li v-for="(item, index) in familyUploadedTextDocuments" :key="`${item.filename}-${index}`">
-                    <span>
-                      {{ item.filename }}
-                      <small class="inline-meta">{{ Math.max(item.content.length, 1) }} 字</small>
-                    </span>
-                    <strong class="inline-actions">
-                      <button class="ghost-button ghost-button--small" type="button" @click="removeFamilyUploadedTextDocument(index)">
-                        删除
-                      </button>
-                    </strong>
-                  </li>
-                </ul>
-              </div>
+              <MaterialInputPanel
+                v-model="familyMaterialState"
+                path-type="family"
+                :subtype="inputMode"
+                :supports-guided-prompts="true"
+              />
 
               <p v-if="!isReunionPersona" class="eyebrow">补充回忆（可选）</p>
               <p v-if="!isReunionPersona" class="section-note">
@@ -1940,27 +1644,6 @@ watch(
                 </label>
               </div>
 
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>图片说明</span>
-                  <textarea
-                    v-model="familyImageNotesText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="先用文字记录图片或截图里的关键信息"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>语音说明</span>
-                  <textarea
-                    v-model="familyVoiceNotesText"
-                    class="field-input wizard-textarea"
-                    rows="5"
-                    placeholder="先用文字记录语音里的关键信息"
-                  ></textarea>
-                </label>
-              </div>
-
               <div v-if="isReunionPersona" class="form-grid">
                 <label class="form-field">
                   <span>回忆方式</span>
@@ -1985,45 +1668,12 @@ watch(
               </div>
 
               <p v-if="isReunionPersona" class="eyebrow">材料输入层</p>
-              <div v-if="isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>上传 txt / md / csv</span>
-                  <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleReunionMaterialFileChange" />
-                  <small class="field-hint">
-                    {{
-                      reunionUploadedTextDocuments.length
-                        ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ')
-                        : (reunionMaterialFileName || '可把文本材料追加到日记 / 信件里')
-                    }}
-                  </small>
-                </label>
-                <label class="form-field">
-                  <span>书信文本</span>
-                  <textarea v-model="formState.letter_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴信件摘录"></textarea>
-                </label>
-              </div>
-
-              <div v-if="isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>记忆片段</span>
-                  <textarea v-model="formState.memory_fragments" class="field-input wizard-textarea" rows="4" placeholder="一句一句整理出最有回忆感的片段"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>语音备注</span>
-                  <textarea v-model="formState.voice_notes" class="field-input wizard-textarea" rows="4" placeholder="先用文字记录语音里的关键信息"></textarea>
-                </label>
-              </div>
-
-              <div v-if="isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>照片 / 截图备注</span>
-                  <textarea v-model="formState.photo_notes" class="field-input wizard-textarea" rows="4" placeholder="照片说明、截图说明、口述回忆"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>安全边界</span>
-                  <textarea v-model="formState.safety_boundaries" class="field-input wizard-textarea" rows="4" placeholder="不激进刺激，不替现实关系下结论"></textarea>
-                </label>
-              </div>
+              <MaterialInputPanel
+                v-if="isReunionPersona"
+                v-model="reunionMaterialState"
+                path-type="reunion"
+                :supports-guided-prompts="false"
+              />
             </div>
           </template>
 
@@ -2149,11 +1799,6 @@ watch(
 
             <div class="form-grid">
               <label class="form-field">
-                <span>上传 txt / md / csv</span>
-                <input class="field-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" @change="handleSelfMemoryFileChange" />
-                <small class="field-hint">{{ memoryEvidenceFileName || '可把文件内容追加到生活痕迹里' }}</small>
-              </label>
-              <label class="form-field">
                 <span>反思规则</span>
                 <textarea
                   v-model="formState.reflection_rules_summary"
@@ -2162,9 +1807,6 @@ watch(
                   placeholder="你希望这个人格保留什么边界"
                 ></textarea>
               </label>
-            </div>
-
-            <div class="form-grid">
               <label class="form-field">
                 <span>反思规则要点</span>
                 <textarea
@@ -2174,17 +1816,24 @@ watch(
                   placeholder="每行一条：不夸张 / 不越界 / 不替自己下定论"
                 ></textarea>
               </label>
-              <div class="summary-panel summary-panel--compact">
-                <p class="eyebrow">输入方式</p>
-                <h3>可多选</h3>
-                <p class="state-copy">你可以同时保留手动填写、聊天记录、文本材料和记忆片段。</p>
-                <ul class="summary-panel__list">
-                  <li v-for="option in selfInputModeOptions" :key="option.key">
-                    <span>{{ option.label }}</span>
-                    <strong>{{ selfInputModes.includes(option.key) ? '已选择' : '未选择' }}</strong>
-                  </li>
-                </ul>
-              </div>
+            </div>
+
+            <MaterialInputPanel
+              v-model="selfMaterialState"
+              path-type="self"
+              :supports-guided-prompts="false"
+            />
+
+            <div class="summary-panel summary-panel--compact">
+              <p class="eyebrow">输入方式</p>
+              <h3>可多选</h3>
+              <p class="state-copy">你可以同时保留手动填写、聊天记录、文本材料和记忆片段。</p>
+              <ul class="summary-panel__list">
+                <li v-for="option in selfInputModeOptions" :key="option.key">
+                  <span>{{ option.label }}</span>
+                  <strong>{{ selfInputModes.includes(option.key) ? '已选择' : '未选择' }}</strong>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -2215,6 +1864,12 @@ watch(
                 <textarea v-model="formState.excluded_content" class="field-input wizard-textarea" rows="4"></textarea>
               </label>
             </div>
+
+            <MaterialInputPanel
+              v-model="sourceMaterialState"
+              path-type="source"
+              :supports-guided-prompts="false"
+            />
           </div>
 
           <div v-else-if="createType === 'family_companion' || createType === 'reunion_persona'" class="wizard-review wizard-review--family">
@@ -2307,105 +1962,11 @@ watch(
               </label>
             </div>
 
-            <p class="eyebrow">材料输入层</p>
-            <div class="form-grid">
-              <label class="form-field">
-                <span>聊天记录</span>
-                <textarea
-                  v-model="formState.chat_history_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="粘贴最近聊天记录、冲突片段或对方样本"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>消息样本 / 回忆片段</span>
-                <textarea
-                  v-model="formState.memory_fragments"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="粘贴你准备发的话、对方回复样本或关系记忆"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>文本材料</span>
-                <textarea
-                  v-model="formState.text_materials"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="可直接粘贴日记、信件摘录、关系说明"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>上传 txt / md / csv</span>
-                <input
-                  class="field-input"
-                  type="file"
-                  accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
-                  @change="handleIntimateMaterialFileChange"
-                />
-                <small class="field-hint">
-                  {{
-                    intimateUploadedTextDocuments.length
-                      ? intimateUploadedTextDocuments.map((item) => item.filename).join(' / ')
-                      : (intimateMaterialFileName || '可把文本材料追加到聊天记录和记忆片段里')
-                  }}
-                </small>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>图片 / 截图备注</span>
-                <textarea
-                  v-model="formState.image_notes"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="先用文字记录图片或截图里的关键信息"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>语音备注</span>
-                <textarea
-                  v-model="formState.voice_notes"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="先用文字记录语音里的关键信息"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="summary-panel summary-panel--compact">
-              <p class="eyebrow">材料输入摘要</p>
-              <h3>已支持文本材料输入</h3>
-              <ul class="summary-panel__list">
-                <li>
-                  <span>聊天记录</span>
-                  <strong>{{ formState.chat_history_summary || '未填写' }}</strong>
-                </li>
-                <li>
-                  <span>消息样本 / 回忆片段</span>
-                  <strong>{{ formState.memory_fragments || '未填写' }}</strong>
-                </li>
-                <li>
-                  <span>文本材料</span>
-                  <strong>{{ formState.text_materials || '未填写' }}</strong>
-                </li>
-                <li>
-                  <span>上传文件</span>
-                  <strong>
-                    {{
-                      intimateUploadedTextDocuments.length
-                        ? intimateUploadedTextDocuments.map((item) => item.filename).join(' / ')
-                        : (intimateMaterialFileName || '未上传')
-                    }}
-                  </strong>
-                </li>
-              </ul>
-            </div>
+            <MaterialInputPanel
+              v-model="intimateMaterialState"
+              path-type="intimate"
+              :supports-guided-prompts="false"
+            />
 
             <label class="form-field">
               <span>边界或禁忌话题</span>
@@ -2446,6 +2007,12 @@ watch(
                 <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
               </label>
             </div>
+
+            <MaterialInputPanel
+              v-model="relationshipMaterialState"
+              path-type="relationship"
+              :supports-guided-prompts="false"
+            />
           </div>
         </article>
 

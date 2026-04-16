@@ -288,14 +288,20 @@ function normalizeStringMap(value: unknown) {
     .filter(Boolean)
 }
 
-function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 'intimate') {
+function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 'intimate' | 'generic') {
   if (!rawMaterials || typeof rawMaterials !== 'object') {
     return []
   }
 
   const record = rawMaterials as Record<string, unknown>
+  const documents = normalizeDocuments(record.uploaded_text_documents)
+  const imageDocuments = normalizeImageDocuments(record.uploaded_image_documents)
+  const ocrResults = normalizeOcrResults(record.ocr_extracted_texts)
+  const ocrSuccessCount = ocrResults.filter((item) => ['success', 'partial'].includes(item.ocrStatus) && item.ocrText).length
+  const ocrFailedCount = ocrResults.filter((item) => !['success', 'partial'].includes(item.ocrStatus) || !item.ocrText).length
+  const ocrSnippet = ocrResults.find((item) => ['success', 'partial'].includes(item.ocrStatus) && item.ocrText)?.ocrText || ''
+
   if (mode === 'family') {
-    const documents = normalizeDocuments(record.uploaded_text_documents)
     return [
       { label: '聊天记录摘要', value: excerptText(record.chat_history_text) || '未填写' },
       { label: '回忆笔记摘要', value: excerptText(record.memory_notes_text) || '未填写' },
@@ -304,37 +310,64 @@ function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 
         label: '已上传材料文件数',
         value: documents.length ? `${documents.length} 个` : '0 个',
       },
+      {
+        label: '已上传图片数',
+        value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张',
+      },
+      {
+        label: 'OCR 提取',
+        value: ocrSnippet ? `${ocrSuccessCount} 成功 / ${ocrFailedCount} 失败` : '未提取到可用文本',
+      },
       { label: '图片说明摘要', value: excerptText(record.image_notes_text) || '未填写' },
       { label: '语音说明摘要', value: excerptText(record.voice_notes_text) || '未填写' },
     ]
   }
 
   if (mode === 'intimate') {
-    const documents = normalizeDocuments(record.uploaded_text_documents)
     return [
       { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
       { label: '消息样本', value: excerptText(record.draft_message_text) || '未填写' },
       { label: '关系片段', value: excerptText(record.memory_notes_text) || '未填写' },
       { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
       {
-        label: '上传文件',
+        label: '上传文本文件',
         value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
       },
+      { label: '已上传图片数', value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张' },
+      { label: 'OCR 提取', value: ocrSnippet ? `${ocrSuccessCount} 成功 / ${ocrFailedCount} 失败` : '未提取到可用文本' },
       { label: '图片备注', value: excerptText(record.image_notes_text) || '未填写' },
       { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
     ]
   }
 
-  const documents = normalizeDocuments(record.uploaded_text_documents)
+  if (mode === 'reunion') {
+    return [
+      { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
+      { label: '日记 / 信件', value: excerptText(record.diary_text) || '未填写' },
+      { label: '书信文本', value: excerptText(record.letter_text) || '未填写' },
+      { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
+      {
+        label: '上传文件',
+        value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
+      },
+      { label: '已上传图片数', value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张' },
+      { label: 'OCR 提取', value: ocrSnippet ? `${ocrSuccessCount} 成功 / ${ocrFailedCount} 失败` : '未提取到可用文本' },
+      { label: '照片备注', value: excerptText(record.photo_notes_text) || '未填写' },
+      { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
+    ]
+  }
+
   return [
     { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
-    { label: '日记 / 信件', value: excerptText(record.diary_text) || '未填写' },
-    { label: '书信文本', value: excerptText(record.letter_text) || '未填写' },
+    { label: '记忆笔记', value: excerptText(record.memory_notes_text) || '未填写' },
+    { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
     {
       label: '上传文件',
       value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
     },
-    { label: '照片备注', value: excerptText(record.photo_notes_text) || '未填写' },
+    { label: '已上传图片数', value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张' },
+    { label: 'OCR 提取', value: ocrSnippet ? `${ocrSuccessCount} 成功 / ${ocrFailedCount} 失败` : '未提取到可用文本' },
+    { label: '图片备注', value: excerptText(record.image_notes_text) || '未填写' },
     { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
   ]
 }
@@ -346,6 +379,8 @@ const familyRawMaterials = computed(() => {
   }
   return payload
 })
+
+const sharedRawMaterials = familyRawMaterials
 
 const familyGuidedAnswers = computed<FamilyCompanionGuidedMemoryAnswers | null>(() => {
   const payload = editableDraft.guided_memory_answers || draft.value?.guided_memory_answers
@@ -469,6 +504,10 @@ const intimateRawMaterials = computed(() => {
 })
 
 const intimateMaterialLines = computed(() => buildMaterialLines(intimateRawMaterials.value, 'intimate'))
+
+const selfMaterialLines = computed(() => buildMaterialLines(sharedRawMaterials.value, 'generic'))
+const sourceMaterialLines = computed(() => buildMaterialLines(sharedRawMaterials.value, 'generic'))
+const relationshipMaterialLines = computed(() => buildMaterialLines(sharedRawMaterials.value, 'generic'))
 
 const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
   const payload = editableDraft.memory_base || draft.value?.memory_base
@@ -970,6 +1009,39 @@ onMounted(() => {
               <p v-if="layer.points.length" class="self-unified-grid__copy">
                 {{ layer.points.join(' / ') }}
               </p>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成自我主线</h3>
+          <div class="family-grid">
+            <div v-for="line in selfMaterialLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'source_persona'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成资料人格</h3>
+          <div class="family-grid">
+            <div v-for="line in sourceMaterialLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'relationship_persona'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成关系人格</h3>
+          <div class="family-grid">
+            <div v-for="line in relationshipMaterialLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
             </div>
           </div>
         </article>

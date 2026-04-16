@@ -22,7 +22,7 @@ from app.schemas.reunion_persona import (
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
 
 
-class FamilyCompanionUploadedImageDocument(BaseModel):
+class CreateWizardUploadedImageDocument(BaseModel):
     filename: str = ""
     mime_type: str = ""
     size: int = 0
@@ -31,7 +31,7 @@ class FamilyCompanionUploadedImageDocument(BaseModel):
     ocr_text: str = ""
 
 
-class FamilyCompanionOCRExtractedText(BaseModel):
+class CreateWizardOCRExtractedText(BaseModel):
     filename: str = ""
     mime_type: str = ""
     size: int = 0
@@ -39,16 +39,42 @@ class FamilyCompanionOCRExtractedText(BaseModel):
     ocr_status: str = "failed"
 
 
-class FamilyCompanionRawMaterials(BaseModel):
+class CreateWizardRawMaterials(BaseModel):
     chat_history_text: str = ""
     memory_notes_text: str = ""
     text_materials_text: str = ""
     uploaded_text_documents: list[dict[str, Any]] = Field(default_factory=list)
-    uploaded_image_documents: list[FamilyCompanionUploadedImageDocument] = Field(default_factory=list)
-    ocr_extracted_texts: list[FamilyCompanionOCRExtractedText] = Field(default_factory=list)
+    uploaded_image_documents: list[CreateWizardUploadedImageDocument] = Field(default_factory=list)
+    ocr_extracted_texts: list[CreateWizardOCRExtractedText] = Field(default_factory=list)
     image_notes_text: str = ""
     photo_notes_text: str = ""
     voice_notes_text: str = ""
+    diary_text: str = ""
+    letter_text: str = ""
+    conflict_text: str = ""
+    draft_message_text: str = ""
+    recent_context_text: str = ""
+    reply_style_samples_text: str = ""
+    relationship_status_text: str = ""
+    interaction_patterns_text: str = ""
+    history_text: str = ""
+    expression_samples_text: str = ""
+
+
+class FamilyCompanionRawMaterials(CreateWizardRawMaterials):
+    pass
+
+
+class ReunionPersonaRawMaterials(CreateWizardRawMaterials):
+    pass
+
+
+class IntimateCompanionRawMaterials(CreateWizardRawMaterials):
+    pass
+
+
+class SelfPersonaRawMaterials(CreateWizardRawMaterials):
+    pass
 
 
 class CreateWizardDraftRequest(BaseModel):
@@ -61,7 +87,7 @@ class CreateWizardDraftRequest(BaseModel):
     family_subtype: str = ""
     input_modes: list[str] = Field(default_factory=list)
     schema_key: str = ""
-    raw_materials: FamilyCompanionRawMaterials = Field(default_factory=FamilyCompanionRawMaterials)
+    raw_materials: CreateWizardRawMaterials = Field(default_factory=CreateWizardRawMaterials)
     form_data: dict[str, Any] = Field(default_factory=dict)
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers = Field(default_factory=FamilyCompanionGuidedMemoryAnswers)
 
@@ -97,6 +123,7 @@ class CreateWizardDraft(BaseModel):
     heuristics: str
     expression: str
     guardrails: str
+    material_summary: str = ""
     relationship_type: str = ""
     family_subtype: str = ""
     raw_materials: dict[str, Any] | None = None

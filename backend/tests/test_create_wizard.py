@@ -33,6 +33,33 @@ class CreateWizardTests(unittest.TestCase):
                 "memory_evidence_points": "聊天记录\n文字片段\n文件材料",
                 "reflection_rules_summary": "把容易失真和需要保留的边界先写清楚。",
                 "reflection_rules_points": "不夸张\n不越界\n不替自己下定论",
+                "raw_materials": {
+                    "chat_history_text": "我在聊天里会先确认目标。",
+                    "memory_notes_text": "我写过的判断片段。",
+                    "text_materials_text": "资料里的一段文字。",
+                    "uploaded_text_documents": [
+                        {"filename": "self-notes.txt", "content": "我做事喜欢先看边界"},
+                    ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "self-screenshot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "self-screenshot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "做决定前先看条件",
+                            "ocr_status": "success",
+                        }
+                    ],
+                    "image_notes_text": "自我截图说明",
+                    "voice_notes_text": "自我语音说明",
+                },
             },
         }
 
@@ -71,6 +98,9 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["profile"].strip())
         self.assertTrue(body["draft"]["mindset"].strip())
         self.assertTrue(body["draft"]["guardrails"].strip())
+        self.assertEqual(body["draft"]["raw_materials"]["uploaded_image_documents"][0]["filename"], "self-screenshot.png")
+        self.assertEqual(body["draft"]["raw_materials"]["ocr_extracted_texts"][0]["ocr_status"], "success")
+        self.assertIn("做决定前先看条件", body["draft"]["self_persona_unified"]["memory_evidence"]["summary"])
 
     def test_create_wizard_draft_endpoint_keeps_relationship_payload_alignment(self):
         payload = {
@@ -87,11 +117,48 @@ class CreateWizardTests(unittest.TestCase):
                 "decision_logic": "先看家庭现实条件",
                 "purpose": "帮助理解父母视角",
                 "relation_boundaries": "不越界",
+                "raw_materials": {
+                    "chat_history_text": "先看家庭现实条件",
+                    "memory_notes_text": "父母会先问家庭安排",
+                    "text_materials_text": "家庭说明文字",
+                    "uploaded_text_documents": [
+                        {"filename": "relationship-notes.txt", "content": "父母更重视整体安排"},
+                    ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "relationship-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "relationship-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "家庭安排要先稳住",
+                            "ocr_status": "success",
+                        }
+                    ],
+                    "image_notes_text": "关系截图说明",
+                    "voice_notes_text": "关系语音说明",
+                },
             },
         }
 
-        with TestClient(app) as client:
-            response = client.post("/persona-api/create-wizard/draft", json=payload)
+        with patch("app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images") as mock_ocr_extract:
+            mock_ocr_extract.return_value = [
+                {
+                    "filename": "relationship-shot.png",
+                    "mime_type": "image/png",
+                    "size": 1024,
+                    "ocr_text": "家庭安排要先稳住",
+                    "ocr_status": "success",
+                }
+            ]
+            with TestClient(app) as client:
+                response = client.post("/persona-api/create-wizard/draft", json=payload)
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -102,6 +169,79 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["meta"]["input_mode"], "parents")
         self.assertEqual(body["draft"]["meta"]["schema_key"], "relationship_family_parents")
         self.assertIn("父母", body["draft"]["profile"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
+        self.assertIn("家庭安排要先稳住", body["draft"]["material_summary"])
+
+    def test_create_wizard_draft_endpoint_builds_source_persona_draft(self):
+        payload = {
+            "create_type": "source_persona",
+            "group": "source",
+            "source_repo": "anyone-to-skill",
+            "display_name": "资料人格",
+            "input_mode": "documents",
+            "schema_key": "source_anyone_from_sources",
+            "form_data": {
+                "target_name": "资料人格",
+                "material_type": "PDF / 文档",
+                "material_description": "整理一批可继续蒸馏的资料材料。",
+                "focus_points": "希望提炼观点和表达方式",
+                "excluded_content": "不需要隐私内容",
+                "raw_materials": {
+                    "chat_history_text": "资料里提到先看目标再看路径。",
+                    "memory_notes_text": "资料材料的关键摘录。",
+                    "text_materials_text": "这里有一段重要的资料文本。",
+                    "uploaded_text_documents": [
+                        {"filename": "source-notes.md", "content": "资料里先整理目标和路径"},
+                    ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "source-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "source-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "资料里写着先看目标",
+                            "ocr_status": "success",
+                        }
+                    ],
+                    "image_notes_text": "资料图片说明",
+                    "voice_notes_text": "资料语音说明",
+                },
+            },
+        }
+
+        with patch("app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images") as mock_ocr_extract:
+            mock_ocr_extract.return_value = [
+                {
+                    "filename": "source-shot.png",
+                    "mime_type": "image/png",
+                    "size": 1024,
+                    "ocr_text": "资料里写着先看目标",
+                    "ocr_status": "success",
+                }
+            ]
+            with TestClient(app) as client:
+                response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["meta"]["create_type"], "source_persona")
+        self.assertEqual(body["draft"]["meta"]["group"], "source")
+        self.assertEqual(body["draft"]["meta"]["source_repo"], "anyone-to-skill")
+        self.assertEqual(body["draft"]["meta"]["display_name"], "资料人格")
+        self.assertEqual(body["draft"]["meta"]["input_mode"], "documents")
+        self.assertEqual(body["draft"]["meta"]["schema_key"], "source_anyone_from_sources")
+        self.assertIn("资料人格", body["draft"]["profile"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
+        self.assertIn("资料里写着先看目标", body["draft"]["material_summary"])
 
     def test_create_wizard_draft_endpoint_builds_family_companion_draft(self):
         payload = {
@@ -458,6 +598,23 @@ class CreateWizardTests(unittest.TestCase):
                     "uploaded_text_documents": [
                         {"filename": "reunion-notes.md", "content": "那天我们在门口见过"},
                     ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "reunion-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "reunion-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "旧截图里的话：先慢慢回忆",
+                            "ocr_status": "success",
+                        }
+                    ],
                     "photo_notes_text": "照片里的关键场景说明",
                     "voice_notes_text": "口述回忆片段",
                 },
@@ -482,6 +639,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIsNotNone(body["draft"]["reunion_safety_guardrails"])
         self.assertIn("raw_materials", body["draft"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
         self.assertIn("重逢人格", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_intimate_companion_draft(self):
@@ -510,6 +669,23 @@ class CreateWizardTests(unittest.TestCase):
                     "text_materials_text": "补充的文本材料",
                     "uploaded_text_documents": [
                         {"filename": "notes.txt", "content": "这是上传的文本材料"}
+                    ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "intimate-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "intimate-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "截图里写着：最近在忙什么",
+                            "ocr_status": "success",
+                        }
                     ],
                     "image_notes_text": "截图里记录了提醒",
                     "voice_notes_text": "语音里提到最近很忙",
@@ -541,6 +717,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIsNotNone(body["draft"]["intimate_memory_base"])
         self.assertIn("raw_materials", body["draft"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
+        self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
         self.assertIsNotNone(body["draft"]["intimate_understanding"])
         self.assertIn("亲密关系", body["draft"]["profile"])
         self.assertIn("关系理解", body["draft"]["profile"])

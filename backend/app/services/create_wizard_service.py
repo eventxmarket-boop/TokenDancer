@@ -517,6 +517,141 @@ def _raw_materials_payload(
     }
 
 
+def build_common_raw_materials(**kwargs: Any) -> dict[str, Any]:
+    """Build the shared raw-material payload for every create flow.
+
+    Future creation paths should reuse this helper instead of rebuilding
+    their own upload / OCR material containers.
+    """
+
+    return _raw_materials_payload(**kwargs)
+
+
+def _merge_ocr_result(base: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base or {})
+    for key in ("filename", "mime_type", "size", "ocr_status"):
+        candidate_value = candidate.get(key)
+        if key == "size":
+            try:
+                size_value = int(candidate_value or merged.get(key) or 0)
+            except (TypeError, ValueError):
+                size_value = int(merged.get(key) or 0)
+            merged[key] = max(size_value, 0)
+            continue
+        if _normalize_text(candidate_value):
+            merged[key] = candidate_value
+        elif key not in merged:
+            merged[key] = candidate_value
+
+    candidate_text = _normalize_text(candidate.get("ocr_text"))
+    if candidate_text:
+        merged["ocr_text"] = candidate_text
+    elif not _normalize_text(merged.get("ocr_text")):
+        merged["ocr_text"] = _normalize_text(base.get("ocr_text"))
+
+    if not _normalize_text(merged.get("ocr_status")):
+        merged["ocr_status"] = "success" if _normalize_text(merged.get("ocr_text")) else "failed"
+    return merged
+
+
+def _run_ocr_for_raw_materials(raw_materials: dict[str, Any]) -> dict[str, Any]:
+    normalized_raw_materials = dict(raw_materials or {})
+    uploaded_image_documents = _normalize_image_documents(normalized_raw_materials.get("uploaded_image_documents"))
+    existing_ocr_results = _normalize_ocr_extracted_texts(normalized_raw_materials.get("ocr_extracted_texts"))
+
+    normalized_raw_materials["uploaded_image_documents"] = uploaded_image_documents
+    normalized_raw_materials["ocr_extracted_texts"] = existing_ocr_results
+    if not uploaded_image_documents:
+        return normalized_raw_materials
+
+    try:
+        extracted_results = ocr_service.extract_texts_from_uploaded_images(uploaded_image_documents)
+    except Exception:
+        extracted_results = []
+
+    combined_ocr_results: list[dict[str, Any]] = []
+    merged_by_filename: dict[str, dict[str, Any]] = {}
+
+    for item in existing_ocr_results:
+        filename = _normalize_text(item.get("filename"))
+        if filename:
+            merged_by_filename[filename] = dict(item)
+
+    for item in extracted_results:
+        if not isinstance(item, dict):
+            continue
+        filename = _normalize_text(item.get("filename"))
+        if filename and filename in merged_by_filename:
+            merged_by_filename[filename] = _merge_ocr_result(merged_by_filename[filename], item)
+        elif filename:
+            merged_by_filename[filename] = dict(item)
+        else:
+            combined_ocr_results.append(dict(item))
+
+    combined_ocr_results.extend(merged_by_filename.values())
+
+    normalized_raw_materials["uploaded_image_documents"] = ocr_service.attach_ocr_results_to_uploaded_images(
+        uploaded_image_documents,
+        combined_ocr_results,
+    )
+    normalized_raw_materials["ocr_extracted_texts"] = combined_ocr_results
+    return normalized_raw_materials
+
+
+def run_ocr_for_raw_materials(raw_materials: dict[str, Any]) -> dict[str, Any]:
+    """Shared OCR hook for every create flow."""
+
+    return _run_ocr_for_raw_materials(raw_materials)
+
+
+def _material_pool_text(raw_materials: dict[str, Any]) -> str:
+    if not isinstance(raw_materials, dict):
+        return ""
+
+    documents = _normalize_documents(raw_materials.get("uploaded_text_documents"))
+    image_documents = _normalize_image_documents(raw_materials.get("uploaded_image_documents"))
+    ocr_texts = _merge_unique_lines(
+        [
+            item.get("ocr_text")
+            for item in _normalize_ocr_extracted_texts(raw_materials.get("ocr_extracted_texts"))
+            if _normalize_text(item.get("ocr_text"))
+        ]
+    )
+    lines = _merge_unique_lines(
+        raw_materials.get("chat_history_text"),
+        raw_materials.get("memory_notes_text"),
+        raw_materials.get("text_materials_text"),
+        ocr_texts,
+        raw_materials.get("image_notes_text"),
+        raw_materials.get("photo_notes_text"),
+        raw_materials.get("voice_notes_text"),
+        raw_materials.get("diary_text"),
+        raw_materials.get("letter_text"),
+        raw_materials.get("conflict_text"),
+        raw_materials.get("draft_message_text"),
+        raw_materials.get("recent_context_text"),
+        raw_materials.get("reply_style_samples_text"),
+        raw_materials.get("relationship_status_text"),
+        raw_materials.get("interaction_patterns_text"),
+        raw_materials.get("history_text"),
+        raw_materials.get("expression_samples_text"),
+        _document_snippets(documents),
+    )
+    if image_documents:
+        lines.append(f"已上传图片 {len(image_documents)} 张")
+    if documents:
+        lines.append(f"已上传文本文件 {len(documents)} 个")
+    if ocr_texts:
+        lines.append(f"OCR 文本 {len(ocr_texts)} 条")
+    return " / ".join(_merge_unique_lines(lines)[:4])
+
+
+def merge_text_sources_for_distillation(raw_materials: dict[str, Any]) -> str:
+    """Merge every material source into the text pool used for distillation."""
+
+    return _material_pool_text(raw_materials)
+
+
 def _collect_material_lines(*parts: Any) -> list[str]:
     lines: list[str] = []
     for part in parts:
@@ -891,6 +1026,27 @@ def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, dis
 
 
 def _build_self_draft(form_data: dict[str, Any], display_name: str = "") -> dict[str, Any]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("memory_evidence_summary"),
+        memory_notes_text=raw_materials_input.get("memory_notes_text") or form_data.get("memory_evidence_points"),
+        text_materials_text=raw_materials_input.get("text_materials_text"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts"),
+        image_notes_text=raw_materials_input.get("image_notes_text"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text"),
+    )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    ocr_lines = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
+    material_summary = _material_pool_text(raw_materials)
+
     unified_form: dict[str, Any] = {
         "name": _normalize_text(form_data.get("name")) or _normalize_text(display_name) or "我的人格",
         "create_mode": _normalize_text(form_data.get("create_mode")) or "standard",
@@ -911,15 +1067,25 @@ def _build_self_draft(form_data: dict[str, Any], display_name: str = "") -> dict
             or form_data.get(f"{layer_key}_items")
             or form_data.get(layer_key)
         )
+        if layer_key == "memory_evidence":
+            raw_points = _merge_unique_lines(raw_points, ocr_lines, _document_snippets(raw_materials.get("uploaded_text_documents", [])))
+            if material_summary:
+                raw_summary = " / ".join(_merge_unique_lines(raw_summary, material_summary))
         unified_form[layer_key] = {
             "summary": raw_summary or fallback,
             "points": raw_points,
         }
 
-    return build_self_persona_draft(unified_form)
+    result = build_self_persona_draft(unified_form)
+    result["raw_materials"] = raw_materials
+    if material_summary:
+        result["profile"] = f"{result['profile']}\n材料池：{material_summary}".strip()
+        result["mindset"] = f"{result['mindset']}\n材料池：{material_summary}".strip()
+    return result
 
 
 def _build_source_draft(form_data: dict[str, Any], display_name: str = "") -> dict[str, str]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     name = _normalize_text(form_data.get("target_name")) or _normalize_text(display_name) or "资料人格"
     material_type = _normalize_text(form_data.get("material_type")) or "文档资料"
     material_description = _normalize_text(form_data.get("material_description")) or "从现有资料中提炼一个更像的回应方式。"
@@ -931,17 +1097,39 @@ def _build_source_draft(form_data: dict[str, Any], display_name: str = "") -> di
         "不抽取隐私敏感信息",
         "不保留明显跑题内容",
     ]
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or material_description,
+        memory_notes_text=raw_materials_input.get("memory_notes_text"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or material_description,
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts"),
+        image_notes_text=raw_materials_input.get("image_notes_text"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text"),
+    )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    material_summary = _material_pool_text(raw_materials)
+    ocr_lines = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
 
     profile = (
         f"目标人格：{name}\n"
         f"材料类型：{material_type}\n"
         f"材料说明：{material_description}"
     )
+    if material_summary:
+        profile = f"{profile}\n材料池：{material_summary}"
     mindset = _format_bullets(
         [
             "先判断材料是否足够代表这个人格",
             "先保留可用于回答问题的稳定模式",
             "如果材料碎片化，先补足关键上下文再提炼",
+            *([f"OCR 片段：{ocr_lines[0]}"] if ocr_lines else []),
         ]
     )
     heuristics = _format_bullets(
@@ -964,6 +1152,7 @@ def _build_source_draft(form_data: dict[str, Any], display_name: str = "") -> di
         "expression": expression,
         "guardrails": guardrails,
         "name": name,
+        "raw_materials": raw_materials,
     }
 
 
@@ -972,6 +1161,7 @@ def _build_relationship_draft(
     display_name: str = "",
     input_mode: str = "",
 ) -> dict[str, str]:
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
@@ -983,17 +1173,39 @@ def _build_relationship_draft(
     decision_logic = _normalize_text(form_data.get("decision_logic")) or "先看现实条件，再看可行性。"
     purpose = _normalize_text(form_data.get("purpose")) or "帮助理解这段关系里的表达和判断。"
     boundaries = _normalize_text(form_data.get("boundaries")) or "不越过对方隐私和现实边界。"
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or purpose,
+        memory_notes_text=raw_materials_input.get("memory_notes_text"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or decision_logic,
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts"),
+        image_notes_text=raw_materials_input.get("image_notes_text"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text"),
+    )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    material_summary = _material_pool_text(raw_materials)
+    ocr_lines = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
 
     profile = (
         f"关系类型：{relation_type}\n"
         f"对象名称：{name}\n"
         f"用途：{purpose}"
     )
+    if material_summary:
+        profile = f"{profile}\n材料池：{material_summary}"
     mindset = _format_bullets(
         [
             f"先看对方常见的判断逻辑：{decision_logic}",
             "先保留关系语境，不把单句当成全貌",
             "条件不足时先追问关系背景",
+            *([f"OCR 片段：{ocr_lines[0]}"] if ocr_lines else []),
         ]
     )
     heuristics = _format_bullets(
@@ -1024,6 +1236,7 @@ def _build_relationship_draft(
         "expression": expression,
         "guardrails": guardrails,
         "name": name,
+        "raw_materials": raw_materials,
     }
 
 
@@ -1380,85 +1593,14 @@ def build_family_companion_draft(
         image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
-    existing_ocr_results = _normalize_ocr_extracted_texts(raw_materials.get("ocr_extracted_texts"))
-    uploaded_image_documents = raw_materials.get("uploaded_image_documents") or []
-    try:
-        ocr_results = ocr_service.extract_texts_from_uploaded_images(uploaded_image_documents)
-    except Exception:
-        ocr_results = []
-
-    def _merge_ocr_result(base: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
-        merged = dict(base or {})
-        for key in ("filename", "mime_type", "size", "ocr_status"):
-            candidate_value = candidate.get(key)
-            if key == "size":
-                try:
-                    size_value = int(candidate_value or merged.get(key) or 0)
-                except (TypeError, ValueError):
-                    size_value = int(merged.get(key) or 0)
-                merged[key] = max(size_value, 0)
-                continue
-            if _normalize_text(candidate_value):
-                merged[key] = candidate_value
-            elif key not in merged:
-                merged[key] = candidate_value
-        candidate_text = _normalize_text(candidate.get("ocr_text"))
-        if candidate_text:
-            merged["ocr_text"] = candidate_text
-        elif not _normalize_text(merged.get("ocr_text")):
-            merged["ocr_text"] = _normalize_text(base.get("ocr_text"))
-        if not _normalize_text(merged.get("ocr_status")):
-            merged["ocr_status"] = "success" if _normalize_text(merged.get("ocr_text")) else "failed"
-        return merged
-
-    combined_ocr_results: list[dict[str, Any]] = []
-    if existing_ocr_results or ocr_results:
-        merged_by_filename: dict[str, dict[str, Any]] = {}
-        for item in existing_ocr_results:
-            filename = _normalize_text(item.get("filename"))
-            if not filename:
-                continue
-            merged_by_filename[filename] = dict(item)
-        for item in ocr_results:
-            if not isinstance(item, dict):
-                continue
-            filename = _normalize_text(item.get("filename"))
-            if filename and filename in merged_by_filename:
-                merged_by_filename[filename] = _merge_ocr_result(merged_by_filename[filename], item)
-            elif filename:
-                merged_by_filename[filename] = dict(item)
-            else:
-                combined_ocr_results.append(dict(item))
-        combined_ocr_results.extend(merged_by_filename.values())
-    if uploaded_image_documents:
-        raw_materials["uploaded_image_documents"] = ocr_service.attach_ocr_results_to_uploaded_images(
-            uploaded_image_documents,
-            combined_ocr_results,
-        )
-    raw_materials["ocr_extracted_texts"] = combined_ocr_results
-    if uploaded_image_documents:
-        attached_images = raw_materials.get("uploaded_image_documents") or []
-        ocr_results_by_filename = {
-            _normalize_text(item.get("filename")): item
-            for item in ocr_results
-            if isinstance(item, dict) and _normalize_text(item.get("filename"))
-        }
-        normalized_attached_images: list[dict[str, Any]] = []
-        for index, document in enumerate(attached_images):
-            if not isinstance(document, dict):
-                continue
-            merged_document = dict(document)
-            result = ocr_results_by_filename.get(_normalize_text(merged_document.get("filename")))
-            if not result and index < len(ocr_results) and isinstance(ocr_results[index], dict):
-                result = ocr_results[index]
-            if result:
-                ocr_text = ocr_service.normalize_ocr_text(result.get("ocr_text") or result.get("text") or result.get("content"))
-                if ocr_text:
-                    merged_document["ocr_text"] = ocr_text
-                    merged_document["ocr_status"] = _normalize_text(result.get("ocr_status") or result.get("status")) or "success"
-            normalized_attached_images.append(merged_document)
-        if normalized_attached_images:
-            raw_materials["uploaded_image_documents"] = normalized_attached_images
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    ocr_extracted_texts = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
     guided_answers_input = (
         guided_memory_answers
         if isinstance(guided_memory_answers, dict)
@@ -1592,9 +1734,13 @@ def _build_reunion_persona_draft(
         or form_data.get("memory_notes"),
         uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
         or form_data.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents")
+        or form_data.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts") or form_data.get("ocr_extracted_texts"),
         photo_notes_text=raw_materials_input.get("photo_notes_text") or form_data.get("photo_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
     material_lines = _merge_unique_lines(
         raw_materials["chat_history_text"],
         raw_materials["diary_text"],
@@ -1602,6 +1748,13 @@ def _build_reunion_persona_draft(
         raw_materials["memory_notes_text"],
         raw_materials["photo_notes_text"],
         raw_materials["voice_notes_text"],
+        _clean_lines(
+            [
+                item.get("ocr_text")
+                for item in raw_materials.get("ocr_extracted_texts", [])
+                if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+            ]
+        ),
         [doc.get("content", "") for doc in raw_materials["uploaded_text_documents"]],
     )
 
@@ -1733,6 +1886,9 @@ def _build_intimate_companion_draft(
         text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
         uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
         or form_data.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents")
+        or form_data.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts") or form_data.get("ocr_extracted_texts"),
         image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
         conflict_text=raw_materials_input.get("conflict_text") or form_data.get("memory_fragments"),
@@ -1743,6 +1899,14 @@ def _build_intimate_companion_draft(
         interaction_patterns_text=raw_materials_input.get("interaction_patterns_text") or form_data.get("interaction_rules"),
         history_text=raw_materials_input.get("history_text") or form_data.get("key_memories"),
         expression_samples_text=raw_materials_input.get("expression_samples_text") or form_data.get("catchphrases"),
+    )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    ocr_lines = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
     )
 
     relationship_context = {
@@ -1763,6 +1927,7 @@ def _build_intimate_companion_draft(
             raw_materials["recent_context_text"],
             raw_materials["draft_message_text"],
             raw_materials["reply_style_samples_text"],
+            ocr_lines,
         ),
         _document_snippets(raw_materials["uploaded_text_documents"]),
     )
@@ -1772,6 +1937,7 @@ def _build_intimate_companion_draft(
             raw_materials["memory_notes_text"],
             raw_materials["conflict_text"],
             raw_materials["text_materials_text"],
+            ocr_lines,
         ),
         _document_snippets(raw_materials["uploaded_text_documents"]),
     )
@@ -1794,6 +1960,7 @@ def _build_intimate_companion_draft(
         _collect_material_lines(
             raw_materials["history_text"],
             raw_materials["text_materials_text"],
+            ocr_lines,
         ),
         _document_snippets(raw_materials["uploaded_text_documents"]),
     )
@@ -2417,6 +2584,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     content_name = content.pop("name")
     form_title = content_name or normalized_display_name or CREATE_TYPE_LABELS[normalized_create_type]
     generated_at = datetime.now(timezone.utc).isoformat()
+    material_summary = _material_pool_text(content.get("raw_materials") or {})
 
     meta = CreateWizardDraftMeta(
         id=f"draft-{uuid4().hex[:8]}",
@@ -2449,6 +2617,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "guardrails": content["guardrails"],
         "relationship_type": content.get("relationship_type", ""),
         "family_subtype": content.get("family_subtype", ""),
+        "material_summary": material_summary,
         "raw_materials": content.get("raw_materials"),
         "guided_memory_answers": content.get("guided_memory_answers"),
         "emotion_rules": content.get("emotion_rules"),

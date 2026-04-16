@@ -22,6 +22,7 @@ class CreatedPersonaSummary(BaseModel):
     persona_type: str
     family_subtype: str = ""
     summary: str
+    material_summary: str = ""
     status: str
     source_type: str
     created_at: datetime

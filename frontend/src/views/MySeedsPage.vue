@@ -139,6 +139,7 @@ onMounted(() => {
                   <p class="persona-category">{{ group.label }}</p>
                   <h4>{{ displaySeedName(seed) }}</h4>
                   <p class="persona-intro">{{ seed.summary || '这是一版可以继续完善的人格。' }}</p>
+                  <p v-if="seed.material_summary" class="persona-intro persona-intro--subtle">{{ seed.material_summary }}</p>
                 </div>
               </div>
 

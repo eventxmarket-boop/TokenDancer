@@ -11,6 +11,7 @@ export type CreatedPersonaSummary = {
   family_subtype?: string
   user_id?: number | null
   summary: string
+  material_summary?: string
   status: string
   source_type: string
   created_at: string

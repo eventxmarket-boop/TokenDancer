@@ -83,6 +83,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
+                self.assertIn("material_summary", saved)
+                self.assertTrue(saved["material_summary"])
                 list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
                 seeds = list_response.json()
@@ -98,6 +100,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "self_unified")
                 self.assertIn("self_persona_unified", detail["draft_payload"])
                 self.assertEqual(detail["draft_payload"]["profile"], draft["profile"])
+                self.assertEqual(detail["material_summary"], saved["material_summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
@@ -126,6 +129,110 @@ class MySeedsTests(unittest.TestCase):
                 chat_body = chat_response.json()
                 self.assertEqual(chat_body["persona_slug"], saved["slug"])
                 self.assertTrue(chat_body["reply"])
+        finally:
+            if created_id is not None:
+                with SessionLocal() as db:
+                    db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
+                    db.commit()
+            self._cleanup_user(user_id)
+
+    def test_source_persona_seed_round_trip_persists_and_loads_material_summary(self):
+        created_id: int | None = None
+        user_id: int | None = None
+
+        payload = {
+            "create_type": "source_persona",
+            "group": "source",
+            "source_repo": "anyone-to-skill",
+            "display_name": "资料人格",
+            "input_mode": "documents",
+            "schema_key": "source_anyone_from_sources",
+            "form_data": {
+                "target_name": "资料人格",
+                "material_type": "PDF / 文档",
+                "material_description": "整理一批可继续蒸馏的资料材料。",
+                "focus_points": "希望提炼观点和表达方式",
+                "excluded_content": "不需要隐私内容",
+                "raw_materials": {
+                    "chat_history_text": "资料里提到先看目标再看路径。",
+                    "memory_notes_text": "资料材料的关键摘录。",
+                    "text_materials_text": "这里有一段重要的资料文本。",
+                    "uploaded_text_documents": [
+                        {"filename": "source-notes.md", "content": "资料里先整理目标和路径"},
+                    ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "source-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "source-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "资料里写着先看目标",
+                            "ocr_status": "success",
+                        }
+                    ],
+                    "image_notes_text": "资料图片说明",
+                    "voice_notes_text": "资料语音说明",
+                },
+            },
+        }
+
+        try:
+            with patch("app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images") as mock_ocr_extract:
+                mock_ocr_extract.return_value = [
+                    {
+                        "filename": "source-shot.png",
+                        "mime_type": "image/png",
+                        "size": 1024,
+                        "ocr_text": "资料里写着先看目标",
+                        "ocr_status": "success",
+                    }
+                ]
+                with TestClient(app) as client:
+                    user, headers = self._register_test_user(client, "my-seeds-source")
+                    user_id = int(user["id"])
+                    draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
+                    self.assertEqual(draft_response.status_code, 200)
+                    draft = draft_response.json()["draft"]
+
+                    save_response = client.post(
+                        "/persona-api/my-seeds",
+                        headers=headers,
+                        json={
+                            "draft": draft,
+                            "source_type": "create_wizard",
+                            "status": "saved",
+                        },
+                    )
+                    self.assertEqual(save_response.status_code, 200)
+                    saved = save_response.json()
+                    created_id = saved["id"]
+                    self.assertIn("material_summary", saved)
+                    self.assertIn("图片材料", saved["material_summary"])
+
+                    detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
+                    self.assertEqual(detail_response.status_code, 200)
+                    detail = detail_response.json()
+                    self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "source_persona")
+                    self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "source_anyone_from_sources")
+                    self.assertIn("raw_materials", detail["draft_payload"])
+                    self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                    self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_image_documents"])
+                    self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
+                    self.assertIn("OCR", detail["material_summary"])
+                    self.assertEqual(detail["material_summary"], saved["material_summary"])
+
+                    persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
+                    self.assertEqual(persona_response.status_code, 200)
+                    persona = persona_response.json()
+                    self.assertEqual(persona["slug"], saved["slug"])
+                    self.assertEqual(persona["name"], saved["name"])
         finally:
             if created_id is not None:
                 with SessionLocal() as db:
@@ -223,6 +330,8 @@ class MySeedsTests(unittest.TestCase):
                     self.assertEqual(save_response.status_code, 200)
                     saved = save_response.json()
                     created_id = saved["id"]
+                    self.assertIn("material_summary", saved)
+                    self.assertIn("图片材料", saved["material_summary"])
                     self.assertIn("family-notes.txt", saved["summary"])
                     self.assertIn("图片材料", saved["summary"])
 
@@ -290,6 +399,7 @@ class MySeedsTests(unittest.TestCase):
                         detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["ocr_text"],
                     )
                     self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
+                    self.assertIn("OCR", detail["material_summary"])
                     self.assertIn(
                         "先别急",
                         detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"][0]["ocr_text"],
@@ -388,6 +498,23 @@ class MySeedsTests(unittest.TestCase):
                     "uploaded_text_documents": [
                         {"filename": "reunion-notes.md", "content": "那天我们在门口见过"},
                     ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "reunion-shot.png",
+                            "mime_type": "image/png",
+                            "size": 2048,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "reunion-shot.png",
+                            "mime_type": "image/png",
+                            "size": 2048,
+                            "ocr_text": "旧截图里的话：先慢慢回忆",
+                            "ocr_status": "success",
+                        }
+                    ],
                     "photo_notes_text": "照片里的关键场景说明",
                     "voice_notes_text": "口述回忆片段",
                 },
@@ -414,6 +541,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
+                self.assertIn("material_summary", saved)
+                self.assertTrue(saved["material_summary"])
 
                 list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
@@ -428,7 +557,10 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "重逢人格")
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_image_documents"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
                 self.assertTrue(detail["draft_payload"]["reunion_memory_base"]["memory_fragments"])
+                self.assertEqual(detail["material_summary"], saved["material_summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
@@ -528,6 +660,23 @@ class MySeedsTests(unittest.TestCase):
                     "uploaded_text_documents": [
                         {"filename": "notes.txt", "content": "这是上传的文本材料"}
                     ],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "intimate-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "data_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+3d8AAAAASUVORK5CYII=",
+                        }
+                    ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "intimate-shot.png",
+                            "mime_type": "image/png",
+                            "size": 1024,
+                            "ocr_text": "截图里写着：最近在忙什么",
+                            "ocr_status": "success",
+                        }
+                    ],
                     "image_notes_text": "截图里记录了提醒",
                     "voice_notes_text": "语音里提到最近很忙",
                     "conflict_text": "那次误会",
@@ -562,6 +711,8 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
+                self.assertIn("material_summary", saved)
+                self.assertTrue(saved["material_summary"])
 
                 detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
@@ -571,6 +722,9 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "关系理解")
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_image_documents"])
+                self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
+                self.assertEqual(detail["material_summary"], saved["material_summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)

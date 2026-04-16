@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.46 - 2026-04-17
+
+- Added a shared material capability layer across all creation flows.
+- Unified text file upload, image upload, and OCR extraction for family, reunion, intimate, and self creation.
+- Routed OCR-extracted text into each path's distillation pipeline and preserved it in raw materials.
+- Surfaced file, image, and OCR summaries consistently in Create result and My Seeds.
+- Ensured future creation flows inherit upload and OCR support by default.
+
 ## V1.4.45 - 2026-04-17
 
 - Added OCR-based text extraction for family companion image materials.

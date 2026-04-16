@@ -493,6 +493,7 @@ def _load_draft_payload(raw: str) -> CreateWizardDraft:
 
 def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
     draft = _load_draft_payload(record.draft_payload)
+    material_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
     return {
         "id": record.id,
         "user_id": record.user_id,
@@ -501,6 +502,7 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
         "persona_type": record.persona_type,
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "summary": record.summary,
+        "material_summary": material_summary,
         "status": record.status,
         "source_type": record.source_type,
         "created_at": record.created_at,
@@ -511,6 +513,7 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
 
 def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
     draft = _load_draft_payload(record.draft_payload)
+    material_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
     return {
         "id": record.id,
         "user_id": record.user_id,
@@ -519,6 +522,7 @@ def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
         "persona_type": record.persona_type,
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "summary": record.summary,
+        "material_summary": material_summary,
         "status": record.status,
         "source_type": record.source_type,
         "created_at": record.created_at,

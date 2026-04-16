@@ -15,7 +15,13 @@ export type CreateWizardPayload = {
   input_modes: string[]
   schema_key: string
   form_data: Record<string, unknown>
-  raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | IntimateCompanionRawMaterials | Record<string, unknown>
+  raw_materials?:
+    | CreateWizardRawMaterials
+    | FamilyCompanionRawMaterials
+    | ReunionPersonaRawMaterials
+    | IntimateCompanionRawMaterials
+    | SelfPersonaRawMaterials
+    | Record<string, unknown>
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers
 }
 
@@ -70,6 +76,30 @@ export type FamilyCompanionMemoryBase = {
   voice_notes: string[]
 }
 
+export type UniversalCreateWizardRawMaterials = {
+  chat_history_text: string
+  memory_notes_text: string
+  text_materials_text: string
+  uploaded_text_documents: TextMaterialDocument[]
+  uploaded_image_documents: UploadedImageDocument[]
+  ocr_extracted_texts: FamilyCompanionOCRExtractedText[]
+  image_notes_text: string
+  photo_notes_text: string
+  voice_notes_text: string
+  diary_text: string
+  letter_text: string
+  conflict_text: string
+  draft_message_text: string
+  recent_context_text: string
+  reply_style_samples_text: string
+  relationship_status_text: string
+  interaction_patterns_text: string
+  history_text: string
+  expression_samples_text: string
+}
+
+export type CreateWizardRawMaterials = UniversalCreateWizardRawMaterials
+
 export type FamilyCompanionGuidedMemoryAnswers = {
   most_common_topics: string
   comfort_style: string
@@ -110,17 +140,7 @@ export type FamilyCompanionOCRExtractedText = {
   ocr_status: string
 }
 
-export type FamilyCompanionRawMaterials = {
-  chat_history_text: string
-  memory_notes_text: string
-  text_materials_text: string
-  uploaded_text_documents: TextMaterialDocument[]
-  uploaded_image_documents: UploadedImageDocument[]
-  ocr_extracted_texts: FamilyCompanionOCRExtractedText[]
-  image_notes_text: string
-  photo_notes_text: string
-  voice_notes_text: string
-}
+export type FamilyCompanionRawMaterials = UniversalCreateWizardRawMaterials
 
 export type FamilyCompanionWizardFormData = {
   relationship_type: string
@@ -166,17 +186,12 @@ export type ReunionPersonaRawMaterials = {
   diary_text: string
   letter_text: string
   memory_notes_text: string
-  uploaded_text_documents: TextMaterialDocument[]
-  photo_notes_text: string
-  voice_notes_text: string
-}
-
-export type IntimateCompanionRawMaterials = {
-  chat_history_text: string
-  memory_notes_text: string
   text_materials_text: string
   uploaded_text_documents: TextMaterialDocument[]
+  uploaded_image_documents: UploadedImageDocument[]
+  ocr_extracted_texts: FamilyCompanionOCRExtractedText[]
   image_notes_text: string
+  photo_notes_text: string
   voice_notes_text: string
   conflict_text: string
   draft_message_text: string
@@ -187,6 +202,30 @@ export type IntimateCompanionRawMaterials = {
   history_text: string
   expression_samples_text: string
 }
+
+export type IntimateCompanionRawMaterials = {
+  chat_history_text: string
+  memory_notes_text: string
+  text_materials_text: string
+  uploaded_text_documents: TextMaterialDocument[]
+  uploaded_image_documents: UploadedImageDocument[]
+  ocr_extracted_texts: FamilyCompanionOCRExtractedText[]
+  image_notes_text: string
+  voice_notes_text: string
+  diary_text: string
+  letter_text: string
+  photo_notes_text: string
+  conflict_text: string
+  draft_message_text: string
+  recent_context_text: string
+  reply_style_samples_text: string
+  relationship_status_text: string
+  interaction_patterns_text: string
+  history_text: string
+  expression_samples_text: string
+}
+
+export type SelfPersonaRawMaterials = UniversalCreateWizardRawMaterials
 
 export type ReunionPersonaRetrievalPolicy = {
   mode: string
@@ -255,7 +294,14 @@ export type CreateWizardDraft = {
   guardrails: string
   relationship_type?: string
   family_subtype?: string
-  raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | Record<string, unknown> | null
+  raw_materials?:
+    | CreateWizardRawMaterials
+    | FamilyCompanionRawMaterials
+    | ReunionPersonaRawMaterials
+    | IntimateCompanionRawMaterials
+    | SelfPersonaRawMaterials
+    | Record<string, unknown>
+    | null
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers | null
   emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
