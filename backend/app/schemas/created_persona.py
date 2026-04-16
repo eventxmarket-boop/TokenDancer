@@ -16,9 +16,11 @@ class CreatedPersonaSaveRequest(BaseModel):
 
 class CreatedPersonaSummary(BaseModel):
     id: int
+    user_id: int | None = None
     slug: str
     name: str
     persona_type: str
+    family_subtype: str = ""
     summary: str
     status: str
     source_type: str

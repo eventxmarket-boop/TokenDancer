@@ -1,3 +1,5 @@
+import { authHeaders } from '@/services/authService'
+
 export type Persona = {
   id: string
   slug: string
@@ -48,12 +50,16 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 export async function listPersonas(): Promise<Persona[]> {
-  const response = await fetch(`${API_PREFIX}/personas`)
+  const response = await fetch(`${API_PREFIX}/personas`, {
+    headers: authHeaders(),
+  })
   return readJson<Persona[]>(response)
 }
 
 export async function loadPersona(id: string): Promise<Persona | null> {
-  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(id)}`)
+  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  })
   if (response.status === 404) {
     return null
   }
@@ -61,6 +67,8 @@ export async function loadPersona(id: string): Promise<Persona | null> {
 }
 
 export async function loadSeedPersonas(): Promise<Persona[]> {
-  const response = await fetch(`${API_PREFIX}/seed-personas`)
+  const response = await fetch(`${API_PREFIX}/seed-personas`, {
+    headers: authHeaders(),
+  })
   return readJson<Persona[]>(response)
 }

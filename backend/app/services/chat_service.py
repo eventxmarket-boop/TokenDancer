@@ -142,21 +142,26 @@ def _resolve_session_title(
     )
 
 
-def _load_persona_summary_any(db: Session, slug: str) -> dict[str, object] | None:
+def _load_persona_summary_any(db: Session, slug: str, user_id: int | None = None) -> dict[str, object] | None:
     summary = load_persona_summary(slug)
     if summary is not None:
         return summary
-    return load_created_persona_summary(db, slug)
+    return load_created_persona_summary(db, slug, user_id=user_id)
 
 
-def _load_persona_skill_any(db: Session, slug: str) -> dict[str, object] | None:
+def _load_persona_skill_any(db: Session, slug: str, user_id: int | None = None) -> dict[str, object] | None:
     skill = load_persona_skill(slug)
     if skill is not None:
         return skill
-    return load_created_persona_skill(db, slug)
+    return load_created_persona_skill(db, slug, user_id=user_id)
 
 
-def _get_or_create_session(db: Session, persona_slug: str, session_id: str | None) -> ChatSession:
+def _get_or_create_session(
+    db: Session,
+    persona_slug: str,
+    session_id: str | None,
+    user_id: int | None = None,
+) -> ChatSession:
     normalized_session_id = (session_id or "").strip()
     session: ChatSession | None = None
 
@@ -166,16 +171,29 @@ def _get_or_create_session(db: Session, persona_slug: str, session_id: str | Non
             .filter(ChatSession.session_id == normalized_session_id)
             .first()
         )
+        if session is not None:
+            normalized_user_id = user_id if user_id and user_id > 0 else None
+            if normalized_user_id is None:
+                if session.user_id is not None:
+                    session = None
+            elif session.user_id != normalized_user_id:
+                session = None
 
     if session is not None:
         if session.persona_slug != persona_slug:
             normalized_session_id = uuid4().hex
-            session = ChatSession(session_id=normalized_session_id, persona_slug=persona_slug)
+            session = ChatSession(
+                session_id=normalized_session_id,
+                persona_slug=persona_slug,
+                user_id=user_id if user_id and user_id > 0 else None,
+            )
             db.add(session)
             db.flush()
             return session
 
         session.persona_slug = persona_slug
+        if user_id and user_id > 0:
+            session.user_id = user_id
         session.updated_at = utcnow()
         db.flush()
         return session
@@ -183,7 +201,11 @@ def _get_or_create_session(db: Session, persona_slug: str, session_id: str | Non
     if not normalized_session_id:
         normalized_session_id = uuid4().hex
 
-    session = ChatSession(session_id=normalized_session_id, persona_slug=persona_slug)
+    session = ChatSession(
+        session_id=normalized_session_id,
+        persona_slug=persona_slug,
+        user_id=user_id if user_id and user_id > 0 else None,
+    )
     db.add(session)
     db.flush()
     return session
@@ -325,16 +347,18 @@ def _serialize_message(row: ChatMessage) -> dict[str, object]:
     ).as_dict()
 
 
-def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] | None:
+def get_chat_session_detail(db: Session, session_id: str, user_id: int | None = None) -> dict[str, object] | None:
     normalized_session_id = session_id.strip()
     if not normalized_session_id:
         raise ChatServiceError("session_id 不能为空")
 
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.session_id == normalized_session_id)
-        .first()
-    )
+    query = db.query(ChatSession).filter(ChatSession.session_id == normalized_session_id)
+    if user_id and user_id > 0:
+        query = query.filter(ChatSession.user_id == user_id)
+    else:
+        query = query.filter(ChatSession.user_id.is_(None))
+
+    session = query.first()
     if session is None:
         return None
 
@@ -344,7 +368,7 @@ def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] |
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
         .all()
     )
-    persona_summary = _load_persona_summary_any(db, session.persona_slug) or {}
+    persona_summary = _load_persona_summary_any(db, session.persona_slug, user_id=user_id) or {}
     persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
     first_user_message = next(
         (row.content for row in rows if row.role == "user" and row.content.strip()),
@@ -362,30 +386,35 @@ def get_chat_session_detail(db: Session, session_id: str) -> dict[str, object] |
     }
 
 
-def get_latest_chat_session_for_persona(db: Session, persona_slug: str) -> dict[str, object] | None:
+def get_latest_chat_session_for_persona(
+    db: Session,
+    persona_slug: str,
+    user_id: int | None = None,
+) -> dict[str, object] | None:
     normalized_slug = persona_slug.strip()
     if not normalized_slug:
         raise ChatServiceError("persona_slug 不能为空")
 
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.persona_slug == normalized_slug)
-        .order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc())
-        .first()
-    )
+    query = db.query(ChatSession).filter(ChatSession.persona_slug == normalized_slug)
+    if user_id and user_id > 0:
+        query = query.filter(ChatSession.user_id == user_id)
+    else:
+        query = query.filter(ChatSession.user_id.is_(None))
+
+    session = query.order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc()).first()
     if session is None:
         return None
-    return get_chat_session_detail(db, session.session_id)
+    return get_chat_session_detail(db, session.session_id, user_id=user_id)
 
 
-def get_recent_chat_sessions(db: Session, limit: int = 10) -> list[dict[str, object]]:
+def get_recent_chat_sessions(db: Session, limit: int = 10, user_id: int | None = None) -> list[dict[str, object]]:
     normalized_limit = max(1, min(int(limit or 10), 50))
-    sessions = (
-        db.query(ChatSession)
-        .order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc())
-        .limit(normalized_limit)
-        .all()
-    )
+    query = db.query(ChatSession)
+    if user_id and user_id > 0:
+        query = query.filter(ChatSession.user_id == user_id)
+    else:
+        query = query.filter(ChatSession.user_id.is_(None))
+    sessions = query.order_by(ChatSession.updated_at.desc(), ChatSession.created_at.desc()).limit(normalized_limit).all()
 
     summaries: list[dict[str, object]] = []
     for session in sessions:
@@ -397,7 +426,7 @@ def get_recent_chat_sessions(db: Session, limit: int = 10) -> list[dict[str, obj
         if has_messages is None:
             continue
 
-        persona_summary = _load_persona_summary_any(db, session.persona_slug) or {}
+        persona_summary = _load_persona_summary_any(db, session.persona_slug, user_id=user_id) or {}
         persona_name = str(persona_summary.get("name") or session.persona_slug).strip()
         first_user = (
             db.query(ChatMessage.content)
@@ -465,8 +494,9 @@ async def chat_with_persona(
     session_id: str | None,
     user_message: str,
     db: Session,
+    user_id: int | None = None,
 ) -> dict[str, object]:
-    persona = _load_persona_skill_any(db, persona_slug)
+    persona = _load_persona_skill_any(db, persona_slug, user_id=user_id)
     if persona is None:
         raise PersonaNotFoundError(f"Persona not found: {persona_slug}")
 
@@ -495,7 +525,7 @@ async def chat_with_persona(
     if not normalized_message:
         raise ChatServiceError("消息内容不能为空")
 
-    session = _get_or_create_session(db, persona_slug, session_id)
+    session = _get_or_create_session(db, persona_slug, session_id, user_id=user_id)
     session_summary, history = build_context_for_chat(db, session)
     if not (session.title or "").strip():
         first_user_message = next(
@@ -580,21 +610,27 @@ async def chat_with_persona(
     ).as_dict()
 
 
-def clear_chat_session(db: Session, session_id: str) -> str:
+def clear_chat_session(db: Session, session_id: str, user_id: int | None = None) -> str:
     normalized_session_id = session_id.strip()
     if not normalized_session_id:
         raise ChatServiceError("session_id 不能为空")
 
-    session = (
-        db.query(ChatSession)
-        .filter(ChatSession.session_id == normalized_session_id)
-        .first()
-    )
+    query = db.query(ChatSession).filter(ChatSession.session_id == normalized_session_id)
+    if user_id and user_id > 0:
+        query = query.filter(ChatSession.user_id == user_id)
+    else:
+        query = query.filter(ChatSession.user_id.is_(None))
+
+    session = query.first()
     if session is None:
         raise ChatServiceError(f"session not found: {normalized_session_id}")
 
     new_session_id = uuid4().hex
-    new_session = ChatSession(session_id=new_session_id, persona_slug=session.persona_slug)
+    new_session = ChatSession(
+        session_id=new_session_id,
+        persona_slug=session.persona_slug,
+        user_id=session.user_id if session.user_id is not None else (user_id if user_id and user_id > 0 else None),
+    )
     db.add(new_session)
     db.commit()
     return new_session_id

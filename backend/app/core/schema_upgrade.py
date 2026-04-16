@@ -28,9 +28,13 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
         "failure_chain_summary": "TEXT NULL",
     },
     "chat_sessions": {
+        "user_id": "INTEGER NULL",
         "title": "VARCHAR(120) NULL",
         "summary_text": "TEXT NULL",
         "summary_updated_at": "TIMESTAMP NULL",
+    },
+    "created_personas": {
+        "user_id": "INTEGER NULL",
     },
 }
 

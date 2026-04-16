@@ -1,3 +1,5 @@
+import { authHeaders } from '@/services/authService'
+
 const API_PREFIX = '/persona-api'
 
 export type ChatUsage = {
@@ -72,11 +74,10 @@ export async function sendChatMessage(payload: {
   sessionId?: string | null
   message: string
 }): Promise<ChatResponse> {
+  const headers = authHeaders({ 'Content-Type': 'application/json' })
   const response = await fetch(`${API_PREFIX}/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
       persona_slug: payload.personaSlug,
       session_id: payload.sessionId || null,
@@ -90,13 +91,16 @@ export async function sendChatMessage(payload: {
 export async function clearChatSession(sessionId: string): Promise<{ session_id: string; status: string }> {
   const response = await fetch(`${API_PREFIX}/sessions/${encodeURIComponent(sessionId)}/clear`, {
     method: 'POST',
+    headers: authHeaders(),
   })
 
   return readJson<{ session_id: string; status: string }>(response)
 }
 
 export async function loadChatSession(sessionId: string): Promise<ChatSessionDetail | null> {
-  const response = await fetch(`${API_PREFIX}/sessions/${encodeURIComponent(sessionId)}`)
+  const response = await fetch(`${API_PREFIX}/sessions/${encodeURIComponent(sessionId)}`, {
+    headers: authHeaders(),
+  })
   if (response.status === 404) {
     return null
   }
@@ -104,7 +108,9 @@ export async function loadChatSession(sessionId: string): Promise<ChatSessionDet
 }
 
 export async function loadLatestPersonaSession(personaSlug: string): Promise<ChatSessionDetail | null> {
-  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(personaSlug)}/latest-session`)
+  const response = await fetch(`${API_PREFIX}/personas/${encodeURIComponent(personaSlug)}/latest-session`, {
+    headers: authHeaders(),
+  })
   if (response.status === 404) {
     return null
   }
@@ -112,6 +118,8 @@ export async function loadLatestPersonaSession(personaSlug: string): Promise<Cha
 }
 
 export async function loadRecentSessions(limit = 10): Promise<RecentSessionSummary[]> {
-  const response = await fetch(`${API_PREFIX}/sessions/recent?limit=${encodeURIComponent(String(limit))}`)
+  const response = await fetch(`${API_PREFIX}/sessions/recent?limit=${encodeURIComponent(String(limit))}`, {
+    headers: authHeaders(),
+  })
   return readJson<RecentSessionSummary[]>(response)
 }

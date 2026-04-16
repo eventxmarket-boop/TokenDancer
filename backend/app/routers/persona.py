@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.deps import get_db
+from app.deps import get_db, get_current_user, get_optional_current_user
 
 from app.core.version import get_project_version
 from app.schemas.created_persona import CreatedPersonaRecord, CreatedPersonaSaveRequest, CreatedPersonaSummary
@@ -79,13 +79,18 @@ async def create_wizard_draft(payload: CreateWizardDraftRequest):
 
 
 @router.post("/persona-api/my-seeds", response_model=CreatedPersonaRecord)
-async def create_my_seed(payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
+async def create_my_seed(
+    payload: CreatedPersonaSaveRequest,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         seed = save_created_persona(
             db,
             payload.draft,
             source_type=payload.source_type,
             status=payload.status,
+            user_id=current_user.id,
         )
         db.commit()
         return seed
@@ -95,7 +100,12 @@ async def create_my_seed(payload: CreatedPersonaSaveRequest, db: Session = Depen
 
 
 @router.put("/persona-api/my-seeds/{seed_id}", response_model=CreatedPersonaRecord)
-async def update_my_seed(seed_id: int, payload: CreatedPersonaSaveRequest, db: Session = Depends(get_db)):
+async def update_my_seed(
+    seed_id: int,
+    payload: CreatedPersonaSaveRequest,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         seed = save_created_persona(
             db,
@@ -103,6 +113,7 @@ async def update_my_seed(seed_id: int, payload: CreatedPersonaSaveRequest, db: S
             record_id=seed_id,
             source_type=payload.source_type,
             status=payload.status,
+            user_id=current_user.id,
         )
         db.commit()
         return seed
@@ -115,17 +126,24 @@ async def update_my_seed(seed_id: int, payload: CreatedPersonaSaveRequest, db: S
 
 
 @router.get("/persona-api/my-seeds", response_model=list[CreatedPersonaSummary])
-async def list_my_seeds(db: Session = Depends(get_db)):
+async def list_my_seeds(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        return list_created_personas(db)
+        return list_created_personas(db, user_id=current_user.id)
     except CreatedPersonaError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/persona-api/my-seeds/{seed_id}", response_model=CreatedPersonaRecord)
-async def get_my_seed(seed_id: int, db: Session = Depends(get_db)):
+async def get_my_seed(
+    seed_id: int,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        seed = get_created_persona(db, seed_id)
+        seed = get_created_persona(db, seed_id, user_id=current_user.id)
     except CreatedPersonaError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -136,7 +154,11 @@ async def get_my_seed(seed_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/persona-api/personas/{slug}", response_model=PersonaRecord)
-async def persona_detail(slug: str, db: Session = Depends(get_db)):
+async def persona_detail(
+    slug: str,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         persona = load_persona_summary(slug)
     except PersonaLoadError as exc:
@@ -144,7 +166,7 @@ async def persona_detail(slug: str, db: Session = Depends(get_db)):
 
     if persona is None:
         try:
-            persona = load_created_persona_summary(db, slug)
+            persona = load_created_persona_summary(db, slug, user_id=current_user.id if current_user else None)
         except CreatedPersonaError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 

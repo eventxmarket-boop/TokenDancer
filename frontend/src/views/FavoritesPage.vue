@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { listPersonas, type Persona } from '@/services/personaService'
+import { getFavoriteScopeKey } from '@/services/favoriteService'
 import {
   clearFavoriteSlugs,
   getFavoriteSlugs,
   toggleFavoriteSlug,
 } from '@/services/favoriteService'
+import { authUser } from '@/stores/auth'
 
 const loading = ref(true)
 const error = ref('')
 const personas = ref<Persona[]>([])
-const favoriteSlugs = ref<string[]>(getFavoriteSlugs())
+const favoriteScopeKey = computed(() => getFavoriteScopeKey(authUser.value?.id ?? null))
+const favoriteSlugs = ref<string[]>(getFavoriteSlugs(favoriteScopeKey.value))
 
 const refreshFavorites = () => {
-  favoriteSlugs.value = getFavoriteSlugs()
+  favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
 }
 
 const load = async () => {
@@ -39,12 +42,12 @@ const favoritePersonas = computed(() =>
 )
 
 const toggleFavorite = (slug: string) => {
-  toggleFavoriteSlug(slug)
+  toggleFavoriteSlug(slug, favoriteScopeKey.value)
   refreshFavorites()
 }
 
 const clearFavorites = () => {
-  clearFavoriteSlugs()
+  clearFavoriteSlugs(favoriteScopeKey.value)
   refreshFavorites()
 }
 
@@ -63,6 +66,10 @@ const groups = computed(() => {
 
 onMounted(() => {
   void load()
+})
+
+watch(favoriteScopeKey, () => {
+  refreshFavorites()
 })
 </script>
 

@@ -25,6 +25,7 @@ class CreateWizardDraftRequest(BaseModel):
     display_name: str = ""
     create_mode: str = ""
     input_mode: str
+    family_subtype: str = ""
     input_modes: list[str] = Field(default_factory=list)
     schema_key: str = ""
     form_data: dict[str, Any] = Field(default_factory=dict)
@@ -41,6 +42,7 @@ class CreateWizardDraftMeta(BaseModel):
     create_type: str
     create_mode: str = ""
     input_mode: str
+    family_subtype: str = ""
     input_modes: list[str] = Field(default_factory=list)
     group: str
     schema_key: str = ""
@@ -61,6 +63,7 @@ class CreateWizardDraft(BaseModel):
     expression: str
     guardrails: str
     relationship_type: str = ""
+    family_subtype: str = ""
     raw_materials: dict[str, Any] | None = None
     emotion_rules: dict[str, Any] | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None

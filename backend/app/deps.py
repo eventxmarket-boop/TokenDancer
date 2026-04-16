@@ -185,6 +185,18 @@ def _get_user_from_jwt(token: str, db: Session) -> User:
     return user
 
 
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        return _get_user_from_jwt(credentials.credentials, db)
+    except HTTPException:
+        return None
+
+
 def _validate_api_key_for_proxy(api_key: APIKey, db: Session) -> ProxyAuthContext:
     if api_key.status != "active":
         raise HTTPException(

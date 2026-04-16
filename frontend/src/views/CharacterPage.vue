@@ -2,14 +2,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadPersona, type Persona } from '@/services/personaService'
-import { getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
+import { getFavoriteScopeKey, getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
+import { authUser } from '@/stores/auth'
 
 const route = useRoute()
 const persona = ref<Persona | null>(null)
 const loading = ref(true)
 const error = ref('')
 const notFound = ref(false)
-const favoriteSlugs = ref<string[]>(getFavoriteSlugs())
+const favoriteScopeKey = computed(() => getFavoriteScopeKey(authUser.value?.id ?? null))
+const favoriteSlugs = ref<string[]>(getFavoriteSlugs(favoriteScopeKey.value))
 
 const slug = computed(() => String(route.params.id || ''))
 const isFavorite = computed(() => {
@@ -44,14 +46,14 @@ const load = async () => {
 }
 
 const refreshFavorites = () => {
-  favoriteSlugs.value = getFavoriteSlugs()
+  favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
 }
 
 const toggleFavorite = () => {
   if (!persona.value || persona.value.isFavoritable === false) {
     return
   }
-  toggleFavoriteSlug(persona.value.slug)
+  toggleFavoriteSlug(persona.value.slug, favoriteScopeKey.value)
   refreshFavorites()
 }
 
@@ -61,6 +63,10 @@ onMounted(() => {
 
 watch(slug, () => {
   void load()
+})
+
+watch(favoriteScopeKey, () => {
+  refreshFavorites()
 })
 </script>
 

@@ -1,4 +1,5 @@
 import type { CreateWizardDraft } from '@/services/createWizardService'
+import { authHeaders } from '@/services/authService'
 
 const API_PREFIX = '/persona-api'
 
@@ -8,6 +9,7 @@ export type CreatedPersonaSummary = {
   name: string
   persona_type: string
   family_subtype?: string
+  user_id?: number | null
   summary: string
   status: string
   source_type: string
@@ -51,12 +53,16 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export async function loadMySeeds(): Promise<CreatedPersonaSummary[]> {
-  const response = await fetch(`${API_PREFIX}/my-seeds`)
+  const response = await fetch(`${API_PREFIX}/my-seeds`, {
+    headers: authHeaders(),
+  })
   return readJson<CreatedPersonaSummary[]>(response)
 }
 
 export async function loadMySeed(seedId: number): Promise<CreatedPersonaRecord | null> {
-  const response = await fetch(`${API_PREFIX}/my-seeds/${encodeURIComponent(String(seedId))}`)
+  const response = await fetch(`${API_PREFIX}/my-seeds/${encodeURIComponent(String(seedId))}`, {
+    headers: authHeaders(),
+  })
   if (response.status === 404) {
     return null
   }
@@ -67,15 +73,14 @@ export async function saveMySeed(
   payload: CreatedPersonaSavePayload,
   seedId?: number | null,
 ): Promise<CreatedPersonaRecord> {
+  const headers = authHeaders({ 'Content-Type': 'application/json' })
   const response = await fetch(
     seedId
       ? `${API_PREFIX}/my-seeds/${encodeURIComponent(String(seedId))}`
       : `${API_PREFIX}/my-seeds`,
     {
       method: seedId ? 'PUT' : 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         draft: payload.draft,
         source_type: payload.source_type || 'create_wizard',

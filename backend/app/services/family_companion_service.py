@@ -9,6 +9,18 @@ ANXIOUS_HINTS = ("焦虑", "压力", "紧张", "担心", "害怕", "慌", "着�
 HAPPY_HINTS = ("开心", "高兴", "好消息", "顺利", "进步", "录取", "上岸", "拿到", "通过", "喜悦")
 ADVICE_HINTS = ("怎么办", "建议", "要不要", "该不该", "怎么做", "帮我看看", "值不值", "如何选择")
 
+FAMILY_SUBTYPE_LABELS = {
+    "mother": "妈妈",
+    "parents": "父母",
+    "other_family": "其他家人",
+}
+
+FAMILY_SUBTYPE_FOCUS = {
+    "mother": "更偏接住情绪、细节照顾和熟悉安慰",
+    "parents": "更偏家庭整体视角、稳定建议和共同记忆",
+    "other_family": "更偏通用家庭陪伴和自然关心",
+}
+
 
 def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
@@ -70,6 +82,17 @@ def _emotion_rules_payload(persona: dict[str, Any]) -> dict[str, Any]:
     return emotion_rules if isinstance(emotion_rules, dict) else {}
 
 
+def _family_subtype(value: Any) -> str:
+    subtype = _normalize_text(value).lower()
+    if subtype in {"mother", "mama", "mom", "妈妈", "母亲"}:
+        return "mother"
+    if subtype in {"parents", "parent", "father", "dad", "父母", "爸爸", "父亲"}:
+        return "parents"
+    if subtype in {"other_family", "other family", "其他家人"}:
+        return "other_family"
+    return "mother"
+
+
 def retrieve_relevant_memories(
     memory_base: dict[str, Any],
     emotional_state: str,
@@ -116,8 +139,10 @@ def build_family_reply_context(
     user_message: str,
     *,
     emotion_rules: dict[str, Any] | None = None,
+    family_subtype: str = "",
 ) -> str:
     emotion_rules = emotion_rules if isinstance(emotion_rules, dict) else {}
+    subtype = _family_subtype(family_subtype or persona_profile.get("family_subtype"))
     tone = _normalize_text(persona_profile.get("tone"))
     comfort_style = _normalize_text(persona_profile.get("comfort_style"))
     celebration_style = _normalize_text(persona_profile.get("celebration_style"))
@@ -148,6 +173,9 @@ def build_family_reply_context(
         f"当前情绪状态：{emotional_state}",
         f"建议回应温度：{temperature}",
     ]
+    subtype_label = FAMILY_SUBTYPE_LABELS.get(subtype, subtype or "妈妈")
+    subtype_focus = FAMILY_SUBTYPE_FOCUS.get(subtype, FAMILY_SUBTYPE_FOCUS["mother"])
+    parts.append(f"家人子类型：{subtype_label}（{subtype_focus}）")
     if relationship_type or name:
         parts.append(f"家人身份：{relationship_type or name}")
     if tone:
@@ -195,10 +223,12 @@ def build_family_companion_context(
     emotional_state = detect_emotional_state(user_message, history)
     memories = retrieve_relevant_memories(memory_base, emotional_state, user_message)
     emotion_rules = _emotion_rules_payload(persona)
+    family_subtype = _normalize_text(persona.get("family_subtype") or persona_profile.get("family_subtype"))
     return build_family_reply_context(
         persona_profile,
         emotional_state,
         memories,
         user_message,
         emotion_rules=emotion_rules,
+        family_subtype=family_subtype,
     )

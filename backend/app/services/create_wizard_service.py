@@ -459,6 +459,81 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
     return "colleague"
 
 
+def _resolve_family_subtype(value: Any, relationship_type: Any = "", display_name: Any = "", input_mode: Any = "") -> str:
+    normalized = _normalize_text(value).lower()
+    normalized_relationship = _normalize_text(relationship_type)
+    normalized_display = _normalize_text(display_name)
+    normalized_input = _normalize_text(input_mode).lower()
+
+    aliases = {
+        "mother": "mother",
+        "mama": "mother",
+        "mom": "mother",
+        "妈妈": "mother",
+        "母亲": "mother",
+        "parents": "parents",
+        "parent": "parents",
+        "father": "parents",
+        "dad": "parents",
+        "爸爸": "parents",
+        "父亲": "parents",
+        "父母": "parents",
+        "other_family": "other_family",
+        "other family": "other_family",
+        "其他家人": "other_family",
+    }
+    if normalized in aliases:
+        return aliases[normalized]
+    if normalized_input in aliases:
+        return aliases[normalized_input]
+    if normalized_relationship in {"妈妈", "母亲"} or normalized_display in {"妈妈", "母亲"}:
+        return "mother"
+    if normalized_relationship in {"父母", "爸爸", "父亲"} or normalized_display in {"父母", "爸爸", "父亲"}:
+        return "parents"
+    if normalized_relationship == "其他家人" or normalized_display == "其他家人":
+        return "other_family"
+    return "mother"
+
+
+def _family_subtype_label(subtype: str) -> str:
+    subtype = _normalize_text(subtype)
+    if subtype == "parents":
+        return "父母"
+    if subtype == "other_family":
+        return "其他家人"
+    return "妈妈"
+
+
+def _family_subtype_profile_preset(subtype: str) -> dict[str, Any]:
+    subtype = _resolve_family_subtype(subtype)
+    if subtype == "parents":
+        return {
+            "tone": "更稳、更完整，带家庭整体视角。",
+            "comfort_style": "先稳住情绪，再给更完整的家庭建议。",
+            "celebration_style": "先一起高兴，再顺着把家里的安排和共识说完整。",
+            "catchphrases": ["先稳住", "别急着下结论", "我们一起想办法"],
+            "response_sequence": ["先看家庭整体处境", "再调用共同记忆", "再给稳定建议"],
+            "memory_priority_rules": ["优先家庭共同记忆", "优先重要建议", "优先成长阶段记忆"],
+        }
+    if subtype == "other_family":
+        return {
+            "tone": "温和、自然、通用家庭陪伴感。",
+            "comfort_style": "先接住情绪，再给自然的陪伴和提醒。",
+            "celebration_style": "先替你高兴，再顺着把好消息说完整。",
+            "catchphrases": ["慢慢说", "我在呢", "先别急"],
+            "response_sequence": ["先接住情绪", "再调用熟悉记忆", "再给自然回应"],
+            "memory_priority_rules": ["优先常见关心方式", "优先共同经历", "优先日常提醒"],
+        }
+    return {
+        "tone": "温和、亲近、会先接住情绪。",
+        "comfort_style": "先接住情绪，再慢慢安慰，语气更熟悉。",
+        "celebration_style": "先替你高兴，再顺着把好消息说完整。",
+        "catchphrases": ["先别急", "慢慢来", "我在呢"],
+        "response_sequence": ["先接住情绪", "再给熟悉的安慰", "再补一点日常照顾"],
+        "memory_priority_rules": ["优先安慰方式", "优先关心细节", "优先日常提醒"],
+    }
+
+
 def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, display_name: str) -> str:
     if create_type == "self_unified":
         return "self_unified"
@@ -562,7 +637,7 @@ def _build_relationship_draft(
         or _normalize_text(display_name)
         or "关系人格"
     )
-    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
+    name = _normalize_text(display_name) or _normalize_text(form_data.get("persona_name")) or relation_type
     speech_style = _normalize_text(form_data.get("speech_style")) or "表达比较直接。"
     decision_logic = _normalize_text(form_data.get("decision_logic")) or "先看现实条件，再看可行性。"
     purpose = _normalize_text(form_data.get("purpose")) or "帮助理解这段关系里的表达和判断。"
@@ -739,6 +814,13 @@ def build_family_companion_draft(
     input_mode: str = "",
 ) -> dict[str, Any]:
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
+    family_subtype = _resolve_family_subtype(
+        form_data.get("family_subtype") or input_mode or form_data.get("relationship_type") or display_name,
+        form_data.get("relationship_type"),
+        display_name,
+        input_mode,
+    )
+    subtype_preset = _family_subtype_profile_preset(family_subtype)
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
@@ -746,10 +828,10 @@ def build_family_companion_draft(
         or "家人陪伴"
     )
     name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
-    tone = _normalize_text(form_data.get("speech_style")) or "温和、亲近、稳一点。"
-    catchphrases = _clean_lines(form_data.get("catchphrases")) or ["先把情绪放一放", "别着急，慢慢来"]
-    comfort_style = _normalize_text(form_data.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
-    celebration_style = _normalize_text(form_data.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
+    tone = _normalize_text(form_data.get("speech_style")) or subtype_preset["tone"]
+    catchphrases = _clean_lines(form_data.get("catchphrases")) or list(subtype_preset["catchphrases"])
+    comfort_style = _normalize_text(form_data.get("comfort_style")) or subtype_preset["comfort_style"]
+    celebration_style = _normalize_text(form_data.get("celebration_style")) or subtype_preset["celebration_style"]
     boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。"
 
     raw_materials = _raw_materials_payload(
@@ -765,7 +847,20 @@ def build_family_companion_draft(
     )
     extraction = extract_family_memory_base_from_materials(form_data, form_data, raw_materials)
     memory_base = FamilyCompanionMemoryBase.model_validate(extraction["memory_base"])
-    emotion_rules = extraction["emotion_rules"]
+    emotion_rules = dict(extraction["emotion_rules"])
+    emotion_rules["summary"] = (
+        f"子类型：{_family_subtype_label(family_subtype)}；{emotion_rules.get('summary')}"
+        if _normalize_text(emotion_rules.get("summary"))
+        else f"子类型：{_family_subtype_label(family_subtype)}"
+    )
+    emotion_rules["response_sequence"] = _merge_unique_lines(
+        subtype_preset["response_sequence"],
+        emotion_rules.get("response_sequence"),
+    )
+    emotion_rules["memory_priority_rules"] = _merge_unique_lines(
+        subtype_preset["memory_priority_rules"],
+        emotion_rules.get("memory_priority_rules"),
+    )
 
     persona_profile = FamilyCompanionPersonaProfile(
         relationship_type=relation_type,
@@ -818,6 +913,7 @@ def build_family_companion_draft(
         "expression": expression,
         "guardrails": guardrails,
         "relationship_type": relation_type,
+        "family_subtype": family_subtype,
         "persona_profile": persona_profile.model_dump(),
         "memory_base": memory_base.model_dump(),
         "emotion_rules": emotion_rules,
@@ -1669,6 +1765,9 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     form_data = payload.get("form_data") or {}
     if not isinstance(form_data, dict):
         raise CreateWizardError("form_data must be an object")
+    family_subtype = _normalize_text(payload.get("family_subtype")) or _normalize_text(form_data.get("family_subtype"))
+    if normalized_create_type == "family_companion" and family_subtype:
+        form_data = {**form_data, "family_subtype": family_subtype}
 
     if normalized_create_type == "self_unified":
         content = _build_self_draft(form_data, normalized_display_name)
@@ -1698,6 +1797,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         create_type=normalized_create_type,
         create_mode=normalized_create_mode,
         input_mode=normalized_input_mode,
+        family_subtype=family_subtype if normalized_create_type == "family_companion" else "",
         input_modes=normalized_input_modes or ([normalized_input_mode] if normalized_input_mode else []),
         group=normalized_group,
         schema_key=normalized_schema_key,
@@ -1716,6 +1816,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "expression": content["expression"],
         "guardrails": content["guardrails"],
         "relationship_type": content.get("relationship_type", ""),
+        "family_subtype": content.get("family_subtype", ""),
         "raw_materials": content.get("raw_materials"),
         "emotion_rules": content.get("emotion_rules"),
         "self_persona_unified": content.get("self_persona_unified"),

@@ -2,17 +2,40 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import patch
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from app.core.database import SessionLocal
 from app.models.created_persona import CreatedPersona
+from app.models.user import User
 from main import app
 
 
 class MySeedsTests(unittest.TestCase):
+    def _register_test_user(self, client: TestClient, prefix: str) -> tuple[dict[str, object], dict[str, str]]:
+        token_suffix = uuid4().hex[:10]
+        payload = {
+            "username": f"{prefix}_{token_suffix}",
+            "email": f"{prefix}_{token_suffix}@example.com",
+            "password": "Aa12345678",
+        }
+        response = client.post("/persona-api/auth/register", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        headers = {"Authorization": f"Bearer {data['access_token']}"}
+        return data["user"], headers
+
+    def _cleanup_user(self, user_id: int | None) -> None:
+        if user_id is None:
+            return
+        with SessionLocal() as db:
+            db.query(User).filter(User.id == user_id).delete()
+            db.commit()
+
     def test_my_seeds_round_trip_persists_and_loads_same_payload(self):
         created_id: int | None = None
+        user_id: int | None = None
 
         payload = {
             "create_type": "self_unified",
@@ -42,12 +65,15 @@ class MySeedsTests(unittest.TestCase):
 
         try:
             with TestClient(app) as client:
+                user, headers = self._register_test_user(client, "my-seeds-self")
+                user_id = int(user["id"])
                 draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
                 self.assertEqual(draft_response.status_code, 200)
                 draft = draft_response.json()["draft"]
 
                 save_response = client.post(
                     "/persona-api/my-seeds",
+                    headers=headers,
                     json={
                         "draft": draft,
                         "source_type": "create_wizard",
@@ -57,12 +83,12 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(save_response.status_code, 200)
                 saved = save_response.json()
                 created_id = saved["id"]
-                list_response = client.get("/persona-api/my-seeds")
+                list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
                 seeds = list_response.json()
                 self.assertTrue(any(item["id"] == created_id for item in seeds))
 
-                detail_response = client.get(f"/persona-api/my-seeds/{created_id}")
+                detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
                 detail = detail_response.json()
                 self.assertEqual(detail["id"], created_id)
@@ -73,7 +99,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("self_persona_unified", detail["draft_payload"])
                 self.assertEqual(detail["draft_payload"]["profile"], draft["profile"])
 
-                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
@@ -88,6 +114,7 @@ class MySeedsTests(unittest.TestCase):
                     }
                     chat_response = client.post(
                         "/persona-api/chat",
+                        headers=headers,
                         json={
                             "persona_slug": saved["slug"],
                             "session_id": None,
@@ -104,9 +131,11 @@ class MySeedsTests(unittest.TestCase):
                 with SessionLocal() as db:
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
                     db.commit()
+            self._cleanup_user(user_id)
 
     def test_family_companion_seed_round_trip_persists_and_chats(self):
         created_id: int | None = None
+        user_id: int | None = None
 
         payload = {
             "create_type": "family_companion",
@@ -148,12 +177,15 @@ class MySeedsTests(unittest.TestCase):
 
         try:
             with TestClient(app) as client:
+                user, headers = self._register_test_user(client, "my-seeds-family")
+                user_id = int(user["id"])
                 draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
                 self.assertEqual(draft_response.status_code, 200)
                 draft = draft_response.json()["draft"]
 
                 save_response = client.post(
                     "/persona-api/my-seeds",
+                    headers=headers,
                     json={
                         "draft": draft,
                         "source_type": "create_wizard",
@@ -165,12 +197,12 @@ class MySeedsTests(unittest.TestCase):
                 created_id = saved["id"]
                 self.assertIn("family-notes.txt", saved["summary"])
 
-                list_response = client.get("/persona-api/my-seeds")
+                list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
                 seeds = list_response.json()
                 self.assertTrue(any(item["id"] == created_id for item in seeds))
 
-                detail_response = client.get(f"/persona-api/my-seeds/{created_id}")
+                detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
                 detail = detail_response.json()
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
@@ -218,7 +250,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
-                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
@@ -233,6 +265,7 @@ class MySeedsTests(unittest.TestCase):
                     }
                     chat_response = client.post(
                         "/persona-api/chat",
+                        headers=headers,
                         json={
                             "persona_slug": saved["slug"],
                             "session_id": None,
@@ -248,10 +281,12 @@ class MySeedsTests(unittest.TestCase):
             if created_id is not None:
                 with SessionLocal() as db:
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
-                db.commit()
+                    db.commit()
+            self._cleanup_user(user_id)
 
     def test_reunion_persona_seed_round_trip_persists_and_chats(self):
         created_id: int | None = None
+        user_id: int | None = None
 
         payload = {
             "create_type": "reunion_persona",
@@ -295,12 +330,15 @@ class MySeedsTests(unittest.TestCase):
 
         try:
             with TestClient(app) as client:
+                user, headers = self._register_test_user(client, "my-seeds-reunion")
+                user_id = int(user["id"])
                 draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
                 self.assertEqual(draft_response.status_code, 200)
                 draft = draft_response.json()["draft"]
 
                 save_response = client.post(
                     "/persona-api/my-seeds",
+                    headers=headers,
                     json={
                         "draft": draft,
                         "source_type": "create_wizard",
@@ -311,12 +349,12 @@ class MySeedsTests(unittest.TestCase):
                 saved = save_response.json()
                 created_id = saved["id"]
 
-                list_response = client.get("/persona-api/my-seeds")
+                list_response = client.get("/persona-api/my-seeds", headers=headers)
                 self.assertEqual(list_response.status_code, 200)
                 seeds = list_response.json()
                 self.assertTrue(any(item["id"] == created_id for item in seeds))
 
-                detail_response = client.get(f"/persona-api/my-seeds/{created_id}")
+                detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
                 detail = detail_response.json()
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "reunion_persona")
@@ -325,7 +363,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
-                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
@@ -340,6 +378,7 @@ class MySeedsTests(unittest.TestCase):
                     }
                     chat_response = client.post(
                         "/persona-api/chat",
+                        headers=headers,
                         json={
                             "persona_slug": saved["slug"],
                             "session_id": None,
@@ -355,10 +394,12 @@ class MySeedsTests(unittest.TestCase):
             if created_id is not None:
                 with SessionLocal() as db:
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
-                db.commit()
+                    db.commit()
+            self._cleanup_user(user_id)
 
     def test_intimate_companion_seed_round_trip_persists_and_chats(self):
         created_id: int | None = None
+        user_id: int | None = None
 
         payload = {
             "create_type": "intimate_companion",
@@ -402,12 +443,15 @@ class MySeedsTests(unittest.TestCase):
 
         try:
             with TestClient(app) as client:
+                user, headers = self._register_test_user(client, "my-seeds-intimate")
+                user_id = int(user["id"])
                 draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
                 self.assertEqual(draft_response.status_code, 200)
                 draft = draft_response.json()["draft"]
 
                 save_response = client.post(
                     "/persona-api/my-seeds",
+                    headers=headers,
                     json={
                         "draft": draft,
                         "source_type": "create_wizard",
@@ -418,7 +462,7 @@ class MySeedsTests(unittest.TestCase):
                 saved = save_response.json()
                 created_id = saved["id"]
 
-                detail_response = client.get(f"/persona-api/my-seeds/{created_id}")
+                detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
                 self.assertEqual(detail_response.status_code, 200)
                 detail = detail_response.json()
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "intimate_companion")
@@ -427,7 +471,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
 
-                persona_response = client.get(f"/persona-api/personas/{saved['slug']}")
+                persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
@@ -442,6 +486,7 @@ class MySeedsTests(unittest.TestCase):
                     }
                     chat_response = client.post(
                         "/persona-api/chat",
+                        headers=headers,
                         json={
                             "persona_slug": saved["slug"],
                             "session_id": None,
@@ -458,6 +503,7 @@ class MySeedsTests(unittest.TestCase):
                 with SessionLocal() as db:
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
                     db.commit()
+            self._cleanup_user(user_id)
 
 
 if __name__ == "__main__":

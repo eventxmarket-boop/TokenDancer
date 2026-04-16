@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.deps import get_db
+from app.deps import get_db, get_optional_current_user
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -25,13 +25,18 @@ router = APIRouter()
 
 
 @router.post("/persona-api/chat", response_model=ChatResponse)
-async def persona_chat(payload: ChatRequest, db: Session = Depends(get_db)):
+async def persona_chat(
+    payload: ChatRequest,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         return await chat_with_persona(
             persona_slug=payload.persona_slug,
             session_id=payload.session_id,
             user_message=payload.message,
             db=db,
+            user_id=current_user.id if current_user else None,
         )
     except PersonaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -44,26 +49,38 @@ async def persona_chat(payload: ChatRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/persona-api/sessions/{session_id}/clear", response_model=ChatSessionClearResponse)
-def persona_chat_clear(session_id: str, db: Session = Depends(get_db)):
+def persona_chat_clear(
+    session_id: str,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        new_session_id = clear_chat_session(db, session_id)
+        new_session_id = clear_chat_session(db, session_id, user_id=current_user.id if current_user else None)
     except ChatServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ChatSessionClearResponse(session_id=new_session_id)
 
 
 @router.get("/persona-api/sessions/recent", response_model=list[RecentSessionSummary])
-def persona_recent_sessions(limit: int = 10, db: Session = Depends(get_db)):
+def persona_recent_sessions(
+    limit: int = 10,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        return get_recent_chat_sessions(db, limit=limit)
+        return get_recent_chat_sessions(db, limit=limit, user_id=current_user.id if current_user else None)
     except ChatServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/persona-api/sessions/{session_id}", response_model=ChatSessionDetailResponse)
-def persona_chat_session_detail(session_id: str, db: Session = Depends(get_db)):
+def persona_chat_session_detail(
+    session_id: str,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        session = get_chat_session_detail(db, session_id)
+        session = get_chat_session_detail(db, session_id, user_id=current_user.id if current_user else None)
     except ChatServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -73,9 +90,13 @@ def persona_chat_session_detail(session_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/persona-api/personas/{slug}/latest-session", response_model=ChatSessionDetailResponse)
-def persona_latest_session(slug: str, db: Session = Depends(get_db)):
+def persona_latest_session(
+    slug: str,
+    current_user = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        session = get_latest_chat_session_for_persona(db, slug)
+        session = get_latest_chat_session_for_persona(db, slug, user_id=current_user.id if current_user else None)
     except ChatServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

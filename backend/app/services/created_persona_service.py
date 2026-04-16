@@ -43,6 +43,12 @@ _INTIMATE_MODE_LABELS = {
     "past_relation_mirror": "过去关系 / 自我镜像",
 }
 
+_FAMILY_SUBTYPE_LABELS = {
+    "mother": "妈妈",
+    "parents": "父母",
+    "other_family": "其他家人",
+}
+
 
 def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
@@ -80,6 +86,11 @@ def _excerpt_text(value: Any, limit: int = 48) -> str:
     if not text:
         return ""
     return text[:limit]
+
+
+def _family_subtype_label(value: Any) -> str:
+    subtype = _normalize_text(value)
+    return _FAMILY_SUBTYPE_LABELS.get(subtype, subtype)
 
 
 def _material_summary_from_raw_materials(raw_materials: Any) -> str:
@@ -160,6 +171,14 @@ def _normalize_persona_type(value: Any) -> str:
     if persona_type in _SELF_UNIFIED_ALIASES:
         return "self_unified"
     return persona_type
+
+
+def _normalize_user_id(value: Any) -> int | None:
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError):
+        return None
+    return normalized if normalized > 0 else None
 
 
 def _build_slug(seed_name: str, persona_type: str) -> str:
@@ -254,6 +273,11 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         emotion_rules = getattr(draft, "emotion_rules", None)
         raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         emotion_rules_summary = _emotion_rules_summary(emotion_rules)
+        family_subtype = _normalize_text(
+            getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")
+        )
+        family_subtype_label = _family_subtype_label(family_subtype)
+        top_name = _normalize_text(getattr(draft.meta, "name", ""))
         profile_name = _normalize_text(profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", ""))
         relationship_type = _normalize_text(
             profile.get("relationship_type") if isinstance(profile, dict) else getattr(profile, "relationship_type", "")
@@ -268,7 +292,7 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             memories.extend(_clean_lines(memory.get("text_materials")))
             memories.extend(_clean_lines(memory.get("image_notes")))
             memories.extend(_clean_lines(memory.get("voice_notes")))
-        summary_parts = [part for part in [profile_name, relationship_type, tone] if part]
+        summary_parts = [part for part in [top_name, family_subtype_label or relationship_type, tone] if part]
         if raw_materials_summary:
             summary_parts.append(raw_materials_summary)
         if emotion_rules_summary:
@@ -335,9 +359,11 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
     draft = _load_draft_payload(record.draft_payload)
     return {
         "id": record.id,
+        "user_id": record.user_id,
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
+        "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "summary": record.summary,
         "status": record.status,
         "source_type": record.source_type,
@@ -348,11 +374,14 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
 
 
 def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
+    draft = _load_draft_payload(record.draft_payload)
     return {
         "id": record.id,
+        "user_id": record.user_id,
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
+        "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "summary": record.summary,
         "status": record.status,
         "source_type": record.source_type,
@@ -368,16 +397,23 @@ def save_created_persona(
     record_id: int | None = None,
     source_type: str = "create_wizard",
     status: str = "saved",
+    user_id: int | None = None,
 ) -> dict[str, Any]:
     normalized_source_type = _normalize_text(source_type) or "create_wizard"
     normalized_status = _normalize_text(status) or "saved"
+    normalized_user_id = _normalize_user_id(user_id)
     persona_type = _normalize_persona_type(draft.meta.create_type)
     name = _normalize_text(draft.meta.name) or "未命名 Seed"
     summary = _build_summary(draft)
     stored_draft = CreateWizardDraft.model_validate(draft.model_dump())
 
     if record_id is not None:
-        record = db.query(CreatedPersona).filter(CreatedPersona.id == record_id).first()
+        query = db.query(CreatedPersona).filter(CreatedPersona.id == record_id)
+        if normalized_user_id is not None:
+            query = query.filter(
+                (CreatedPersona.user_id == normalized_user_id) | (CreatedPersona.user_id.is_(None))
+            )
+        record = query.first()
         if record is None:
             raise CreatedPersonaNotFoundError(f"Created persona not found: {record_id}")
         stored_draft.meta.slug = record.slug
@@ -387,6 +423,8 @@ def save_created_persona(
         record.draft_payload = _dump_draft(stored_draft)
         record.source_type = normalized_source_type
         record.status = normalized_status
+        if normalized_user_id is not None:
+            record.user_id = normalized_user_id
         db.flush()
         db.refresh(record)
         return _serialize_record(record)
@@ -394,6 +432,7 @@ def save_created_persona(
     slug = _build_slug(name or draft.meta.slug or "seed", persona_type)
     stored_draft.meta.slug = slug
     record = CreatedPersona(
+        user_id=normalized_user_id,
         slug=slug,
         name=name,
         persona_type=persona_type,
@@ -408,34 +447,62 @@ def save_created_persona(
     return _serialize_record(record)
 
 
-def list_created_personas(db: Session) -> list[dict[str, Any]]:
-    records = (
-        db.query(CreatedPersona)
-        .order_by(CreatedPersona.updated_at.desc(), CreatedPersona.created_at.desc())
-        .all()
-    )
+def list_created_personas(db: Session, user_id: int | None = None) -> list[dict[str, Any]]:
+    normalized_user_id = _normalize_user_id(user_id)
+    if normalized_user_id is None:
+        return []
+
+    query = db.query(CreatedPersona)
+    query = query.filter(CreatedPersona.user_id == normalized_user_id)
+    records = query.order_by(CreatedPersona.updated_at.desc(), CreatedPersona.created_at.desc()).all()
     return [_serialize_summary(record) for record in records]
 
 
-def get_created_persona(db: Session, record_id: int) -> dict[str, Any] | None:
-    record = db.query(CreatedPersona).filter(CreatedPersona.id == record_id).first()
+def get_created_persona(
+    db: Session,
+    record_id: int,
+    user_id: int | None = None,
+) -> dict[str, Any] | None:
+    normalized_user_id = _normalize_user_id(user_id)
+    if normalized_user_id is None:
+        return None
+
+    query = db.query(CreatedPersona).filter(CreatedPersona.id == record_id)
+    query = query.filter(CreatedPersona.user_id == normalized_user_id)
+    record = query.first()
     if record is None:
         return None
     return _serialize_record(record)
 
 
-def get_created_persona_by_slug(db: Session, slug: str) -> dict[str, Any] | None:
+def get_created_persona_by_slug(db: Session, slug: str, user_id: int | None = None) -> dict[str, Any] | None:
     normalized_slug = _normalize_text(slug)
     if not normalized_slug:
         return None
-    record = db.query(CreatedPersona).filter(CreatedPersona.slug == normalized_slug).first()
+    normalized_user_id = _normalize_user_id(user_id)
+    if normalized_user_id is None:
+        return None
+
+    query = db.query(CreatedPersona).filter(CreatedPersona.slug == normalized_slug)
+    query = query.filter(CreatedPersona.user_id == normalized_user_id)
+    record = query.first()
     if record is None:
         return None
     return _serialize_record(record)
 
 
-def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | None:
-    record = db.query(CreatedPersona).filter(CreatedPersona.slug == _normalize_text(slug)).first()
+def load_created_persona_summary(
+    db: Session,
+    slug: str,
+    user_id: int | None = None,
+) -> dict[str, Any] | None:
+    normalized_user_id = _normalize_user_id(user_id)
+    if normalized_user_id is None:
+        return None
+
+    query = db.query(CreatedPersona).filter(CreatedPersona.slug == _normalize_text(slug))
+    query = query.filter(CreatedPersona.user_id == normalized_user_id)
+    record = query.first()
     if record is None:
         return None
 
@@ -489,8 +556,18 @@ def load_created_persona_summary(db: Session, slug: str) -> dict[str, Any] | Non
     }
 
 
-def load_created_persona_skill(db: Session, slug: str) -> dict[str, Any] | None:
-    record = db.query(CreatedPersona).filter(CreatedPersona.slug == _normalize_text(slug)).first()
+def load_created_persona_skill(
+    db: Session,
+    slug: str,
+    user_id: int | None = None,
+) -> dict[str, Any] | None:
+    normalized_user_id = _normalize_user_id(user_id)
+    if normalized_user_id is None:
+        return None
+
+    query = db.query(CreatedPersona).filter(CreatedPersona.slug == _normalize_text(slug))
+    query = query.filter(CreatedPersona.user_id == normalized_user_id)
+    record = query.first()
     if record is None:
         return None
     draft = _load_draft_payload(record.draft_payload)

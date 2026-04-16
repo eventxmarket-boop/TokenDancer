@@ -22,6 +22,7 @@ import {
   saveMySeed,
   type CreatedPersonaRecord,
 } from '@/services/createdPersonaService'
+import { isLoggedIn } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -707,6 +708,13 @@ async function persistToBackend() {
 }
 
 async function saveDraft() {
+  if (!isLoggedIn.value) {
+    persistEditedDraft()
+    notice.value = '请先登录后再保存到“我创建的 Seed”'
+    await router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+
   saving.value = true
   notice.value = ''
 
@@ -730,6 +738,16 @@ function persistEditedDraft() {
   saveLatestDraft(snapshot)
 }
 
+function isAuthRequiredError(message: string) {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('认证') ||
+    normalized.includes('token') ||
+    normalized.includes('登录') ||
+    normalized.includes('authorization')
+  )
+}
+
 async function loadFromSeed(seedId: number) {
   const record = await loadMySeed(seedId)
   if (!record) {
@@ -747,10 +765,19 @@ async function loadFromSeed(seedId: number) {
 async function loadInitialDraft() {
   const querySeedId = Number(route.query.seed_id || 0)
   if (querySeedId > 0) {
-    const restored = await loadFromSeed(querySeedId)
-    if (restored) {
-      loading.value = false
-      return
+    try {
+      const restored = await loadFromSeed(querySeedId)
+      if (restored) {
+        loading.value = false
+        return
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : ''
+      if (isAuthRequiredError(message)) {
+        await router.push({ path: '/login', query: { redirect: route.fullPath } })
+        return
+      }
+      notice.value = message || '加载保存结果失败'
     }
   }
 

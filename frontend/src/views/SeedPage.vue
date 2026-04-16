@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { loadSeedPersonas, type Persona } from '@/services/personaService'
-import { getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
+import { getFavoriteScopeKey, getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
+import { authUser } from '@/stores/auth'
 
 const loading = ref(true)
 const error = ref('')
 const seedPersonas = ref<Persona[]>([])
-const favoriteSlugs = ref<string[]>(getFavoriteSlugs())
 const listSectionRef = ref<HTMLElement | null>(null)
 const featuredSectionRef = ref<HTMLElement | null>(null)
 const groupSectionRef = ref<HTMLElement | null>(null)
 const featuredExpanded = ref(false)
+const favoriteScopeKey = computed(() => getFavoriteScopeKey(authUser.value?.id ?? null))
+const favoriteSlugs = ref<string[]>(getFavoriteSlugs(favoriteScopeKey.value))
 
 const displayLabelMap: Record<string, string> = {
-  self: '我的人格',
+  self: '自我主线',
   source: '从资料创建',
   work: '职场关系',
   intimate: '亲密关系',
@@ -27,7 +29,7 @@ const displayLabelMap: Record<string, string> = {
 }
 
 const refreshFavorites = () => {
-  favoriteSlugs.value = getFavoriteSlugs()
+  favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
 }
 
 const loadSeeds = async () => {
@@ -97,12 +99,16 @@ const toggleFeaturedPreview = async () => {
 }
 
 const toggleFavorite = (slug: string) => {
-  toggleFavoriteSlug(slug)
+  toggleFavoriteSlug(slug, favoriteScopeKey.value)
   refreshFavorites()
 }
 
 onMounted(() => {
   void loadSeeds()
+})
+
+watch(favoriteScopeKey, () => {
+  refreshFavorites()
 })
 </script>
 

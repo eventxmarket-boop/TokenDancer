@@ -11,6 +11,9 @@ import AdminPage from '@/views/AdminPage.vue'
 import RecentSessionsPage from '@/views/RecentSessionsPage.vue'
 import MySeedsPage from '@/views/MySeedsPage.vue'
 import MePage from '@/views/MePage.vue'
+import LoginPage from '@/views/LoginPage.vue'
+import RegisterPage from '@/views/RegisterPage.vue'
+import { ensureAuthReady, isLoggedIn } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,7 +24,19 @@ const router = createRouter({
       path: '/favorites',
       name: 'favorites',
       component: FavoritesPage,
-      meta: { title: '收藏人格' },
+      meta: { title: '收藏人格', requiresAuth: true },
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginPage,
+      meta: { title: '登录' },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterPage,
+      meta: { title: '注册' },
     },
     {
       path: '/create',
@@ -57,13 +72,13 @@ const router = createRouter({
       path: '/sessions',
       name: 'sessions',
       component: RecentSessionsPage,
-      meta: { title: '最近会话' },
+      meta: { title: '最近会话', requiresAuth: true },
     },
     {
       path: '/my-seeds',
       name: 'my-seeds',
       component: MySeedsPage,
-      meta: { title: '我创建的 Seed' },
+      meta: { title: '我创建的 Seed', requiresAuth: true },
     },
     { path: '/me', name: 'me', component: MePage, meta: { title: '个人中心' } },
     { path: '/admin', name: 'admin', component: AdminPage, meta: { title: '后台设置' } },
@@ -72,6 +87,25 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   },
+})
+
+router.beforeEach(async (to) => {
+  await ensureAuthReady()
+
+  const requiresAuth = to.matched.some((record) => Boolean(record.meta.requiresAuth))
+  if (requiresAuth && !isLoggedIn.value) {
+    return {
+      path: '/login',
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
+
+  if ((to.name === 'login' || to.name === 'register') && isLoggedIn.value) {
+    const redirect = String(to.query.redirect || '').trim()
+    return redirect || '/me'
+  }
 })
 
 router.afterEach((to) => {

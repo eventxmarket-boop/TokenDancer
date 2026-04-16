@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.34 - 2026-04-16
+
+- Added the minimal auth closure with login and register pages.
+- Added JWT-backed register/login/me endpoints and frontend auth-state persistence.
+- Protected user-scoped pages so My Seeds, Favorites, and Sessions resolve against the signed-in user.
+- Kept the create-to-save flow redirecting to login when the user tries to persist a seed while signed out.
+
 ## V1.4.33 - 2026-04-16
 
 - Fixed the frontend type definitions so family companion `family_subtype` is accepted by the create wizard and my-seeds / result surfaces.

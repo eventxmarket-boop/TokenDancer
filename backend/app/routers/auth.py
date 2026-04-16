@@ -39,7 +39,7 @@ def _validate_password(password: str) -> None:
 
 # ---- Auth routes ----
 
-@router.post("/register", response_model=UserRead)
+@router.post("/register", response_model=TokenResponse)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
     """用户注册（限流 + 密码强度校验）。"""
     rate_limit(f"register:{data.email}", settings.RATE_LIMIT_REGISTER)
@@ -50,13 +50,13 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         raise
 
     try:
-        user = auth_service.register(data, db)
-        logger.info(f"New user registered: {user.email}")
+        result = auth_service.register(data, db)
+        logger.info(f"New user registered: {result.user.email}")
         try:
-            email_service.send_welcome(user.email, user.username)
+            email_service.send_welcome(result.user.email, result.user.username)
         except Exception as e:
             logger.warning(f"Welcome email failed: {e}")
-        return user
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -64,20 +64,21 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     """用户登录（限流 + 登录失败冷却）。"""
-    rate_limit(f"login:{data.email}", settings.RATE_LIMIT_LOGIN)
-    check_login_cooldown(data.email)
+    identity = data.username_or_email.strip()
+    rate_limit(f"login:{identity}", settings.RATE_LIMIT_LOGIN)
+    check_login_cooldown(identity)
 
     try:
         result = auth_service.login(data, db)
-        auth_service.after_login_success(data.email)
-        logger.info(f"User logged in: {data.email}")
+        auth_service.after_login_success(identity)
+        logger.info(f"User logged in: {identity}")
         return result
     except ValueError as e:
         from app.deps import _login_tracker
-        _login_tracker.record_failure(data.email)
-        logger.warning(f"Failed login for {data.email}")
+        _login_tracker.record_failure(identity)
+        logger.warning(f"Failed login for {identity}")
         # Always return same message to avoid email enumeration
-        raise HTTPException(status_code=401, detail="邮箱或密码错误")
+        raise HTTPException(status_code=401, detail="用户名、邮箱或密码错误")
 
 
 @router.get("/me", response_model=UserRead)
