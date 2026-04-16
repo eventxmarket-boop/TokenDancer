@@ -51,6 +51,12 @@ const inputModeLabels: Record<string, string> = {
   past_relation_mirror: '过去关系 / 自我镜像',
 }
 
+const familySubtypeLabels: Record<string, string> = {
+  mother: '妈妈',
+  parents: '父母',
+  other_family: '其他家人',
+}
+
 const editableDraft = reactive<CreateWizardDraft>({
   meta: {
     id: '',
@@ -63,6 +69,7 @@ const editableDraft = reactive<CreateWizardDraft>({
     create_type: '',
     create_mode: '',
     input_mode: '',
+    family_subtype: '',
     input_modes: [],
     group: '',
     schema_key: '',
@@ -108,7 +115,7 @@ const typeLabel = computed(() => {
 
   const type = draft.value.meta.create_type
   if (type === 'self_unified') {
-    return '我的人格'
+    return '自我主线'
   }
   if (type === 'source_persona') {
     return '从资料创建'
@@ -123,6 +130,14 @@ const typeLabel = computed(() => {
     return '亲密关系'
   }
   return '关系人格'
+})
+
+const displayDraftName = computed(() => {
+  const name = normalizeText(editableDraft.meta.name)
+  if (draft.value?.meta.create_type === 'self_unified' && (!name || name === '我的人格')) {
+    return '自我主线'
+  }
+  return name
 })
 
 const inputModeLabel = computed(() => {
@@ -147,6 +162,30 @@ const familyPersonaProfile = computed<FamilyCompanionPersonaProfile | null>(() =
     return null
   }
   return payload
+})
+
+const familySubtypeLabel = computed(() => {
+  const subtype = normalizeText(
+    (draft.value as Record<string, unknown> | null)?.family_subtype ||
+      (draft.value?.meta as Record<string, unknown> | undefined)?.family_subtype ||
+      (editableDraft as Record<string, unknown>)?.family_subtype,
+  )
+  if (subtype) {
+    return familySubtypeLabels[subtype] || subtype
+  }
+  const relationshipType = normalizeText(familyPersonaProfile.value?.relationship_type)
+  if (relationshipType) {
+    if (relationshipType.includes('妈')) {
+      return '妈妈'
+    }
+    if (relationshipType.includes('父')) {
+      return '父母'
+    }
+    if (relationshipType.includes('家')) {
+      return '其他家人'
+    }
+  }
+  return ''
 })
 
 function normalizeText(value: unknown) {
@@ -265,6 +304,12 @@ const familyMaterialSummaryLines = computed(() => {
   const rawMaterials = familyRawMaterials.value
   const documents = normalizeDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_text_documents)
   return [
+    {
+      label: '子类型侧重',
+      value:
+        familySubtypeLabel.value ||
+        (normalizeText((draft.value as Record<string, unknown> | null)?.family_subtype) || '妈妈'),
+    },
     {
       label: '聊天记录摘要',
       value:
@@ -592,6 +637,13 @@ const intimateMemoryLines = computed(() => {
 
 function applyDraft(nextDraft: CreateWizardDraft) {
   const snapshot = cloneDraft(nextDraft)
+  if (
+    snapshot.meta.create_type === 'self_unified' &&
+    (!String(snapshot.meta.name || '').trim() || String(snapshot.meta.name || '').trim() === '我的人格')
+  ) {
+    snapshot.meta.name = '自我主线'
+    snapshot.meta.display_name = '自我主线'
+  }
   draft.value = snapshot
   Object.assign(editableDraft, snapshot)
 }
@@ -733,7 +785,10 @@ onMounted(() => {
 
       <div class="hero-metrics">
         <span class="metric-chip"><strong>{{ typeLabel }}</strong><span>人格类型</span></span>
-        <span class="metric-chip"><strong>{{ editableDraft.meta.name || '未命名' }}</strong><span>结果名称</span></span>
+        <span v-if="draft?.meta.create_type === 'family_companion' && familySubtypeLabel" class="metric-chip">
+          <strong>{{ familySubtypeLabel }}</strong><span>家人子类型</span>
+        </span>
+        <span class="metric-chip"><strong>{{ displayDraftName || '未命名' }}</strong><span>结果名称</span></span>
         <span class="metric-chip"><strong>{{ savedSeedLabel }}</strong><span>保存状态</span></span>
       </div>
 
@@ -768,7 +823,7 @@ onMounted(() => {
           <div class="draft-card__head">
             <div>
               <p class="eyebrow">结果身份</p>
-              <h3>{{ editableDraft.meta.name }}</h3>
+              <h3>{{ displayDraftName }}</h3>
             </div>
             <span class="status-pill">{{ typeLabel }}</span>
           </div>
@@ -789,7 +844,7 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
-          <p class="eyebrow">人格层</p>
+          <p class="eyebrow">人格层 · {{ familySubtypeLabel || '妈妈' }}</p>
           <div class="family-grid">
             <div v-for="line in familyProfileLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
@@ -799,7 +854,7 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
-          <p class="eyebrow">记忆层</p>
+          <p class="eyebrow">记忆层 · {{ familySubtypeLabel || '妈妈' }}</p>
           <div class="family-grid">
             <div v-for="line in familyMemoryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
@@ -809,7 +864,7 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
-          <p class="eyebrow">情绪规则</p>
+          <p class="eyebrow">情绪规则 · {{ familySubtypeLabel || '妈妈' }}</p>
           <div class="family-grid">
             <div v-for="line in familyEmotionLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
@@ -819,7 +874,7 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'family_companion'" class="draft-card">
-          <p class="eyebrow">材料提炼摘要</p>
+          <p class="eyebrow">材料提炼摘要 · {{ familySubtypeLabel || '妈妈' }}</p>
           <h3>已基于输入材料生成记忆库</h3>
           <p class="state-copy">系统已经把聊天记录、回忆笔记、文本材料和上传文件提炼成可继续聊天的记忆层。</p>
           <div class="family-grid">

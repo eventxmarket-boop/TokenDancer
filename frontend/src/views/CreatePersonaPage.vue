@@ -51,17 +51,17 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'family',
     title: '家人陪伴',
-    description: '从熟悉的关心方式、说话方式和记忆片段中开始，也可进入重逢人格。',
+    description: '从熟悉的关心方式、说话方式和记忆片段中开始，进入后再选妈妈、父母或其他家人。',
     groupKeys: ['relationship_family'],
   },
 ]
 
 const displayLabelMap: Record<string, string> = {
-  'self-skill': '我的人格',
-  'nuwa-skill': '我的人格',
-  'forge-skill': '我的人格',
-  'digital-life': '我的人格',
-  'self-skill+nuwa-skill+forge-skill+digital-life': '我的人格',
+  'self-skill': '自我主线',
+  'nuwa-skill': '自我主线',
+  'forge-skill': '自我主线',
+  'digital-life': '自我主线',
+  'self-skill+nuwa-skill+forge-skill+digital-life': '自我主线',
   'colleague-skill': '同事',
   'boss-skills': '老板',
   supervisor: '导师',
@@ -280,7 +280,7 @@ function buildWizardQuery(item: CreateCatalogItem) {
     create_type: createType,
     group: item.group,
     source_repo: item.source_repo,
-    display_name: item.name,
+    display_name: createType === 'self_unified' ? '自我主线' : item.name,
     create_mode: createType === 'self_unified' ? 'standard' : '',
     input_mode: getDefaultInputMode(item),
     schema_key: getSchemaKeyForItem(item),
@@ -304,6 +304,19 @@ function collapseSection(sectionKey: MainPathKey) {
 
 function getDisplayLabel(value: string) {
   return displayLabelMap[value] || value.replace(/[_-]+/g, ' ')
+}
+
+function getCardTags(item: CreateCatalogItem) {
+  if (item.create_type === 'family_companion') {
+    return ['家人陪伴']
+  }
+  if (item.create_type === 'reunion_persona') {
+    return ['重逢人格']
+  }
+  if (item.create_type === 'self_unified') {
+    return []
+  }
+  return item.input_modes.map((mode) => getDisplayLabel(mode))
 }
 
 function startCreation(item: CreateCatalogItem) {
@@ -415,7 +428,7 @@ onMounted(() => {
                 <article v-if="section.key === 'self'" class="create-card create-card--compact create-card--single">
                   <div class="create-card__head">
                     <div>
-                      <h4>我的人格</h4>
+                      <h4>开始创建</h4>
                     </div>
                   </div>
 
@@ -449,8 +462,8 @@ onMounted(() => {
                   <p class="create-card__copy">{{ item.description }}</p>
 
                   <div class="tag-row">
-                    <span v-for="mode in item.input_modes" :key="mode" class="tag-chip">
-                      {{ getDisplayLabel(mode) }}
+                    <span v-for="tag in getCardTags(item)" :key="tag" class="tag-chip">
+                      {{ tag }}
                     </span>
                   </div>
 

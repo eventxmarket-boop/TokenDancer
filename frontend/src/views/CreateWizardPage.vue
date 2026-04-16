@@ -36,6 +36,14 @@ const selectedSourceRepo = ref('')
 const selectedSchemaKey = ref('')
 const isBootstrapping = ref(false)
 
+function normalizeSelfUnifiedDisplayName(value: unknown) {
+  const text = String(value || '').trim()
+  if (!text || text === '我的人格') {
+    return '自我主线'
+  }
+  return text
+}
+
 const formState = reactive({
   name: '',
   create_mode: 'standard',
@@ -94,7 +102,7 @@ const formState = reactive({
 const typeCards = [
   {
     type: 'self_unified' as const,
-    title: '我的人格',
+    title: '自我主线',
     description: '先把做事方式、回复方式、思考路径和生活痕迹整理出来。',
     hint: '从自己开始',
   },
@@ -345,7 +353,7 @@ const familyVoiceNotesText = computed({
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
-    return '我的人格'
+    return '自我主线'
   }
   if (createType.value === 'source_persona') {
     return '从资料创建'
@@ -527,7 +535,7 @@ function getDefaultSourceRepoForType(type: CreateType) {
 
 function getDefaultDisplayNameForType(type: CreateType) {
   if (type === 'self_unified') {
-    return '我的人格'
+    return '自我主线'
   }
   if (type === 'source_persona') {
     return '资料人格'
@@ -813,6 +821,69 @@ function getRelationshipLabel(mode: string) {
   )
 }
 
+function getFamilySubtypePreset(mode: string) {
+  if (mode === 'parents') {
+    return {
+      relationshipType: '父母',
+      personaName: '父母',
+      speechStyle: '更稳、更完整，带家庭整体视角。',
+      catchphrases: '先稳住\n我们一起想办法\n慢慢来',
+      comfortStyle: '先稳住情绪，再给更完整的家庭建议。',
+      celebrationStyle: '先一起高兴，再顺着把家里的安排和共识说完整。',
+      sharedEvents: '家庭一起经历的重要时刻\n成长过程里的大事',
+      importantAdvice: '先看现实条件\n先把家庭安排稳住',
+      dailyHabits: '会提醒你注意整体安排\n会关心你的成长进度',
+      emotionalTriggers: '家庭压力\n成长选择\n重要决定',
+      relationBoundaries: '更偏家庭整体关心，不替你做决定。',
+      chatHistorySummary: '把父母整体关心、提醒和建议先整理出来。',
+      memoryFragments: '家庭共同记忆\n成长过程里的关键片段',
+      textMaterials: '家庭说明\n家书材料',
+      imageNotes: '家庭照片 / 截图说明',
+      voiceNotes: '家庭语音提醒',
+    }
+  }
+
+  if (mode === 'other_family') {
+    return {
+      relationshipType: '其他家人',
+      personaName: '其他家人',
+      speechStyle: '温和、自然、通用家庭陪伴感。',
+      catchphrases: '慢慢说\n我在呢\n先别急',
+      comfortStyle: '先接住情绪，再给自然的陪伴和提醒。',
+      celebrationStyle: '先替你高兴，再顺着把好消息说完整。',
+      sharedEvents: '一起经历过的小事\n家里常见的互动',
+      importantAdvice: '保持联系\n照顾好自己',
+      dailyHabits: '会问候你近况\n会留意你的状态',
+      emotionalTriggers: '日常压力\n家庭琐事\n需要陪伴',
+      relationBoundaries: '保持亲近感，也保留合适边界。',
+      chatHistorySummary: '把其他家人的关心方式和日常互动先整理出来。',
+      memoryFragments: '小事里的关心\n常见互动片段',
+      textMaterials: '家庭便条\n补充说明',
+      imageNotes: '图片 / 截图说明',
+      voiceNotes: '语音说明',
+    }
+  }
+
+  return {
+    relationshipType: '妈妈',
+    personaName: '妈妈',
+    speechStyle: '温和、熟悉、会先接住情绪。',
+    catchphrases: '先别急\n慢慢来\n我在呢',
+    comfortStyle: '先接住情绪，再慢慢安慰，语气更熟悉。',
+    celebrationStyle: '先替你高兴，再顺着把好消息说完整。',
+    sharedEvents: '小时候一起吃饭\n你难过时被安慰',
+    importantAdvice: '先照顾好自己\n遇事先稳住',
+    dailyHabits: '会问你吃饭没\n会提醒你休息',
+    emotionalTriggers: '考试压力\n工作烦心\n好消息分享',
+    relationBoundaries: '不越界，不替你做决定，不伪造没发生过的事。',
+    chatHistorySummary: '把你和家人之间的重要聊天、提醒和记忆先整理出来。',
+    memoryFragments: '聊天记录片段\n共同回忆\n日常关心',
+    textMaterials: '文本材料\n手记内容',
+    imageNotes: '照片 / 截图说明',
+    voiceNotes: '语音片段说明',
+  }
+}
+
 function clearFormState() {
   for (const key of Object.keys(formState) as Array<keyof typeof formState>) {
     formState[key] = ''
@@ -829,7 +900,7 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   intimateUploadedTextDocuments.value = []
 
   if (type === 'self_unified') {
-    formState.name = displayName || '我的人格'
+    formState.name = displayName || '自我主线'
     formState.work_system_summary = '把做事方式整理成可以继续使用的人格骨架。'
     formState.work_system_points = '先看目标\n再看路径\n再看边界'
     formState.reply_persona_summary = '把回复方式整理成更像自己的表达。'
@@ -860,22 +931,23 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   }
 
   if (type === 'family_companion') {
-    formState.relationship_type = getRelationshipLabel(mode) || displayName || '家人陪伴'
-    formState.persona_name = displayName || getRelationshipLabel(mode) || '家人陪伴'
-    formState.speech_style = '温和、熟悉、带一点家里的感觉。'
-    formState.catchphrases = '先别急\n慢慢来\n我在呢'
-    formState.comfort_style = '先接住情绪，再慢慢安慰。'
-    formState.celebration_style = '先替你高兴，再顺着把好消息讲完。'
-    formState.shared_events = '小时候一起吃饭\n你难过时被安慰'
-    formState.important_advice = '先照顾好自己\n遇事先稳住'
-    formState.daily_habits = '会问你吃饭没\n会提醒你休息'
-    formState.emotional_triggers = '考试压力\n工作烦心\n好消息分享'
-    formState.relation_boundaries = '不越界，不替你做决定，不伪造没发生过的事。'
-    formState.chat_history_summary = '把你和家人之间的重要聊天、提醒和记忆先整理出来。'
-    formState.memory_fragments = '聊天记录片段\n共同回忆\n日常关心'
-    formState.text_materials = '文本材料\n手记内容'
-    formState.image_notes = '照片 / 截图说明'
-    formState.voice_notes = '语音片段说明'
+    const preset = getFamilySubtypePreset(mode)
+    formState.relationship_type = preset.relationshipType || getRelationshipLabel(mode) || displayName || '家人陪伴'
+    formState.persona_name = displayName || preset.personaName || getRelationshipLabel(mode) || '家人陪伴'
+    formState.speech_style = preset.speechStyle
+    formState.catchphrases = preset.catchphrases
+    formState.comfort_style = preset.comfortStyle
+    formState.celebration_style = preset.celebrationStyle
+    formState.shared_events = preset.sharedEvents
+    formState.important_advice = preset.importantAdvice
+    formState.daily_habits = preset.dailyHabits
+    formState.emotional_triggers = preset.emotionalTriggers
+    formState.relation_boundaries = preset.relationBoundaries
+    formState.chat_history_summary = preset.chatHistorySummary
+    formState.memory_fragments = preset.memoryFragments
+    formState.text_materials = preset.textMaterials
+    formState.image_notes = preset.imageNotes
+    formState.voice_notes = preset.voiceNotes
   }
 
   if (type === 'reunion_persona') {
@@ -919,7 +991,11 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
 
 function buildEntryDefaults() {
   const createTypeValue = inferCreateTypeFromQuery()
-  const displayName = readQueryValue('display_name') || readQueryValue('name') || getDefaultDisplayNameForType(createTypeValue)
+  const rawDisplayName = readQueryValue('display_name') || readQueryValue('name')
+  const displayName =
+    createTypeValue === 'self_unified'
+      ? getDefaultDisplayNameForType(createTypeValue)
+      : rawDisplayName || getDefaultDisplayNameForType(createTypeValue)
   const createModeValue = readQueryValue('create_mode') as SelfCreateMode || 'standard'
   const schemaKeyFromQuery = readQueryValue('schema_key')
   const inputModeFromQuery = readQueryValue('input_mode')
@@ -946,6 +1022,7 @@ function saveStateSnapshot() {
     createType: createType.value,
     createMode: createMode.value,
     inputMode: inputMode.value,
+    familySubtype: createType.value === 'family_companion' ? inputMode.value : '',
     selfInputModes: selfInputModes.value,
     selectedGroup: selectedGroup.value,
     selectedName: selectedName.value,
@@ -964,6 +1041,7 @@ function loadStateSnapshot() {
     createType?: string
     createMode?: SelfCreateMode
     inputMode?: string
+    familySubtype?: string
     selfInputModes?: string[]
     selectedGroup?: string
     selectedName?: string
@@ -994,13 +1072,19 @@ function loadStateSnapshot() {
   if (snapshot.inputMode) {
     inputMode.value = snapshot.inputMode
   }
+  if (createType.value === 'family_companion' && snapshot.familySubtype) {
+    inputMode.value = snapshot.familySubtype
+  }
 
   if (Array.isArray(snapshot.selfInputModes) && snapshot.selfInputModes.length > 0) {
     selfInputModes.value = snapshot.selfInputModes
   }
 
   selectedGroup.value = snapshot.selectedGroup || selectedGroup.value
-  selectedName.value = snapshot.selectedName || selectedName.value
+  selectedName.value =
+    createType.value === 'self_unified'
+      ? normalizeSelfUnifiedDisplayName(snapshot.selectedName || selectedName.value)
+      : snapshot.selectedName || selectedName.value
   selectedSourceRepo.value = snapshot.selectedSourceRepo || selectedSourceRepo.value
   selectedSchemaKey.value = snapshot.selectedSchemaKey || selectedSchemaKey.value
   if (Array.isArray(snapshot.familyUploadedTextDocuments)) {
@@ -1070,6 +1154,10 @@ function loadStateSnapshot() {
 
   if (snapshot.formState) {
     Object.assign(formState, snapshot.formState)
+  }
+
+  if (createType.value === 'self_unified') {
+    formState.name = normalizeSelfUnifiedDisplayName(formState.name)
   }
 
   return true
@@ -1176,7 +1264,7 @@ function selectInputMode(mode: string) {
   ) {
     if (createType.value === 'family_companion') {
       selectedSourceRepo.value = 'parents-skills+MamaSkill'
-      selectedName.value = getRelationshipLabel(mode) || selectedName.value
+      selectedName.value = selectedName.value || getDefaultDisplayNameForType(createType.value)
     } else if (createType.value === 'reunion_persona') {
       selectedSourceRepo.value = 'reunion-skill'
       selectedName.value = selectedName.value || '重逢人格'
@@ -1283,6 +1371,7 @@ async function generateDraft() {
       display_name: selectedName.value,
       create_mode: createType.value === 'self_unified' ? createMode.value : '',
       input_mode: inputMode.value,
+      family_subtype: createType.value === 'family_companion' ? inputMode.value : '',
       input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
       form_data:
@@ -1379,7 +1468,7 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 1 步</p>
-              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择关系类型') : '选择创建类型' }}</h3>
+              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择子类型') : '选择创建类型' }}</h3>
             </div>
             <p class="section-note">
               {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人。') : '先确认你要从哪里开始创建。' }}
@@ -1463,7 +1552,7 @@ watch(
               <div class="form-grid">
                 <label class="form-field">
                   <span>你怎么称呼他 / 她</span>
-                  <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 爸爸" />
+                  <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 父母 / 其他家人" />
                 </label>
                 <label class="form-field">
                   <span>说话风格</span>

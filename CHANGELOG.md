@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.32 - 2026-04-16
+
+- Unified the visible self-persona display labels across the create flow so the first-load UI no longer reintroduces `我的人格` from query defaults or older saved labels.
+- Normalized self persona display names to `自我主线` in the wizard, result page, and my-seeds surface to keep the entry wording consistent.
+- Kept the first-load cache behavior aligned with the current UI shell and no-cache strategy.
+
 ## V1.4.31 - 2026-04-16
 
 - Fixed the first-load stale UI issue by setting `/persona/` and `/persona/index.html` to `no-store` while keeping hashed assets cacheable.

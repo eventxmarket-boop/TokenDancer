@@ -9,12 +9,26 @@ const error = ref('')
 const seeds = ref<CreatedPersonaSummary[]>([])
 
 const typeLabels: Record<string, string> = {
-  self_unified: '我的人格',
+  self_unified: '自我主线',
   source_persona: '资料',
   relationship_persona: '关系',
   intimate_companion: '亲密关系',
   family_companion: '家人陪伴',
   reunion_persona: '重逢人格',
+}
+
+const familySubtypeLabels: Record<string, string> = {
+  mother: '妈妈',
+  parents: '父母',
+  other_family: '其他家人',
+}
+
+function displaySeedName(seed: CreatedPersonaSummary) {
+  const name = String(seed.name || '').trim()
+  if (normalizePersonaType(seed.persona_type) === 'self_unified' && (!name || name === '我的人格')) {
+    return '自我主线'
+  }
+  return name
 }
 
 function normalizePersonaType(type: string) {
@@ -120,16 +134,19 @@ onMounted(() => {
           <div class="persona-grid">
             <article v-for="seed in group.items" :key="seed.id" class="persona-card persona-card--featured">
               <div class="persona-card__top">
-                <div class="persona-avatar">{{ seed.name.slice(0, 2) }}</div>
+                <div class="persona-avatar">{{ displaySeedName(seed).slice(0, 2) }}</div>
                 <div class="persona-card__meta">
                   <p class="persona-category">{{ group.label }}</p>
-                  <h4>{{ seed.name }}</h4>
+                  <h4>{{ displaySeedName(seed) }}</h4>
                   <p class="persona-intro">{{ seed.summary || '这是一版可以继续完善的人格。' }}</p>
                 </div>
               </div>
 
               <div class="tag-row">
                 <span class="tag-chip">{{ typeLabels[normalizePersonaType(seed.persona_type)] || normalizePersonaType(seed.persona_type) }}</span>
+                <span v-if="normalizePersonaType(seed.persona_type) === 'family_companion' && seed.family_subtype" class="tag-chip">
+                  {{ familySubtypeLabels[seed.family_subtype] || seed.family_subtype }}
+                </span>
                 <span class="tag-chip">{{ new Date(seed.created_at).toLocaleDateString() }}</span>
               </div>
 
