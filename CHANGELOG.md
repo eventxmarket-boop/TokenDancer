@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.39 - 2026-04-16
+
+- Strengthened the Favorites card lift and click response so all three Me page cards now feel interactive.
+- Added a quick pop animation and stronger hover/press shadow for the personal-center stack.
+- Kept the semi-overlapped structure while making the middle card's motion easier to perceive.
+
 ## V1.4.38 - 2026-04-16
 
 - Raised the Me page Favorites card to the same interaction stack as the other entries so it no longer feels inert.
