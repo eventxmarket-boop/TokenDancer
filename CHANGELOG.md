@@ -1,3 +1,12 @@
+# Changelog
+
+## V1.4.24 - 2026-04-16
+
+- Expanded the intimate-relationship Create paths so they can ingest pasted materials and uploaded text documents instead of relying only on hand-filled fields.
+- Added raw material payloads for intimate drafts so the backend can derive interaction samples, relationship memory, style samples, and candidate reply cues from chat history and text materials.
+- Surfaced concise material-input summaries in the Create result and My Seeds flows while keeping the full raw materials hidden from the user-facing cards.
+- Kept the intimate save/open/chat chain aligned around the same persisted object across the four main paths.
+
 ## V1.4.23 - 2026-04-16
 
 - Expanded the family-companion and reunion create flows so they can ingest pasted materials and uploaded text documents instead of relying only on hand-filled fields.
@@ -18,9 +27,6 @@
 - Expanded the family and reunion wizard payloads to include persona, memory, and material layers.
 - Added dedicated family and reunion services to keep save, open, and chat aligned with the same persisted object.
 - Updated create and seed round-trip coverage for the new family/reunion chain.
-
-# Changelog
-
 ## V1.4.20 - 2026-04-16
 
 - Consolidated the family relation Create path around `家人陪伴` and `重逢人格` with explicit upstream source mapping.

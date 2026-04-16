@@ -383,6 +383,14 @@ def _raw_materials_payload(
     diary_text: Any = "",
     letter_text: Any = "",
     photo_notes_text: Any = "",
+    conflict_text: Any = "",
+    draft_message_text: Any = "",
+    recent_context_text: Any = "",
+    reply_style_samples_text: Any = "",
+    relationship_status_text: Any = "",
+    interaction_patterns_text: Any = "",
+    history_text: Any = "",
+    expression_samples_text: Any = "",
 ) -> dict[str, Any]:
     return {
         "chat_history_text": _normalize_text(chat_history_text),
@@ -394,7 +402,28 @@ def _raw_materials_payload(
         "diary_text": _normalize_text(diary_text),
         "letter_text": _normalize_text(letter_text),
         "photo_notes_text": _normalize_text(photo_notes_text),
+        "conflict_text": _normalize_text(conflict_text),
+        "draft_message_text": _normalize_text(draft_message_text),
+        "recent_context_text": _normalize_text(recent_context_text),
+        "reply_style_samples_text": _normalize_text(reply_style_samples_text),
+        "relationship_status_text": _normalize_text(relationship_status_text),
+        "interaction_patterns_text": _normalize_text(interaction_patterns_text),
+        "history_text": _normalize_text(history_text),
+        "expression_samples_text": _normalize_text(expression_samples_text),
     }
+
+
+def _collect_material_lines(*parts: Any) -> list[str]:
+    lines: list[str] = []
+    for part in parts:
+        lines = _merge_unique_lines(lines, _clean_lines(part))
+    return lines
+
+
+def _material_summary_from_parts(*parts: Any) -> str:
+    snippets = [_excerpt_text(part, 44) for part in parts if _normalize_text(part)]
+    snippets = [snippet for snippet in snippets if snippet]
+    return " / ".join(snippets[:3])
 
 
 def _format_bullets(items: list[str]) -> str:
@@ -901,34 +930,563 @@ def _build_intimate_companion_draft(
     display_name: str = "",
     input_mode: str = "",
 ) -> dict[str, Any]:
+    mode = _normalize_text(input_mode) or "relationship_understanding"
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     relation_type = (
         _normalize_text(form_data.get("relationship_type"))
-        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or RELATIONSHIP_LABELS.get(mode, "")
         or _normalize_text(display_name)
         or "亲密关系"
     )
     name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
-    relationship_stage = _normalize_text(form_data.get("relationship_stage")) or "暧昧 / 关系中 / 磨合中"
+    relationship_stage = _normalize_text(form_data.get("relationship_stage")) or "关系阶段待补充"
     tone = _normalize_text(form_data.get("speech_style")) or "自然、亲近、带一点熟悉感。"
     response_temperature = _normalize_text(form_data.get("response_temperature")) or "先接住情绪，再顺着回应。"
     catchphrases = _clean_lines(form_data.get("catchphrases")) or ["最近怎么样", "我在听"]
     boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不越界，不替对方下结论。"
-    conversation_samples = _clean_lines(form_data.get("conversation_samples")) or [
-        "你今天过得怎么样？",
-        "最近在忙什么？",
-    ]
-    interaction_rules = _clean_lines(form_data.get("interaction_rules")) or [
-        "先回应情绪，再给建议",
-        "不要一下子逼问对方",
-    ]
-    relationship_goals = _clean_lines(form_data.get("relationship_goals")) or [
-        "让沟通更顺畅",
-        "让关系更稳定",
-    ]
-    key_memories = _clean_lines(form_data.get("key_memories")) or [
-        "常聊的话题",
-        "一起经历过的重要时刻",
-    ]
+
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
+        memory_notes_text=raw_materials_input.get("memory_notes_text") or form_data.get("memory_fragments"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents")
+        or form_data.get("uploaded_text_documents"),
+        image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
+        conflict_text=raw_materials_input.get("conflict_text") or form_data.get("memory_fragments"),
+        draft_message_text=raw_materials_input.get("draft_message_text") or form_data.get("conversation_samples"),
+        recent_context_text=raw_materials_input.get("recent_context_text") or form_data.get("chat_history_summary"),
+        reply_style_samples_text=raw_materials_input.get("reply_style_samples_text") or form_data.get("conversation_samples"),
+        relationship_status_text=raw_materials_input.get("relationship_status_text") or form_data.get("relationship_stage"),
+        interaction_patterns_text=raw_materials_input.get("interaction_patterns_text") or form_data.get("interaction_rules"),
+        history_text=raw_materials_input.get("history_text") or form_data.get("key_memories"),
+        expression_samples_text=raw_materials_input.get("expression_samples_text") or form_data.get("catchphrases"),
+    )
+
+    relationship_context = {
+        "relationship_type": relation_type,
+        "name": name,
+        "relationship_stage": relationship_stage,
+        "speech_style": tone,
+        "boundaries": boundaries,
+        "focus": _normalize_text(form_data.get("purpose"))
+        or _normalize_text(form_data.get("decision_logic"))
+        or "根据场景提炼更合适的回应方式。",
+    }
+
+    base_conversation_samples = _merge_unique_lines(
+        _clean_lines(form_data.get("conversation_samples")),
+        _collect_material_lines(
+            raw_materials["chat_history_text"],
+            raw_materials["recent_context_text"],
+            raw_materials["draft_message_text"],
+            raw_materials["reply_style_samples_text"],
+        ),
+        _document_snippets(raw_materials["uploaded_text_documents"]),
+    )
+    base_memory_fragments = _merge_unique_lines(
+        _clean_lines(form_data.get("memory_fragments")),
+        _collect_material_lines(
+            raw_materials["memory_notes_text"],
+            raw_materials["conflict_text"],
+            raw_materials["text_materials_text"],
+        ),
+        _document_snippets(raw_materials["uploaded_text_documents"]),
+    )
+    base_interaction_rules = _merge_unique_lines(
+        _clean_lines(form_data.get("interaction_rules")),
+        _collect_material_lines(
+            raw_materials["interaction_patterns_text"],
+            raw_materials["reply_style_samples_text"],
+        ),
+    )
+    base_relationship_goals = _merge_unique_lines(
+        _clean_lines(form_data.get("relationship_goals")),
+        _collect_material_lines(
+            raw_materials["draft_message_text"],
+            raw_materials["relationship_status_text"],
+        ),
+    )
+    base_key_memories = _merge_unique_lines(
+        _clean_lines(form_data.get("key_memories")),
+        _collect_material_lines(
+            raw_materials["history_text"],
+            raw_materials["text_materials_text"],
+        ),
+        _document_snippets(raw_materials["uploaded_text_documents"]),
+    )
+    base_expression_samples = _merge_unique_lines(
+        _clean_lines(form_data.get("catchphrases")),
+        _collect_material_lines(
+            raw_materials["expression_samples_text"],
+            raw_materials["reply_style_samples_text"],
+        ),
+    )
+
+    if mode == "relationship_understanding":
+        relationship_profile = {
+            "relationship_type": relation_type,
+            "name": name,
+            "relationship_stage": relationship_stage,
+            "tone": tone,
+            "response_temperature": response_temperature,
+            "catchphrases": catchphrases,
+            "boundaries": boundaries,
+        }
+        conversation_samples = _merge_unique_lines(
+            base_conversation_samples,
+            _collect_material_lines(
+                raw_materials["chat_history_text"],
+                raw_materials["memory_notes_text"],
+                raw_materials["text_materials_text"],
+            ),
+            _document_snippets(raw_materials["uploaded_text_documents"]),
+        )
+        misunderstanding_points = _merge_unique_lines(
+            base_memory_fragments,
+            _collect_material_lines(
+                raw_materials["conflict_text"],
+                raw_materials["recent_context_text"],
+            ),
+        )
+        rewrite_targets = _merge_unique_lines(
+            base_relationship_goals,
+            _collect_material_lines(
+                raw_materials["draft_message_text"],
+                raw_materials["reply_style_samples_text"],
+            ),
+        )
+        memory_base = IntimateCompanionMemoryBase(
+            conversation_samples=conversation_samples,
+            interaction_rules=_merge_unique_lines(base_interaction_rules, ["先看关系阶段，再判断沟通卡点"]),
+            relationship_goals=base_relationship_goals,
+            key_memories=base_key_memories,
+            relationship_context=_material_summary_from_parts(
+                relation_type,
+                relationship_stage,
+                tone,
+                raw_materials["chat_history_text"],
+            ),
+            misunderstanding_points=misunderstanding_points,
+            rewrite_targets=rewrite_targets,
+            target_persona_profile=relationship_profile,
+            conversation_context={
+                "relationship_stage": relationship_stage,
+                "focus": relationship_context["focus"],
+                "mode": mode,
+            },
+            reply_style_samples=base_expression_samples,
+            simulation_preferences={},
+            interaction_patterns=base_interaction_rules,
+            maintenance_goals=base_relationship_goals,
+            relationship_memory=base_key_memories,
+            expression_samples=base_expression_samples,
+            response_temperature=response_temperature,
+            boundaries=_clean_lines(boundaries),
+        )
+        profile = (
+            f"亲密关系定位：{relation_type}\n"
+            f"对象名称：{name}\n"
+            f"关系阶段：{relationship_stage}\n"
+            f"说话风格：{tone}\n"
+            f"用途：输入聊天样本、冲突片段和待改写消息，先看理解和改写方向。"
+        )
+        mindset = _format_bullets(
+            [
+                "先看关系阶段和沟通卡点，再判断对方表达的意思",
+                "先把误解点和改写目标理清，再给建议",
+                "信息不足时先补聊天样本和冲突片段",
+            ]
+        )
+        heuristics = _format_bullets(
+            [
+                "优先识别关系阶段、情绪状态与沟通意图",
+                "改写建议要贴近真实聊天样本",
+                "不要把单条消息直接推成全部关系结论",
+            ]
+        )
+        expression = _format_bullets(
+            [
+                f"理解视角：{relationship_context['focus']}",
+                f"说话风格：{tone}",
+                "回答要像先分析关系，再给改写建议",
+            ]
+        )
+        guardrails = _format_bullets(
+            [
+                f"边界要求：{boundaries}",
+                "不伪造未确认的关系事实",
+                "不把推测写成确定判断",
+            ]
+        )
+        return {
+            "profile": profile,
+            "mindset": mindset,
+            "heuristics": heuristics,
+            "expression": expression,
+            "guardrails": guardrails,
+            "relationship_type": relation_type,
+            "relationship_profile": relationship_profile,
+            "intimate_memory_base": memory_base.model_dump(),
+            "intimate_understanding": {
+                "relationship_context": relationship_context,
+                "conversation_samples": conversation_samples,
+                "misunderstanding_points": misunderstanding_points,
+                "rewrite_targets": rewrite_targets,
+                "raw_materials": raw_materials,
+            },
+            "raw_materials": raw_materials,
+            "name": name,
+        }
+
+    if mode == "message_simulation":
+        target_persona_profile = {
+            "relationship_type": relation_type,
+            "name": name,
+            "speech_style": tone,
+            "response_temperature": response_temperature,
+            "boundaries": boundaries,
+            "stage": relationship_stage,
+        }
+        conversation_context = {
+            "recent_context": _normalize_text(raw_materials["recent_context_text"])
+            or _normalize_text(form_data.get("chat_history_summary")),
+            "current_message": _normalize_text(raw_materials["draft_message_text"])
+            or _normalize_text(form_data.get("conversation_samples")),
+            "relationship_stage": relationship_stage,
+        }
+        reply_style_samples = _merge_unique_lines(
+            _clean_lines(form_data.get("conversation_samples")),
+            _collect_material_lines(
+                raw_materials["reply_style_samples_text"],
+                raw_materials["chat_history_text"],
+            ),
+            _document_snippets(raw_materials["uploaded_text_documents"]),
+        )
+        simulation_preferences = {
+            "candidate_count": 3,
+            "tone": tone,
+            "response_temperature": response_temperature,
+            "mode": mode,
+        }
+        memory_base = IntimateCompanionMemoryBase(
+            conversation_samples=_merge_unique_lines(
+                base_conversation_samples,
+                reply_style_samples,
+            ),
+            interaction_rules=_merge_unique_lines(base_interaction_rules, ["先给 2~4 个候选回复，再给建议发送版本"]),
+            relationship_goals=_merge_unique_lines(base_relationship_goals, ["更像对方的表达节奏"]),
+            key_memories=base_key_memories,
+            relationship_context=_material_summary_from_parts(
+                relation_type,
+                relationship_stage,
+                tone,
+                raw_materials["chat_history_text"],
+            ),
+            misunderstanding_points=base_memory_fragments,
+            rewrite_targets=base_relationship_goals,
+            target_persona_profile=target_persona_profile,
+            conversation_context=conversation_context,
+            reply_style_samples=reply_style_samples,
+            simulation_preferences=simulation_preferences,
+            interaction_patterns=base_interaction_rules,
+            maintenance_goals=[],
+            relationship_memory=base_key_memories,
+            expression_samples=base_expression_samples,
+            response_temperature=response_temperature,
+            boundaries=_clean_lines(boundaries),
+        )
+        profile = (
+            f"消息模拟定位：{relation_type}\n"
+            f"对象名称：{name}\n"
+            f"说话风格：{tone}\n"
+            f"回复温度：{response_temperature}\n"
+            f"用途：输入当前消息和最近上下文，预测 2~4 个候选回复。"
+        )
+        mindset = _format_bullets(
+            [
+                "先看最近上下文，再判断对方可能的回复节奏",
+                "先保留对方一贯的说话习惯，再做候选分支",
+                "信息不足时先补聊天样本和语气样本",
+            ]
+        )
+        heuristics = _format_bullets(
+            [
+                "优先给出多个候选回复，再给建议版本",
+                "候选回复尽量贴近对方样本里的语气",
+                "不要把单条消息误判成全部关系状态",
+            ]
+        )
+        expression = _format_bullets(
+            [
+                f"候选回复语气：{tone}",
+                f"回复温度：{response_temperature}",
+                "输出要像发送前预演，而不是泛建议",
+            ]
+        )
+        guardrails = _format_bullets(
+            [
+                f"边界要求：{boundaries}",
+                "不伪造未确认的回复",
+                "不把候选分支写成唯一真相",
+            ]
+        )
+        return {
+            "profile": profile,
+            "mindset": mindset,
+            "heuristics": heuristics,
+            "expression": expression,
+            "guardrails": guardrails,
+            "relationship_type": relation_type,
+            "relationship_profile": target_persona_profile,
+            "intimate_memory_base": memory_base.model_dump(),
+            "intimate_message_simulation": {
+                "target_persona_profile": target_persona_profile,
+                "conversation_context": conversation_context,
+                "reply_style_samples": reply_style_samples,
+                "simulation_preferences": simulation_preferences,
+                "raw_materials": raw_materials,
+            },
+            "raw_materials": raw_materials,
+            "name": name,
+        }
+
+    if mode == "partner_maintenance":
+        relationship_profile = {
+            "relationship_type": relation_type,
+            "name": name,
+            "relationship_stage": relationship_stage,
+            "tone": tone,
+            "response_temperature": response_temperature,
+            "catchphrases": catchphrases,
+            "boundaries": boundaries,
+        }
+        interaction_patterns = _merge_unique_lines(
+            _clean_lines(form_data.get("interaction_rules")),
+            _collect_material_lines(
+                raw_materials["interaction_patterns_text"],
+                raw_materials["chat_history_text"],
+                raw_materials["memory_notes_text"],
+            ),
+        )
+        maintenance_goals = _merge_unique_lines(
+            _clean_lines(form_data.get("relationship_goals")),
+            _collect_material_lines(
+                raw_materials["relationship_status_text"],
+                raw_materials["draft_message_text"],
+            ),
+        )
+        conversation_samples = _merge_unique_lines(
+            base_conversation_samples,
+            _collect_material_lines(
+                raw_materials["chat_history_text"],
+                raw_materials["recent_context_text"],
+            ),
+        )
+        memory_base = IntimateCompanionMemoryBase(
+            conversation_samples=conversation_samples,
+            interaction_rules=interaction_patterns,
+            relationship_goals=maintenance_goals,
+            key_memories=base_key_memories,
+            relationship_context=_material_summary_from_parts(
+                relation_type,
+                relationship_stage,
+                tone,
+                raw_materials["chat_history_text"],
+            ),
+            misunderstanding_points=base_memory_fragments,
+            rewrite_targets=maintenance_goals,
+            target_persona_profile=relationship_profile,
+            conversation_context={"relationship_stage": relationship_stage, "mode": mode},
+            reply_style_samples=base_expression_samples,
+            simulation_preferences={},
+            interaction_patterns=interaction_patterns,
+            maintenance_goals=maintenance_goals,
+            relationship_memory=base_key_memories,
+            expression_samples=base_expression_samples,
+            response_temperature=response_temperature,
+            boundaries=_clean_lines(boundaries),
+        )
+        profile = (
+            f"关系维护定位：{relation_type}\n"
+            f"对象名称：{name}\n"
+            f"关系阶段：{relationship_stage}\n"
+            f"说话风格：{tone}\n"
+            f"用途：围绕伴侣关系维护、磨合和沟通修复整理人格。"
+        )
+        mindset = _format_bullets(
+            [
+                "先看关系互动模式，再决定是修复、安抚还是推进",
+                "先保留关系中的稳定信号，再处理冲突点",
+                "信息不足时先补关系样本和常见冲突",
+            ]
+        )
+        heuristics = _format_bullets(
+            [
+                "优先看长期互动模式，不只看一次争执",
+                "修复建议要贴近伴侣关系语境",
+                "如果目标不清楚，先回到关系目标再继续",
+            ]
+        )
+        expression = _format_bullets(
+            [
+                f"常见说话感觉：{tone}",
+                f"回复温度：{response_temperature}",
+                "回答要像关系维护建议，不要像普通陪聊",
+            ]
+        )
+        guardrails = _format_bullets(
+            [
+                f"边界要求：{boundaries}",
+                "不把冲突细节夸大成唯一结论",
+                "不越界替对方下判断",
+            ]
+        )
+        return {
+            "profile": profile,
+            "mindset": mindset,
+            "heuristics": heuristics,
+            "expression": expression,
+            "guardrails": guardrails,
+            "relationship_type": relation_type,
+            "relationship_profile": relationship_profile,
+            "intimate_memory_base": memory_base.model_dump(),
+            "intimate_relationship_maintenance": {
+                "relationship_profile": relationship_profile,
+                "interaction_patterns": interaction_patterns,
+                "maintenance_goals": maintenance_goals,
+                "conversation_samples": conversation_samples,
+                "raw_materials": raw_materials,
+            },
+            "raw_materials": raw_materials,
+            "name": name,
+        }
+
+    if mode == "past_relation_mirror":
+        persona_profile = {
+            "relationship_type": relation_type,
+            "name": name,
+            "tone": tone,
+            "remembrance_style": _normalize_text(form_data.get("remembrance_style")) or "先慢慢回忆，再一点点靠近。",
+            "response_temperature": response_temperature,
+            "boundaries": boundaries,
+        }
+        relationship_memory = _merge_unique_lines(
+            _clean_lines(form_data.get("key_memories")),
+            _collect_material_lines(
+                raw_materials["chat_history_text"],
+                raw_materials["memory_notes_text"],
+                raw_materials["history_text"],
+                raw_materials["text_materials_text"],
+            ),
+            _document_snippets(raw_materials["uploaded_text_documents"]),
+        )
+        expression_samples = _merge_unique_lines(
+            _clean_lines(form_data.get("catchphrases")),
+            _collect_material_lines(
+                raw_materials["expression_samples_text"],
+                raw_materials["reply_style_samples_text"],
+            ),
+        )
+        memory_base = IntimateCompanionMemoryBase(
+            conversation_samples=_merge_unique_lines(
+                base_conversation_samples,
+                _collect_material_lines(raw_materials["chat_history_text"], raw_materials["history_text"]),
+            ),
+            interaction_rules=_merge_unique_lines(base_interaction_rules, ["先克制，再回忆", "不激进刺激"]),
+            relationship_goals=_merge_unique_lines(base_relationship_goals, ["保留情绪边界", "慢慢靠近记忆"]),
+            key_memories=relationship_memory,
+            relationship_context=_material_summary_from_parts(
+                relation_type,
+                persona_profile["remembrance_style"],
+                tone,
+                raw_materials["chat_history_text"],
+            ),
+            misunderstanding_points=base_memory_fragments,
+            rewrite_targets=base_relationship_goals,
+            target_persona_profile=persona_profile,
+            conversation_context={"mode": mode, "boundary": boundaries},
+            reply_style_samples=expression_samples,
+            simulation_preferences={},
+            interaction_patterns=base_interaction_rules,
+            maintenance_goals=base_relationship_goals,
+            relationship_memory=relationship_memory,
+            expression_samples=expression_samples,
+            response_temperature=response_temperature,
+            boundaries=_clean_lines(boundaries),
+        )
+        profile = (
+            f"过去关系 / 自我镜像定位：{relation_type}\n"
+            f"称呼：{name}\n"
+            f"回忆方式：{persona_profile['remembrance_style']}\n"
+            f"说话风格：{tone}\n"
+            f"用途：整理历史关系、镜像自我表达与克制的陪伴回应。"
+        )
+        mindset = _format_bullets(
+            [
+                "先判断是回忆、复盘还是自我支持，再决定回应节奏",
+                "先从少量相关记忆开始，再逐步靠近细节",
+                "信息不足时先补材料来源和边界",
+            ]
+        )
+        heuristics = _format_bullets(
+            [
+                "优先采用渐进式回忆",
+                "自我镜像时优先保留自己的表达习惯",
+                "不要把怀念推成失控刺激",
+            ]
+        )
+        expression = _format_bullets(
+            [
+                f"常见说话感觉：{tone}",
+                f"回忆节奏：{persona_profile['remembrance_style']}",
+                "回答要克制、带记忆感，但不过度刺激情绪",
+            ]
+        )
+        guardrails = _format_bullets(
+            [
+                f"边界要求：{boundaries}",
+                "不伪造未确认的历史细节",
+                "不把过去关系写成现实替代",
+            ]
+        )
+        return {
+            "profile": profile,
+            "mindset": mindset,
+            "heuristics": heuristics,
+            "expression": expression,
+            "guardrails": guardrails,
+            "relationship_type": relation_type,
+            "relationship_profile": persona_profile,
+            "intimate_memory_base": memory_base.model_dump(),
+            "intimate_past_relationship": {
+                "persona_profile": persona_profile,
+                "relationship_memory": relationship_memory,
+                "expression_samples": expression_samples,
+                "response_temperature": response_temperature,
+                "boundaries": _clean_lines(boundaries),
+                "raw_materials": raw_materials,
+            },
+            "raw_materials": raw_materials,
+            "name": name,
+        }
+
+    conversation_samples = _merge_unique_lines(
+        _clean_lines(form_data.get("conversation_samples")),
+        base_conversation_samples,
+    )
+    interaction_rules = _merge_unique_lines(
+        _clean_lines(form_data.get("interaction_rules")),
+        base_interaction_rules,
+    )
+    relationship_goals = _merge_unique_lines(
+        _clean_lines(form_data.get("relationship_goals")),
+        base_relationship_goals,
+    )
+    key_memories = _merge_unique_lines(
+        _clean_lines(form_data.get("key_memories")),
+        base_key_memories,
+    )
 
     relationship_profile = IntimateCompanionRelationshipProfile(
         relationship_type=relation_type,
@@ -944,6 +1502,24 @@ def _build_intimate_companion_draft(
         interaction_rules=interaction_rules,
         relationship_goals=relationship_goals,
         key_memories=key_memories,
+        relationship_context=_material_summary_from_parts(
+            relation_type,
+            relationship_stage,
+            tone,
+            raw_materials["chat_history_text"],
+        ),
+        misunderstanding_points=base_memory_fragments,
+        rewrite_targets=relationship_goals,
+        target_persona_profile={},
+        conversation_context={},
+        reply_style_samples=base_expression_samples,
+        simulation_preferences={},
+        interaction_patterns=interaction_rules,
+        maintenance_goals=relationship_goals,
+        relationship_memory=key_memories,
+        expression_samples=base_expression_samples,
+        response_temperature=response_temperature,
+        boundaries=_clean_lines(boundaries),
     )
 
     profile = (
@@ -990,6 +1566,7 @@ def _build_intimate_companion_draft(
         "relationship_type": relation_type,
         "relationship_profile": relationship_profile.model_dump(),
         "intimate_memory_base": memory_base.model_dump(),
+        "raw_materials": raw_materials,
         "name": name,
     }
 
@@ -1079,4 +1656,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "reunion_safety_guardrails": content.get("reunion_safety_guardrails"),
         "relationship_profile": content.get("relationship_profile"),
         "intimate_memory_base": content.get("intimate_memory_base"),
+        "intimate_understanding": content.get("intimate_understanding"),
+        "intimate_message_simulation": content.get("intimate_message_simulation"),
+        "intimate_relationship_maintenance": content.get("intimate_relationship_maintenance"),
+        "intimate_past_relationship": content.get("intimate_past_relationship"),
     }

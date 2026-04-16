@@ -104,6 +104,23 @@ export type ReunionPersonaRawMaterials = {
   voice_notes_text: string
 }
 
+export type IntimateCompanionRawMaterials = {
+  chat_history_text: string
+  memory_notes_text: string
+  text_materials_text: string
+  uploaded_text_documents: TextMaterialDocument[]
+  image_notes_text: string
+  voice_notes_text: string
+  conflict_text: string
+  draft_message_text: string
+  recent_context_text: string
+  reply_style_samples_text: string
+  relationship_status_text: string
+  interaction_patterns_text: string
+  history_text: string
+  expression_samples_text: string
+}
+
 export type ReunionPersonaRetrievalPolicy = {
   mode: string
   progressive_recall: boolean
@@ -147,6 +164,19 @@ export type IntimateCompanionMemoryBase = {
   interaction_rules: string[]
   relationship_goals: string[]
   key_memories: string[]
+  relationship_context: string
+  misunderstanding_points: string[]
+  rewrite_targets: string[]
+  target_persona_profile: Record<string, unknown>
+  conversation_context: Record<string, unknown>
+  reply_style_samples: string[]
+  simulation_preferences: Record<string, unknown>
+  interaction_patterns: string[]
+  maintenance_goals: string[]
+  relationship_memory: string[]
+  expression_samples: string[]
+  response_temperature: string
+  boundaries: string[]
 }
 
 export type CreateWizardDraft = {
@@ -167,6 +197,10 @@ export type CreateWizardDraft = {
   reunion_safety_guardrails?: ReunionPersonaSafetyGuardrails | null
   relationship_profile?: IntimateCompanionRelationshipProfile | null
   intimate_memory_base?: IntimateCompanionMemoryBase | null
+  intimate_understanding?: Record<string, unknown> | null
+  intimate_message_simulation?: Record<string, unknown> | null
+  intimate_relationship_maintenance?: Record<string, unknown> | null
+  intimate_past_relationship?: Record<string, unknown> | null
 }
 
 export type CreateWizardDraftResponse = {

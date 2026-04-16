@@ -308,8 +308,10 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 const memoryEvidenceFileName = ref('')
 const familyMaterialFileName = ref('')
 const reunionMaterialFileName = ref('')
+const intimateMaterialFileName = ref('')
 const familyUploadedTextDocuments = ref<TextMaterialDocument[]>([])
 const reunionUploadedTextDocuments = ref<TextMaterialDocument[]>([])
+const intimateUploadedTextDocuments = ref<TextMaterialDocument[]>([])
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
@@ -630,6 +632,43 @@ function handleReunionMaterialFileChange(event: Event) {
   target.value = ''
 }
 
+function handleIntimateMaterialFileChange(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file) {
+    return
+  }
+
+  intimateMaterialFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = () => {
+    const content = String(reader.result || '').trim()
+    if (!content) {
+      return
+    }
+    intimateUploadedTextDocuments.value = [
+      ...intimateUploadedTextDocuments.value,
+      { filename: file.name, content },
+    ]
+    appendTextToFormField('text_materials', content)
+    appendTextToFormField('memory_fragments', content)
+    if (createType.value === 'intimate_companion') {
+      if (inputMode.value === 'relationship_understanding' || inputMode.value === 'message_simulation') {
+        appendTextToFormField('chat_history_summary', content)
+      }
+      if (inputMode.value === 'partner_maintenance') {
+        appendTextToFormField('interaction_rules', content)
+      }
+      if (inputMode.value === 'past_relation_mirror') {
+        appendTextToFormField('key_memories', content)
+      }
+    }
+    saveStateSnapshot()
+  }
+  reader.readAsText(file)
+  target.value = ''
+}
+
 function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   if (type === 'self_unified') {
     return 'self'
@@ -746,8 +785,10 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   clearFormState()
   familyMaterialFileName.value = ''
   reunionMaterialFileName.value = ''
+  intimateMaterialFileName.value = ''
   familyUploadedTextDocuments.value = []
   reunionUploadedTextDocuments.value = []
+  intimateUploadedTextDocuments.value = []
 
   if (type === 'self_unified') {
     formState.name = displayName || '我的人格'
@@ -874,6 +915,7 @@ function saveStateSnapshot() {
     selectedSchemaKey: selectedSchemaKey.value,
     familyUploadedTextDocuments: familyUploadedTextDocuments.value,
     reunionUploadedTextDocuments: reunionUploadedTextDocuments.value,
+    intimateUploadedTextDocuments: intimateUploadedTextDocuments.value,
     formState: { ...formState },
   })
 }
@@ -891,6 +933,7 @@ function loadStateSnapshot() {
     selectedSchemaKey?: string
     familyUploadedTextDocuments?: TextMaterialDocument[]
     reunionUploadedTextDocuments?: TextMaterialDocument[]
+    intimateUploadedTextDocuments?: TextMaterialDocument[]
     formState?: Record<string, string>
   }>()
 
@@ -927,6 +970,9 @@ function loadStateSnapshot() {
   }
   if (Array.isArray(snapshot.reunionUploadedTextDocuments)) {
     reunionUploadedTextDocuments.value = snapshot.reunionUploadedTextDocuments
+  }
+  if (Array.isArray(snapshot.intimateUploadedTextDocuments)) {
+    intimateUploadedTextDocuments.value = snapshot.intimateUploadedTextDocuments
   }
 
   if (createType.value === 'relationship_persona') {
@@ -1135,6 +1181,25 @@ function buildReunionRawMaterials() {
   }
 }
 
+function buildIntimateRawMaterials() {
+  return {
+    chat_history_text: formState.chat_history_summary,
+    memory_notes_text: formState.memory_fragments,
+    text_materials_text: formState.text_materials,
+    uploaded_text_documents: intimateUploadedTextDocuments.value,
+    image_notes_text: formState.image_notes,
+    voice_notes_text: formState.voice_notes,
+    conflict_text: formState.memory_fragments,
+    draft_message_text: formState.conversation_samples,
+    recent_context_text: formState.chat_history_summary,
+    reply_style_samples_text: formState.conversation_samples,
+    relationship_status_text: formState.relationship_stage,
+    interaction_patterns_text: formState.interaction_rules,
+    history_text: formState.key_memories,
+    expression_samples_text: formState.catchphrases,
+  }
+}
+
 async function generateDraft() {
   loading.value = true
   error.value = ''
@@ -1194,6 +1259,11 @@ async function generateDraft() {
                   ...formState,
                   raw_materials: buildReunionRawMaterials(),
                 }
+              : createType.value === 'intimate_companion'
+                ? {
+                    ...formState,
+                    raw_materials: buildIntimateRawMaterials(),
+                  }
               : { ...formState },
     })
 
@@ -1812,6 +1882,106 @@ watch(
                 <span>关键记忆</span>
                 <textarea v-model="formState.key_memories" class="field-input wizard-textarea" rows="4"></textarea>
               </label>
+            </div>
+
+            <p class="eyebrow">材料输入层</p>
+            <div class="form-grid">
+              <label class="form-field">
+                <span>聊天记录</span>
+                <textarea
+                  v-model="formState.chat_history_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="粘贴最近聊天记录、冲突片段或对方样本"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>消息样本 / 回忆片段</span>
+                <textarea
+                  v-model="formState.memory_fragments"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="粘贴你准备发的话、对方回复样本或关系记忆"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>文本材料</span>
+                <textarea
+                  v-model="formState.text_materials"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="可直接粘贴日记、信件摘录、关系说明"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>上传 txt / md / csv</span>
+                <input
+                  class="field-input"
+                  type="file"
+                  accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+                  @change="handleIntimateMaterialFileChange"
+                />
+                <small class="field-hint">
+                  {{
+                    intimateUploadedTextDocuments.length
+                      ? intimateUploadedTextDocuments.map((item) => item.filename).join(' / ')
+                      : (intimateMaterialFileName || '可把文本材料追加到聊天记录和记忆片段里')
+                  }}
+                </small>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>图片 / 截图备注</span>
+                <textarea
+                  v-model="formState.image_notes"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="先用文字记录图片或截图里的关键信息"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>语音备注</span>
+                <textarea
+                  v-model="formState.voice_notes"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="先用文字记录语音里的关键信息"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="summary-panel summary-panel--compact">
+              <p class="eyebrow">材料输入摘要</p>
+              <h3>已支持文本材料输入</h3>
+              <ul class="summary-panel__list">
+                <li>
+                  <span>聊天记录</span>
+                  <strong>{{ formState.chat_history_summary || '未填写' }}</strong>
+                </li>
+                <li>
+                  <span>消息样本 / 回忆片段</span>
+                  <strong>{{ formState.memory_fragments || '未填写' }}</strong>
+                </li>
+                <li>
+                  <span>文本材料</span>
+                  <strong>{{ formState.text_materials || '未填写' }}</strong>
+                </li>
+                <li>
+                  <span>上传文件</span>
+                  <strong>
+                    {{
+                      intimateUploadedTextDocuments.length
+                        ? intimateUploadedTextDocuments.map((item) => item.filename).join(' / ')
+                        : (intimateMaterialFileName || '未上传')
+                    }}
+                  </strong>
+                </li>
+              </ul>
             </div>
 
             <label class="form-field">

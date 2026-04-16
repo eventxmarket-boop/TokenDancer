@@ -228,6 +228,24 @@ class CreateWizardTests(unittest.TestCase):
                 "interaction_rules": "先回应情绪，再进入内容本身",
                 "relationship_goals": "让沟通更顺畅\n让关系更稳定",
                 "key_memories": "一起经历过的重要时刻\n常聊的话题",
+                "raw_materials": {
+                    "chat_history_text": "最近在忙什么\n今天怎么了",
+                    "memory_notes_text": "一起经历过的重要时刻",
+                    "text_materials_text": "补充的文本材料",
+                    "uploaded_text_documents": [
+                        {"filename": "notes.txt", "content": "这是上传的文本材料"}
+                    ],
+                    "image_notes_text": "截图里记录了提醒",
+                    "voice_notes_text": "语音里提到最近很忙",
+                    "conflict_text": "那次误会",
+                    "draft_message_text": "你今天怎么了？",
+                    "recent_context_text": "最近在忙什么？",
+                    "reply_style_samples_text": "我在听\n先别急",
+                    "relationship_status_text": "关系有点紧张",
+                    "interaction_patterns_text": "先回应情绪，再进入内容本身",
+                    "history_text": "一起经历过的重要时刻",
+                    "expression_samples_text": "我在听\n先别急",
+                },
             },
         }
 
@@ -245,6 +263,9 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["relationship_type"], "关系理解")
         self.assertIsNotNone(body["draft"]["relationship_profile"])
         self.assertIsNotNone(body["draft"]["intimate_memory_base"])
+        self.assertIn("raw_materials", body["draft"])
+        self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
+        self.assertIsNotNone(body["draft"]["intimate_understanding"])
         self.assertIn("亲密关系", body["draft"]["profile"])
         self.assertIn("关系理解", body["draft"]["profile"])
 

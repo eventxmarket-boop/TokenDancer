@@ -173,7 +173,7 @@ function normalizeDocuments(value: unknown) {
     .filter(Boolean) as Array<{ filename: string; content: string }>
 }
 
-function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion') {
+function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion' | 'intimate') {
   if (!rawMaterials || typeof rawMaterials !== 'object') {
     return []
   }
@@ -184,6 +184,22 @@ function buildMaterialLines(rawMaterials: unknown, mode: 'family' | 'reunion') {
     return [
       { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
       { label: '记忆片段', value: excerptText(record.memory_notes_text) || '未填写' },
+      { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
+      {
+        label: '上传文件',
+        value: documents.length ? documents.map((item) => item.filename).join(' / ') : '未上传',
+      },
+      { label: '图片备注', value: excerptText(record.image_notes_text) || '未填写' },
+      { label: '语音备注', value: excerptText(record.voice_notes_text) || '未填写' },
+    ]
+  }
+
+  if (mode === 'intimate') {
+    const documents = normalizeDocuments(record.uploaded_text_documents)
+    return [
+      { label: '聊天记录', value: excerptText(record.chat_history_text) || '未填写' },
+      { label: '消息样本', value: excerptText(record.draft_message_text) || '未填写' },
+      { label: '关系片段', value: excerptText(record.memory_notes_text) || '未填写' },
       { label: '文本材料', value: excerptText(record.text_materials_text) || '未填写' },
       {
         label: '上传文件',
@@ -227,6 +243,16 @@ const reunionRawMaterials = computed(() => {
 })
 
 const reunionMaterialLines = computed(() => buildMaterialLines(reunionRawMaterials.value, 'reunion'))
+
+const intimateRawMaterials = computed(() => {
+  const payload = editableDraft.raw_materials || draft.value?.raw_materials
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
+const intimateMaterialLines = computed(() => buildMaterialLines(intimateRawMaterials.value, 'intimate'))
 
 const familyMemoryBase = computed<FamilyCompanionMemoryBase | null>(() => {
   const payload = editableDraft.memory_base || draft.value?.memory_base
@@ -767,6 +793,17 @@ onMounted(() => {
           <p class="eyebrow">记忆层</p>
           <div class="family-grid">
             <div v-for="line in intimateMemoryLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'intimate_companion'" class="draft-card">
+          <p class="eyebrow">材料输入层</p>
+          <h3>已基于输入材料生成结构化结果</h3>
+          <div class="family-grid">
+            <div v-for="line in intimateMaterialLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

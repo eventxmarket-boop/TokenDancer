@@ -36,6 +36,13 @@ _SELF_UNIFIED_ALIASES = {
     "self_digital_trace_persona",
 }
 
+_INTIMATE_MODE_LABELS = {
+    "relationship_understanding": "关系理解",
+    "message_simulation": "消息模拟",
+    "partner_maintenance": "关系维护",
+    "past_relation_mirror": "过去关系 / 自我镜像",
+}
+
 
 def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
@@ -158,6 +165,13 @@ def _build_summary(draft: CreateWizardDraft) -> str:
     if _normalize_text(draft.meta.create_type) == "intimate_companion":
         profile = draft.relationship_profile or {}
         memory = draft.intimate_memory_base or {}
+        understanding = getattr(draft, "intimate_understanding", None) or {}
+        simulation = getattr(draft, "intimate_message_simulation", None) or {}
+        maintenance = getattr(draft, "intimate_relationship_maintenance", None) or {}
+        mirror = getattr(draft, "intimate_past_relationship", None) or {}
+        raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
+        input_mode = _normalize_text(getattr(draft.meta, "input_mode", ""))
+        mode_label = _INTIMATE_MODE_LABELS.get(input_mode, input_mode)
         profile_name = _normalize_text(
             profile.get("name") if isinstance(profile, dict) else getattr(profile, "name", "")
         )
@@ -171,12 +185,43 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         memories = []
         if isinstance(memory, dict):
             memories.extend(_clean_lines(memory.get("conversation_samples")))
+            memories.extend(_clean_lines(memory.get("interaction_rules")))
             memories.extend(_clean_lines(memory.get("relationship_goals")))
-        summary_parts = [part for part in [profile_name, relationship_type, stage, tone] if part]
-        if summary_parts or memories:
+            memories.extend(_clean_lines(memory.get("key_memories")))
+            memories.extend(_clean_lines(memory.get("misunderstanding_points")))
+            memories.extend(_clean_lines(memory.get("rewrite_targets")))
+            memories.extend(_clean_lines(memory.get("interaction_patterns")))
+            memories.extend(_clean_lines(memory.get("maintenance_goals")))
+            memories.extend(_clean_lines(memory.get("relationship_memory")))
+            memories.extend(_clean_lines(memory.get("expression_samples")))
+        path_notes: list[str] = []
+        if isinstance(understanding, dict):
+            path_notes.extend(_clean_lines(understanding.get("misunderstanding_points")))
+            path_notes.extend(_clean_lines(understanding.get("rewrite_targets")))
+        if isinstance(simulation, dict):
+            path_notes.extend(_clean_lines(simulation.get("reply_style_samples")))
+            simulation_preferences = simulation.get("simulation_preferences")
+            if isinstance(simulation_preferences, dict):
+                tone = _normalize_text(simulation_preferences.get("tone"))
+                candidate_count = _normalize_text(simulation_preferences.get("candidate_count"))
+                if tone:
+                    path_notes.append(f"语气偏好：{tone}")
+                if candidate_count:
+                    path_notes.append(f"候选数量：{candidate_count}")
+        if isinstance(maintenance, dict):
+            path_notes.extend(_clean_lines(maintenance.get("interaction_patterns")))
+            path_notes.extend(_clean_lines(maintenance.get("maintenance_goals")))
+        if isinstance(mirror, dict):
+            path_notes.extend(_clean_lines(mirror.get("relationship_memory")))
+            path_notes.extend(_clean_lines(mirror.get("expression_samples")))
+        summary_parts = [part for part in [mode_label, profile_name, relationship_type, stage, tone] if part]
+        if raw_materials_summary:
+            summary_parts.append(raw_materials_summary)
+        if summary_parts or memories or path_notes:
             combined = " · ".join(summary_parts)
-            if memories:
-                combined = f"{combined} / {memories[0]}" if combined else memories[0]
+            extras = path_notes or memories
+            if extras:
+                combined = f"{combined} / {extras[0]}" if combined else extras[0]
             return combined[:120]
 
     if _normalize_text(draft.meta.create_type) == "family_companion":

@@ -71,6 +71,10 @@ class CreateWizardDraft(BaseModel):
     reunion_safety_guardrails: ReunionPersonaSafetyGuardrails | None = None
     relationship_profile: IntimateCompanionRelationshipProfile | None = None
     intimate_memory_base: IntimateCompanionMemoryBase | None = None
+    intimate_understanding: dict[str, Any] | None = None
+    intimate_message_simulation: dict[str, Any] | None = None
+    intimate_relationship_maintenance: dict[str, Any] | None = None
+    intimate_past_relationship: dict[str, Any] | None = None
 
 
 class CreateWizardDraftResponse(BaseModel):
