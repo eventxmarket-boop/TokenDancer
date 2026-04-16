@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.38 - 2026-04-16
+
+- Raised the Me page Favorites card to the same interaction stack as the other entries so it no longer feels inert.
+- Moved stacking priority to the link layer and added a clearer press state for all three Me page cards.
+- Preserved the existing semi-overlapped design while making the middle card easier to hover and click.
+
 ## V1.4.37 - 2026-04-16
 
 - Increased the Me page card lift and selection responsiveness so the active card appears on top more clearly.
