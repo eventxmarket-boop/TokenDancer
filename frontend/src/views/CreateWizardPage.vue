@@ -82,6 +82,12 @@ const formState = reactive({
   text_materials: '',
   image_notes: '',
   voice_notes: '',
+  guided_most_common_topics: '',
+  guided_comfort_style: '',
+  guided_most_characteristic_event: '',
+  guided_repeated_phrases: '',
+  guided_care_habits: '',
+  guided_most_common_reminders: '',
   remembrance_style: '',
   retrieval_mode: '',
   priority_rules: '',
@@ -1309,6 +1315,17 @@ function buildFamilyRawMaterials() {
   }
 }
 
+function buildFamilyGuidedMemoryAnswers() {
+  return {
+    most_common_topics: formState.guided_most_common_topics,
+    comfort_style: formState.guided_comfort_style,
+    most_characteristic_event: formState.guided_most_characteristic_event,
+    repeated_phrases: formState.guided_repeated_phrases,
+    care_habits: formState.guided_care_habits,
+    most_common_reminders: formState.guided_most_common_reminders,
+  }
+}
+
 function buildReunionRawMaterials() {
   return {
     chat_history_text: formState.chat_history_summary,
@@ -1387,14 +1404,17 @@ async function generateDraft() {
       family_subtype: createType.value === 'family_companion' ? inputMode.value : '',
       input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
+      guided_memory_answers:
+        createType.value === 'family_companion' ? buildFamilyGuidedMemoryAnswers() : undefined,
       form_data:
         createType.value === 'self_unified'
           ? { ...formState, ...selfUnifiedPayload }
-          : createType.value === 'family_companion'
-            ? {
-                ...formState,
-                raw_materials: buildFamilyRawMaterials(),
-              }
+        : createType.value === 'family_companion'
+          ? {
+              ...formState,
+              raw_materials: buildFamilyRawMaterials(),
+              guided_memory_answers: buildFamilyGuidedMemoryAnswers(),
+            }
             : createType.value === 'reunion_persona'
               ? {
                   ...formState,
@@ -1685,6 +1705,73 @@ watch(
                     </strong>
                   </li>
                 </ul>
+              </div>
+
+              <p v-if="!isReunionPersona" class="eyebrow">补充回忆（可选）</p>
+              <p v-if="!isReunionPersona" class="section-note">
+                没有完整材料也没关系，可以先用几个关键问题补充这段家人关系。
+              </p>
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>你们最常聊什么</span>
+                  <textarea
+                    v-model="formState.guided_most_common_topics"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="比如：吃饭、工作、考试、回家"
+                  ></textarea>
+                </label>
+                <label class="form-field">
+                  <span>他 / 她最常怎么安慰你</span>
+                  <textarea
+                    v-model="formState.guided_comfort_style"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="比如：先别急、慢慢来、我在呢"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>最像他 / 她的一件小事是什么</span>
+                  <textarea
+                    v-model="formState.guided_most_characteristic_event"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="比如：每天都会提醒你吃饭"
+                  ></textarea>
+                </label>
+                <label class="form-field">
+                  <span>有哪些反复说过的话</span>
+                  <textarea
+                    v-model="formState.guided_repeated_phrases"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="把常说的话整理成几句"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div v-if="!isReunionPersona" class="form-grid">
+                <label class="form-field">
+                  <span>最常提醒你的是什么</span>
+                  <textarea
+                    v-model="formState.guided_most_common_reminders"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="比如：注意休息、先稳住、别太累"
+                  ></textarea>
+                </label>
+                <label class="form-field">
+                  <span>他 / 她最典型的关心方式</span>
+                  <textarea
+                    v-model="formState.guided_care_habits"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="比如：每天问候近况、记得你爱吃什么"
+                  ></textarea>
+                </label>
               </div>
 
               <div v-if="!isReunionPersona" class="form-grid">

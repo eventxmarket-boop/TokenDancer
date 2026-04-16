@@ -7,6 +7,7 @@ import {
   saveLatestDraft,
   type CreateWizardDraft,
   type FamilyCompanionMemoryBase,
+  type FamilyCompanionGuidedMemoryAnswers,
   type FamilyCompanionEmotionRules,
   type FamilyCompanionPersonaProfile,
   type IntimateCompanionMemoryBase,
@@ -90,6 +91,7 @@ const editableDraft = reactive<CreateWizardDraft>({
   relationship_type: '',
   raw_materials: null,
   emotion_rules: null,
+  guided_memory_answers: null,
   self_persona_unified: {
     create_mode: 'standard',
     input_modes: [],
@@ -299,10 +301,19 @@ const familyRawMaterials = computed(() => {
   return payload
 })
 
+const familyGuidedAnswers = computed<FamilyCompanionGuidedMemoryAnswers | null>(() => {
+  const payload = editableDraft.guided_memory_answers || draft.value?.guided_memory_answers
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return payload
+})
+
 const familyMaterialSummaryLines = computed(() => {
   const profile = familyPersonaProfile.value
   const memory = familyMemoryBase.value
   const rawMaterials = familyRawMaterials.value
+  const guidedAnswers = familyGuidedAnswers.value
   const documents = normalizeDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_text_documents)
   return [
     {
@@ -320,19 +331,47 @@ const familyMaterialSummaryLines = computed(() => {
     },
     {
       label: '共同经历摘要',
-      value: memory?.shared_events?.join(' / ') || '未填写',
+      value:
+        memory?.episodic_memories?.join(' / ') ||
+        memory?.shared_events?.join(' / ') ||
+        '未填写',
+    },
+    {
+      label: '稳定认知摘要',
+      value:
+        memory?.semantic_memories?.join(' / ') ||
+        memory?.important_advice?.join(' / ') ||
+        '未填写',
+    },
+    {
+      label: '说话 / 安慰习惯',
+      value:
+        memory?.procedural_memories?.join(' / ') ||
+        profile?.comfort_style ||
+        '未填写',
     },
     {
       label: '常说的话摘要',
-      value: memory?.important_advice?.join(' / ') || profile?.catchphrases?.join(' / ') || '未填写',
+      value: profile?.catchphrases?.join(' / ') || memory?.important_advice?.join(' / ') || '未填写',
     },
     {
-      label: '典型安慰方式',
-      value: profile?.comfort_style || '未填写',
-    },
-    {
-      label: '关心方式',
-      value: memory?.daily_habits?.join(' / ') || '未填写',
+      label: '引导补充',
+      value:
+        guidedAnswers
+          ? (() => {
+              const items = [
+                guidedAnswers.most_common_topics,
+                guidedAnswers.comfort_style,
+                guidedAnswers.most_characteristic_event,
+                guidedAnswers.repeated_phrases,
+                guidedAnswers.care_habits,
+                guidedAnswers.most_common_reminders,
+              ]
+                .map((item) => normalizeText(item))
+                .filter(Boolean)
+              return items.length ? `${items.length} 项 / ${items[0]}` : '已参与'
+            })()
+          : '未填写',
     },
     {
       label: '已上传材料文件数',
@@ -417,15 +456,10 @@ const familyMemoryLines = computed(() => {
   }
 
   return [
-    { label: '聊天摘要', value: memory.chat_history_summary || '未填写' },
-    { label: '关键共同经历', value: memory.shared_events?.join(' / ') || '未填写' },
-    { label: '最常提起的往事', value: memory.daily_habits?.join(' / ') || '未填写' },
-    { label: '反复说过的话', value: memory.important_advice?.join(' / ') || '未填写' },
-    { label: '在意的事', value: memory.emotional_triggers?.join(' / ') || '未填写' },
-    { label: '记忆片段', value: memory.memory_fragments?.join(' / ') || '未填写' },
-    { label: '文本材料', value: memory.text_materials?.join(' / ') || '未填写' },
-    { label: '图片备注', value: memory.image_notes?.join(' / ') || '未填写' },
-    { label: '语音备注', value: memory.voice_notes?.join(' / ') || '未填写' },
+    { label: '共同经历（episodic）', value: memory.episodic_memories?.join(' / ') || memory.shared_events?.join(' / ') || '未填写' },
+    { label: '稳定认知（semantic）', value: memory.semantic_memories?.join(' / ') || memory.important_advice?.join(' / ') || '未填写' },
+    { label: '说话 / 安慰习惯（procedural）', value: memory.procedural_memories?.join(' / ') || memory.daily_habits?.join(' / ') || '未填写' },
+    { label: '旧版摘要', value: memory.legacy_summary?.join(' / ') || memory.chat_history_summary || '未填写' },
   ]
 })
 

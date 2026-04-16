@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import unittest
 
-from app.services.family_companion_service import build_family_companion_context
+from app.services.family_companion_service import (
+    build_family_companion_context,
+    retrieve_ranked_family_memories,
+)
 
 
 class FamilyCompanionServiceTests(unittest.TestCase):
@@ -114,3 +117,42 @@ class FamilyCompanionServiceTests(unittest.TestCase):
         self.assertNotEqual(mother_context, parents_context)
         self.assertNotEqual(mother_context, other_context)
         self.assertNotEqual(parents_context, other_context)
+
+    def test_family_companion_ranked_memories_prefer_layer_by_emotion_and_topic(self):
+        memory_base = {
+            "episodic_memories": [
+                "小时候你考试前总陪你复习",
+                "那次家里一起过年",
+            ],
+            "semantic_memories": [
+                "总提醒你先稳住再决定",
+                "家庭里一直觉得先照顾好自己很重要",
+            ],
+            "procedural_memories": [
+                "先别急",
+                "我在呢，慢慢来",
+                "会提醒你按时吃饭",
+            ],
+            "shared_events": ["小时候你考试前总陪你复习", "那次家里一起过年"],
+            "important_advice": ["总提醒你先稳住再决定"],
+            "daily_habits": ["会提醒你按时吃饭"],
+            "chat_history_summary": "你压力大时会先安慰你。",
+        }
+
+        sad_ranked = retrieve_ranked_family_memories(
+            memory_base,
+            "难过 / 失落",
+            "我最近工作压力很大",
+            family_subtype="mother",
+        )
+        topic_ranked = retrieve_ranked_family_memories(
+            memory_base,
+            "寻求建议",
+            "我在考虑考试和工作怎么选",
+            family_subtype="parents",
+        )
+
+        self.assertTrue(sad_ranked)
+        self.assertTrue(topic_ranked)
+        self.assertIn("先别急", sad_ranked[0] + "".join(sad_ranked))
+        self.assertTrue(any("复习" in item or "过年" in item for item in topic_ranked))

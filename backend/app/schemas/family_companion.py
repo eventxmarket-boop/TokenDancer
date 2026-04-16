@@ -13,7 +13,20 @@ class FamilyCompanionPersonaProfile(BaseModel):
     boundaries: str = ""
 
 
+class FamilyCompanionGuidedMemoryAnswers(BaseModel):
+    most_common_topics: str = ""
+    comfort_style: str = ""
+    most_characteristic_event: str = ""
+    repeated_phrases: str = ""
+    care_habits: str = ""
+    most_common_reminders: str = ""
+
+
 class FamilyCompanionMemoryBase(BaseModel):
+    episodic_memories: list[str] = Field(default_factory=list)
+    semantic_memories: list[str] = Field(default_factory=list)
+    procedural_memories: list[str] = Field(default_factory=list)
+    legacy_summary: list[str] = Field(default_factory=list)
     shared_events: list[str] = Field(default_factory=list)
     important_advice: list[str] = Field(default_factory=list)
     daily_habits: list[str] = Field(default_factory=list)

@@ -23,26 +23,34 @@ FAMILY_SUBTYPE_FOCUS = {
 
 FAMILY_SUBTYPE_MEMORY_PRIORITY = {
     "mother": {
-        "chat_history_summary": 5,
+        "procedural_memories": 6,
+        "daily_habits": 5,
+        "voice_notes": 4,
+        "image_notes": 4,
+        "chat_history_summary": 4,
         "memory_fragments": 4,
-        "daily_habits": 4,
         "shared_events": 3,
         "important_advice": 3,
         "text_materials": 2,
-        "image_notes": 2,
-        "voice_notes": 2,
         "emotional_triggers": 5,
+        "episodic_memories": 3,
+        "semantic_memories": 3,
+        "legacy_summary": 2,
     },
     "parents": {
+        "episodic_memories": 6,
+        "semantic_memories": 6,
         "shared_events": 5,
         "important_advice": 5,
         "daily_habits": 4,
-        "chat_history_summary": 3,
-        "memory_fragments": 3,
-        "text_materials": 2,
+        "chat_history_summary": 4,
+        "memory_fragments": 4,
+        "text_materials": 3,
         "image_notes": 2,
         "voice_notes": 2,
         "emotional_triggers": 3,
+        "procedural_memories": 3,
+        "legacy_summary": 2,
     },
     "other_family": {
         "chat_history_summary": 4,
@@ -54,6 +62,10 @@ FAMILY_SUBTYPE_MEMORY_PRIORITY = {
         "image_notes": 2,
         "voice_notes": 2,
         "emotional_triggers": 3,
+        "episodic_memories": 3,
+        "semantic_memories": 3,
+        "procedural_memories": 3,
+        "legacy_summary": 2,
     },
 }
 
@@ -96,6 +108,14 @@ def detect_emotional_state(user_message: str, history: list[dict[str, str]]) -> 
 
 def _memory_sources(memory_base: dict[str, Any]) -> list[tuple[str, str]]:
     items: list[tuple[str, str]] = []
+    layer_keys = (
+        "episodic_memories",
+        "semantic_memories",
+        "procedural_memories",
+        "legacy_summary",
+    )
+    for key in layer_keys:
+        items.extend((key, item) for item in _clean_lines(memory_base.get(key)))
     for key in (
         "shared_events",
         "important_advice",
@@ -111,6 +131,125 @@ def _memory_sources(memory_base: dict[str, Any]) -> list[tuple[str, str]]:
     if chat_history_summary:
         items.append(("chat_history_summary", chat_history_summary))
     return [(source, item) for source, item in items if item]
+
+
+def _topic_keywords(message: str) -> list[str]:
+    text = _normalize_text(message)
+    if not text:
+        return []
+
+    topic_map = [
+        (("工作", "上班", "职场", "加班", "项目", "任务"), "工作"),
+        (("考试", "学习", "分数", "录取", "上岸", "论文", "成绩"), "学习"),
+        (("家庭", "父母", "妈妈", "父亲", "爸爸", "家里", "回家"), "家庭"),
+        (("身体", "健康", "生病", "医院", "睡眠", "吃饭"), "健康"),
+        (("感情", "关系", "伴侣", "朋友", "同事", "相处"), "关系"),
+        (("钱", "薪资", "工资", "花费", "消费", "房租", "钱"), "金钱"),
+        (("选择", "决定", "怎么办", "值不值", "要不要", "怎么做"), "选择"),
+    ]
+    topics = []
+    for hints, label in topic_map:
+        if any(hint in text for hint in hints):
+            topics.append(label)
+    return topics
+
+
+def _family_memory_layer_for_line(line: str, source_key: str = "") -> str:
+    text = _normalize_text(line)
+    source = _normalize_text(source_key)
+    if not text and not source:
+        return "semantic"
+
+    episodic_hints = (
+        "小时候",
+        "一起",
+        "回家",
+        "团圆",
+        "陪你",
+        "家里",
+        "过年",
+        "那次",
+        "那天",
+        "第一次",
+        "最后",
+        "经历",
+        "时刻",
+        "事件",
+        "记忆",
+        "场景",
+    )
+    semantic_hints = (
+        "建议",
+        "提醒",
+        "不要",
+        "应该",
+        "规则",
+        "价值",
+        "看重",
+        "总是",
+        "一直",
+        "稳定",
+        "先照顾",
+        "先稳住",
+        "家庭",
+    )
+    procedural_hints = (
+        "会",
+        "常常",
+        "经常",
+        "总会",
+        "习惯",
+        "怎么安慰",
+        "怎么照顾",
+        "口头禅",
+        "语气",
+        "节奏",
+        "先别急",
+        "慢慢来",
+        "我在呢",
+        "照顾",
+        "关心",
+    )
+
+    scores = {
+        "episodic": 0,
+        "semantic": 0,
+        "procedural": 0,
+    }
+    if source in {"shared_events", "memory_fragments", "chat_history_summary", "diary_text", "letter_text"}:
+        scores["episodic"] += 1
+    if source in {"important_advice", "emotional_triggers", "text_materials"}:
+        scores["semantic"] += 1
+    if source in {"daily_habits", "image_notes", "voice_notes"}:
+        scores["procedural"] += 1
+
+    if any(hint in text for hint in episodic_hints):
+        scores["episodic"] += 3
+    if any(hint in text for hint in semantic_hints):
+        scores["semantic"] += 3
+    if any(hint in text for hint in procedural_hints):
+        scores["procedural"] += 3
+
+    if "安慰" in text or "照顾" in text or "陪" in text:
+        scores["procedural"] += 1
+    if "提醒" in text or "建议" in text or "规则" in text:
+        scores["semantic"] += 1
+    if "一起" in text or "经历" in text or "记得" in text:
+        scores["episodic"] += 1
+
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    return ranked[0][0] if ranked else "semantic"
+
+
+def _memory_layer_key(source_key: str, item: str) -> str:
+    source = _normalize_text(source_key)
+    if source in {"episodic_memories", "shared_events", "memory_fragments", "chat_history_summary"}:
+        return "episodic"
+    if source in {"procedural_memories", "daily_habits", "image_notes", "voice_notes"}:
+        return "procedural"
+    if source in {"semantic_memories", "important_advice", "text_materials", "emotional_triggers"}:
+        return "semantic"
+    return _family_memory_layer_for_line(item, source)
 
 
 def _emotion_rules_payload(persona: dict[str, Any]) -> dict[str, Any]:
@@ -136,6 +275,21 @@ def retrieve_relevant_memories(
     *,
     family_subtype: str = "",
 ) -> list[str]:
+    return retrieve_ranked_family_memories(
+        memory_base,
+        emotional_state,
+        user_message,
+        family_subtype=family_subtype,
+    )
+
+
+def retrieve_ranked_family_memories(
+    memory_base: dict[str, Any],
+    emotional_state: str,
+    user_message: str,
+    *,
+    family_subtype: str = "",
+) -> list[str]:
     candidates = _memory_sources(memory_base)
     if not candidates:
         return []
@@ -150,33 +304,48 @@ def retrieve_relevant_memories(
         "寻求建议": ADVICE_HINTS,
         "日常聊天": (),
     }.get(emotional_state, ())
+    message_topics = _topic_keywords(message)
+    message_tokens = [token for token in re.split(r"[\s,，。！？；：]+", message) if token]
 
     scored: list[tuple[int, int, str]] = []
     for index, (source_key, item) in enumerate(candidates):
         score = 0
         score += subtype_priority.get(source_key, 0)
-        if any(keyword in item for keyword in emotional_keywords):
+        layer_key = _memory_layer_key(source_key, item)
+        if emotional_state in {"难过 / 失落", "焦虑 / 压力"} and layer_key == "procedural":
+            score += 5
+        if emotional_state == "开心 / 分享喜悦" and layer_key in {"procedural", "episodic"}:
             score += 3
-        if any(keyword in item for keyword in message.split() if keyword):
+        if emotional_state == "寻求建议" and layer_key == "semantic":
+            score += 4
+        if emotional_state == "日常聊天" and layer_key == "procedural":
+            score += 2
+        if any(keyword in item for keyword in emotional_keywords):
+            score += 4
+        if any(topic and topic in item for topic in message_topics):
+            score += 4
+        if any(token and token in item for token in message_tokens if len(token) >= 2):
             score += 2
         if emotional_state in item:
             score += 1
-        if source_key == "chat_history_summary" and subtype == "mother":
-            score += 2
-        if source_key == "memory_fragments" and subtype == "mother":
+        if layer_key == "episodic" and subtype == "parents":
             score += 1
-        if source_key in {"shared_events", "important_advice"} and subtype == "parents":
+        if layer_key == "procedural" and subtype == "mother":
             score += 2
-        if len(item) <= 12:
+        if layer_key == "semantic" and subtype == "parents":
+            score += 2
+        if layer_key == "procedural" and subtype == "other_family":
+            score += 1
+        if len(item) <= 18:
             score += 1
         scored.append((score, index, item))
 
     scored.sort(key=lambda entry: (-entry[0], entry[1]))
-    selected = [item for score, _, item in scored if score > 0][:4]
+    selected = [item for score, _, item in scored if score > 0][:5]
     if selected:
         return selected
 
-    return candidates[:3]
+    return [item for _, item in candidates[:3]]
 
 
 def build_family_reply_context(

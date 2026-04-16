@@ -161,6 +161,14 @@ class MySeedsTests(unittest.TestCase):
                 "text_materials": "家书片段\n日常聊天摘录",
                 "image_notes": "老照片说明",
                 "voice_notes": "语音提醒片段",
+                "guided_memory_answers": {
+                    "most_common_topics": "总是聊吃饭和休息",
+                    "comfort_style": "先接住情绪，再慢慢安慰",
+                    "most_characteristic_event": "考试前陪我复习",
+                    "repeated_phrases": "先别急\n慢慢来",
+                    "care_habits": "会记得提醒我吃饭",
+                    "most_common_reminders": "早点睡，别熬夜",
+                },
                 "raw_materials": {
                     "chat_history_text": "妈总是提醒我按时吃饭和休息",
                     "memory_notes_text": "小时候一起写作业\n晚上陪你散步",
@@ -249,8 +257,16 @@ class MySeedsTests(unittest.TestCase):
                     " ".join(detail["draft_payload"]["memory_base"]["memory_fragments"]),
                 )
                 self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
+                self.assertTrue(detail["draft_payload"]["memory_base"]["episodic_memories"])
+                self.assertTrue(detail["draft_payload"]["memory_base"]["semantic_memories"])
+                self.assertTrue(detail["draft_payload"]["memory_base"]["procedural_memories"])
+                self.assertEqual(
+                    detail["draft_payload"]["guided_memory_answers"]["most_common_topics"],
+                    "总是聊吃饭和休息",
+                )
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
-                self.assertIn("妈妈", saved["summary"])
+                self.assertIn("三层记忆", saved["summary"])
+                self.assertIn("引导补充", saved["summary"])
                 self.assertIn("妈妈", detail["summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
@@ -365,6 +381,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "重逢人格")
                 self.assertIn("raw_materials", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                self.assertTrue(detail["draft_payload"]["reunion_memory_base"]["memory_fragments"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)
@@ -399,6 +416,40 @@ class MySeedsTests(unittest.TestCase):
                     db.query(CreatedPersona).filter(CreatedPersona.id == created_id).delete()
                     db.commit()
             self._cleanup_user(user_id)
+
+    def test_family_companion_guided_answers_without_materials_still_builds_layers(self):
+        payload = {
+            "create_type": "family_companion",
+            "group": "relationship_family",
+            "source_repo": "parents-skills+MamaSkill",
+            "display_name": "家人陪伴",
+            "input_mode": "mother",
+            "schema_key": "family_companion_mother",
+            "form_data": {
+                "family_subtype": "mother",
+                "relationship_type": "妈妈",
+                "persona_name": "妈妈",
+                "guided_memory_answers": {
+                    "most_common_topics": "常聊吃饭和休息",
+                    "comfort_style": "先接住情绪，再慢慢安慰",
+                    "most_characteristic_event": "总在考试前陪我复习",
+                    "repeated_phrases": "慢慢来\n别急",
+                    "care_habits": "会记得我生病时的照顾方式",
+                    "most_common_reminders": "按时吃饭和早点睡",
+                },
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        draft = response.json()["draft"]
+        self.assertEqual(draft["family_subtype"], "mother")
+        self.assertEqual(draft["guided_memory_answers"]["most_common_topics"], "常聊吃饭和休息")
+        self.assertTrue(draft["memory_base"]["episodic_memories"])
+        self.assertTrue(draft["memory_base"]["semantic_memories"])
+        self.assertTrue(draft["memory_base"]["procedural_memories"])
 
     def test_intimate_companion_seed_round_trip_persists_and_chats(self):
         created_id: int | None = None

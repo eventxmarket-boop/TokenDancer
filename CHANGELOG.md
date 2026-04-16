@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.43 - 2026-04-17
+
+- Extended family memory from a flat summary into layered episodic, semantic, and procedural memories.
+- Added optional guided memory collection to family companion creation and preserved it through draft, save, and summary surfaces.
+- Adjusted family summary generation so guided recollection is visible in My Seeds instead of being truncated away.
+- Upgraded family companion retrieval to rank memories by emotion, topic, subtype, and memory layer.
+
 ## V1.4.42 - 2026-04-16
 
 - Unified the family-companion entry around a single visible `家人陪伴` path while preserving the `妈妈 / 父母 / 其他家人` subtype split internally.

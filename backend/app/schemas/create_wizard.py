@@ -4,7 +4,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+from app.schemas.family_companion import (
+    FamilyCompanionGuidedMemoryAnswers,
+    FamilyCompanionMemoryBase,
+    FamilyCompanionPersonaProfile,
+)
 from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
@@ -29,6 +33,7 @@ class CreateWizardDraftRequest(BaseModel):
     input_modes: list[str] = Field(default_factory=list)
     schema_key: str = ""
     form_data: dict[str, Any] = Field(default_factory=dict)
+    guided_memory_answers: FamilyCompanionGuidedMemoryAnswers = Field(default_factory=FamilyCompanionGuidedMemoryAnswers)
 
 
 class CreateWizardDraftMeta(BaseModel):
@@ -65,6 +70,7 @@ class CreateWizardDraft(BaseModel):
     relationship_type: str = ""
     family_subtype: str = ""
     raw_materials: dict[str, Any] | None = None
+    guided_memory_answers: FamilyCompanionGuidedMemoryAnswers | None = None
     emotion_rules: dict[str, Any] | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None

@@ -15,6 +15,7 @@ export type CreateWizardPayload = {
   input_modes: string[]
   schema_key: string
   form_data: Record<string, unknown>
+  guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers
 }
 
 export type CreateWizardDraftMeta = {
@@ -52,6 +53,10 @@ export type FamilyCompanionPersonaProfile = {
 }
 
 export type FamilyCompanionMemoryBase = {
+  episodic_memories: string[]
+  semantic_memories: string[]
+  procedural_memories: string[]
+  legacy_summary: string[]
   shared_events: string[]
   important_advice: string[]
   daily_habits: string[]
@@ -61,6 +66,15 @@ export type FamilyCompanionMemoryBase = {
   text_materials: string[]
   image_notes: string[]
   voice_notes: string[]
+}
+
+export type FamilyCompanionGuidedMemoryAnswers = {
+  most_common_topics: string
+  comfort_style: string
+  most_characteristic_event: string
+  repeated_phrases: string
+  care_habits: string
+  most_common_reminders: string
 }
 
 export type FamilyCompanionEmotionRules = {
@@ -221,6 +235,7 @@ export type CreateWizardDraft = {
   relationship_type?: string
   family_subtype?: string
   raw_materials?: FamilyCompanionRawMaterials | ReunionPersonaRawMaterials | Record<string, unknown> | null
+  guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers | null
   emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   persona_profile?: FamilyCompanionPersonaProfile | null

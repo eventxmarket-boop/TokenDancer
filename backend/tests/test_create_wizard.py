@@ -115,6 +115,14 @@ class CreateWizardTests(unittest.TestCase):
                 "text_materials": "家书片段\n日常聊天摘录",
                 "image_notes": "老照片说明",
                 "voice_notes": "语音提醒片段",
+                "guided_memory_answers": {
+                    "most_common_topics": "常聊吃饭和休息",
+                    "comfort_style": "先接住情绪，再慢慢安慰",
+                    "most_characteristic_event": "小时候陪我写作业",
+                    "repeated_phrases": "先别急\n慢慢来",
+                    "care_habits": "会提醒我按时吃饭",
+                    "most_common_reminders": "记得休息和照顾自己",
+                },
                 "raw_materials": {
                     "chat_history_text": "妈总是提醒我按时吃饭和休息",
                     "memory_notes_text": "小时候一起写作业\n晚上陪你散步",
@@ -163,6 +171,10 @@ class CreateWizardTests(unittest.TestCase):
             "先照顾好自己",
             " ".join(body["draft"]["memory_base"]["important_advice"]),
         )
+        self.assertTrue(body["draft"]["memory_base"]["episodic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["semantic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["procedural_memories"])
+        self.assertEqual(body["draft"]["guided_memory_answers"]["most_common_topics"], "常聊吃饭和休息")
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
         self.assertEqual(body["draft"]["family_subtype"], "mother")
         self.assertEqual(body["draft"]["emotion_rules"]["subtype_label"], "妈妈")
@@ -220,6 +232,9 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("更偏家庭整体视角", body["draft"]["emotion_rules"]["subtype_focus"])
         self.assertIn("家庭一起经历的重要时刻", " ".join(body["draft"]["memory_base"]["shared_events"]))
         self.assertIn("先把家庭安排稳住", " ".join(body["draft"]["memory_base"]["important_advice"]))
+        self.assertTrue(body["draft"]["memory_base"]["episodic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["semantic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["procedural_memories"])
         self.assertIn("父母", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_family_companion_other_family_draft(self):
@@ -272,7 +287,44 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("更偏通用家庭陪伴", body["draft"]["emotion_rules"]["subtype_focus"])
         self.assertIn("小事里的关心", " ".join(body["draft"]["memory_base"]["memory_fragments"]))
         self.assertIn("保持联系", " ".join(body["draft"]["memory_base"]["important_advice"]))
+        self.assertTrue(body["draft"]["memory_base"]["episodic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["semantic_memories"])
+        self.assertTrue(body["draft"]["memory_base"]["procedural_memories"])
         self.assertIn("其他家人", body["draft"]["profile"])
+
+    def test_create_wizard_draft_endpoint_builds_family_companion_guided_memory_only_draft(self):
+        payload = {
+            "create_type": "family_companion",
+            "group": "relationship_family",
+            "source_repo": "parents-skills+MamaSkill",
+            "display_name": "家人陪伴",
+            "input_mode": "mother",
+            "schema_key": "family_companion_mother",
+            "form_data": {
+                "family_subtype": "mother",
+                "relationship_type": "妈妈",
+                "persona_name": "妈妈",
+                "guided_memory_answers": {
+                    "most_common_topics": "总会聊吃饭和休息",
+                    "comfort_style": "先接住情绪，再慢慢安慰",
+                    "most_characteristic_event": "总在我考试前陪我复习",
+                    "repeated_phrases": "慢慢来\n别急",
+                    "care_habits": "会记得我生病时的照顾方式",
+                    "most_common_reminders": "按时吃饭和早点睡",
+                },
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()["draft"]
+        self.assertEqual(body["family_subtype"], "mother")
+        self.assertEqual(body["guided_memory_answers"]["most_common_topics"], "总会聊吃饭和休息")
+        self.assertTrue(body["memory_base"]["episodic_memories"])
+        self.assertTrue(body["memory_base"]["semantic_memories"])
+        self.assertTrue(body["memory_base"]["procedural_memories"])
 
     def test_create_wizard_draft_endpoint_builds_reunion_persona_draft(self):
         payload = {

@@ -142,6 +142,47 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
     return "；".join(parts[:4])
 
 
+def _object_value(value: Any, key: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(key)
+    return getattr(value, key, None)
+
+
+def _family_memory_layer_summary(memory: Any) -> str:
+    if memory is None:
+        return ""
+
+    episodic = _clean_lines(_object_value(memory, "episodic_memories"))
+    semantic = _clean_lines(_object_value(memory, "semantic_memories"))
+    procedural = _clean_lines(_object_value(memory, "procedural_memories"))
+    legacy = _clean_lines(_object_value(memory, "legacy_summary"))
+    counts = [len(episodic), len(semantic), len(procedural)]
+    if any(counts):
+        summary = f"三层记忆：E{counts[0]} / S{counts[1]} / P{counts[2]}"
+        if legacy:
+            summary += f"；旧版摘要：{legacy[0]}"
+        return summary
+    return ""
+
+
+def _guided_answers_summary(guided_answers: Any) -> str:
+    if guided_answers is None:
+        return ""
+
+    fields = [
+        _normalize_text(_object_value(guided_answers, "most_common_topics")),
+        _normalize_text(_object_value(guided_answers, "comfort_style")),
+        _normalize_text(_object_value(guided_answers, "most_characteristic_event")),
+        _normalize_text(_object_value(guided_answers, "repeated_phrases")),
+        _normalize_text(_object_value(guided_answers, "care_habits")),
+        _normalize_text(_object_value(guided_answers, "most_common_reminders")),
+    ]
+    filled = [item for item in fields if item]
+    if not filled:
+        return ""
+    return f"引导补充：{len(filled)} 项 / {filled[0][:24]}"
+
+
 def _emotion_rules_summary(emotion_rules: Any) -> str:
     if not isinstance(emotion_rules, dict):
         return ""
@@ -271,8 +312,11 @@ def _build_summary(draft: CreateWizardDraft) -> str:
         profile = draft.persona_profile or {}
         memory = draft.memory_base or {}
         emotion_rules = getattr(draft, "emotion_rules", None)
+        guided_answers = getattr(draft, "guided_memory_answers", None)
         raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
         emotion_rules_summary = _emotion_rules_summary(emotion_rules)
+        layer_summary = _family_memory_layer_summary(memory)
+        guided_summary = _guided_answers_summary(guided_answers)
         family_subtype = _normalize_text(
             getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")
         )
@@ -293,15 +337,19 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             memories.extend(_clean_lines(memory.get("image_notes")))
             memories.extend(_clean_lines(memory.get("voice_notes")))
         summary_parts = [part for part in [top_name, family_subtype_label or relationship_type, tone] if part]
+        if guided_summary:
+            summary_parts.append(guided_summary)
         if raw_materials_summary:
             summary_parts.append(raw_materials_summary)
+        if layer_summary:
+            summary_parts.append(layer_summary)
         if emotion_rules_summary:
             summary_parts.append(emotion_rules_summary)
         if summary_parts or memories:
             combined = " · ".join(summary_parts)
             if memories:
                 combined = f"{combined} / {memories[0]}" if combined else memories[0]
-            return combined[:120]
+            return combined[:160]
 
     if _normalize_text(draft.meta.create_type) == "reunion_persona":
         profile = draft.reunion_persona_profile or {}

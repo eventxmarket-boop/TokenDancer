@@ -6,7 +6,11 @@ from typing import Any
 from uuid import uuid4
 
 from app.schemas.create_wizard import CreateWizardDraftMeta
-from app.schemas.family_companion import FamilyCompanionMemoryBase, FamilyCompanionPersonaProfile
+from app.schemas.family_companion import (
+    FamilyCompanionGuidedMemoryAnswers,
+    FamilyCompanionMemoryBase,
+    FamilyCompanionPersonaProfile,
+)
 from app.schemas.intimate_companion import (
     IntimateCompanionMemoryBase,
     IntimateCompanionRelationshipProfile,
@@ -426,6 +430,181 @@ def _material_summary_from_parts(*parts: Any) -> str:
     return " / ".join(snippets[:3])
 
 
+FAMILY_GUIDED_MEMORY_FIELDS = (
+    "most_common_topics",
+    "comfort_style",
+    "most_characteristic_event",
+    "repeated_phrases",
+    "care_habits",
+    "most_common_reminders",
+)
+
+
+def _normalize_guided_memory_answers(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for field in FAMILY_GUIDED_MEMORY_FIELDS:
+        text = _normalize_text(value.get(field))
+        if text:
+            normalized[field] = text
+    return normalized
+
+
+def _family_memory_layer_for_line(line: str, source_key: str = "") -> str:
+    text = _normalize_text(line)
+    source = _normalize_text(source_key)
+    if not text and not source:
+        return "semantic"
+
+    episodic_hints = (
+        "小时候",
+        "一起",
+        "回家",
+        "团圆",
+        "陪你",
+        "家里",
+        "过年",
+        "那次",
+        "那天",
+        "第一次",
+        "最后",
+        "经历",
+        "时刻",
+        "事件",
+        "记忆",
+        "场景",
+    )
+    semantic_hints = (
+        "建议",
+        "提醒",
+        "不要",
+        "应该",
+        "规则",
+        "价值",
+        "看重",
+        "总是",
+        "一直",
+        "稳定",
+        "先照顾",
+        "先稳住",
+        "家庭",
+    )
+    procedural_hints = (
+        "会",
+        "常常",
+        "经常",
+        "总会",
+        "习惯",
+        "怎么安慰",
+        "怎么照顾",
+        "口头禅",
+        "语气",
+        "节奏",
+        "先别急",
+        "慢慢来",
+        "我在呢",
+        "照顾",
+        "关心",
+    )
+
+    scores = {
+        "episodic": 0,
+        "semantic": 0,
+        "procedural": 0,
+    }
+    if source in {"shared_events", "memory_fragments", "chat_history_summary", "diary_text", "letter_text"}:
+        scores["episodic"] += 1
+    if source in {"important_advice", "emotional_triggers", "text_materials"}:
+        scores["semantic"] += 1
+    if source in {"daily_habits", "image_notes", "voice_notes"}:
+        scores["procedural"] += 1
+
+    if any(hint in text for hint in episodic_hints):
+        scores["episodic"] += 3
+    if any(hint in text for hint in semantic_hints):
+        scores["semantic"] += 3
+    if any(hint in text for hint in procedural_hints):
+        scores["procedural"] += 3
+
+    if "安慰" in text or "照顾" in text or "陪" in text:
+        scores["procedural"] += 1
+    if "提醒" in text or "建议" in text or "规则" in text:
+        scores["semantic"] += 1
+    if "一起" in text or "经历" in text or "记得" in text:
+        scores["episodic"] += 1
+
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    return ranked[0][0] if ranked else "semantic"
+
+
+def _family_memory_base_dict(
+    *,
+    episodic_memories: Any = None,
+    semantic_memories: Any = None,
+    procedural_memories: Any = None,
+    legacy_summary: Any = None,
+    shared_events: Any = None,
+    important_advice: Any = None,
+    daily_habits: Any = None,
+    emotional_triggers: Any = None,
+    chat_history_summary: Any = "",
+    memory_fragments: Any = None,
+    text_materials: Any = None,
+    image_notes: Any = None,
+    voice_notes: Any = None,
+) -> dict[str, Any]:
+    episodic = _merge_unique_lines(episodic_memories)
+    semantic = _merge_unique_lines(semantic_memories)
+    procedural = _merge_unique_lines(procedural_memories)
+    legacy = _merge_unique_lines(legacy_summary)
+
+    shared_events = _merge_unique_lines(shared_events, episodic)
+    important_advice = _merge_unique_lines(important_advice, semantic)
+    daily_habits = _merge_unique_lines(daily_habits, procedural)
+    emotional_triggers = _merge_unique_lines(emotional_triggers)
+    memory_fragments = _merge_unique_lines(memory_fragments, episodic, semantic)
+    text_materials = _merge_unique_lines(text_materials, semantic)
+    image_notes = _merge_unique_lines(image_notes)
+    voice_notes = _merge_unique_lines(voice_notes)
+    legacy = _merge_unique_lines(
+        legacy,
+        episodic[:2],
+        semantic[:2],
+        procedural[:2],
+        _clean_lines(chat_history_summary),
+    )
+
+    return {
+        "episodic_memories": episodic,
+        "semantic_memories": semantic,
+        "procedural_memories": procedural,
+        "legacy_summary": legacy,
+        "shared_events": shared_events,
+        "important_advice": important_advice,
+        "daily_habits": daily_habits,
+        "emotional_triggers": emotional_triggers,
+        "chat_history_summary": _normalize_text(chat_history_summary),
+        "memory_fragments": memory_fragments,
+        "text_materials": text_materials,
+        "image_notes": image_notes,
+        "voice_notes": voice_notes,
+    }
+
+
+def _family_memory_summary_excerpt(memory_base: dict[str, Any]) -> str:
+    if not isinstance(memory_base, dict):
+        return ""
+
+    snippets = []
+    for key in ("episodic_memories", "semantic_memories", "procedural_memories", "legacy_summary"):
+        lines = _merge_unique_lines(memory_base.get(key))
+        if lines:
+            snippets.append(lines[0])
+    return " / ".join(snippets[:3])
+
+
 def _format_bullets(items: list[str]) -> str:
     if not items:
         return "- 暂无"
@@ -763,6 +942,11 @@ def extract_family_memory_base_from_materials(
     comfort_style = _normalize_text(persona_form.get("comfort_style")) or "先接住情绪，再给安慰和陪伴。"
     celebration_style = _normalize_text(persona_form.get("celebration_style")) or "先替你高兴，再顺着把好消息说完整。"
     boundaries = _normalize_text(persona_form.get("relation_boundaries") or persona_form.get("boundaries")) or "不碰隐私边界，不越界替你做决定。"
+    guided_answers = _normalize_guided_memory_answers(
+        memory_form.get("guided_memory_answers")
+        or persona_form.get("guided_memory_answers")
+        or raw_materials.get("guided_memory_answers")
+    )
 
     shared_events = _clean_lines(memory_form.get("shared_events") or persona_form.get("shared_events")) or [
         "小时候一起吃饭的场景",
@@ -781,6 +965,10 @@ def extract_family_memory_base_from_materials(
     text_materials = _clean_lines(memory_form.get("text_materials") or persona_form.get("text_materials"))
     image_notes = _clean_lines(memory_form.get("image_notes") or persona_form.get("image_notes"))
     voice_notes = _clean_lines(memory_form.get("voice_notes") or persona_form.get("voice_notes"))
+    episodic_memories: list[str] = []
+    semantic_memories: list[str] = []
+    procedural_memories: list[str] = []
+    legacy_summary: list[str] = []
 
     material_lines = _merge_unique_lines(
         raw_materials.get("chat_history_text"),
@@ -797,17 +985,28 @@ def extract_family_memory_base_from_materials(
             raw_materials.get("text_materials_text"),
         )
 
+    chat_history_summary = _normalize_text(raw_materials.get("chat_history_text"))
+    if chat_history_summary:
+        episodic_memories.append(chat_history_summary)
+        legacy_summary.append(chat_history_summary)
+
     for line in material_lines:
-        if any(keyword in line for keyword in ("小时候", "一起", "回家", "团圆", "陪你", "家里", "过年")):
+        layer = _family_memory_layer_for_line(line, "materials")
+        if layer == "episodic":
             shared_events.append(line)
-        elif any(keyword in line for keyword in ("先", "别", "记得", "一定", "注意", "照顾", "稳住", "要")):
-            important_advice.append(line)
-        elif any(keyword in line for keyword in ("常", "总是", "每天", "会", "经常", "习惯")):
-            daily_habits.append(line)
-        elif any(keyword in line for keyword in ("难过", "开心", "高兴", "委屈", "压力", "担心", "焦虑")):
-            emotional_triggers.append(line)
-        else:
             memory_fragments.append(line)
+            episodic_memories.append(line)
+        elif layer == "semantic":
+            important_advice.append(line)
+            text_materials.append(line)
+            semantic_memories.append(line)
+        else:
+            daily_habits.append(line)
+            procedural_memories.append(line)
+
+        if any(keyword in line for keyword in ("难过", "开心", "高兴", "委屈", "压力", "担心", "焦虑")):
+            emotional_triggers.append(line)
+            legacy_summary.append(line)
 
     shared_events = _merge_unique_lines(shared_events)
     important_advice = _merge_unique_lines(important_advice)
@@ -817,9 +1016,21 @@ def extract_family_memory_base_from_materials(
     text_materials = _merge_unique_lines(text_materials, _document_snippets(raw_materials.get("uploaded_text_documents", [])))
     image_notes = _merge_unique_lines(image_notes)
     voice_notes = _merge_unique_lines(voice_notes)
-    chat_history_summary = _normalize_text(raw_materials.get("chat_history_text"))
+    episodic_memories = _merge_unique_lines(episodic_memories, shared_events, memory_fragments)
+    semantic_memories = _merge_unique_lines(semantic_memories, important_advice, text_materials, emotional_triggers)
+    procedural_memories = _merge_unique_lines(procedural_memories, daily_habits, image_notes, voice_notes)
+    legacy_summary = _merge_unique_lines(
+        legacy_summary,
+        episodic_memories[:2],
+        semantic_memories[:2],
+        procedural_memories[:2],
+    )
 
     memory_base = FamilyCompanionMemoryBase(
+        episodic_memories=episodic_memories,
+        semantic_memories=semantic_memories,
+        procedural_memories=procedural_memories,
+        legacy_summary=legacy_summary,
         shared_events=shared_events,
         important_advice=important_advice,
         daily_habits=daily_habits,
@@ -864,13 +1075,150 @@ def extract_family_memory_base_from_materials(
     return {
         "memory_base": memory_base.model_dump(),
         "emotion_rules": emotion_rules,
+        "guided_memory_answers": guided_answers,
     }
+
+
+def extract_family_memory_base_from_guided_answers(
+    persona_form: dict[str, Any],
+    guided_answers: dict[str, Any],
+    raw_materials: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    _ = persona_form or {}
+    raw_materials = raw_materials or {}
+    answers = _normalize_guided_memory_answers(guided_answers)
+    if not answers:
+        return {
+            "memory_base": _family_memory_base_dict(
+                chat_history_summary=_normalize_text(raw_materials.get("chat_history_text")),
+            ),
+            "guided_memory_answers": {},
+        }
+
+    episodic_memories: list[str] = []
+    semantic_memories: list[str] = []
+    procedural_memories: list[str] = []
+    legacy_summary: list[str] = []
+    shared_events: list[str] = []
+    important_advice: list[str] = []
+    daily_habits: list[str] = []
+    emotional_triggers: list[str] = []
+    memory_fragments: list[str] = []
+    text_materials: list[str] = []
+
+    source_map = {
+        "most_common_topics": ("semantic", semantic_memories, legacy_summary, text_materials),
+        "comfort_style": ("procedural", procedural_memories, legacy_summary, daily_habits),
+        "most_characteristic_event": ("episodic", episodic_memories, legacy_summary, shared_events, memory_fragments),
+        "repeated_phrases": ("procedural", procedural_memories, legacy_summary, daily_habits),
+        "care_habits": ("procedural", procedural_memories, legacy_summary, daily_habits),
+        "most_common_reminders": ("semantic", semantic_memories, legacy_summary, important_advice, emotional_triggers),
+    }
+
+    for field, value in answers.items():
+        lines = _clean_lines(value)
+        if not lines:
+            continue
+        layer_name, primary_bucket, summary_bucket, *extra_buckets = source_map.get(
+            field,
+            ("semantic", semantic_memories, legacy_summary),
+        )
+        primary_bucket.extend(lines)
+        summary_bucket.extend(lines)
+        for bucket in extra_buckets:
+            bucket.extend(lines)
+        if layer_name == "episodic":
+            episodic_memories.extend(lines)
+        elif layer_name == "procedural":
+            procedural_memories.extend(lines)
+        else:
+            semantic_memories.extend(lines)
+
+    memory_base = _family_memory_base_dict(
+        episodic_memories=episodic_memories,
+        semantic_memories=semantic_memories,
+        procedural_memories=procedural_memories,
+        legacy_summary=legacy_summary,
+        shared_events=shared_events or episodic_memories,
+        important_advice=important_advice or semantic_memories,
+        daily_habits=daily_habits or procedural_memories,
+        emotional_triggers=emotional_triggers,
+        chat_history_summary=_normalize_text(raw_materials.get("chat_history_text")),
+        memory_fragments=memory_fragments or episodic_memories,
+        text_materials=text_materials or semantic_memories,
+    )
+    return {
+        "memory_base": memory_base,
+        "guided_memory_answers": answers,
+    }
+
+
+def merge_family_memories(
+    material_memory_base: dict[str, Any] | None,
+    guided_memory_base: dict[str, Any] | None,
+) -> dict[str, Any]:
+    material_memory_base = material_memory_base or {}
+    guided_memory_base = guided_memory_base or {}
+    return _family_memory_base_dict(
+        episodic_memories=_merge_unique_lines(
+            material_memory_base.get("episodic_memories"),
+            guided_memory_base.get("episodic_memories"),
+        ),
+        semantic_memories=_merge_unique_lines(
+            material_memory_base.get("semantic_memories"),
+            guided_memory_base.get("semantic_memories"),
+        ),
+        procedural_memories=_merge_unique_lines(
+            material_memory_base.get("procedural_memories"),
+            guided_memory_base.get("procedural_memories"),
+        ),
+        legacy_summary=_merge_unique_lines(
+            material_memory_base.get("legacy_summary"),
+            guided_memory_base.get("legacy_summary"),
+        ),
+        shared_events=_merge_unique_lines(
+            material_memory_base.get("shared_events"),
+            guided_memory_base.get("shared_events"),
+        ),
+        important_advice=_merge_unique_lines(
+            material_memory_base.get("important_advice"),
+            guided_memory_base.get("important_advice"),
+        ),
+        daily_habits=_merge_unique_lines(
+            material_memory_base.get("daily_habits"),
+            guided_memory_base.get("daily_habits"),
+        ),
+        emotional_triggers=_merge_unique_lines(
+            material_memory_base.get("emotional_triggers"),
+            guided_memory_base.get("emotional_triggers"),
+        ),
+        chat_history_summary=_normalize_text(
+            material_memory_base.get("chat_history_summary") or guided_memory_base.get("chat_history_summary")
+        ),
+        memory_fragments=_merge_unique_lines(
+            material_memory_base.get("memory_fragments"),
+            guided_memory_base.get("memory_fragments"),
+        ),
+        text_materials=_merge_unique_lines(
+            material_memory_base.get("text_materials"),
+            guided_memory_base.get("text_materials"),
+        ),
+        image_notes=_merge_unique_lines(
+            material_memory_base.get("image_notes"),
+            guided_memory_base.get("image_notes"),
+        ),
+        voice_notes=_merge_unique_lines(
+            material_memory_base.get("voice_notes"),
+            guided_memory_base.get("voice_notes"),
+        ),
+    )
 
 
 def build_family_companion_draft(
     form_data: dict[str, Any],
     display_name: str = "",
     input_mode: str = "",
+    guided_memory_answers: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
     family_subtype = _resolve_family_subtype(
@@ -905,11 +1253,23 @@ def build_family_companion_draft(
         image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
-    extraction = extract_family_memory_base_from_materials(form_data, form_data, raw_materials)
-    memory_base = FamilyCompanionMemoryBase.model_validate(extraction["memory_base"])
+    guided_answers_input = (
+        guided_memory_answers
+        if isinstance(guided_memory_answers, dict)
+        else form_data.get("guided_memory_answers")
+        if isinstance(form_data.get("guided_memory_answers"), dict)
+        else {}
+    )
+    material_extraction = extract_family_memory_base_from_materials(form_data, form_data, raw_materials)
+    guided_extraction = extract_family_memory_base_from_guided_answers(form_data, guided_answers_input, raw_materials)
+    merged_memory_base = merge_family_memories(
+        material_extraction.get("memory_base") or {},
+        guided_extraction.get("memory_base") or {},
+    )
+    memory_base = FamilyCompanionMemoryBase.model_validate(merged_memory_base)
     emotion_rules = build_family_emotion_rules(
         family_subtype,
-        extraction["emotion_rules"],
+        material_extraction["emotion_rules"],
         subtype_preset,
     )
 
@@ -967,6 +1327,7 @@ def build_family_companion_draft(
         "memory_base": memory_base.model_dump(),
         "emotion_rules": emotion_rules,
         "raw_materials": raw_materials,
+        "guided_memory_answers": guided_extraction.get("guided_memory_answers") or _normalize_guided_memory_answers(guided_answers_input),
         "name": name,
     }
 
@@ -1817,13 +2178,22 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     family_subtype = _normalize_text(payload.get("family_subtype")) or _normalize_text(form_data.get("family_subtype"))
     if normalized_create_type == "family_companion" and family_subtype:
         form_data = {**form_data, "family_subtype": family_subtype}
+    guided_memory_answers = _normalize_guided_memory_answers(payload.get("guided_memory_answers"))
+    form_guided_memory_answers = _normalize_guided_memory_answers(form_data.get("guided_memory_answers"))
+    if form_guided_memory_answers:
+        guided_memory_answers = {**form_guided_memory_answers, **guided_memory_answers}
 
     if normalized_create_type == "self_unified":
         content = _build_self_draft(form_data, normalized_display_name)
     elif normalized_create_type == "source_persona":
         content = _build_source_draft(form_data, normalized_display_name)
     elif normalized_create_type == "family_companion":
-        content = build_family_companion_draft(form_data, normalized_display_name, normalized_input_mode)
+        content = build_family_companion_draft(
+            form_data,
+            normalized_display_name,
+            normalized_input_mode,
+            guided_memory_answers,
+        )
     elif normalized_create_type == "reunion_persona":
         content = _build_reunion_persona_draft(form_data, normalized_display_name, normalized_input_mode)
     elif normalized_create_type == "intimate_companion":
@@ -1867,6 +2237,7 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "relationship_type": content.get("relationship_type", ""),
         "family_subtype": content.get("family_subtype", ""),
         "raw_materials": content.get("raw_materials"),
+        "guided_memory_answers": content.get("guided_memory_answers"),
         "emotion_rules": content.get("emotion_rules"),
         "self_persona_unified": content.get("self_persona_unified"),
         "persona_profile": content.get("persona_profile"),
