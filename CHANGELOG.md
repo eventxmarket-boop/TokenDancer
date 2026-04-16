@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.35 - 2026-04-16
+
+- Restyled the personal center cards into a semi-overlapped stack that matches the homepage sticker pattern.
+- Added hover and active color feedback so the three entry cards feel clickable and responsive.
+- Kept the personal center focused on the three real entries without changing backend behavior.
+
 ## V1.4.34 - 2026-04-16
 
 - Added the minimal auth closure with login and register pages.

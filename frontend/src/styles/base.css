@@ -964,54 +964,131 @@ html[data-theme='night'] .my-entry-card {
   line-height: 1;
 }
 
-.my-entry-grid {
+.my-entry-stack {
+  position: relative;
+  width: min(860px, 100%);
+  height: 360px;
+}
+
+.my-entry-link {
+  position: absolute;
+  inset: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  width: min(920px, 100%);
+  place-items: center;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  --entry-shift-x: 0px;
+  --entry-shift-y: 0px;
+  --entry-rotate: 0deg;
+  --entry-z: 1;
+}
+
+.my-entry-link--my-seeds {
+  --entry-shift-x: -152px;
+  --entry-shift-y: 12px;
+  --entry-rotate: -8deg;
+  --entry-z: 2;
+}
+
+.my-entry-link--favorites {
+  --entry-shift-x: 0px;
+  --entry-shift-y: -2px;
+  --entry-rotate: 0deg;
+  --entry-z: 4;
+}
+
+.my-entry-link--sessions {
+  --entry-shift-x: 152px;
+  --entry-shift-y: 14px;
+  --entry-rotate: 8deg;
+  --entry-z: 3;
 }
 
 .my-entry-card {
   display: grid;
   gap: 10px;
-  padding: 22px;
+  width: min(280px, 52vw);
+  min-height: 200px;
+  padding: 24px;
   border-radius: 28px;
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow);
-  min-height: 190px;
   justify-items: center;
+  align-content: start;
   text-align: center;
   transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
+    transform 0.24s ease,
+    box-shadow 0.24s ease,
+    border-color 0.24s ease,
+    background 0.24s ease,
+    opacity 0.24s ease;
+  transform: translate3d(var(--entry-shift-x), var(--entry-shift-y), 0) rotate(var(--entry-rotate));
+  z-index: var(--entry-z);
+}
+
+.my-entry-card__tag {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .my-entry-card h3 {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.48rem;
 }
 
 .my-entry-card p {
   margin: 0;
   color: var(--muted);
+  line-height: 1.65;
 }
 
-.my-entry-card:hover {
-  transform: translateY(-3px);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 245, 239, 0.9));
+.my-entry-card--active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 241, 0.96));
+  border-color: rgba(234, 127, 102, 0.28);
+  box-shadow: 0 30px 68px rgba(184, 127, 101, 0.2);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 10px), 0) rotate(0deg) scale(1.05);
+}
+
+.my-entry-card--inactive {
+  opacity: 0.92;
+}
+
+.my-entry-link:hover .my-entry-card,
+.my-entry-link:focus-visible .my-entry-card {
   border-color: rgba(234, 127, 102, 0.26);
-  box-shadow: 0 28px 60px rgba(184, 127, 101, 0.18);
+  box-shadow: 0 28px 62px rgba(184, 127, 101, 0.18);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 8px), 0) rotate(0deg) scale(1.03);
 }
 
-html[data-theme='night'] .my-entry-card:hover {
-  background: linear-gradient(180deg, rgba(42, 34, 53, 0.96), rgba(31, 25, 39, 0.92));
-  border-color: rgba(255, 177, 156, 0.26);
+.my-entry-link:hover .my-entry-card__tag,
+.my-entry-link:focus-visible .my-entry-card__tag {
+  background: rgba(255, 213, 196, 0.95);
 }
 
 .my-entry-card h3,
 .my-entry-card p {
   width: 100%;
+}
+
+html[data-theme='night'] .my-entry-card--active {
+  background: linear-gradient(180deg, rgba(51, 41, 65, 0.98), rgba(29, 23, 38, 0.96));
+  border-color: rgba(255, 177, 156, 0.26);
+}
+
+html[data-theme='night'] .my-entry-link:hover .my-entry-card,
+html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
+  background: linear-gradient(180deg, rgba(51, 41, 65, 0.98), rgba(29, 23, 38, 0.96));
+  border-color: rgba(255, 177, 156, 0.26);
 }
 
 .my-seeds-group-stack {
@@ -2267,8 +2344,18 @@ html[data-theme='night'] .my-entry-card:hover {
     padding-top: 4px;
   }
 
-  .my-entry-grid {
-    grid-template-columns: 1fr;
+  .my-entry-stack {
+    width: 100%;
+    height: auto;
+    display: grid;
+    gap: 14px;
+  }
+
+  .my-entry-link {
+    position: static;
+    --entry-shift-x: 0px;
+    --entry-shift-y: 0px;
+    --entry-rotate: 0deg;
   }
 
   .my-page__inner,
