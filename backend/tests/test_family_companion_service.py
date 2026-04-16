@@ -53,3 +53,64 @@ class FamilyCompanionServiceTests(unittest.TestCase):
         self.assertIn("安抚但不空泛，先帮对方稳住", context)
         self.assertIn("先接住当前情绪", context)
 
+    def test_family_companion_context_varies_by_subtype(self):
+        base_persona = {
+            "persona_profile": {
+                "relationship_type": "家人陪伴",
+                "name": "家人陪伴",
+                "tone": "温和、亲近",
+                "catchphrases": ["先别急", "慢慢来"],
+                "comfort_style": "先接住情绪，再慢慢安慰",
+                "celebration_style": "先替你高兴，再顺着说",
+                "boundaries": "不越界替你做决定",
+            },
+            "memory_base": {
+                "shared_events": ["家庭一起经历的重要时刻", "成长过程里的大事"],
+                "important_advice": ["先看现实条件", "先把家庭安排稳住"],
+                "daily_habits": ["会提醒你注意整体安排", "会关心你的成长进度"],
+                "emotional_triggers": ["家庭压力", "成长选择", "重要决定"],
+                "chat_history_summary": "把父母整体关心、提醒和建议先整理出来。",
+                "memory_fragments": ["小时候一起写作业", "晚上陪你散步"],
+                "text_materials": ["家书片段", "日常聊天摘录"],
+            },
+            "emotion_rules": {
+                "summary": "先判断情绪，再提取记忆，再给温和回应",
+                "emotion_state_priority": [
+                    "难过 / 失落",
+                    "焦虑 / 压力",
+                    "开心 / 分享喜悦",
+                ],
+                "response_sequence": ["先接住当前情绪", "再调用熟悉记忆", "再给温和回应"],
+                "response_temperature_map": {
+                    "焦虑 / 压力": "安抚但不空泛，先帮对方稳住",
+                },
+                "memory_priority_rules": ["优先常说的话", "优先共同经历"],
+                "boundary_rules": ["不伪造不确定的家庭事实"],
+            },
+        }
+
+        mother_context = build_family_companion_context(
+            {**base_persona, "family_subtype": "mother"},
+            [{"role": "user", "content": "我今天压力有点大"}],
+            "我今天压力有点大",
+        )
+        parents_context = build_family_companion_context(
+            {**base_persona, "family_subtype": "parents"},
+            [{"role": "user", "content": "我今天压力有点大"}],
+            "我今天压力有点大",
+        )
+        other_context = build_family_companion_context(
+            {**base_persona, "family_subtype": "other_family"},
+            [{"role": "user", "content": "我今天压力有点大"}],
+            "我今天压力有点大",
+        )
+
+        self.assertIn("家人子类型：妈妈", mother_context)
+        self.assertIn("子类型重点：更偏接住情绪、细节照顾和熟悉安慰", mother_context)
+        self.assertIn("家人子类型：父母", parents_context)
+        self.assertIn("子类型重点：更偏家庭整体视角、稳定建议和共同记忆", parents_context)
+        self.assertIn("家人子类型：其他家人", other_context)
+        self.assertIn("子类型重点：更偏通用家庭陪伴和自然关心", other_context)
+        self.assertNotEqual(mother_context, parents_context)
+        self.assertNotEqual(mother_context, other_context)
+        self.assertNotEqual(parents_context, other_context)

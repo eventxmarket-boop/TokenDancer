@@ -795,9 +795,9 @@ function getInputModeNote(type: CreateType, mode: string) {
   }
 
   if (type === 'family_companion') {
-    if (mode === 'mother') return '适合妈妈视角。'
-    if (mode === 'parents') return '适合父母视角。'
-    if (mode === 'other_family') return '适合其他家人视角。'
+    if (mode === 'mother') return '更偏安慰、接住情绪和熟悉照顾感。'
+    if (mode === 'parents') return '更偏家庭共同记忆和稳定建议。'
+    if (mode === 'other_family') return '更偏通用家庭陪伴。'
   }
 
   if (type === 'reunion_persona') {
@@ -819,6 +819,19 @@ function getRelationshipLabel(mode: string) {
     inputModeLabels.reunion_persona[mode] ||
     '关系人格'
   )
+}
+
+function getFamilySubtypeNote(mode: string) {
+  if (mode === 'mother') {
+    return '妈妈更偏安慰和接住情绪，语气更熟悉。'
+  }
+  if (mode === 'parents') {
+    return '父母更偏家庭共同记忆和稳定建议。'
+  }
+  if (mode === 'other_family') {
+    return '其他家人走更通用的家庭陪伴。'
+  }
+  return '先选妈妈、父母或其他家人，再统一填写下面的内容。'
 }
 
 function getFamilySubtypePreset(mode: string) {
@@ -1468,10 +1481,10 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 1 步</p>
-              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择子类型') : '选择创建类型' }}</h3>
+              <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择家人类型') : '选择创建类型' }}</h3>
             </div>
             <p class="section-note">
-              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人。') : '先确认你要从哪里开始创建。' }}
+              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。') : '先确认你要从哪里开始创建。' }}
             </p>
           </div>
 
@@ -1523,10 +1536,10 @@ watch(
           <div class="section-head">
             <div>
               <p class="eyebrow">第 2 步</p>
-              <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? (isReunionPersona ? '填写重逢资料' : '填写人物资料') : '选择创建方式' }}</h3>
+              <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? (isReunionPersona ? '填写重逢资料' : '选择家人类型') : '选择创建方式' }}</h3>
             </div>
             <p class="section-note">
-              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? (isReunionPersona ? '把记忆层和安全边界先写清楚。' : '把人物层和记忆层先写清楚。') : '不同类型会显示不同的方式选择。' }}
+              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? (isReunionPersona ? '把记忆层和安全边界先写清楚。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。') : '不同类型会显示不同的方式选择。' }}
             </p>
           </div>
 
@@ -1548,10 +1561,11 @@ watch(
 
           <template v-else-if="isFamilyCompanion">
             <div class="wizard-form">
+              <p class="section-note section-note--subtle">{{ getFamilySubtypeNote(inputMode) }}</p>
               <p class="eyebrow">人格层</p>
               <div class="form-grid">
                 <label class="form-field">
-                  <span>你怎么称呼他 / 她</span>
+                  <span>你怎么称呼这位家人</span>
                   <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 父母 / 其他家人" />
                 </label>
                 <label class="form-field">
@@ -1566,7 +1580,7 @@ watch(
                   <textarea v-model="formState.catchphrases" class="field-input wizard-textarea" rows="4"></textarea>
                 </label>
                 <label class="form-field">
-                  <span>难过时会怎么说</span>
+                  <span>难过时会怎么安慰</span>
                   <textarea v-model="formState.comfort_style" class="field-input wizard-textarea" rows="4"></textarea>
                 </label>
               </div>

@@ -164,8 +164,115 @@ class CreateWizardTests(unittest.TestCase):
             " ".join(body["draft"]["memory_base"]["important_advice"]),
         )
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_text_documents"])
+        self.assertEqual(body["draft"]["family_subtype"], "mother")
+        self.assertEqual(body["draft"]["emotion_rules"]["subtype_label"], "妈妈")
+        self.assertIn("更偏接住情绪", body["draft"]["emotion_rules"]["subtype_focus"])
         self.assertIn("家人陪伴", body["draft"]["profile"])
         self.assertIn("妈妈", body["draft"]["profile"])
+
+    def test_create_wizard_draft_endpoint_builds_family_companion_parents_draft(self):
+        payload = {
+            "create_type": "family_companion",
+            "group": "relationship_family",
+            "source_repo": "parents-skills+MamaSkill",
+            "display_name": "家人陪伴",
+            "input_mode": "parents",
+            "schema_key": "family_companion_parents",
+            "form_data": {
+                "family_subtype": "parents",
+                "relationship_type": "父母",
+                "persona_name": "父母",
+                "speech_style": "更稳、更完整，带家庭整体视角。",
+                "catchphrases": "先稳住\n我们一起想办法",
+                "comfort_style": "先稳住情绪，再给更完整的家庭建议。",
+                "celebration_style": "先一起高兴，再顺着把家里的安排和共识说完整。",
+                "relation_boundaries": "更偏家庭整体关心，不替你做决定。",
+                "shared_events": "家庭一起经历的重要时刻\n成长过程里的大事",
+                "important_advice": "先看现实条件\n先把家庭安排稳住",
+                "daily_habits": "会提醒你注意整体安排\n会关心你的成长进度",
+                "emotional_triggers": "家庭压力\n成长选择\n重要决定",
+                "chat_history_summary": "把父母整体关心、提醒和建议先整理出来。",
+                "memory_fragments": "家庭共同记忆\n成长过程里的关键片段",
+                "text_materials": "家庭说明\n家书材料",
+                "image_notes": "家庭照片 / 截图说明",
+                "voice_notes": "家庭语音提醒",
+                "raw_materials": {
+                    "chat_history_text": "父母总是提醒我先稳住再做决定",
+                    "memory_notes_text": "家庭一起经历的重要时刻\n成长过程里的大事",
+                    "text_materials_text": "家书材料\n家庭说明",
+                    "uploaded_text_documents": [
+                        {"filename": "parents-notes.txt", "content": "先把家庭安排稳住"},
+                    ],
+                    "image_notes_text": "家庭照片 / 截图说明",
+                    "photo_notes_text": "家庭照片 / 截图说明",
+                    "voice_notes_text": "家庭语音提醒",
+                },
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["family_subtype"], "parents")
+        self.assertEqual(body["draft"]["emotion_rules"]["subtype_label"], "父母")
+        self.assertIn("更偏家庭整体视角", body["draft"]["emotion_rules"]["subtype_focus"])
+        self.assertIn("家庭一起经历的重要时刻", " ".join(body["draft"]["memory_base"]["shared_events"]))
+        self.assertIn("先把家庭安排稳住", " ".join(body["draft"]["memory_base"]["important_advice"]))
+        self.assertIn("父母", body["draft"]["profile"])
+
+    def test_create_wizard_draft_endpoint_builds_family_companion_other_family_draft(self):
+        payload = {
+            "create_type": "family_companion",
+            "group": "relationship_family",
+            "source_repo": "parents-skills+MamaSkill",
+            "display_name": "家人陪伴",
+            "input_mode": "other_family",
+            "schema_key": "family_companion_other_family",
+            "form_data": {
+                "family_subtype": "other_family",
+                "relationship_type": "其他家人",
+                "persona_name": "其他家人",
+                "speech_style": "温和、自然、通用家庭陪伴感。",
+                "catchphrases": "慢慢说\n我在呢\n先别急",
+                "comfort_style": "先接住情绪，再给自然的陪伴和提醒。",
+                "celebration_style": "先替你高兴，再顺着把好消息说完整。",
+                "relation_boundaries": "保持亲近感，也保留合适边界。",
+                "shared_events": "一起经历过的小事\n家里常见的互动",
+                "important_advice": "保持联系\n照顾好自己",
+                "daily_habits": "会问候你近况\n会留意你的状态",
+                "emotional_triggers": "日常压力\n家庭琐事\n需要陪伴",
+                "chat_history_summary": "把其他家人的关心方式和日常互动先整理出来。",
+                "memory_fragments": "小事里的关心\n常见互动片段",
+                "text_materials": "家庭便条\n补充说明",
+                "image_notes": "图片 / 截图说明",
+                "voice_notes": "语音说明",
+                "raw_materials": {
+                    "chat_history_text": "他/她会常常问候我的近况",
+                    "memory_notes_text": "小事里的关心\n常见互动片段",
+                    "text_materials_text": "家庭便条\n补充说明",
+                    "uploaded_text_documents": [
+                        {"filename": "other-family-notes.txt", "content": "保持联系，照顾好自己"},
+                    ],
+                    "image_notes_text": "图片 / 截图说明",
+                    "photo_notes_text": "图片 / 截图说明",
+                    "voice_notes_text": "语音说明",
+                },
+            },
+        }
+
+        with TestClient(app) as client:
+            response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["family_subtype"], "other_family")
+        self.assertEqual(body["draft"]["emotion_rules"]["subtype_label"], "其他家人")
+        self.assertIn("更偏通用家庭陪伴", body["draft"]["emotion_rules"]["subtype_focus"])
+        self.assertIn("小事里的关心", " ".join(body["draft"]["memory_base"]["memory_fragments"]))
+        self.assertIn("保持联系", " ".join(body["draft"]["memory_base"]["important_advice"]))
+        self.assertIn("其他家人", body["draft"]["profile"])
 
     def test_create_wizard_draft_endpoint_builds_reunion_persona_draft(self):
         payload = {

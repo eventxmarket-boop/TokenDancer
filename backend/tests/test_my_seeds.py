@@ -208,6 +208,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
                 self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "family_companion_mother")
                 self.assertEqual(detail["draft_payload"]["relationship_type"], "妈妈")
+                self.assertEqual(detail["draft_payload"]["family_subtype"], "mother")
                 self.assertIn("emotion_rules", detail["draft_payload"])
                 self.assertTrue(detail["draft_payload"]["emotion_rules"]["summary"])
                 self.assertIn("raw_materials", detail["draft_payload"])
@@ -249,6 +250,8 @@ class MySeedsTests(unittest.TestCase):
                 )
                 self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
                 self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                self.assertIn("妈妈", saved["summary"])
+                self.assertIn("妈妈", detail["summary"])
 
                 persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
                 self.assertEqual(persona_response.status_code, 200)

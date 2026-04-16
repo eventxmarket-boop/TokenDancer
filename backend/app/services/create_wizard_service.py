@@ -508,6 +508,7 @@ def _family_subtype_profile_preset(subtype: str) -> dict[str, Any]:
     subtype = _resolve_family_subtype(subtype)
     if subtype == "parents":
         return {
+            "focus": "更偏家庭整体视角、稳定建议和共同记忆",
             "tone": "更稳、更完整，带家庭整体视角。",
             "comfort_style": "先稳住情绪，再给更完整的家庭建议。",
             "celebration_style": "先一起高兴，再顺着把家里的安排和共识说完整。",
@@ -517,6 +518,7 @@ def _family_subtype_profile_preset(subtype: str) -> dict[str, Any]:
         }
     if subtype == "other_family":
         return {
+            "focus": "更偏通用家庭陪伴和自然关心",
             "tone": "温和、自然、通用家庭陪伴感。",
             "comfort_style": "先接住情绪，再给自然的陪伴和提醒。",
             "celebration_style": "先替你高兴，再顺着把好消息说完整。",
@@ -525,6 +527,7 @@ def _family_subtype_profile_preset(subtype: str) -> dict[str, Any]:
             "memory_priority_rules": ["优先常见关心方式", "优先共同经历", "优先日常提醒"],
         }
     return {
+        "focus": "更偏接住情绪、细节照顾和熟悉安慰",
         "tone": "温和、亲近、会先接住情绪。",
         "comfort_style": "先接住情绪，再慢慢安慰，语气更熟悉。",
         "celebration_style": "先替你高兴，再顺着把好消息说完整。",
@@ -532,6 +535,62 @@ def _family_subtype_profile_preset(subtype: str) -> dict[str, Any]:
         "response_sequence": ["先接住情绪", "再给熟悉的安慰", "再补一点日常照顾"],
         "memory_priority_rules": ["优先安慰方式", "优先关心细节", "优先日常提醒"],
     }
+
+
+def build_family_persona_profile(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+    family_subtype: str = "",
+    subtype_preset: dict[str, Any] | None = None,
+) -> FamilyCompanionPersonaProfile:
+    relation_type = (
+        _normalize_text(form_data.get("relationship_type"))
+        or RELATIONSHIP_LABELS.get(_normalize_text(input_mode), "")
+        or _normalize_text(display_name)
+        or "家人陪伴"
+    )
+    preset = subtype_preset or _family_subtype_profile_preset(family_subtype)
+    return FamilyCompanionPersonaProfile(
+        relationship_type=relation_type,
+        name=_normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type,
+        tone=_normalize_text(form_data.get("speech_style")) or preset["tone"],
+        catchphrases=_clean_lines(form_data.get("catchphrases")) or list(preset["catchphrases"]),
+        comfort_style=_normalize_text(form_data.get("comfort_style")) or preset["comfort_style"],
+        celebration_style=_normalize_text(form_data.get("celebration_style")) or preset["celebration_style"],
+        boundaries=_normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。",
+    )
+
+
+def build_family_emotion_rules(
+    subtype: str,
+    extraction_rules: dict[str, Any],
+    subtype_preset: dict[str, Any],
+) -> dict[str, Any]:
+    family_subtype = _resolve_family_subtype(subtype)
+    emotion_rules = dict(extraction_rules or {})
+    summary = _normalize_text(emotion_rules.get("summary"))
+    subtype_label = _family_subtype_label(family_subtype)
+    emotion_rules["summary"] = (
+        f"子类型：{subtype_label}；{subtype_preset.get('focus', '')}；{summary}"
+        if summary
+        else f"子类型：{subtype_label}；{subtype_preset.get('focus', '')}"
+    ).strip("；")
+    emotion_rules["subtype_label"] = subtype_label
+    emotion_rules["subtype_focus"] = subtype_preset.get("focus", "")
+    emotion_rules["response_sequence"] = _merge_unique_lines(
+        subtype_preset["response_sequence"],
+        emotion_rules.get("response_sequence"),
+    )
+    emotion_rules["memory_priority_rules"] = _merge_unique_lines(
+        subtype_preset["memory_priority_rules"],
+        emotion_rules.get("memory_priority_rules"),
+    )
+    emotion_rules["boundary_rules"] = _merge_unique_lines(
+        emotion_rules.get("boundary_rules"),
+        ["不伪造不确定的家庭事实", "不把关心变成控制"],
+    )
+    return emotion_rules
 
 
 def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, display_name: str) -> str:
@@ -827,12 +886,13 @@ def build_family_companion_draft(
         or _normalize_text(display_name)
         or "家人陪伴"
     )
-    name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
-    tone = _normalize_text(form_data.get("speech_style")) or subtype_preset["tone"]
-    catchphrases = _clean_lines(form_data.get("catchphrases")) or list(subtype_preset["catchphrases"])
-    comfort_style = _normalize_text(form_data.get("comfort_style")) or subtype_preset["comfort_style"]
-    celebration_style = _normalize_text(form_data.get("celebration_style")) or subtype_preset["celebration_style"]
-    boundaries = _normalize_text(form_data.get("relation_boundaries")) or "不碰隐私边界，不越界替你做决定。"
+    persona_profile = build_family_persona_profile(
+        form_data,
+        display_name=display_name,
+        input_mode=input_mode,
+        family_subtype=family_subtype,
+        subtype_preset=subtype_preset,
+    )
 
     raw_materials = _raw_materials_payload(
         chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary"),
@@ -847,33 +907,22 @@ def build_family_companion_draft(
     )
     extraction = extract_family_memory_base_from_materials(form_data, form_data, raw_materials)
     memory_base = FamilyCompanionMemoryBase.model_validate(extraction["memory_base"])
-    emotion_rules = dict(extraction["emotion_rules"])
-    emotion_rules["summary"] = (
-        f"子类型：{_family_subtype_label(family_subtype)}；{emotion_rules.get('summary')}"
-        if _normalize_text(emotion_rules.get("summary"))
-        else f"子类型：{_family_subtype_label(family_subtype)}"
-    )
-    emotion_rules["response_sequence"] = _merge_unique_lines(
-        subtype_preset["response_sequence"],
-        emotion_rules.get("response_sequence"),
-    )
-    emotion_rules["memory_priority_rules"] = _merge_unique_lines(
-        subtype_preset["memory_priority_rules"],
-        emotion_rules.get("memory_priority_rules"),
+    emotion_rules = build_family_emotion_rules(
+        family_subtype,
+        extraction["emotion_rules"],
+        subtype_preset,
     )
 
-    persona_profile = FamilyCompanionPersonaProfile(
-        relationship_type=relation_type,
-        name=name,
-        tone=tone,
-        catchphrases=catchphrases,
-        comfort_style=comfort_style,
-        celebration_style=celebration_style,
-        boundaries=boundaries,
-    )
+    name = _normalize_text(persona_profile.name) or _normalize_text(display_name) or relation_type
+    tone = _normalize_text(persona_profile.tone) or subtype_preset["tone"]
+    catchphrases = list(persona_profile.catchphrases or [])
+    comfort_style = _normalize_text(persona_profile.comfort_style) or subtype_preset["comfort_style"]
+    celebration_style = _normalize_text(persona_profile.celebration_style) or subtype_preset["celebration_style"]
+    boundaries = _normalize_text(persona_profile.boundaries) or "不碰隐私边界，不越界替你做决定。"
 
     profile = (
         f"家人陪伴定位：{relation_type}\n"
+        f"子类型：{_family_subtype_label(family_subtype)}\n"
         f"称呼：{name}\n"
         f"说话风格：{tone}\n"
         f"主要用途：在你需要陪伴、安慰或分享好消息时，给出更贴近家人的回应。"

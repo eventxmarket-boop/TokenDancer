@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.42 - 2026-04-16
+
+- Unified the family-companion entry around a single visible `家人陪伴` path while preserving the `妈妈 / 父母 / 其他家人` subtype split internally.
+- Weighted the family draft and reply flow so `mother` leans more on MamaSkill-style emotional support and `parents` leans more on parents-skills-style shared memory and stable advice.
+- Kept `reunion-skill` separate as its own `重逢人格` branch and persisted `family_subtype` through create, result, My Seeds, and chat surfaces.
+- Added regression coverage for `mother`, `parents`, and `other_family` family draft and chat-context differences.
+
 ## V1.4.41 - 2026-04-16
 
 - Upgraded the H5 frontend for mobile browsing and touch interaction.

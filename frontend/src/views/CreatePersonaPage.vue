@@ -51,7 +51,7 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'family',
     title: '家人陪伴',
-    description: '从熟悉的关心方式、说话方式和记忆片段中开始，进入后再选妈妈、父母或其他家人。',
+    description: '统一入口，进入后再选妈妈、父母或其他家人。',
     groupKeys: ['relationship_family'],
   },
 ]

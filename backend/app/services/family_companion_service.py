@@ -21,6 +21,42 @@ FAMILY_SUBTYPE_FOCUS = {
     "other_family": "更偏通用家庭陪伴和自然关心",
 }
 
+FAMILY_SUBTYPE_MEMORY_PRIORITY = {
+    "mother": {
+        "chat_history_summary": 5,
+        "memory_fragments": 4,
+        "daily_habits": 4,
+        "shared_events": 3,
+        "important_advice": 3,
+        "text_materials": 2,
+        "image_notes": 2,
+        "voice_notes": 2,
+        "emotional_triggers": 5,
+    },
+    "parents": {
+        "shared_events": 5,
+        "important_advice": 5,
+        "daily_habits": 4,
+        "chat_history_summary": 3,
+        "memory_fragments": 3,
+        "text_materials": 2,
+        "image_notes": 2,
+        "voice_notes": 2,
+        "emotional_triggers": 3,
+    },
+    "other_family": {
+        "chat_history_summary": 4,
+        "shared_events": 4,
+        "daily_habits": 3,
+        "important_advice": 3,
+        "memory_fragments": 3,
+        "text_materials": 2,
+        "image_notes": 2,
+        "voice_notes": 2,
+        "emotional_triggers": 3,
+    },
+}
+
 
 def _normalize_text(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
@@ -58,8 +94,8 @@ def detect_emotional_state(user_message: str, history: list[dict[str, str]]) -> 
     return "日常聊天"
 
 
-def _memory_sources(memory_base: dict[str, Any]) -> list[str]:
-    items: list[str] = []
+def _memory_sources(memory_base: dict[str, Any]) -> list[tuple[str, str]]:
+    items: list[tuple[str, str]] = []
     for key in (
         "shared_events",
         "important_advice",
@@ -70,11 +106,11 @@ def _memory_sources(memory_base: dict[str, Any]) -> list[str]:
         "image_notes",
         "voice_notes",
     ):
-        items.extend(_clean_lines(memory_base.get(key)))
+        items.extend((key, item) for item in _clean_lines(memory_base.get(key)))
     chat_history_summary = _normalize_text(memory_base.get("chat_history_summary"))
     if chat_history_summary:
-        items.append(chat_history_summary)
-    return [item for item in items if item]
+        items.append(("chat_history_summary", chat_history_summary))
+    return [(source, item) for source, item in items if item]
 
 
 def _emotion_rules_payload(persona: dict[str, Any]) -> dict[str, Any]:
@@ -97,12 +133,16 @@ def retrieve_relevant_memories(
     memory_base: dict[str, Any],
     emotional_state: str,
     user_message: str,
+    *,
+    family_subtype: str = "",
 ) -> list[str]:
     candidates = _memory_sources(memory_base)
     if not candidates:
         return []
 
     message = _normalize_text(user_message)
+    subtype = _family_subtype(family_subtype)
+    subtype_priority = FAMILY_SUBTYPE_MEMORY_PRIORITY.get(subtype, FAMILY_SUBTYPE_MEMORY_PRIORITY["other_family"])
     emotional_keywords = {
         "难过 / 失落": SAD_HINTS,
         "焦虑 / 压力": ANXIOUS_HINTS,
@@ -112,14 +152,21 @@ def retrieve_relevant_memories(
     }.get(emotional_state, ())
 
     scored: list[tuple[int, int, str]] = []
-    for index, item in enumerate(candidates):
+    for index, (source_key, item) in enumerate(candidates):
         score = 0
+        score += subtype_priority.get(source_key, 0)
         if any(keyword in item for keyword in emotional_keywords):
             score += 3
         if any(keyword in item for keyword in message.split() if keyword):
             score += 2
         if emotional_state in item:
             score += 1
+        if source_key == "chat_history_summary" and subtype == "mother":
+            score += 2
+        if source_key == "memory_fragments" and subtype == "mother":
+            score += 1
+        if source_key in {"shared_events", "important_advice"} and subtype == "parents":
+            score += 2
         if len(item) <= 12:
             score += 1
         scored.append((score, index, item))
@@ -176,6 +223,8 @@ def build_family_reply_context(
     subtype_label = FAMILY_SUBTYPE_LABELS.get(subtype, subtype or "妈妈")
     subtype_focus = FAMILY_SUBTYPE_FOCUS.get(subtype, FAMILY_SUBTYPE_FOCUS["mother"])
     parts.append(f"家人子类型：{subtype_label}（{subtype_focus}）")
+    if subtype_focus:
+        parts.append(f"子类型重点：{subtype_focus}")
     if relationship_type or name:
         parts.append(f"家人身份：{relationship_type or name}")
     if tone:
@@ -221,9 +270,14 @@ def build_family_companion_context(
         return ""
 
     emotional_state = detect_emotional_state(user_message, history)
-    memories = retrieve_relevant_memories(memory_base, emotional_state, user_message)
-    emotion_rules = _emotion_rules_payload(persona)
     family_subtype = _normalize_text(persona.get("family_subtype") or persona_profile.get("family_subtype"))
+    memories = retrieve_relevant_memories(
+        memory_base,
+        emotional_state,
+        user_message,
+        family_subtype=family_subtype,
+    )
+    emotion_rules = _emotion_rules_payload(persona)
     return build_family_reply_context(
         persona_profile,
         emotional_state,
