@@ -46,6 +46,10 @@ function handleLogout() {
 function activateEntry(entryKey: EntryKey) {
   selectedEntry.value = entryKey
 }
+
+function enterEntry(entryKey: EntryKey) {
+  selectedEntry.value = entryKey
+}
 </script>
 
 <template>
@@ -79,8 +83,9 @@ function activateEntry(entryKey: EntryKey) {
               { 'my-entry-link--active': selectedEntry === entry.key },
             ]"
             :to="entry.to"
-            @mouseenter="activateEntry(entry.key)"
+            @pointerenter="enterEntry(entry.key)"
             @focus="activateEntry(entry.key)"
+            @pointerdown="activateEntry(entry.key)"
             @click="activateEntry(entry.key)"
           >
             <article

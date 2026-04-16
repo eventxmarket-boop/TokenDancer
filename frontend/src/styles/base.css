@@ -987,22 +987,22 @@ html[data-theme='night'] .my-entry-card {
 }
 
 .my-entry-link--my-seeds {
-  --entry-shift-x: -152px;
-  --entry-shift-y: 12px;
+  --entry-shift-x: -168px;
+  --entry-shift-y: 16px;
   --entry-rotate: -8deg;
   --entry-z: 2;
 }
 
 .my-entry-link--favorites {
   --entry-shift-x: 0px;
-  --entry-shift-y: -2px;
+  --entry-shift-y: -10px;
   --entry-rotate: 0deg;
   --entry-z: 4;
 }
 
 .my-entry-link--sessions {
-  --entry-shift-x: 152px;
-  --entry-shift-y: 14px;
+  --entry-shift-x: 168px;
+  --entry-shift-y: 16px;
   --entry-rotate: 8deg;
   --entry-z: 3;
 }
@@ -1025,13 +1025,16 @@ html[data-theme='night'] .my-entry-card {
   align-content: start;
   text-align: center;
   transition:
-    transform 0.24s ease,
-    box-shadow 0.24s ease,
-    border-color 0.24s ease,
-    background 0.24s ease,
-    opacity 0.24s ease;
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
   transform: translate3d(var(--entry-shift-x), var(--entry-shift-y), 0) rotate(var(--entry-rotate));
   z-index: var(--entry-z);
+  will-change: transform, box-shadow;
+  transform-origin: center bottom;
 }
 
 .my-entry-card__tag {
@@ -1061,7 +1064,8 @@ html[data-theme='night'] .my-entry-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 241, 0.96));
   border-color: rgba(234, 127, 102, 0.28);
   box-shadow: 0 30px 68px rgba(184, 127, 101, 0.2);
-  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 16px), 0) rotate(0deg) scale(1.06);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 24px), 0) rotate(0deg) scale(1.1);
+  filter: saturate(1.06);
 }
 
 .my-entry-card--inactive {
@@ -1072,12 +1076,13 @@ html[data-theme='night'] .my-entry-card {
 .my-entry-link:focus-visible .my-entry-card {
   border-color: rgba(234, 127, 102, 0.26);
   box-shadow: 0 28px 62px rgba(184, 127, 101, 0.18);
-  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 8px), 0) rotate(0deg) scale(1.03);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 14px), 0) rotate(0deg) scale(1.06);
+  filter: saturate(1.05);
 }
 
 .my-entry-link--active:hover .my-entry-card,
 .my-entry-link--active:focus-visible .my-entry-card {
-  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 18px), 0) rotate(0deg) scale(1.07);
+  transform: translate3d(var(--entry-shift-x), calc(var(--entry-shift-y) - 26px), 0) rotate(0deg) scale(1.12);
 }
 
 .my-entry-link:hover .my-entry-card__tag,

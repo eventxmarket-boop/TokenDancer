@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.37 - 2026-04-16
+
+- Increased the Me page card lift and selection responsiveness so the active card appears on top more clearly.
+- Added faster pointer-triggered highlighting for all three personal-center cards, including Favorites.
+- Kept the semi-overlapped pattern but made the hover/selection motion more immediate and visible.
+
 ## V1.4.36 - 2026-04-16
 
 - Raised the active personal-center card to the top of the stack so the selected entry is easier to inspect.
