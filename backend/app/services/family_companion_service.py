@@ -27,6 +27,7 @@ FAMILY_SUBTYPE_MEMORY_PRIORITY = {
         "daily_habits": 5,
         "voice_notes": 4,
         "image_notes": 4,
+        "ocr_extracted_texts": 5,
         "chat_history_summary": 4,
         "memory_fragments": 4,
         "shared_events": 3,
@@ -43,6 +44,7 @@ FAMILY_SUBTYPE_MEMORY_PRIORITY = {
         "shared_events": 5,
         "important_advice": 5,
         "daily_habits": 4,
+        "ocr_extracted_texts": 4,
         "chat_history_summary": 4,
         "memory_fragments": 4,
         "text_materials": 3,
@@ -58,6 +60,7 @@ FAMILY_SUBTYPE_MEMORY_PRIORITY = {
         "daily_habits": 3,
         "important_advice": 3,
         "memory_fragments": 3,
+        "ocr_extracted_texts": 3,
         "text_materials": 2,
         "image_notes": 2,
         "voice_notes": 2,
@@ -125,6 +128,7 @@ def _memory_sources(memory_base: dict[str, Any]) -> list[tuple[str, str]]:
         "text_materials",
         "image_notes",
         "voice_notes",
+        "ocr_extracted_texts",
     ):
         items.extend((key, item) for item in _clean_lines(memory_base.get(key)))
     chat_history_summary = _normalize_text(memory_base.get("chat_history_summary"))

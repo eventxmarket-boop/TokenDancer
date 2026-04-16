@@ -231,9 +231,36 @@ function normalizeImageDocuments(value: unknown) {
       const filename = normalizeText(record.filename || record.name)
       const mimeType = normalizeText(record.mime_type || record.type)
       const size = Number(record.size || 0)
-      return filename || mimeType || size ? { filename, mimeType, size } : null
+      const ocrStatus = normalizeText(record.ocr_status || record.status)
+      const ocrText = normalizeText(record.ocr_text || record.text || record.content)
+      return filename || mimeType || size || ocrStatus || ocrText
+        ? { filename, mimeType, size, ocrStatus, ocrText }
+        : null
     })
-    .filter(Boolean) as Array<{ filename: string; mimeType: string; size: number }>
+    .filter(Boolean) as Array<{ filename: string; mimeType: string; size: number; ocrStatus: string; ocrText: string }>
+}
+
+function normalizeOcrResults(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      const filename = normalizeText(record.filename || record.name)
+      const mimeType = normalizeText(record.mime_type || record.type)
+      const size = Number(record.size || 0)
+      const ocrStatus = normalizeText(record.ocr_status || record.status) || 'failed'
+      const ocrText = normalizeText(record.ocr_text || record.text || record.content)
+      return filename || mimeType || size || ocrStatus || ocrText
+        ? { filename, mimeType, size, ocrStatus, ocrText }
+        : null
+    })
+    .filter(Boolean) as Array<{ filename: string; mimeType: string; size: number; ocrStatus: string; ocrText: string }>
 }
 
 function normalizeStringList(value: unknown) {
@@ -335,6 +362,10 @@ const familyMaterialSummaryLines = computed(() => {
   const guidedAnswers = familyGuidedAnswers.value
   const documents = normalizeDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_text_documents)
   const imageDocuments = normalizeImageDocuments((rawMaterials as Record<string, unknown> | null)?.uploaded_image_documents)
+  const ocrResults = normalizeOcrResults((rawMaterials as Record<string, unknown> | null)?.ocr_extracted_texts)
+  const ocrSuccessCount = ocrResults.filter((item) => ['success', 'partial'].includes(item.ocrStatus) && item.ocrText).length
+  const ocrFailedCount = ocrResults.filter((item) => !['success', 'partial'].includes(item.ocrStatus) || !item.ocrText).length
+  const ocrSnippet = ocrResults.find((item) => ['success', 'partial'].includes(item.ocrStatus) && item.ocrText)?.ocrText || ''
   return [
     {
       label: '子类型侧重',
@@ -400,6 +431,14 @@ const familyMaterialSummaryLines = computed(() => {
     {
       label: '已上传图片数',
       value: imageDocuments.length ? `${imageDocuments.length} 张` : '0 张',
+    },
+    {
+      label: '已识别图片数',
+      value: ocrSuccessCount ? `${ocrSuccessCount} 张${ocrFailedCount ? ` / ${ocrFailedCount} 张未识别` : ''}` : '0 张',
+    },
+    {
+      label: 'OCR 提取摘要',
+      value: ocrSnippet ? ocrSnippet.slice(0, 60) : '未提取到可用文本',
     },
     {
       label: '图片说明',

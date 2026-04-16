@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.45 - 2026-04-17
+
+- Added OCR-based text extraction for family companion image materials.
+- Let uploaded family screenshots and photos flow through OCR into raw materials, family memory distillation, and chat recall.
+- Kept image notes as a fallback while preserving uploaded images as material assets and surfacing OCR summaries in result and My Seeds views.
+- Preserved the existing family companion and family subtype flows without adding new persona entry points.
+
 ## V1.4.44 - 2026-04-17
 
 - Added mobile-friendly family companion photo upload support in the create wizard.

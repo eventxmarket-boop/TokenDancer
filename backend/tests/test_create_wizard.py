@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -35,8 +36,20 @@ class CreateWizardTests(unittest.TestCase):
             },
         }
 
-        with TestClient(app) as client:
-            response = client.post("/persona-api/create-wizard/draft", json=payload)
+        with patch(
+            "app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images"
+        ) as mock_ocr_extract:
+            mock_ocr_extract.return_value = [
+                {
+                    "filename": "family-photo.jpg",
+                    "mime_type": "image/jpeg",
+                    "size": 2048,
+                    "ocr_text": "截图里写着：先别急，慢慢来",
+                    "ocr_status": "success",
+                }
+            ]
+            with TestClient(app) as client:
+                response = client.post("/persona-api/create-wizard/draft", json=payload)
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -138,6 +151,15 @@ class CreateWizardTests(unittest.TestCase):
                             "data_url": "data:image/jpeg;base64,ZmFrZQ==",
                         }
                     ],
+                    "ocr_extracted_texts": [
+                        {
+                            "filename": "family-photo.jpg",
+                            "mime_type": "image/jpeg",
+                            "size": 2048,
+                            "ocr_text": "截图里写着：先别急，慢慢来",
+                            "ocr_status": "success",
+                        }
+                    ],
                     "image_notes_text": "老照片说明",
                     "photo_notes_text": "老照片说明",
                     "voice_notes_text": "语音提醒片段",
@@ -174,9 +196,16 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["raw_materials"]["uploaded_image_documents"][0]["filename"], "family-photo.jpg")
         self.assertEqual(body["draft"]["raw_materials"]["uploaded_image_documents"][0]["mime_type"], "image/jpeg")
         self.assertIn(
+            body["draft"]["raw_materials"]["uploaded_image_documents"][0]["ocr_status"],
+            {"success", "failed"},
+        )
+        self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])
+        self.assertIn("先别急", body["draft"]["raw_materials"]["ocr_extracted_texts"][0]["ocr_text"])
+        self.assertIn(
             "小时候一起写作业",
             " ".join(body["draft"]["memory_base"]["memory_fragments"]),
         )
+        self.assertIn("先别急", " ".join(body["draft"]["memory_base"]["procedural_memories"]))
         self.assertIn(
             "先照顾好自己",
             " ".join(body["draft"]["memory_base"]["important_advice"]),
@@ -246,6 +275,64 @@ class CreateWizardTests(unittest.TestCase):
         self.assertTrue(body["draft"]["memory_base"]["semantic_memories"])
         self.assertTrue(body["draft"]["memory_base"]["procedural_memories"])
         self.assertIn("父母", body["draft"]["profile"])
+
+    def test_create_wizard_draft_endpoint_keeps_family_companion_when_ocr_fails(self):
+        payload = {
+            "create_type": "family_companion",
+            "group": "relationship_family",
+            "source_repo": "parents-skills+MamaSkill",
+            "display_name": "家人陪伴",
+            "input_mode": "mother",
+            "schema_key": "family_companion_mother",
+            "form_data": {
+                "family_subtype": "mother",
+                "relationship_type": "妈妈",
+                "persona_name": "妈妈",
+                "speech_style": "温和、熟悉、有点唠叨",
+                "catchphrases": "先别急\n慢慢来",
+                "comfort_style": "先接住情绪，再慢慢安慰",
+                "celebration_style": "先替你高兴，再顺着把好消息说完整",
+                "relation_boundaries": "不越界替你做决定",
+                "shared_events": "小时候一起吃饭\n夜里陪你写作业",
+                "important_advice": "先照顾好自己\n遇事先稳住",
+                "daily_habits": "会问你吃饭没\n会提醒你休息",
+                "emotional_triggers": "考试压力\n工作烦心\n好消息分享",
+                "chat_history_summary": "总是提醒你按时吃饭和休息",
+                "memory_fragments": "小时候一起写作业\n晚上陪你散步",
+                "text_materials": "家书片段\n日常聊天摘录",
+                "image_notes": "老照片说明",
+                "voice_notes": "语音提醒片段",
+                "raw_materials": {
+                    "chat_history_text": "妈总是提醒我按时吃饭和休息",
+                    "memory_notes_text": "小时候一起写作业\n晚上陪你散步",
+                    "text_materials_text": "家书片段\n日常聊天摘录",
+                    "uploaded_text_documents": [],
+                    "uploaded_image_documents": [
+                        {
+                            "filename": "family-photo.jpg",
+                            "mime_type": "image/jpeg",
+                            "size": 2048,
+                            "data_url": "data:image/jpeg;base64,ZmFrZQ==",
+                        }
+                    ],
+                    "image_notes_text": "老照片说明",
+                    "photo_notes_text": "老照片说明",
+                    "voice_notes_text": "语音提醒片段",
+                },
+            },
+        }
+
+        with patch("app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images") as mock_ocr_extract:
+            mock_ocr_extract.return_value = []
+            with TestClient(app) as client:
+                response = client.post("/persona-api/create-wizard/draft", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["draft"]["family_subtype"], "mother")
+        self.assertEqual(body["draft"]["raw_materials"]["uploaded_image_documents"][0]["ocr_status"], "待识别")
+        self.assertEqual(body["draft"]["raw_materials"]["ocr_extracted_texts"], [])
+        self.assertTrue(body["draft"]["memory_base"]["episodic_memories"] or body["draft"]["memory_base"]["procedural_memories"])
 
     def test_create_wizard_draft_endpoint_builds_family_companion_other_family_draft(self):
         payload = {

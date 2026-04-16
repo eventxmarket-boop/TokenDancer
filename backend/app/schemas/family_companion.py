@@ -26,6 +26,7 @@ class FamilyCompanionMemoryBase(BaseModel):
     episodic_memories: list[str] = Field(default_factory=list)
     semantic_memories: list[str] = Field(default_factory=list)
     procedural_memories: list[str] = Field(default_factory=list)
+    ocr_extracted_texts: list[str] = Field(default_factory=list)
     legacy_summary: list[str] = Field(default_factory=list)
     shared_events: list[str] = Field(default_factory=list)
     important_advice: list[str] = Field(default_factory=list)

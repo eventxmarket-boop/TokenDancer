@@ -21,6 +21,7 @@ from app.schemas.reunion_persona import (
     ReunionPersonaRetrievalPolicy,
     ReunionPersonaSafetyGuardrails,
 )
+from app.services import ocr_service
 from app.services.self_persona_unified_service import build_self_persona_draft
 
 
@@ -376,8 +377,51 @@ def _normalize_image_documents(value: Any) -> list[dict[str, Any]]:
         }
         if data_url:
             document["data_url"] = data_url
+        ocr_status = _normalize_text(item.get("ocr_status") or item.get("status"))
+        if ocr_status:
+            document["ocr_status"] = ocr_status
+        ocr_text = _normalize_text(item.get("ocr_text") or item.get("text") or item.get("content"))
+        if ocr_text:
+            document["ocr_text"] = ocr_text
         documents.append(document)
     return documents
+
+
+def _normalize_ocr_extracted_texts(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    results: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            mime_type = _normalize_text(item.get("mime_type") or item.get("type")) or "image/*"
+            try:
+                size = int(item.get("size") or 0)
+            except (TypeError, ValueError):
+                size = 0
+            ocr_text = _normalize_text(item.get("ocr_text") or item.get("text") or item.get("content"))
+            ocr_status = _normalize_text(item.get("ocr_status") or item.get("status")) or ("success" if ocr_text else "failed")
+        else:
+            filename = ""
+            mime_type = "image/*"
+            size = 0
+            ocr_text = _normalize_text(item)
+            ocr_status = "success" if ocr_text else "failed"
+
+        if not filename and not ocr_text and not size:
+            continue
+
+        results.append(
+            {
+                "filename": filename,
+                "mime_type": mime_type,
+                "size": max(size, 0),
+                "ocr_text": ocr_text,
+                "ocr_status": ocr_status,
+            }
+        )
+    return results
 
 
 def _excerpt_text(value: Any, limit: int = 120) -> str:
@@ -435,6 +479,7 @@ def _raw_materials_payload(
     text_materials_text: Any = "",
     uploaded_text_documents: Any = None,
     uploaded_image_documents: Any = None,
+    ocr_extracted_texts: Any = None,
     image_notes_text: Any = "",
     voice_notes_text: Any = "",
     diary_text: Any = "",
@@ -455,6 +500,7 @@ def _raw_materials_payload(
         "text_materials_text": _normalize_text(text_materials_text),
         "uploaded_text_documents": _normalize_documents(uploaded_text_documents),
         "uploaded_image_documents": _normalize_image_documents(uploaded_image_documents),
+        "ocr_extracted_texts": _normalize_ocr_extracted_texts(ocr_extracted_texts),
         "image_notes_text": _normalize_text(image_notes_text),
         "voice_notes_text": _normalize_text(voice_notes_text),
         "diary_text": _normalize_text(diary_text),
@@ -598,6 +644,7 @@ def _family_memory_base_dict(
     episodic_memories: Any = None,
     semantic_memories: Any = None,
     procedural_memories: Any = None,
+    ocr_extracted_texts: Any = None,
     legacy_summary: Any = None,
     shared_events: Any = None,
     important_advice: Any = None,
@@ -612,6 +659,7 @@ def _family_memory_base_dict(
     episodic = _merge_unique_lines(episodic_memories)
     semantic = _merge_unique_lines(semantic_memories)
     procedural = _merge_unique_lines(procedural_memories)
+    ocr_extracted_texts = _merge_unique_lines(ocr_extracted_texts)
     legacy = _merge_unique_lines(legacy_summary)
 
     shared_events = _merge_unique_lines(shared_events, episodic)
@@ -634,6 +682,7 @@ def _family_memory_base_dict(
         "episodic_memories": episodic,
         "semantic_memories": semantic,
         "procedural_memories": procedural,
+        "ocr_extracted_texts": ocr_extracted_texts,
         "legacy_summary": legacy,
         "shared_events": shared_events,
         "important_advice": important_advice,
@@ -1019,6 +1068,13 @@ def extract_family_memory_base_from_materials(
     text_materials = _clean_lines(memory_form.get("text_materials") or persona_form.get("text_materials"))
     image_notes = _clean_lines(memory_form.get("image_notes") or persona_form.get("image_notes"))
     voice_notes = _clean_lines(memory_form.get("voice_notes") or persona_form.get("voice_notes"))
+    ocr_extracted_texts = _clean_lines(
+        [
+            item.get("ocr_text")
+            for item in raw_materials.get("ocr_extracted_texts", [])
+            if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+        ]
+    )
     episodic_memories: list[str] = []
     semantic_memories: list[str] = []
     procedural_memories: list[str] = []
@@ -1030,6 +1086,7 @@ def extract_family_memory_base_from_materials(
         raw_materials.get("text_materials_text"),
         raw_materials.get("image_notes_text"),
         raw_materials.get("voice_notes_text"),
+        ocr_extracted_texts,
         [doc.get("content", "") for doc in raw_materials.get("uploaded_text_documents", []) if isinstance(doc, dict)],
     )
     if not raw_materials.get("chat_history_text"):
@@ -1070,9 +1127,10 @@ def extract_family_memory_base_from_materials(
     text_materials = _merge_unique_lines(text_materials, _document_snippets(raw_materials.get("uploaded_text_documents", [])))
     image_notes = _merge_unique_lines(image_notes)
     voice_notes = _merge_unique_lines(voice_notes)
+    ocr_extracted_texts = _merge_unique_lines(ocr_extracted_texts)
     episodic_memories = _merge_unique_lines(episodic_memories, shared_events, memory_fragments)
     semantic_memories = _merge_unique_lines(semantic_memories, important_advice, text_materials, emotional_triggers)
-    procedural_memories = _merge_unique_lines(procedural_memories, daily_habits, image_notes, voice_notes)
+    procedural_memories = _merge_unique_lines(procedural_memories, daily_habits, image_notes, voice_notes, ocr_extracted_texts)
     legacy_summary = _merge_unique_lines(
         legacy_summary,
         episodic_memories[:2],
@@ -1094,6 +1152,7 @@ def extract_family_memory_base_from_materials(
         text_materials=text_materials,
         image_notes=image_notes,
         voice_notes=voice_notes,
+        ocr_extracted_texts=ocr_extracted_texts,
     )
     emotion_rules = {
         "summary": "先判断情绪，再提取记忆，再用家人的方式回应",
@@ -1192,6 +1251,13 @@ def extract_family_memory_base_from_guided_answers(
         episodic_memories=episodic_memories,
         semantic_memories=semantic_memories,
         procedural_memories=procedural_memories,
+        ocr_extracted_texts=_clean_lines(
+            [
+                item.get("ocr_text")
+                for item in raw_materials.get("ocr_extracted_texts", [])
+                if isinstance(item, dict) and _normalize_text(item.get("ocr_text"))
+            ]
+        ),
         legacy_summary=legacy_summary,
         shared_events=shared_events or episodic_memories,
         important_advice=important_advice or semantic_memories,
@@ -1225,6 +1291,10 @@ def merge_family_memories(
         procedural_memories=_merge_unique_lines(
             material_memory_base.get("procedural_memories"),
             guided_memory_base.get("procedural_memories"),
+        ),
+        ocr_extracted_texts=_merge_unique_lines(
+            material_memory_base.get("ocr_extracted_texts"),
+            guided_memory_base.get("ocr_extracted_texts"),
         ),
         legacy_summary=_merge_unique_lines(
             material_memory_base.get("legacy_summary"),
@@ -1306,9 +1376,89 @@ def build_family_companion_draft(
         or form_data.get("uploaded_text_documents"),
         uploaded_image_documents=raw_materials_input.get("uploaded_image_documents")
         or form_data.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts") or form_data.get("ocr_extracted_texts"),
         image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
         voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
     )
+    existing_ocr_results = _normalize_ocr_extracted_texts(raw_materials.get("ocr_extracted_texts"))
+    uploaded_image_documents = raw_materials.get("uploaded_image_documents") or []
+    try:
+        ocr_results = ocr_service.extract_texts_from_uploaded_images(uploaded_image_documents)
+    except Exception:
+        ocr_results = []
+
+    def _merge_ocr_result(base: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(base or {})
+        for key in ("filename", "mime_type", "size", "ocr_status"):
+            candidate_value = candidate.get(key)
+            if key == "size":
+                try:
+                    size_value = int(candidate_value or merged.get(key) or 0)
+                except (TypeError, ValueError):
+                    size_value = int(merged.get(key) or 0)
+                merged[key] = max(size_value, 0)
+                continue
+            if _normalize_text(candidate_value):
+                merged[key] = candidate_value
+            elif key not in merged:
+                merged[key] = candidate_value
+        candidate_text = _normalize_text(candidate.get("ocr_text"))
+        if candidate_text:
+            merged["ocr_text"] = candidate_text
+        elif not _normalize_text(merged.get("ocr_text")):
+            merged["ocr_text"] = _normalize_text(base.get("ocr_text"))
+        if not _normalize_text(merged.get("ocr_status")):
+            merged["ocr_status"] = "success" if _normalize_text(merged.get("ocr_text")) else "failed"
+        return merged
+
+    combined_ocr_results: list[dict[str, Any]] = []
+    if existing_ocr_results or ocr_results:
+        merged_by_filename: dict[str, dict[str, Any]] = {}
+        for item in existing_ocr_results:
+            filename = _normalize_text(item.get("filename"))
+            if not filename:
+                continue
+            merged_by_filename[filename] = dict(item)
+        for item in ocr_results:
+            if not isinstance(item, dict):
+                continue
+            filename = _normalize_text(item.get("filename"))
+            if filename and filename in merged_by_filename:
+                merged_by_filename[filename] = _merge_ocr_result(merged_by_filename[filename], item)
+            elif filename:
+                merged_by_filename[filename] = dict(item)
+            else:
+                combined_ocr_results.append(dict(item))
+        combined_ocr_results.extend(merged_by_filename.values())
+    if uploaded_image_documents:
+        raw_materials["uploaded_image_documents"] = ocr_service.attach_ocr_results_to_uploaded_images(
+            uploaded_image_documents,
+            combined_ocr_results,
+        )
+    raw_materials["ocr_extracted_texts"] = combined_ocr_results
+    if uploaded_image_documents:
+        attached_images = raw_materials.get("uploaded_image_documents") or []
+        ocr_results_by_filename = {
+            _normalize_text(item.get("filename")): item
+            for item in ocr_results
+            if isinstance(item, dict) and _normalize_text(item.get("filename"))
+        }
+        normalized_attached_images: list[dict[str, Any]] = []
+        for index, document in enumerate(attached_images):
+            if not isinstance(document, dict):
+                continue
+            merged_document = dict(document)
+            result = ocr_results_by_filename.get(_normalize_text(merged_document.get("filename")))
+            if not result and index < len(ocr_results) and isinstance(ocr_results[index], dict):
+                result = ocr_results[index]
+            if result:
+                ocr_text = ocr_service.normalize_ocr_text(result.get("ocr_text") or result.get("text") or result.get("content"))
+                if ocr_text:
+                    merged_document["ocr_text"] = ocr_text
+                    merged_document["ocr_status"] = _normalize_text(result.get("ocr_status") or result.get("status")) or "success"
+            normalized_attached_images.append(merged_document)
+        if normalized_attached_images:
+            raw_materials["uploaded_image_documents"] = normalized_attached_images
     guided_answers_input = (
         guided_memory_answers
         if isinstance(guided_memory_answers, dict)

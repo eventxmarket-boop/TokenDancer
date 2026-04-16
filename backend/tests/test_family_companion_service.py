@@ -133,6 +133,10 @@ class FamilyCompanionServiceTests(unittest.TestCase):
                 "我在呢，慢慢来",
                 "会提醒你按时吃饭",
             ],
+            "ocr_extracted_texts": [
+                "截图里写着先别急，慢慢来",
+                "提醒你晚上早点休息",
+            ],
             "shared_events": ["小时候你考试前总陪你复习", "那次家里一起过年"],
             "important_advice": ["总提醒你先稳住再决定"],
             "daily_habits": ["会提醒你按时吃饭"],
@@ -155,4 +159,5 @@ class FamilyCompanionServiceTests(unittest.TestCase):
         self.assertTrue(sad_ranked)
         self.assertTrue(topic_ranked)
         self.assertIn("先别急", sad_ranked[0] + "".join(sad_ranked))
+        self.assertTrue(any("截图" in item or "早点休息" in item for item in sad_ranked))
         self.assertTrue(any("复习" in item or "过年" in item for item in topic_ranked))

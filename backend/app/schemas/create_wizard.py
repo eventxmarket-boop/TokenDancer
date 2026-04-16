@@ -27,6 +27,16 @@ class FamilyCompanionUploadedImageDocument(BaseModel):
     mime_type: str = ""
     size: int = 0
     data_url: str = ""
+    ocr_status: str = "待识别"
+    ocr_text: str = ""
+
+
+class FamilyCompanionOCRExtractedText(BaseModel):
+    filename: str = ""
+    mime_type: str = ""
+    size: int = 0
+    ocr_text: str = ""
+    ocr_status: str = "failed"
 
 
 class FamilyCompanionRawMaterials(BaseModel):
@@ -35,6 +45,7 @@ class FamilyCompanionRawMaterials(BaseModel):
     text_materials_text: str = ""
     uploaded_text_documents: list[dict[str, Any]] = Field(default_factory=list)
     uploaded_image_documents: list[FamilyCompanionUploadedImageDocument] = Field(default_factory=list)
+    ocr_extracted_texts: list[FamilyCompanionOCRExtractedText] = Field(default_factory=list)
     image_notes_text: str = ""
     photo_notes_text: str = ""
     voice_notes_text: str = ""

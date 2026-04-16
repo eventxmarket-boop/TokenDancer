@@ -192,127 +192,157 @@ class MySeedsTests(unittest.TestCase):
         }
 
         try:
-            with TestClient(app) as client:
-                user, headers = self._register_test_user(client, "my-seeds-family")
-                user_id = int(user["id"])
-                draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
-                self.assertEqual(draft_response.status_code, 200)
-                draft = draft_response.json()["draft"]
-
-                save_response = client.post(
-                    "/persona-api/my-seeds",
-                    headers=headers,
-                    json={
-                        "draft": draft,
-                        "source_type": "create_wizard",
-                        "status": "saved",
-                    },
-                )
-                self.assertEqual(save_response.status_code, 200)
-                saved = save_response.json()
-                created_id = saved["id"]
-                self.assertIn("family-notes.txt", saved["summary"])
-                self.assertIn("图片材料", saved["summary"])
-
-                list_response = client.get("/persona-api/my-seeds", headers=headers)
-                self.assertEqual(list_response.status_code, 200)
-                seeds = list_response.json()
-                self.assertTrue(any(item["id"] == created_id for item in seeds))
-
-                detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
-                self.assertEqual(detail_response.status_code, 200)
-                detail = detail_response.json()
-                self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
-                self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "family_companion_mother")
-                self.assertEqual(detail["draft_payload"]["relationship_type"], "妈妈")
-                self.assertEqual(detail["draft_payload"]["family_subtype"], "mother")
-                self.assertIn("emotion_rules", detail["draft_payload"])
-                self.assertTrue(detail["draft_payload"]["emotion_rules"]["summary"])
-                self.assertIn("raw_materials", detail["draft_payload"])
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["chat_history_text"],
-                    "妈总是提醒我按时吃饭和休息",
-                )
-                self.assertIn(
-                    "小时候一起写作业",
-                    detail["draft_payload"]["raw_materials"]["memory_notes_text"],
-                )
-                self.assertIn(
-                    "晚上陪你散步",
-                    detail["draft_payload"]["raw_materials"]["memory_notes_text"],
-                )
-                self.assertIn(
-                    "家书片段",
-                    detail["draft_payload"]["raw_materials"]["text_materials_text"],
-                )
-                self.assertIn(
-                    "日常聊天摘录",
-                    detail["draft_payload"]["raw_materials"]["text_materials_text"],
-                )
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["image_notes_text"],
-                    "老照片说明",
-                )
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["voice_notes_text"],
-                    "语音提醒片段",
-                )
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["uploaded_text_documents"][0]["filename"],
-                    "family-notes.txt",
-                )
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["filename"],
-                    "family-photo.jpg",
-                )
-                self.assertEqual(
-                    detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["mime_type"],
-                    "image/jpeg",
-                )
-                self.assertIn(
-                    "小时候一起写作业",
-                    " ".join(detail["draft_payload"]["memory_base"]["memory_fragments"]),
-                )
-                self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
-                self.assertTrue(detail["draft_payload"]["memory_base"]["episodic_memories"])
-                self.assertTrue(detail["draft_payload"]["memory_base"]["semantic_memories"])
-                self.assertTrue(detail["draft_payload"]["memory_base"]["procedural_memories"])
-                self.assertEqual(
-                    detail["draft_payload"]["guided_memory_answers"]["most_common_topics"],
-                    "总是聊吃饭和休息",
-                )
-                self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
-                self.assertIn("三层记忆", saved["summary"])
-                self.assertIn("引导补充", saved["summary"])
-                self.assertIn("妈妈", detail["summary"])
-
-                persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
-                self.assertEqual(persona_response.status_code, 200)
-                persona = persona_response.json()
-                self.assertEqual(persona["slug"], saved["slug"])
-                self.assertIn("家人陪伴", persona.get("category", ""))
-
-                with patch("app.services.chat_service.generate_reply") as fake_reply:
-                    fake_reply.return_value = {
-                        "content": "我在呢",
-                        "model": "gpt-admin-test",
-                        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
-                        "latency_ms": 1,
+            with patch(
+                "app.services.create_wizard_service.ocr_service.extract_texts_from_uploaded_images"
+            ) as mock_ocr_extract:
+                mock_ocr_extract.return_value = [
+                    {
+                        "filename": "family-photo.jpg",
+                        "mime_type": "image/jpeg",
+                        "size": 2048,
+                        "ocr_text": "截图里写着：先别急，慢慢来",
+                        "ocr_status": "success",
                     }
-                    chat_response = client.post(
-                        "/persona-api/chat",
+                ]
+                with TestClient(app) as client:
+                    user, headers = self._register_test_user(client, "my-seeds-family")
+                    user_id = int(user["id"])
+                    draft_response = client.post("/persona-api/create-wizard/draft", json=payload)
+                    self.assertEqual(draft_response.status_code, 200)
+                    draft = draft_response.json()["draft"]
+
+                    save_response = client.post(
+                        "/persona-api/my-seeds",
                         headers=headers,
                         json={
-                            "persona_slug": saved["slug"],
-                            "session_id": None,
-                            "message": "我今天有点累",
+                            "draft": draft,
+                            "source_type": "create_wizard",
+                            "status": "saved",
                         },
                     )
+                    self.assertEqual(save_response.status_code, 200)
+                    saved = save_response.json()
+                    created_id = saved["id"]
+                    self.assertIn("family-notes.txt", saved["summary"])
+                    self.assertIn("图片材料", saved["summary"])
 
-                self.assertEqual(chat_response.status_code, 200)
-                chat_body = chat_response.json()
-                self.assertEqual(chat_body["persona_slug"], saved["slug"])
-                self.assertTrue(chat_body["reply"])
+                    list_response = client.get("/persona-api/my-seeds", headers=headers)
+                    self.assertEqual(list_response.status_code, 200)
+                    seeds = list_response.json()
+                    self.assertTrue(any(item["id"] == created_id for item in seeds))
+
+                    detail_response = client.get(f"/persona-api/my-seeds/{created_id}", headers=headers)
+                    self.assertEqual(detail_response.status_code, 200)
+                    detail = detail_response.json()
+                    self.assertEqual(detail["draft_payload"]["meta"]["create_type"], "family_companion")
+                    self.assertEqual(detail["draft_payload"]["meta"]["schema_key"], "family_companion_mother")
+                    self.assertEqual(detail["draft_payload"]["relationship_type"], "妈妈")
+                    self.assertEqual(detail["draft_payload"]["family_subtype"], "mother")
+                    self.assertIn("emotion_rules", detail["draft_payload"])
+                    self.assertTrue(detail["draft_payload"]["emotion_rules"]["summary"])
+                    self.assertIn("raw_materials", detail["draft_payload"])
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["chat_history_text"],
+                        "妈总是提醒我按时吃饭和休息",
+                    )
+                    self.assertIn(
+                        "小时候一起写作业",
+                        detail["draft_payload"]["raw_materials"]["memory_notes_text"],
+                    )
+                    self.assertIn(
+                        "晚上陪你散步",
+                        detail["draft_payload"]["raw_materials"]["memory_notes_text"],
+                    )
+                    self.assertIn(
+                        "家书片段",
+                        detail["draft_payload"]["raw_materials"]["text_materials_text"],
+                    )
+                    self.assertIn(
+                        "日常聊天摘录",
+                        detail["draft_payload"]["raw_materials"]["text_materials_text"],
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["image_notes_text"],
+                        "老照片说明",
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["voice_notes_text"],
+                        "语音提醒片段",
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["uploaded_text_documents"][0]["filename"],
+                        "family-notes.txt",
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["filename"],
+                        "family-photo.jpg",
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["mime_type"],
+                        "image/jpeg",
+                    )
+                    self.assertEqual(
+                        detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["ocr_status"],
+                        "success",
+                    )
+                    self.assertIn(
+                        "先别急",
+                        detail["draft_payload"]["raw_materials"]["uploaded_image_documents"][0]["ocr_text"],
+                    )
+                    self.assertTrue(detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"])
+                    self.assertIn(
+                        "先别急",
+                        detail["draft_payload"]["raw_materials"]["ocr_extracted_texts"][0]["ocr_text"],
+                    )
+                    self.assertIn(
+                        "小时候一起写作业",
+                        " ".join(detail["draft_payload"]["memory_base"]["memory_fragments"]),
+                    )
+                    self.assertIn(
+                        "先别急",
+                        " ".join(detail["draft_payload"]["memory_base"]["procedural_memories"]),
+                    )
+                    self.assertIn("按时吃饭和休息", detail["draft_payload"]["memory_base"]["chat_history_summary"])
+                    self.assertTrue(detail["draft_payload"]["memory_base"]["episodic_memories"])
+                    self.assertTrue(detail["draft_payload"]["memory_base"]["semantic_memories"])
+                    self.assertTrue(detail["draft_payload"]["memory_base"]["procedural_memories"])
+                    self.assertEqual(
+                        detail["draft_payload"]["guided_memory_answers"]["most_common_topics"],
+                        "总是聊吃饭和休息",
+                    )
+                    self.assertTrue(detail["draft_payload"]["raw_materials"]["uploaded_text_documents"])
+                    self.assertIn("三层记忆", saved["summary"])
+                    self.assertIn("引导补充", saved["summary"])
+                    self.assertIn("OCR识别", saved["summary"])
+                    self.assertIn("妈妈", detail["summary"])
+
+                    persona_response = client.get(f"/persona-api/personas/{saved['slug']}", headers=headers)
+                    self.assertEqual(persona_response.status_code, 200)
+                    persona = persona_response.json()
+                    self.assertEqual(persona["slug"], saved["slug"])
+                    self.assertIn("家人陪伴", persona.get("category", ""))
+
+                    with patch("app.services.chat_service.generate_reply") as fake_reply:
+                        fake_reply.return_value = {
+                            "content": "我在呢",
+                            "model": "gpt-admin-test",
+                            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                            "latency_ms": 1,
+                        }
+                        chat_response = client.post(
+                            "/persona-api/chat",
+                            headers=headers,
+                            json={
+                                "persona_slug": saved["slug"],
+                                "session_id": None,
+                                "message": "我今天有点累",
+                            },
+                        )
+
+                    self.assertEqual(chat_response.status_code, 200)
+                    chat_body = chat_response.json()
+                    self.assertEqual(chat_body["persona_slug"], saved["slug"])
+                    self.assertTrue(chat_body["reply"])
         finally:
             if created_id is not None:
                 with SessionLocal() as db:

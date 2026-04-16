@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.created_persona import CreatedPersona
 from app.schemas.create_wizard import CreateWizardDraft
+from app.services import ocr_service
 
 
 class CreatedPersonaError(RuntimeError):
@@ -111,8 +112,49 @@ def _normalize_image_documents(value: Any) -> list[dict[str, Any]]:
         }
         if data_url:
             document["data_url"] = data_url
+        ocr_status = _normalize_text(item.get("ocr_status") or item.get("status"))
+        if ocr_status:
+            document["ocr_status"] = ocr_status
+        ocr_text = _normalize_text(item.get("ocr_text") or item.get("text") or item.get("content"))
+        if ocr_text:
+            document["ocr_text"] = ocr_text
         documents.append(document)
     return documents
+
+
+def _normalize_ocr_results(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    results: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            filename = _normalize_text(item.get("filename") or item.get("name"))
+            mime_type = _normalize_text(item.get("mime_type") or item.get("type")) or "image/*"
+            try:
+                size = int(item.get("size") or 0)
+            except (TypeError, ValueError):
+                size = 0
+            ocr_text = _normalize_text(item.get("ocr_text") or item.get("text") or item.get("content"))
+            ocr_status = _normalize_text(item.get("ocr_status") or item.get("status")) or ("success" if ocr_text else "failed")
+        else:
+            filename = ""
+            mime_type = "image/*"
+            size = 0
+            ocr_text = _normalize_text(item)
+            ocr_status = "success" if ocr_text else "failed"
+        if not filename and not ocr_text and not size:
+            continue
+        results.append(
+            {
+                "filename": filename,
+                "mime_type": mime_type,
+                "size": max(size, 0),
+                "ocr_text": ocr_text,
+                "ocr_status": ocr_status,
+            }
+        )
+    return results
 
 
 def _excerpt_text(value: Any, limit: int = 48) -> str:
@@ -132,6 +174,36 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
         return ""
 
     parts: list[str] = []
+    documents = _normalize_documents(raw_materials.get("uploaded_text_documents"))
+    if documents:
+        doc_items: list[str] = []
+        for document in documents[:2]:
+            filename = _normalize_text(document.get("filename"))
+            content = _normalize_text(document.get("content"))
+            snippet = content[:16]
+            if filename:
+                doc_items.append(filename)
+            elif snippet:
+                doc_items.append(snippet)
+        if doc_items:
+            parts.append(f"文件材料：{' / '.join(doc_items)}")
+        else:
+            parts.append(f"文件材料：{len(documents)} 份")
+
+    image_documents = _normalize_image_documents(raw_materials.get("uploaded_image_documents"))
+    if image_documents:
+        parts.append(f"图片材料：{len(image_documents)} 张")
+        first_image = image_documents[0]
+        ocr_status = _normalize_text(first_image.get("ocr_status"))
+        if ocr_status:
+            parts.append(f"首图识别：{ocr_status}")
+
+    ocr_results = _normalize_ocr_results(raw_materials.get("ocr_extracted_texts"))
+    if ocr_results:
+        summary = ocr_service.summarize_ocr_results(ocr_results)
+        if summary:
+            parts.append(summary)
+
     chat_history = _excerpt_text(raw_materials.get("chat_history_text"), 40)
     if chat_history:
         parts.append(f"聊天记录：{chat_history}")
@@ -145,28 +217,6 @@ def _material_summary_from_raw_materials(raw_materials: Any) -> str:
     )
     if text_notes:
         parts.append(f"文本材料：{text_notes}")
-
-    image_documents = _normalize_image_documents(raw_materials.get("uploaded_image_documents"))
-    if image_documents:
-        parts.append(f"图片材料：{len(image_documents)} 张")
-
-    documents = _normalize_documents(raw_materials.get("uploaded_text_documents"))
-    if documents:
-        doc_items: list[str] = []
-        for document in documents[:2]:
-            filename = _normalize_text(document.get("filename"))
-            content = _normalize_text(document.get("content"))
-            snippet = content[:24]
-            if filename and snippet:
-                doc_items.append(f"{filename}：{snippet}")
-            elif filename:
-                doc_items.append(filename)
-            elif snippet:
-                doc_items.append(snippet)
-        if doc_items:
-            parts.append(f"文件材料：{' / '.join(doc_items)}")
-        else:
-            parts.append(f"文件材料：{len(documents)} 份")
 
     image_notes = _excerpt_text(raw_materials.get("image_notes_text") or raw_materials.get("photo_notes_text"), 30)
     if image_notes:
@@ -373,11 +423,12 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             memories.extend(_clean_lines(memory.get("text_materials")))
             memories.extend(_clean_lines(memory.get("image_notes")))
             memories.extend(_clean_lines(memory.get("voice_notes")))
-        summary_parts = [part for part in [top_name, family_subtype_label or relationship_type, tone] if part]
+        if raw_materials_summary:
+            summary_parts = [part for part in [top_name, family_subtype_label or relationship_type, raw_materials_summary] if part]
+        else:
+            summary_parts = [part for part in [top_name, family_subtype_label or relationship_type] if part]
         if guided_summary:
             summary_parts.append(guided_summary)
-        if raw_materials_summary:
-            summary_parts.append(raw_materials_summary)
         if layer_summary:
             summary_parts.append(layer_summary)
         if emotion_rules_summary:

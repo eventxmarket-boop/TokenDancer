@@ -722,6 +722,8 @@ async function handleFamilyImageFileChange(event: Event) {
       mime_type: guessImageMimeType(file),
       size: file.size,
       data_url: await readFileAsDataUrl(file),
+      ocr_status: '待识别',
+      ocr_text: '',
     })),
   )
 
@@ -1406,6 +1408,13 @@ function buildFamilyRawMaterials() {
     text_materials_text: familyTextMaterialsText.value,
     uploaded_text_documents: familyUploadedTextDocuments.value,
     uploaded_image_documents: familyUploadedImageDocuments.value,
+    ocr_extracted_texts: familyUploadedImageDocuments.value.map((item) => ({
+      filename: item.filename,
+      mime_type: item.mime_type,
+      size: item.size,
+      ocr_text: item.ocr_text || '',
+      ocr_status: item.ocr_status || '待识别',
+    })),
     image_notes_text: familyImageNotesText.value,
     photo_notes_text: familyImageNotesText.value,
     voice_notes_text: familyVoiceNotesText.value,
@@ -1805,6 +1814,9 @@ watch(
                     @change="handleFamilyImageFileChange"
                   />
                   <small class="field-hint">
+                    可上传聊天记录截图或照片，系统会尝试提取图片中的文字；若识别不完整，请补充图片说明。
+                  </small>
+                  <small class="field-hint">
                     {{
                       familyUploadedImageDocuments.length
                         ? `${familyUploadedImageDocuments.length} 张照片：${familyUploadedImageDocuments.map((item) => item.filename).join(' / ')}`
@@ -1830,7 +1842,9 @@ watch(
                   <li v-for="(item, index) in familyUploadedImageDocuments" :key="`${item.filename}-${index}`">
                     <span>
                       {{ item.filename }}
-                      <small class="inline-meta">{{ item.mime_type }} · {{ formatFileSize(item.size) }}</small>
+                      <small class="inline-meta">
+                        {{ item.mime_type }} · {{ formatFileSize(item.size) }} · {{ item.ocr_status || '待识别' }}
+                      </small>
                     </span>
                     <strong class="inline-actions">
                       <button class="ghost-button ghost-button--small" type="button" @click="removeFamilyUploadedImageDocument(index)">

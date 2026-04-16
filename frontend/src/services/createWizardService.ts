@@ -57,6 +57,7 @@ export type FamilyCompanionMemoryBase = {
   episodic_memories: string[]
   semantic_memories: string[]
   procedural_memories: string[]
+  ocr_extracted_texts: string[]
   legacy_summary: string[]
   shared_events: string[]
   important_advice: string[]
@@ -97,6 +98,16 @@ export type UploadedImageDocument = {
   mime_type: string
   size: number
   data_url?: string
+  ocr_status?: string
+  ocr_text?: string
+}
+
+export type FamilyCompanionOCRExtractedText = {
+  filename: string
+  mime_type: string
+  size: number
+  ocr_text: string
+  ocr_status: string
 }
 
 export type FamilyCompanionRawMaterials = {
@@ -105,6 +116,7 @@ export type FamilyCompanionRawMaterials = {
   text_materials_text: string
   uploaded_text_documents: TextMaterialDocument[]
   uploaded_image_documents: UploadedImageDocument[]
+  ocr_extracted_texts: FamilyCompanionOCRExtractedText[]
   image_notes_text: string
   photo_notes_text: string
   voice_notes_text: string
