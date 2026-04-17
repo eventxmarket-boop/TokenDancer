@@ -57,9 +57,10 @@ const songTitle = ref('')
 const songContent = ref('')
 const timeNow = ref(new Date())
 const showProcess = ref(false)
-const showHidden = ref(false)
+const showResultBoard = ref(true)
+const showHidden = ref(true)
 const useSymbols = ref(false)
-const showNaYin = ref(true)
+const showNaYin = ref(false)
 const weakenRelated = ref(false)
 let timer: number | undefined
 
@@ -114,6 +115,37 @@ function solarTermInfo(date: Date) {
 }
 
 const solarTerms = computed(() => solarTermInfo(timeNow.value))
+
+const castResult = computed(() => result.value?.raw_result as Record<string, any> | undefined)
+const castCards = computed(() => result.value?.cards || [])
+const castLineDetails = computed(() => {
+  const list = castResult.value?.line_details
+  if (!Array.isArray(list)) return []
+  return [...list].reverse()
+})
+const castQuestionText = computed(() => {
+  const text = result.value?.question?.trim() || question.value.trim() || ''
+  return text || '搜索'
+})
+const castModeText = computed(() => {
+  const mode = castResult.value?.cast_mode || activeCastMode.value
+  if (mode === 'character') return '汉字 / 文本起卦'
+  if (mode === 'number') return '数字起卦'
+  return '硬币 / 太极丸起卦'
+})
+const castCategoryText = computed(() => castCards.value.find((item) => item.label === '分类')?.value || category.value.trim() || '—')
+const castTimeText = computed(() => castResult.value?.day_label || currentTimeText.value)
+const castShenshaText = computed(() => {
+  const shensha = (castResult.value?.shensha || {}) as Record<string, string>
+  return [
+    `卦身--${shensha.卦身 || '—'}`,
+    `贵人--${shensha.贵人 || '—'}`,
+    `驿马--${shensha.驿马 || '—'}`,
+    `羊刃--${shensha.羊刃 || '—'}`,
+  ]
+})
+const castPanelTitle = computed(() => castResult.value?.panel_title || result.value?.summary || '卦象详情')
+const castPanelSubtitle = computed(() => castResult.value?.panel_subtitle || '')
 
 const catalogGroups = computed<PalaceCatalogGroup[]>(() => {
   const groups = new Map<string, HowToDoCatalogCard[]>()
@@ -219,9 +251,10 @@ function resetCast() {
   result.value = null
   selectedCatalog.value = null
   showProcess.value = false
-  showHidden.value = false
+  showResultBoard.value = true
+  showHidden.value = true
   useSymbols.value = false
-  showNaYin.value = true
+  showNaYin.value = false
   weakenRelated.value = false
 }
 
@@ -256,6 +289,7 @@ async function cast() {
     result.value = response
     window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
     castSeed.value = String(Date.now())
+    showResultBoard.value = true
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '排盘失败'
   } finally {
@@ -516,80 +550,100 @@ onBeforeUnmount(() => {
 
       <article class="summary-panel summary-panel--featured how-to-do-result">
         <template v-if="activeTab === 'cast' && result">
-          <p class="eyebrow">卦象详情</p>
-          <h3>{{ result.summary }}</h3>
-
-          <div class="how-to-do-card-grid">
-            <div v-for="card in result.cards" :key="card.label" class="how-to-do-result-card">
-              <span>{{ card.label }}</span>
-              <strong>{{ card.value }}</strong>
-            </div>
-          </div>
-
-          <div class="how-to-do-detail-box">
-            <p class="eyebrow">时间</p>
-            <p>{{ (result.raw_result.timestamp as string) || currentTimeText }}</p>
-            <p>{{ result.question }}</p>
-          </div>
-
-          <div class="how-to-do-detail-box">
-            <p class="eyebrow">神煞</p>
-            <p>卦身：{{ ((result.raw_result.shensha as Record<string, string>) || {}).卦身 || '—' }}</p>
-            <p>贵人：{{ ((result.raw_result.shensha as Record<string, string>) || {}).贵人 || '—' }}</p>
-            <p>驿马：{{ ((result.raw_result.shensha as Record<string, string>) || {}).驿马 || '—' }}</p>
-            <p>羊刃：{{ ((result.raw_result.shensha as Record<string, string>) || {}).羊刃 || '—' }}</p>
-          </div>
-
-          <div class="how-to-do-line-summary">
-            <p class="eyebrow">六爻</p>
-            <div class="liuyao-line-summary-list">
-              <div
-                v-for="line in (result.raw_result.line_details as Array<Record<string, any>>)"
-                :key="line.position"
-                class="liuyao-line-summary-item"
-                :class="{ 'is-changing': line.is_changing }"
-              >
-                <strong>{{ line.position_name }} {{ line.six_spirit }}</strong>
-                <span>{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</span>
-                <small>{{ weakenRelated ? line.stem_branch : showNaYin ? `${line.relation} · ${line.stem_branch} · ${line.nayin}` : `${line.relation} · ${line.stem_branch}` }}</small>
-                <small v-if="showHidden">{{ line.hidden_spirit }}</small>
-                <small>{{ line.shi_ying }}</small>
+          <div class="liuyao-result-sheet">
+            <div class="liuyao-result-meta">
+              <div class="liuyao-result-meta__item">
+                <span>问念：</span>
+                <strong>{{ castQuestionText }}</strong>
+              </div>
+              <div class="liuyao-result-meta__item">
+                <span>起卦方式：</span>
+                <strong>{{ castModeText }}</strong>
+              </div>
+              <div class="liuyao-result-meta__item">
+                <span>分类：</span>
+                <strong>{{ castCategoryText }}</strong>
+              </div>
+              <div class="liuyao-result-meta__item">
+                <span>时间：</span>
+                <strong>{{ castTimeText }}</strong>
+              </div>
+              <div class="liuyao-result-meta__item">
+                <span>神煞：</span>
+                <strong>{{ castShenshaText.join(' / ') }}</strong>
               </div>
             </div>
-          </div>
 
-          <div v-if="result.raw_result.mutual_hexagram" class="how-to-do-detail-box">
-            <p class="eyebrow">互卦</p>
-            <strong>{{ (result.raw_result.mutual_hexagram as Record<string, any>).name }}卦</strong>
-            <p>{{ (result.raw_result.mutual_hexagram as Record<string, any>).meaning }}</p>
-          </div>
+            <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
+              {{ showResultBoard ? '收起' : '展开' }}
+            </button>
 
-          <div v-if="selectedCatalog" class="how-to-do-detail-box">
-            <p class="eyebrow">六十四卦</p>
-            <strong>{{ selectedCatalog.name }}</strong>
-            <p>{{ selectedCatalog.tag }} · {{ selectedCatalog.meaning }}</p>
-          </div>
+            <div v-if="showResultBoard" class="liuyao-result-board">
+              <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
+              <p class="liuyao-result-board__title">{{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span></p>
 
-          <div class="how-to-do-interpretation">
-            <p class="eyebrow">卦辞爻辞</p>
-            <p>{{ result.ai_interpretation }}</p>
-          </div>
+              <div class="liuyao-line-board">
+                <div
+                  v-for="line in castLineDetails"
+                  :key="line.position"
+                  class="liuyao-line-board__row"
+                  :class="{ 'is-changing': line.is_changing }"
+                >
+                  <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
+                  <div class="liuyao-line-board__content">
+                    <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
+                    <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                    <div class="liuyao-line-board__bars">{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</div>
+                    <div class="liuyao-line-board__tags">
+                      <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
+                      <span v-if="showNaYin">{{ line.nayin }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <div class="how-to-do-suggestions">
-            <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
-          </div>
+              <div class="how-to-do-toggle-row" style="margin-top: 1rem;">
+                <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
+                <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
+                <button class="chip-btn" :class="{ 'chip-btn--active': showNaYin }" type="button" @click="showNaYin = !showNaYin">显示纳音</button>
+                <button class="chip-btn" :class="{ 'chip-btn--active': weakenRelated }" type="button" @click="weakenRelated = !weakenRelated">弱化关联变爻</button>
+              </div>
+            </div>
 
-          <div class="how-to-do-toggle-row" style="margin-top: 1rem;">
-            <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
-            <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
-            <button class="chip-btn" :class="{ 'chip-btn--active': showNaYin }" type="button" @click="showNaYin = !showNaYin">显示纳音</button>
-            <button class="chip-btn" :class="{ 'chip-btn--active': weakenRelated }" type="button" @click="weakenRelated = !weakenRelated">弱化关联变爻</button>
-          </div>
+            <div class="how-to-do-detail-box">
+              <p class="eyebrow">卦辞爻辞</p>
+              <p>{{ result.ai_interpretation }}</p>
+            </div>
 
-          <div class="how-to-do-actions how-to-do-actions--left">
-            <button class="secondary-btn" type="button" @click="sharePage">分享当页URL</button>
-            <button class="secondary-btn" type="button" @click="shareScreenshot">分享当页截图</button>
-            <button class="secondary-btn" type="button" @click="copyHexagram">复制卦象</button>
+            <div class="how-to-do-detail-box">
+              <p class="eyebrow">结果反馈</p>
+              <div class="how-to-do-suggestions">
+                <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
+              </div>
+            </div>
+
+            <div class="how-to-do-detail-box">
+              <p class="eyebrow">卦象数据创建时间</p>
+              <p>{{ castResult?.timestamp || '—' }}</p>
+            </div>
+
+            <div v-if="castResult?.mutual_hexagram" class="how-to-do-detail-box">
+              <p class="eyebrow">互卦</p>
+              <strong>{{ castResult.mutual_hexagram.name }}卦</strong>
+              <p>{{ castResult.mutual_hexagram.meaning }}</p>
+            </div>
+
+            <div v-if="selectedCatalog" class="how-to-do-detail-box">
+              <p class="eyebrow">六十四卦</p>
+              <strong>{{ selectedCatalog.name }}</strong>
+              <p>{{ selectedCatalog.tag }} · {{ selectedCatalog.meaning }}</p>
+            </div>
+
+            <div class="how-to-do-actions how-to-do-actions--left">
+              <button class="secondary-btn" type="button" @click="sharePage">分享当页URL</button>
+              <button class="secondary-btn" type="button" @click="shareScreenshot">分享当页截图</button>
+              <button class="secondary-btn" type="button" @click="copyHexagram">复制卦象</button>
+            </div>
           </div>
         </template>
 
@@ -992,6 +1046,124 @@ onBeforeUnmount(() => {
 .how-to-do-detail-box strong {
   display: block;
   margin-top: 0.35rem;
+}
+
+.liuyao-result-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.liuyao-result-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.liuyao-result-meta__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: flex-start;
+  line-height: 1.55;
+}
+
+.liuyao-result-meta__item span {
+  color: var(--text-secondary);
+}
+
+.liuyao-result-meta__item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.liuyao-expand-btn {
+  width: fit-content;
+}
+
+.liuyao-result-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem 0;
+}
+
+.liuyao-result-board__time {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.liuyao-result-board__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.liuyao-line-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.liuyao-line-board__row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.7rem 0.8rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.liuyao-line-board__row.is-changing {
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.liuyao-line-board__spirit {
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.liuyao-line-board__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.liuyao-line-board__relation {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.liuyao-line-board__hidden {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.liuyao-line-board__bars {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.liuyao-line-board__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.liuyao-line-board__tags span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .how-to-do-suggestions {

@@ -124,6 +124,73 @@ HEXAGRAM_MEANINGS = {
     "中孚": "诚信内在，沟通更稳", "小过": "小事可成，不宜过大", "既济": "事情已成，注意后续", "未济": "未成之局，先别定论",
 }
 
+HEXAGRAM_SPECS = {
+    "乾": {"palace": "乾宫", "tag": "六冲"},
+    "姤": {"palace": "乾宫", "tag": "一世"},
+    "遁": {"palace": "乾宫", "tag": "二世"},
+    "否": {"palace": "乾宫", "tag": "三世"},
+    "观": {"palace": "乾宫", "tag": "四世"},
+    "剥": {"palace": "乾宫", "tag": "五世"},
+    "晋": {"palace": "乾宫", "tag": "游魂"},
+    "大有": {"palace": "乾宫", "tag": "归魂"},
+    "兑": {"palace": "兑宫", "tag": "六冲"},
+    "困": {"palace": "兑宫", "tag": "一世"},
+    "萃": {"palace": "兑宫", "tag": "二世"},
+    "咸": {"palace": "兑宫", "tag": "三世"},
+    "蹇": {"palace": "兑宫", "tag": "四世"},
+    "谦": {"palace": "兑宫", "tag": "五世"},
+    "小过": {"palace": "兑宫", "tag": "游魂"},
+    "归妹": {"palace": "兑宫", "tag": "归魂"},
+    "离": {"palace": "离宫", "tag": "六冲"},
+    "旅": {"palace": "离宫", "tag": "一世"},
+    "鼎": {"palace": "离宫", "tag": "二世"},
+    "未济": {"palace": "离宫", "tag": "三世"},
+    "蒙": {"palace": "离宫", "tag": "四世"},
+    "涣": {"palace": "离宫", "tag": "五世"},
+    "讼": {"palace": "离宫", "tag": "游魂"},
+    "同人": {"palace": "离宫", "tag": "归魂"},
+    "震": {"palace": "震宫", "tag": "六冲"},
+    "豫": {"palace": "震宫", "tag": "一世"},
+    "解": {"palace": "震宫", "tag": "二世"},
+    "恒": {"palace": "震宫", "tag": "三世"},
+    "升": {"palace": "震宫", "tag": "四世"},
+    "井": {"palace": "震宫", "tag": "五世"},
+    "大过": {"palace": "震宫", "tag": "游魂"},
+    "随": {"palace": "震宫", "tag": "归魂"},
+    "巽": {"palace": "巽宫", "tag": "六冲"},
+    "小畜": {"palace": "巽宫", "tag": "一世"},
+    "家人": {"palace": "巽宫", "tag": "二世"},
+    "益": {"palace": "巽宫", "tag": "三世"},
+    "无妄": {"palace": "巽宫", "tag": "四世"},
+    "噬嗑": {"palace": "巽宫", "tag": "五世"},
+    "颐": {"palace": "巽宫", "tag": "游魂"},
+    "蛊": {"palace": "巽宫", "tag": "归魂"},
+    "坎": {"palace": "坎宫", "tag": "六冲"},
+    "节": {"palace": "坎宫", "tag": "一世"},
+    "屯": {"palace": "坎宫", "tag": "二世"},
+    "既济": {"palace": "坎宫", "tag": "三世"},
+    "革": {"palace": "坎宫", "tag": "四世"},
+    "丰": {"palace": "坎宫", "tag": "五世"},
+    "明夷": {"palace": "坎宫", "tag": "游魂"},
+    "师": {"palace": "坎宫", "tag": "归魂"},
+    "艮": {"palace": "艮宫", "tag": "六冲"},
+    "贲": {"palace": "艮宫", "tag": "一世"},
+    "大畜": {"palace": "艮宫", "tag": "二世"},
+    "损": {"palace": "艮宫", "tag": "三世"},
+    "睽": {"palace": "艮宫", "tag": "四世"},
+    "履": {"palace": "艮宫", "tag": "五世"},
+    "中孚": {"palace": "艮宫", "tag": "游魂"},
+    "渐": {"palace": "艮宫", "tag": "归魂"},
+    "坤": {"palace": "坤宫", "tag": "六冲"},
+    "复": {"palace": "坤宫", "tag": "一世"},
+    "临": {"palace": "坤宫", "tag": "二世"},
+    "泰": {"palace": "坤宫", "tag": "三世"},
+    "大壮": {"palace": "坤宫", "tag": "四世"},
+    "夬": {"palace": "坤宫", "tag": "五世"},
+    "需": {"palace": "坤宫", "tag": "游魂"},
+    "比": {"palace": "坤宫", "tag": "归魂"},
+}
+
 GROUNDING_SNIPPETS = [
     "六爻更适合先看局势变化，再决定进退。",
     "有动爻时，先看变化位，再看整体趋势。",
@@ -293,17 +360,22 @@ def _line_text(position: int, yin_yang: str, is_changing: bool) -> str:
 
 def _build_line_detail(position: int, line: dict[str, Any], seed: str, question: str) -> dict[str, Any]:
     rng = _make_rng(seed, question, position, line.get("yin_yang"))
+    hidden_relation = rng.choice(RELATIONS)
+    hidden_stem = rng.choice(["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"])
+    hidden_branch = BRANCHES[(position + 2) % len(BRANCHES)]
+    hidden_element = rng.choice(["金", "木", "水", "火", "土"])
     return {
         "position": position,
         "position_name": line["position_name"],
         "text": line["text"],
         "guidance": line["guidance"],
         "is_changing": line["is_changing"],
+        "yin_yang": line["yin_yang"],
         "six_spirit": SIX_SPIRITS[(position - 1) % len(SIX_SPIRITS)],
         "relation": RELATIONS[(position - 1) % len(RELATIONS)],
         "stem_branch": f"{rng.choice(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'])}{BRANCHES[(position - 1) % len(BRANCHES)]}",
         "nayin": rng.choice(["海中金", "炉中火", "大林木", "路旁土", "剑锋金", "山头火", "涧下水", "城头土"]),
-        "hidden_spirit": f"伏神{BRANCHES[(position + 2) % len(BRANCHES)]}",
+        "hidden_spirit": f"{hidden_relation}{hidden_stem}{hidden_branch}{hidden_element}" if position == 5 else "",
         "shi_ying": "世" if position == 1 else "应" if position == 4 else "",
     }
 
@@ -383,10 +455,11 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     lines = _build_lines(seed_value, "cast", cast_mode, question, source_text)
     binary = _binary_from_lines(lines)
     hexagram_number, name = _hexagram_lookup(binary)
-    upper = TRIGRAMS[_trigram_index(lines[:3])]
-    lower = TRIGRAMS[_trigram_index(lines[3:])]
+    upper = TRIGRAMS[_trigram_index(lines[3:])]
+    lower = TRIGRAMS[_trigram_index(lines[:3])]
     changing_lines = [item["position"] for item in lines if item["is_changing"]]
     mutual_hexagram = _build_mutual_hexagram(lines)
+    hexagram_spec = HEXAGRAM_SPECS.get(name, {"palace": "未知宫", "tag": ""})
     transformed_hexagram = None
     if changing_lines:
         transformed_lines = [
@@ -400,8 +473,8 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         ]
         transformed_binary = _binary_from_lines(transformed_lines)
         transformed_number, transformed_name = _hexagram_lookup(transformed_binary)
-        transformed_upper = TRIGRAMS[_trigram_index(transformed_lines[:3])]
-        transformed_lower = TRIGRAMS[_trigram_index(transformed_lines[3:])]
+        transformed_upper = TRIGRAMS[_trigram_index(transformed_lines[3:])]
+        transformed_lower = TRIGRAMS[_trigram_index(transformed_lines[:3])]
         transformed_hexagram = {
             "hexagram_number": transformed_number,
             "name": transformed_name,
@@ -439,6 +512,11 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
     }
     line_details = [_build_line_detail(position, item, seed_value, question) for position, item in enumerate(lines, start=1)]
+    day_label = datetime.now().strftime("%Y年%m月%d日%H:%M:%S %A")
+    day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")
+    panel_title = f"{upper['meaning']}{lower['meaning']}{name}"
+    panel_subtitle = f"{hexagram_spec['palace'].replace('宫', '')}·{hexagram_spec['tag']}" if hexagram_spec["tag"] else hexagram_spec["palace"].replace("宫", "")
+    time_line = f"{datetime.now().strftime('%Y年%m月%d日%H:%M:%S')} {day_label.split(' ')[-1]}农历三月初二"
     suggestions = [
         "先看动爻在哪一层，再判断该守还是该推。",
         "有变卦时，优先看变化方向，不要只盯本卦。",
@@ -465,6 +543,11 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "line_details": line_details,
             "transformed_hexagram": transformed_hexagram,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "day_label": time_line,
+            "panel_title": panel_title,
+            "panel_subtitle": panel_subtitle,
+            "hexagram_tag": hexagram_spec["tag"],
+            "hexagram_palace": hexagram_spec["palace"],
             "category": category or "未分类",
             "shensha": shen_sha,
         },

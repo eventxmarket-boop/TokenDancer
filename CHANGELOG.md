@@ -1,3 +1,9 @@
+## V1.4.88 - 2026-04-18
+
+- Reworked the cast result into a more source-like six-yao panel with direct question, cast method, category, time, and shensha rows.
+- Corrected the hexagram title and line order so the board reads top-to-bottom like the reference layout.
+- Kept the module one-piece and removable while preserving the current tabs and auxiliary sections.
+
 ## V1.4.87 - 2026-04-18
 
 - Rebuilt `我该怎么做` into a fuller one-to-one liu-yao layout with 排盘, 日晷, 歌诀, and 六十四卦 sections.
