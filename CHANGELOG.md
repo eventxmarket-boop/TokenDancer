@@ -1,3 +1,8 @@
+## V1.4.92 - 2026-04-18
+
+- Removed the remaining copy-hexagram action from `我该怎么做` so the page is down to the core board only.
+- Kept the liu-yao module focused on cast, result, and transformed-hexagram display without extra share actions.
+
 ## V1.4.90 - 2026-04-18
 
 - Added the transformed hexagram board to `我该怎么做` so changing lines now render a second hexagram panel instead of only the main one.
