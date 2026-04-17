@@ -5,9 +5,8 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const mobileNavItems = [
-  { to: '/', label: '首页' },
-  { to: '/reply-assistant', label: '我该怎么回' },
   { to: '/seed', label: 'Seed' },
+  { to: '/reply-assistant', label: '我该怎么回' },
   { to: '/favorites', label: '收藏' },
   { to: '/me', label: '个人' },
 ]
@@ -34,7 +33,7 @@ const isReplyMenuActive = computed(
 )
 
 const isSeedMenuActive = computed(
-  () => route.path === '/seed' || route.path.startsWith('/create'),
+  () => route.path === '/seed' || route.path.startsWith('/create') || route.path === '/',
 )
 
 onMounted(() => {
@@ -71,21 +70,19 @@ watch(
 
       <div class="topbar__actions">
         <nav class="desktop-nav" aria-label="主导航">
-          <RouterLink to="/" class="nav-link">首页</RouterLink>
+          <div class="nav-group" :class="{ 'nav-group--active': isSeedMenuActive }">
+            <RouterLink to="/seed" class="nav-dropdown__trigger">Seed</RouterLink>
+            <div class="nav-dropdown" aria-label="Seed 下拉菜单">
+              <RouterLink to="/create" class="nav-dropdown__item">创建</RouterLink>
+              <RouterLink to="/seed" class="nav-dropdown__item">Seed</RouterLink>
+            </div>
+          </div>
 
           <div class="nav-group" :class="{ 'nav-group--active': isReplyMenuActive }">
             <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">我该怎么回</RouterLink>
             <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
               <RouterLink to="/reply-assistant/workbench" class="nav-dropdown__item">我该怎么回</RouterLink>
               <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>
-            </div>
-          </div>
-
-          <div class="nav-group" :class="{ 'nav-group--active': isSeedMenuActive }">
-            <RouterLink to="/seed" class="nav-dropdown__trigger">Seed</RouterLink>
-            <div class="nav-dropdown" aria-label="Seed 下拉菜单">
-              <RouterLink to="/create" class="nav-dropdown__item">创建</RouterLink>
-              <RouterLink to="/seed" class="nav-dropdown__item">Seed</RouterLink>
             </div>
           </div>
 

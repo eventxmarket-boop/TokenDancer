@@ -1,3 +1,9 @@
+## V1.4.69 - 2026-04-17
+
+- Replaced the top-level `首页` nav item with a single `Seed` entry.
+- Kept `Seed` as a dropdown menu with `创建 / Seed` destinations and removed the separate top-bar `Seed` item.
+- Preserved the existing reply assistant and other top-level entries while narrowing the primary seed entry to one consistent menu.
+
 ## V1.4.68 - 2026-04-17
 
 - Split `我该怎么回` into a top-level landing page and a deeper reply workbench route.
