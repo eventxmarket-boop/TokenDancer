@@ -513,6 +513,12 @@
 - Expanded the family companion and intimate companion creation flows with explicit profile and memory layers.
 - Started merging the four self-related Create entries into a later unified main line.
 
+## V1.4.65
+- Removed `我该怎么回` from the create entry flow so it stays a standalone top-level feature
+- Removed the reply-assistant branch from the create wizard and aligned the fill pages more closely with the self-mainline visual system
+- Unified fill-page surfaces and form cards around the same warm H5-friendly card language
+- Fixed the `Seed` and `我该怎么回` hover dropdown gap so submenu items stay reachable
+
 ## V1.4.64
 - Reworked the top navigation into hover dropdowns for `我该怎么回` and `Seed`
 - Added a placeholder `我该怎么做` page for the future flow

@@ -187,12 +187,6 @@ const typeCards = [
     description: '先看清关系，再调整表达、改善相处、继续经营。',
     hint: '从关系经营开始',
   },
-  {
-    type: 'reply_assistant' as const,
-    title: '我该怎么回',
-    description: '收到一句话，不知道怎么回，就从这里开始。',
-    hint: '从回复开始',
-  },
 ]
 
 const intimateModeCards = [
@@ -3304,102 +3298,6 @@ watch(
             <label class="form-field">
               <span>边界或禁忌话题</span>
               <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
-            </label>
-          </div>
-
-          <div v-else-if="createType === 'reply_assistant'" class="wizard-form">
-            <div class="form-grid">
-              <label class="form-field">
-                <span>人物类型</span>
-                <select v-model="formState.target_person_type" class="field-input">
-                  <option v-for="[value, label] in replyAssistantTargetTypeOptions" :key="value" :value="value">
-                    {{ label }}
-                  </option>
-                </select>
-              </label>
-              <label class="form-field">
-                <span>对方称呼</span>
-                <input v-model="formState.target_person_name" class="field-input" type="text" placeholder="例如：小林 / 甲方 / 妈妈" />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>当前关系状态</span>
-                <textarea
-                  v-model="formState.relationship_status"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="例如：暧昧期 / 合作中 / 冷战中 / 日常沟通"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>你想达到的目标</span>
-                <textarea
-                  v-model="formState.reply_goal"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="例如：接住情绪、稳住局面、推进一步、先不激化"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>语气要求</span>
-                <textarea
-                  v-model="formState.tone"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="例如：自然、克制、清楚、不油腻"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>一句话原文</span>
-                <textarea
-                  v-model="formState.single_message_text"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="把对方原话直接贴进来"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>候选回复风格</span>
-                <textarea
-                  v-model="formState.reply_style_samples"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="稳妥版 / 自然版 / 主动版 / 克制版"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>补充说明</span>
-                <textarea
-                  v-model="formState.reply_material_notes"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="可以补充聊天记录、文件、图片或 OCR 材料"
-                ></textarea>
-              </label>
-            </div>
-
-            <MaterialInputPanel
-              v-model="replyAssistantMaterialState"
-              path-type="relationship"
-              :supports-guided-prompts="false"
-            />
-
-            <label class="form-field">
-              <span>人物描述 / 场景补充</span>
-              <textarea
-                v-model="formState.target_person_description"
-                class="field-input wizard-textarea"
-                rows="4"
-                placeholder="补充对方说话风格、场景、关系变化或雷区"
-              ></textarea>
             </label>
           </div>
 

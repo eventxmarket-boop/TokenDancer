@@ -49,12 +49,6 @@ const mainPathSections: MainPathSection[] = [
     groupKeys: ['relationship_intimate'],
   },
   {
-    key: 'reply_assistant',
-    title: '我该怎么回',
-    description: '收到一句话，不知道怎么回，就从这里开始。',
-    groupKeys: ['reply_assistant'],
-  },
-  {
     key: 'family',
     title: '家人陪伴',
     description: '统一入口，进入后再选妈妈、父母或其他家人。',
