@@ -1,3 +1,8 @@
+## V1.4.72 - 2026-04-17
+
+- Reverted the last copy-trimming pass and restored the previous page text density.
+- Kept the release history monotonic by recording the rollback as a new version instead of lowering the version number.
+
 ## V1.4.70 - 2026-04-17
 
 - Kept the original home page content intact while making the top-level `Seed` entry point back to `/`.
