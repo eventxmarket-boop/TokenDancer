@@ -255,7 +255,7 @@ async function cast() {
                 {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
               </div>
               <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__header liuyao-result-grid__header--right">
-                {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
+                {{ castResult.transformed_hexagram.panel_title || castResult.transformed_hexagram.name }}<span v-if="castResult.transformed_hexagram.panel_subtitle">（{{ castResult.transformed_hexagram.panel_subtitle }}）</span>
               </div>
 
               <template v-for="(line, index) in castLineDetails" :key="line.position">
@@ -269,7 +269,6 @@ async function cast() {
                     <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
                     <span v-if="line.shi_ying" class="liuyao-result-grid__marker">{{ line.shi_ying }}</span>
                   </div>
-                  <div class="liuyao-result-grid__nayin">{{ line.nayin }}</div>
                 </div>
 
                 <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__cell liuyao-result-grid__cell--right">
@@ -280,7 +279,6 @@ async function cast() {
                     <span v-if="transformedLineDetails[index]?.change_mark" class="is-change-mark">{{ transformedLineDetails[index]?.change_mark }}</span>
                     <span v-if="transformedLineDetails[index]?.shi_ying" class="liuyao-result-grid__marker">{{ transformedLineDetails[index]?.shi_ying }}</span>
                   </div>
-                  <div class="liuyao-result-grid__nayin">{{ transformedLineDetails[index]?.nayin }}</div>
                 </div>
               </template>
             </div>
@@ -502,12 +500,6 @@ async function cast() {
   font-size: 0.9rem;
   color: var(--text-primary);
   font-weight: 700;
-}
-
-.liuyao-result-grid__nayin {
-  font-size: 0.84rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
 }
 
 .is-change-mark {

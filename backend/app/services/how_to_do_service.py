@@ -606,12 +606,15 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         transformed_number, transformed_name = _hexagram_lookup(transformed_binary)
         transformed_upper = TRIGRAMS[_trigram_index(transformed_lines[3:])]
         transformed_lower = TRIGRAMS[_trigram_index(transformed_lines[:3])]
+        transformed_spec = HEXAGRAM_SPECS.get(transformed_name, {"palace": "未知宫", "tag": ""})
         transformed_hexagram = {
             "hexagram_number": transformed_number,
             "name": transformed_name,
             "meaning": _hexagram_meaning(transformed_name),
             "upper_trigram": transformed_upper["name"],
             "lower_trigram": transformed_lower["name"],
+            "panel_title": f"{transformed_lower['meaning']}{transformed_upper['meaning']}{transformed_name}",
+            "panel_subtitle": f"{transformed_spec['palace'].replace('宫', '')}·{transformed_spec['tag']}" if transformed_spec["tag"] else transformed_spec["palace"].replace("宫", ""),
         }
         transformed_line_details = [
             _build_line_detail(position, item, seed_value + "-transformed", question, *_shi_ying_positions(transformed_name))

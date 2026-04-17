@@ -1,3 +1,8 @@
+## V1.4.99 - 2026-04-18
+
+- Switched transformed-hexagram titles to full names such as `水泽节（坎·一世）` instead of the shortened trigram-only label.
+- Removed `纳音` from the liu-yao board display while keeping the rest of the board layout unchanged.
+
 ## V1.4.98 - 2026-04-18
 
 - Reworked the liu-yao board UI into a single aligned sheet so 六神、主卦、变卦、世应、`o/x` render as one whole instead of per-line cards.
