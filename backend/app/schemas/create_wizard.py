@@ -82,6 +82,10 @@ class SelfPersonaRawMaterials(CreateWizardRawMaterials):
     pass
 
 
+class ReplyAssistantRawMaterials(CreateWizardRawMaterials):
+    pass
+
+
 class CreateWizardDraftRequest(BaseModel):
     create_type: str
     group: str = ""
@@ -134,6 +138,14 @@ class CreateWizardDraft(BaseModel):
     material_summary: str = ""
     relationship_type: str = ""
     family_subtype: str = ""
+    reply_mode: str = ""
+    target_person_type: str = ""
+    target_person_label: str = ""
+    target_person_name: str = ""
+    relationship_status: str = ""
+    reply_goal: str = ""
+    tone: str = ""
+    target_person_description: str = ""
     raw_materials: dict[str, Any] | None = None
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers | None = None
     reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers | None = None
@@ -156,6 +168,13 @@ class CreateWizardDraft(BaseModel):
     intimate_message_simulation: dict[str, Any] | None = None
     intimate_relationship_maintenance: dict[str, Any] | None = None
     intimate_past_relationship: dict[str, Any] | None = None
+    reply_assistant_profile: dict[str, Any] | None = None
+    reply_assistant_memory_base: dict[str, Any] | None = None
+    reply_assistant_understanding_layer: dict[str, Any] | None = None
+    reply_assistant_reply_candidates: list[str] = Field(default_factory=list)
+    reply_assistant_predicted_replies: list[str] = Field(default_factory=list)
+    reply_assistant_risk_flags: list[str] = Field(default_factory=list)
+    reply_assistant_focus: dict[str, Any] | None = None
     message_push_weight: float = 0.0
 
 

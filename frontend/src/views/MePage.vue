@@ -12,6 +12,12 @@ const myEntries = [
     summary: '继续查看你亲手创建的人格。',
   },
   {
+    key: 'reply-assistant' as const,
+    to: '/reply-assistant',
+    title: '我该怎么回',
+    summary: '直接输入一句话，获取回复建议。',
+  },
+  {
     key: 'favorites' as const,
     to: '/favorites',
     title: '收藏的人格',
@@ -71,7 +77,7 @@ function handleLogout() {
             :to="entry.to"
           >
             <article class="my-entry-card">
-              <span class="my-entry-card__tag">{{ entry.key === 'my-seeds' ? '01' : entry.key === 'favorites' ? '02' : '03' }}</span>
+              <span class="my-entry-card__tag">{{ entry.key === 'my-seeds' ? '01' : entry.key === 'reply-assistant' ? '02' : entry.key === 'favorites' ? '03' : '04' }}</span>
               <h3>{{ entry.title }}</h3>
               <p>{{ entry.summary }}</p>
             </article>

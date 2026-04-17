@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.51 - 2026-04-17
+
+- Added a direct-use top-level feature: 我该怎么回.
+- Built a unified reply-assistant runtime instead of a create-first persona flow.
+- Integrated crush-skill, relationship-training-skill, xinyi, partner-skill, ex-skill, colleague-skill, teammate-skill, and Atlas-style tone enhancement.
+- Added broad reply coverage across intimacy, work communication, family, friends, and formal scenarios.
+- Reused the shared file/image/OCR material layer for reply understanding and style grounding.
+
 ## V1.4.50 - 2026-04-17
 
 - Merged the intimate understanding and maintenance paths into one visible relationship-management entry and absorbed crush-skill as the message-push / send-preview layer.

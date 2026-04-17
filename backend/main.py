@@ -9,6 +9,7 @@ from app.routers.auth import router as auth_router
 from app.routers.persona_admin import router as persona_admin_router
 from app.routers.chat import router as chat_router
 from app.routers.persona import router as persona_router
+from app.routers.reply_assistant import router as reply_assistant_router
 
 
 def create_app() -> FastAPI:
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/persona-api")
     app.include_router(persona_admin_router)
     app.include_router(chat_router)
+    app.include_router(reply_assistant_router)
     return app
 
 

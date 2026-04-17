@@ -163,21 +163,19 @@
           "name": "关系经营",
           "group": "relationship_intimate",
           "create_type": "intimate_companion",
-          "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill",
+          "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill",
           "repo_url": "https://github.com/TammyTan516/relationship-training-skill",
           "source_repos": [
             "relationship-training-skill",
             "xinyi",
             "partner-skill",
-            "npy-skill",
-            "crush-skill"
+            "npy-skill"
           ],
           "source_urls": [
             "https://github.com/TammyTan516/relationship-training-skill",
             "https://github.com/kroxchan/xinyi",
             "https://github.com/NatalieCao323/partner-skill",
-            "https://github.com/wwwttlll/npy-skill",
-            "https://github.com/yyyyyyylll/crush-skill"
+            "https://github.com/wwwttlll/npy-skill"
           ],
           "description": "自动判断更偏理解、维护、发送前预演还是平衡，再给出关系分析和经营建议。",
           "input_modes": ["chat_history", "documents", "memory_notes"],
@@ -215,11 +213,66 @@
       ]
     },
     {
+      "group": "reply_assistant",
+      "label": "我该怎么回",
+      "description": "跨场景回复辅助主线，支持理解、候选回法和发送前预演。",
+      "source_hint": "跨场景回复辅助",
+      "sort_order": 6,
+      "items": [
+        {
+          "slug": "reply_assistant",
+          "name": "我该怎么回",
+          "group": "reply_assistant",
+          "create_type": "reply_assistant",
+          "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill",
+          "repo_url": "https://github.com/yyyyyyylll/crush-skill",
+          "source_repos": [
+            "relationship-training-skill",
+            "xinyi",
+            "partner-skill",
+            "npy-skill",
+            "crush-skill",
+            "ex-skill",
+            "colleague-skill",
+            "teammate-skill"
+          ],
+          "source_urls": [
+            "https://github.com/TammyTan516/relationship-training-skill",
+            "https://github.com/kroxchan/xinyi",
+            "https://github.com/NatalieCao323/partner-skill",
+            "https://github.com/wwwttlll/npy-skill",
+            "https://github.com/yyyyyyylll/crush-skill",
+            "https://github.com/titanwings/ex-skill",
+            "https://github.com/titanwings/colleague-skill",
+            "https://github.com/LeoYeAI/teammate-skill"
+          ],
+          "description": "把单条消息、聊天记录或材料蒸馏成候选回复、风险提示和发送前预演。",
+          "input_modes": [
+            "single_message",
+            "material_distill",
+            "crush",
+            "partner",
+            "ex",
+            "colleague",
+            "boss",
+            "client",
+            "friend",
+            "family"
+          ],
+          "stage": "entry_only",
+          "entry_type": "create",
+          "ui_mode": "card",
+          "status": "available",
+          "sort_order": 1
+        }
+      ]
+    },
+    {
       "group": "relationship_family",
       "label": "家人陪伴",
       "description": "从聊天记录、回忆片段和文本材料里提炼家人的说话方式、共同记忆和关心方式，创建更有温度的陪伴人格。",
       "source_hint": "家人陪伴 + 记忆库提炼",
-      "sort_order": 6,
+      "sort_order": 7,
       "items": [
         {
           "slug": "family_companion",
@@ -265,7 +318,7 @@
       "label": "数字分身",
       "description": "做更高保真的长期数字分身或全平台蒸馏框架。",
       "source_hint": "高保真创建框架",
-      "sort_order": 7,
+      "sort_order": 8,
       "items": [
         {
           "slug": "high_fidelity_twin",
@@ -302,7 +355,7 @@
       "label": "隐私与防护",
       "description": "做资料脱敏、防蒸馏与边界保留，不让创建流程越界。",
       "source_hint": "边界保护工具",
-      "sort_order": 8,
+      "sort_order": 9,
       "items": [
         {
           "slug": "anti_distill_protection",

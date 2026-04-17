@@ -47,6 +47,8 @@ const inputModeLabels: Record<string, string> = {
   partner: '伴侣',
   mother: '妈妈',
   other_family: '其他家人',
+  single_message: '单条消息',
+  material_distill: '材料蒸馏',
   relationship_management: '关系经营',
   relationship_understanding: '关系经营',
   relationship_maintenance: '关系经营',
@@ -84,6 +86,14 @@ const editableDraft = reactive<CreateWizardDraft>({
     stage: '',
     persona_kind: '',
     generated_at: '',
+    reply_mode: '',
+    target_person_type: '',
+    target_person_label: '',
+    target_person_name: '',
+    relationship_status: '',
+    reply_goal: '',
+    tone: '',
+    target_person_description: '',
   },
   profile: '',
   mindset: '',
@@ -113,6 +123,13 @@ const editableDraft = reactive<CreateWizardDraft>({
   intimate_memory_base: null,
   relationship_management_profile: null,
   relationship_management_memory_base: null,
+  reply_assistant_profile: null,
+  reply_assistant_memory_base: null,
+  reply_assistant_understanding_layer: null,
+  reply_assistant_reply_candidates: [],
+  reply_assistant_predicted_replies: [],
+  reply_assistant_risk_flags: [],
+  reply_assistant_focus: null,
 })
 
 const typeLabel = computed(() => {
@@ -135,6 +152,9 @@ const typeLabel = computed(() => {
   }
   if (type === 'intimate_companion') {
     return '关系经营'
+  }
+  if (type === 'reply_assistant') {
+    return '我该怎么回'
   }
   return '关系人格'
 })
@@ -881,6 +901,50 @@ const intimateMemoryLines = computed(() => {
   ]
 })
 
+const replyAssistantProfileLines = computed(() => {
+  const profile = editableDraft.reply_assistant_profile || draft.value?.reply_assistant_profile
+  if (!profile || typeof profile !== 'object') {
+    return []
+  }
+
+  const record = profile as Record<string, unknown>
+  return [
+    { label: '人物类型', value: normalizeText(record.target_person_label || record.target_person_type || editableDraft.target_person_label || '未填写') },
+    { label: '对象称呼', value: normalizeText(record.target_person_name || editableDraft.target_person_name || '未填写') },
+    { label: '回复模式', value: normalizeText(record.reply_mode || editableDraft.reply_mode || '单条消息') },
+    { label: '关系状态', value: normalizeText(record.relationship_status || editableDraft.relationship_status || '未填写') },
+    { label: '回复目标', value: normalizeText(record.reply_goal || editableDraft.reply_goal || '未填写') },
+    { label: '语气要求', value: normalizeText(record.tone || editableDraft.tone || '未填写') },
+    { label: '分析重心', value: normalizeText(record.analysis_focus || editableDraft.analysis_focus || '平衡型') },
+  ]
+})
+
+const replyAssistantMemoryLines = computed(() => {
+  const memory = editableDraft.reply_assistant_memory_base || draft.value?.reply_assistant_memory_base
+  if (!memory || typeof memory !== 'object') {
+    return []
+  }
+
+  const record = memory as Record<string, unknown>
+  const replyCandidates = Array.isArray(record.reply_candidates)
+    ? record.reply_candidates
+    : editableDraft.reply_assistant_reply_candidates || draft.value?.reply_assistant_reply_candidates || []
+  const predictedReplies = Array.isArray(record.predicted_replies)
+    ? record.predicted_replies
+    : editableDraft.reply_assistant_predicted_replies || draft.value?.reply_assistant_predicted_replies || []
+  const riskFlags = Array.isArray(record.risk_flags)
+    ? record.risk_flags
+    : editableDraft.reply_assistant_risk_flags || draft.value?.reply_assistant_risk_flags || []
+
+  return [
+    { label: '理解层', value: normalizeText((editableDraft.reply_assistant_understanding_layer as Record<string, unknown> | null)?.analysis_focus || record.analysis_focus || '未填写') },
+    { label: '候选回复', value: replyCandidates.length ? `${replyCandidates.length} 条` : '未填写' },
+    { label: '预判回复', value: predictedReplies.length ? `${predictedReplies.length} 条` : '未填写' },
+    { label: '风险提示', value: riskFlags.length ? `${riskFlags.length} 条` : '未填写' },
+    { label: '材料摘要', value: normalizeText(record.reply_context || '未填写') },
+  ]
+})
+
 function applyDraft(nextDraft: CreateWizardDraft) {
   const snapshot = cloneDraft(nextDraft)
   if (
@@ -1246,6 +1310,26 @@ onMounted(() => {
           <h3>已基于输入材料生成结构化结果</h3>
           <div class="family-grid">
             <div v-for="line in intimateMaterialLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'reply_assistant'" class="draft-card">
+          <p class="eyebrow">回复设定</p>
+          <div class="family-grid">
+            <div v-for="line in replyAssistantProfileLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'reply_assistant'" class="draft-card">
+          <p class="eyebrow">回复结果</p>
+          <div class="family-grid">
+            <div v-for="line in replyAssistantMemoryLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>
             </div>

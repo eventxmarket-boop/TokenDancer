@@ -26,6 +26,7 @@ _PERSONA_TYPE_LABELS = {
     "source_persona": "资料",
     "relationship_persona": "关系",
     "intimate_companion": "关系经营",
+    "reply_assistant": "我该怎么回",
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
 }
@@ -44,6 +45,19 @@ _INTIMATE_MODE_LABELS = {
     "message_simulation": "关系经营",
     "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
+}
+
+_REPLY_ASSISTANT_MODE_LABELS = {
+    "single_message": "单条消息",
+    "material_distill": "材料蒸馏",
+    "crush": "暧昧 / crush",
+    "partner": "伴侣",
+    "ex": "前任",
+    "colleague": "同事",
+    "boss": "上司 / 领导",
+    "client": "客户 / 对接方",
+    "friend": "朋友",
+    "family": "家人",
 }
 
 _FAMILY_SUBTYPE_LABELS = {
@@ -385,6 +399,16 @@ def _emotion_rules_summary(emotion_rules: Any) -> str:
     return "；".join(parts[:4])
 
 
+def _entry_label_for_draft(draft: CreateWizardDraft) -> str:
+    create_type = _normalize_text(draft.meta.create_type)
+    input_mode = _normalize_text(getattr(draft.meta, "input_mode", ""))
+    if create_type == "reply_assistant":
+        return _REPLY_ASSISTANT_MODE_LABELS.get(input_mode, input_mode or "我该怎么回")
+    if create_type == "intimate_companion":
+        return _INTIMATE_MODE_LABELS.get(input_mode, input_mode or "关系经营")
+    return _PERSONA_TYPE_LABELS.get(create_type, create_type)
+
+
 def _normalize_persona_type(value: Any) -> str:
     persona_type = _normalize_text(value) or "self_unified"
     if persona_type in _SELF_UNIFIED_ALIASES:
@@ -503,6 +527,69 @@ def _build_summary(draft: CreateWizardDraft) -> str:
             if extras:
                 combined = f"{combined} / {extras[0]}" if combined else extras[0]
             return combined[:120]
+
+    if _normalize_text(draft.meta.create_type) == "reply_assistant":
+        profile = draft.reply_assistant_profile or {}
+        memory = draft.reply_assistant_memory_base or {}
+        raw_materials_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
+        target_person_label = _normalize_text(
+            profile.get("target_person_label") if isinstance(profile, dict) else getattr(profile, "target_person_label", "")
+        )
+        target_person_name = _normalize_text(
+            profile.get("target_person_name") if isinstance(profile, dict) else getattr(profile, "target_person_name", "")
+        )
+        reply_mode = _normalize_text(
+            profile.get("reply_mode") if isinstance(profile, dict) else getattr(profile, "reply_mode", "")
+        )
+        relationship_status = _normalize_text(
+            profile.get("relationship_status") if isinstance(profile, dict) else getattr(profile, "relationship_status", "")
+        )
+        reply_goal = _normalize_text(
+            profile.get("reply_goal") if isinstance(profile, dict) else getattr(profile, "reply_goal", "")
+        )
+        tone = _normalize_text(profile.get("tone") if isinstance(profile, dict) else getattr(profile, "tone", ""))
+        analysis_focus = _normalize_text(getattr(draft, "analysis_focus", ""))
+        understanding_weight = float(getattr(draft, "understanding_weight", 0.0) or 0.0)
+        maintenance_weight = float(getattr(draft, "maintenance_weight", 0.0) or 0.0)
+        message_push_weight = float(getattr(draft, "message_push_weight", 0.0) or 0.0)
+        reply_candidates = _clean_lines(getattr(draft, "reply_assistant_reply_candidates", []))
+        predicted_replies = _clean_lines(getattr(draft, "reply_assistant_predicted_replies", []))
+        risk_flags = _clean_lines(getattr(draft, "reply_assistant_risk_flags", []))
+        understanding_layer = getattr(draft, "reply_assistant_understanding_layer", None) or {}
+        summary_parts = [
+            part
+            for part in [
+                target_person_label,
+                target_person_name,
+                reply_mode,
+                relationship_status,
+                reply_goal,
+                tone,
+                analysis_focus and f"重心：{analysis_focus}",
+                f"理解{understanding_weight:.2f}",
+                f"维护{maintenance_weight:.2f}",
+                f"推进{message_push_weight:.2f}",
+            ]
+            if part
+        ]
+        if isinstance(understanding_layer, dict):
+            summary_parts.extend(
+                part
+                for part in [
+                    _normalize_text(understanding_layer.get("reply_mode")),
+                    _normalize_text(understanding_layer.get("target_person_name")),
+                    _normalize_text(understanding_layer.get("analysis_focus")),
+                ]
+                if part
+            )
+        if raw_materials_summary:
+            summary_parts.append(raw_materials_summary)
+        extras = reply_candidates or predicted_replies or risk_flags
+        if summary_parts or extras:
+            combined = " · ".join(summary_parts)
+            if extras:
+                combined = f"{combined} / {extras[0]}" if combined else extras[0]
+            return combined[:160]
 
     if _normalize_text(draft.meta.create_type) == "family_companion":
         profile = draft.persona_profile or {}
@@ -629,10 +716,7 @@ def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
-        "entry_label": _INTIMATE_MODE_LABELS.get(
-            _normalize_text(getattr(draft.meta, "input_mode", "")),
-            _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type),
-        ),
+        "entry_label": _entry_label_for_draft(draft),
         "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
@@ -658,10 +742,7 @@ def _serialize_summary(record: CreatedPersona) -> dict[str, Any]:
         "slug": record.slug,
         "name": record.name,
         "persona_type": record.persona_type,
-        "entry_label": _INTIMATE_MODE_LABELS.get(
-            _normalize_text(getattr(draft.meta, "input_mode", "")),
-            _PERSONA_TYPE_LABELS.get(record.persona_type, record.persona_type),
-        ),
+        "entry_label": _entry_label_for_draft(draft),
         "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "family_subtype": _normalize_text(getattr(draft, "family_subtype", "") or getattr(draft.meta, "family_subtype", "")),
         "analysis_focus": _normalize_text(getattr(draft, "analysis_focus", "")),
@@ -819,13 +900,25 @@ def load_created_persona_summary(
             relation_type = _normalize_text(reunion_profile.get("relationship_type"))
         else:
             relation_type = _normalize_text(getattr(reunion_profile, "relationship_type", ""))
+    reply_assistant_profile = getattr(draft, "reply_assistant_profile", None)
+    if not relation_type and reply_assistant_profile is not None:
+        if isinstance(reply_assistant_profile, dict):
+            relation_type = _normalize_text(
+                reply_assistant_profile.get("target_person_label")
+                or reply_assistant_profile.get("target_person_type")
+            )
+        else:
+            relation_type = _normalize_text(
+                getattr(reply_assistant_profile, "target_person_label", "")
+                or getattr(reply_assistant_profile, "target_person_type", "")
+            )
 
     return {
         "id": str(record.id),
         "slug": record.slug,
         "name": record.name,
         "category": display_type,
-        "entry_label": _INTIMATE_MODE_LABELS.get(_normalize_text(getattr(draft.meta, "input_mode", "")), display_type),
+        "entry_label": _entry_label_for_draft(draft),
         "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "avatar": None,
         "intro": intro or (profile[:80] if profile else record.summary),

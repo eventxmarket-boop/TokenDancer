@@ -11,6 +11,8 @@ const RELATIONSHIP_MANAGEMENT_MODE_ALIASES = new Set([
   'message_simulation',
   'crush',
 ])
+const REPLY_ASSISTANT_CANONICAL_MODE = 'single_message'
+const REPLY_ASSISTANT_MODE_ALIASES = new Set(['message_simulation'])
 
 export function normalizeIntimateCompanionInputMode(value: string) {
   const mode = String(value || '').trim()
@@ -26,6 +28,16 @@ export function normalizeIntimateCompanionInputMode(value: string) {
 export function normalizeCreateWizardInputMode(createType: string, inputMode: string) {
   if (createType === 'intimate_companion') {
     return normalizeIntimateCompanionInputMode(inputMode)
+  }
+  if (createType === 'reply_assistant') {
+    const mode = String(inputMode || '').trim()
+    if (!mode) {
+      return REPLY_ASSISTANT_CANONICAL_MODE
+    }
+    if (REPLY_ASSISTANT_MODE_ALIASES.has(mode)) {
+      return REPLY_ASSISTANT_CANONICAL_MODE
+    }
+    return mode
   }
   return String(inputMode || '').trim()
 }
@@ -50,6 +62,14 @@ export type CreateWizardPayload = {
     | Record<string, unknown>
   guided_memory_answers?: FamilyCompanionGuidedMemoryAnswers
   reunion_guided_memory_answers?: ReunionPersonaGuidedMemoryAnswers
+  target_person_type?: string
+  reply_mode?: string
+  target_person_label?: string
+  target_person_name?: string
+  relationship_status?: string
+  reply_goal?: string
+  tone?: string
+  target_person_description?: string
 }
 
 export type CreateWizardDraftMeta = {
@@ -63,6 +83,14 @@ export type CreateWizardDraftMeta = {
   create_mode: string
   input_mode: string
   family_subtype: string
+  reply_mode: string
+  target_person_type: string
+  target_person_label: string
+  target_person_name: string
+  relationship_status: string
+  reply_goal: string
+  tone: string
+  target_person_description: string
   input_modes: string[]
   group: string
   display_name: string
@@ -168,6 +196,7 @@ export type FamilyCompanionOCRExtractedText = {
 }
 
 export type FamilyCompanionRawMaterials = UniversalCreateWizardRawMaterials
+export type ReplyAssistantRawMaterials = UniversalCreateWizardRawMaterials
 
 export type FamilyCompanionWizardFormData = {
   relationship_type: string
@@ -187,6 +216,21 @@ export type FamilyCompanionWizardFormData = {
   image_notes: string
   voice_notes: string
   raw_materials: FamilyCompanionRawMaterials
+}
+
+export type ReplyAssistantWizardFormData = {
+  target_person_type: string
+  target_person_label: string
+  target_person_name: string
+  reply_mode: string
+  relationship_status: string
+  reply_goal: string
+  tone: string
+  target_person_description: string
+  single_message_text: string
+  reply_style_samples: string
+  reply_material_notes: string
+  raw_materials: ReplyAssistantRawMaterials
 }
 
 export type ReunionPersonaProfile = {
@@ -378,6 +422,14 @@ export type CreateWizardDraft = {
   guardrails: string
   relationship_type?: string
   family_subtype?: string
+  reply_mode?: string
+  target_person_type?: string
+  target_person_label?: string
+  target_person_name?: string
+  relationship_status?: string
+  reply_goal?: string
+  tone?: string
+  target_person_description?: string
   raw_materials?:
     | CreateWizardRawMaterials
     | FamilyCompanionRawMaterials
@@ -402,6 +454,13 @@ export type CreateWizardDraft = {
   intimate_message_simulation?: Record<string, unknown> | null
   intimate_relationship_maintenance?: Record<string, unknown> | null
   intimate_past_relationship?: Record<string, unknown> | null
+  reply_assistant_profile?: Record<string, unknown> | null
+  reply_assistant_memory_base?: Record<string, unknown> | null
+  reply_assistant_understanding_layer?: Record<string, unknown> | null
+  reply_assistant_reply_candidates?: string[]
+  reply_assistant_predicted_replies?: string[]
+  reply_assistant_risk_flags?: string[]
+  reply_assistant_focus?: Record<string, unknown> | null
   relationship_management_profile?: RelationshipManagementProfile | null
   relationship_management_memory_base?: RelationshipManagementMemoryBase | null
   analysis_focus?: string

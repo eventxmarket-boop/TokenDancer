@@ -32,6 +32,11 @@ from app.services.relationship_management_service import (
     build_relationship_management_profile,
     infer_relationship_management_focus,
 )
+from app.services.reply_assistant_service import (
+    build_reply_assistant_memory_base,
+    build_reply_assistant_profile,
+    infer_reply_assistant_focus,
+)
 from app.services.self_persona_unified_service import build_self_persona_draft
 
 
@@ -46,6 +51,7 @@ SUPPORTED_CREATE_TYPES = {
     "family_companion",
     "reunion_persona",
     "intimate_companion",
+    "reply_assistant",
 }
 
 SELF_UNIFIED_SOURCE_REPO = "self-skill+nuwa-skill+forge-skill+digital-life"
@@ -65,6 +71,19 @@ INTIMATE_MANAGEMENT_MODES = {
     "message_simulation",
     "crush",
 }
+REPLY_ASSISTANT_SOURCE_REPO = "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill"
+REPLY_ASSISTANT_MODES = {
+    "single_message",
+    "material_distill",
+    "crush",
+    "partner",
+    "ex",
+    "colleague",
+    "boss",
+    "client",
+    "friend",
+    "family",
+}
 
 CREATE_TYPE_LABELS = {
     "self_unified": "我的人格",
@@ -73,6 +92,7 @@ CREATE_TYPE_LABELS = {
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
     "intimate_companion": "关系经营",
+    "reply_assistant": "我该怎么回",
 }
 
 CREATE_TYPE_CONFIG = {
@@ -125,6 +145,22 @@ CREATE_TYPE_CONFIG = {
         ],
         "source_hint": "关系经营模板",
     },
+    "reply_assistant": {
+        "group": "reply_assistant",
+        "source_repo": REPLY_ASSISTANT_SOURCE_REPO,
+        "repo_url": "https://github.com/yyyyyyylll/crush-skill",
+        "source_repos": [
+            "relationship-training-skill",
+            "xinyi",
+            "partner-skill",
+            "npy-skill",
+            "crush-skill",
+            "ex-skill",
+            "colleague-skill",
+            "teammate-skill",
+        ],
+        "source_hint": "跨场景回复辅助模板",
+    },
 }
 
 INPUT_MODE_BY_SOURCE_REPO = {
@@ -171,6 +207,7 @@ INPUT_MODE_BY_SOURCE_REPO = {
     "first-love-skill": "past_relation_mirror",
     "shuixian-skill": "past_relation_mirror",
     INTIMATE_PAST_RELATION_SOURCE_REPO: "past_relation_mirror",
+    REPLY_ASSISTANT_SOURCE_REPO: "single_message",
 }
 
 SCHEMA_KEY_BY_SOURCE_REPO = {
@@ -268,6 +305,8 @@ RELATIONSHIP_LABELS = {
     "message_simulation": "关系经营",
     "partner_maintenance": "关系经营",
     "past_relation_mirror": "过去关系 / 自我镜像",
+    "single_message": "单条消息",
+    "material_distill": "材料蒸馏",
     "parents": "父母",
     "mother": "妈妈",
     "other_family": "其他家人",
@@ -299,6 +338,18 @@ INPUT_MODE_LABELS = {
         "relationship_management": "关系经营",
         "message_simulation": "关系经营",
         "past_relation_mirror": "过去关系 / 自我镜像",
+    },
+    "reply_assistant": {
+        "single_message": "单条消息",
+        "material_distill": "材料蒸馏",
+        "crush": "暧昧 / crush",
+        "partner": "伴侣",
+        "ex": "前任",
+        "colleague": "同事",
+        "boss": "上司 / 领导",
+        "client": "客户 / 对接方",
+        "friend": "朋友",
+        "family": "家人",
     },
     "family_companion": {
         "mother": "妈妈",
@@ -899,6 +950,8 @@ def _resolve_input_mode(create_type: str, source_repo: str, schema_key: str) -> 
         return "chat_history"
     if create_type == "intimate_companion":
         return "relationship_management"
+    if create_type == "reply_assistant":
+        return "single_message"
     return "colleague"
 
 
@@ -936,6 +989,38 @@ def _resolve_family_subtype(value: Any, relationship_type: Any = "", display_nam
     if normalized_relationship == "其他家人" or normalized_display == "其他家人":
         return "other_family"
     return "mother"
+
+
+def _resolve_reply_assistant_target_person_type(value: Any, relationship_type: Any = "", display_name: Any = "") -> str:
+    normalized = _normalize_text(value).lower()
+    normalized_relationship = _normalize_text(relationship_type).lower()
+    normalized_display = _normalize_text(display_name).lower()
+
+    aliases = {
+        "crush": "crush",
+        "暧昧": "crush",
+        "暧昧对象": "crush",
+        "partner": "partner",
+        "伴侣": "partner",
+        "ex": "ex",
+        "前任": "ex",
+        "colleague": "colleague",
+        "同事": "colleague",
+        "boss": "boss",
+        "上司": "boss",
+        "领导": "boss",
+        "client": "client",
+        "客户": "client",
+        "对接方": "client",
+        "friend": "friend",
+        "朋友": "friend",
+        "family": "family",
+        "家人": "family",
+    }
+    for candidate in (normalized, normalized_relationship, normalized_display):
+        if candidate in aliases:
+            return aliases[candidate]
+    return "friend"
 
 
 def _family_subtype_label(subtype: str) -> str:
@@ -1045,6 +1130,8 @@ def _resolve_schema_key(create_type: str, source_repo: str, input_mode: str, dis
         return f"reunion_persona_{input_mode or 'chat_history'}"
     if create_type == "intimate_companion":
         return f"intimate_companion_{input_mode or 'relationship_management'}"
+    if create_type == "reply_assistant":
+        return f"reply_assistant_{input_mode or 'single_message'}"
     if source_repo and source_repo in SCHEMA_KEY_BY_SOURCE_REPO:
         return SCHEMA_KEY_BY_SOURCE_REPO[source_repo]
     fallback = f"{create_type}_{input_mode or 'default'}"
@@ -2928,6 +3015,174 @@ def _build_intimate_companion_draft(
     }
 
 
+def _build_reply_assistant_draft(
+    form_data: dict[str, Any],
+    display_name: str = "",
+    input_mode: str = "",
+) -> dict[str, Any]:
+    reply_mode = _normalize_text(input_mode) or "single_message"
+    if reply_mode not in REPLY_ASSISTANT_MODES:
+        reply_mode = "single_message"
+
+    raw_materials_input = form_data.get("raw_materials") if isinstance(form_data.get("raw_materials"), dict) else {}
+    target_person_type = _resolve_reply_assistant_target_person_type(
+        form_data.get("target_person_type") or reply_mode,
+        form_data.get("relationship_status"),
+        display_name,
+    )
+    target_person_label = RELATIONSHIP_LABELS.get(target_person_type, _normalize_text(form_data.get("target_person_label")))
+    if not target_person_label:
+        target_person_label = {
+            "crush": "暧昧 / crush",
+            "partner": "伴侣",
+            "ex": "前任",
+            "colleague": "同事",
+            "boss": "上司 / 领导",
+            "client": "客户 / 对接方",
+            "friend": "朋友",
+            "family": "家人",
+        }.get(target_person_type, "朋友")
+
+    target_person_name = _normalize_text(form_data.get("target_person_name")) or _normalize_text(display_name) or target_person_label
+    relationship_status = _normalize_text(form_data.get("relationship_status")) or "关系状态待补充"
+    reply_goal = _normalize_text(form_data.get("reply_goal")) or _normalize_text(form_data.get("purpose")) or "先把话接住，再给更合适的回应。"
+    tone = _normalize_text(form_data.get("tone")) or _normalize_text(form_data.get("speech_style")) or "自然、克制、清楚。"
+    target_person_description = _normalize_text(
+        form_data.get("target_person_description")
+        or form_data.get("conversation_samples")
+        or form_data.get("interaction_rules")
+    )
+
+    raw_materials = _raw_materials_payload(
+        chat_history_text=raw_materials_input.get("chat_history_text") or form_data.get("chat_history_summary") or target_person_description,
+        memory_notes_text=raw_materials_input.get("memory_notes_text") or form_data.get("memory_notes"),
+        text_materials_text=raw_materials_input.get("text_materials_text") or form_data.get("text_materials"),
+        uploaded_text_documents=raw_materials_input.get("uploaded_text_documents") or form_data.get("uploaded_text_documents"),
+        uploaded_image_documents=raw_materials_input.get("uploaded_image_documents") or form_data.get("uploaded_image_documents"),
+        ocr_extracted_texts=raw_materials_input.get("ocr_extracted_texts") or form_data.get("ocr_extracted_texts"),
+        image_notes_text=raw_materials_input.get("image_notes_text") or form_data.get("image_notes"),
+        photo_notes_text=raw_materials_input.get("photo_notes_text") or form_data.get("photo_notes"),
+        voice_notes_text=raw_materials_input.get("voice_notes_text") or form_data.get("voice_notes"),
+        diary_text=raw_materials_input.get("diary_text") or form_data.get("diary_notes"),
+        letter_text=raw_materials_input.get("letter_text") or form_data.get("letter_notes"),
+        conflict_text=raw_materials_input.get("conflict_text") or form_data.get("single_message_text"),
+        draft_message_text=raw_materials_input.get("draft_message_text") or form_data.get("single_message_text") or form_data.get("draft_message_text"),
+        recent_context_text=raw_materials_input.get("recent_context_text") or form_data.get("relationship_status"),
+        reply_style_samples_text=raw_materials_input.get("reply_style_samples_text") or form_data.get("reply_style_samples"),
+        relationship_status_text=raw_materials_input.get("relationship_status_text") or relationship_status,
+        interaction_patterns_text=raw_materials_input.get("interaction_patterns_text") or form_data.get("interaction_patterns"),
+        history_text=raw_materials_input.get("history_text") or form_data.get("target_person_description"),
+        expression_samples_text=raw_materials_input.get("expression_samples_text") or form_data.get("tone"),
+    )
+    raw_materials = _run_ocr_for_raw_materials(raw_materials)
+    focus = infer_reply_assistant_focus(
+        target_person_type,
+        reply_mode,
+        relationship_status,
+        reply_goal,
+        tone,
+        target_person_description,
+        raw_materials.get("chat_history_text"),
+        raw_materials.get("draft_message_text"),
+        raw_materials.get("memory_notes_text"),
+        raw_materials.get("reply_style_samples_text"),
+        target_person_type=target_person_type,
+    )
+    target_label = target_person_label or target_person_type
+    profile_payload = build_reply_assistant_profile(
+        target_person_type=target_person_type,
+        target_person_label=target_label,
+        target_person_name=target_person_name,
+        reply_mode=reply_mode,
+        relationship_status=relationship_status,
+        reply_goal=reply_goal,
+        tone=tone,
+        focus=focus,
+    )
+    memory_payload = build_reply_assistant_memory_base(
+        target_person_type=target_person_type,
+        target_person_label=target_label,
+        target_person_name=target_person_name,
+        reply_mode=reply_mode,
+        relationship_status=relationship_status,
+        reply_goal=reply_goal,
+        tone=tone,
+        raw_materials=raw_materials,
+        focus=focus,
+    )
+    understanding_layer = memory_payload.get("understanding_layer") or {}
+    reply_candidates = _clean_lines(memory_payload.get("reply_candidates"))
+    predicted_replies = _clean_lines(memory_payload.get("predicted_replies"))
+    risk_flags = _clean_lines(memory_payload.get("risk_flags"))
+
+    profile = (
+        f"回复辅助定位：{target_label}\n"
+        f"模式：{reply_mode}\n"
+        f"对象称呼：{target_person_name}\n"
+        f"关系状态：{relationship_status}\n"
+        f"用途：先理解对方，再给候选回法，并预判下一句怎么回。"
+    )
+    mindset = _format_bullets(
+        [
+            "先理解这句话的意思，再决定怎么接",
+            "先分清是单条消息处理还是材料蒸馏",
+            "信息不足时先补关系状态和目标",
+        ]
+    )
+    heuristics = _format_bullets(
+        [
+            f"对象类型优先：{target_label}",
+            f"当前目标：{reply_goal}",
+            "候选回复至少保留稳妥、自然、主动、克制四种方向",
+        ]
+    )
+    expression = _format_bullets(
+        [
+            f"语气要求：{tone}",
+            f"分析重心：{focus['analysis_focus']}",
+            f"理解权重：{focus['understanding_weight']}",
+            f"维护权重：{focus['maintenance_weight']}",
+            f"推进权重：{focus.get('message_push_weight', 0.0)}",
+        ]
+    )
+    guardrails = _format_bullets(
+        [
+            "不把推测当成确定事实",
+            "不替用户做最终发送决定",
+            "不把单条消息误当成全部关系",
+        ]
+    )
+
+    return {
+        "profile": profile,
+        "mindset": mindset,
+        "heuristics": heuristics,
+        "expression": expression,
+        "guardrails": guardrails,
+        "reply_mode": reply_mode,
+        "target_person_type": target_person_type,
+        "target_person_label": target_label,
+        "target_person_name": target_person_name,
+        "relationship_status": relationship_status,
+        "reply_goal": reply_goal,
+        "tone": tone,
+        "target_person_description": target_person_description,
+        "reply_assistant_profile": profile_payload,
+        "reply_assistant_memory_base": memory_payload,
+        "reply_assistant_understanding_layer": understanding_layer,
+        "reply_assistant_reply_candidates": reply_candidates,
+        "reply_assistant_predicted_replies": predicted_replies,
+        "reply_assistant_risk_flags": risk_flags,
+        "analysis_focus": _normalize_text(focus.get("analysis_focus")),
+        "understanding_weight": float(focus.get("understanding_weight") or 0.0),
+        "maintenance_weight": float(focus.get("maintenance_weight") or 0.0),
+        "message_push_weight": float(focus.get("message_push_weight") or 0.0),
+        "reply_assistant_focus": focus,
+        "raw_materials": raw_materials,
+        "name": target_person_name or target_label,
+    }
+
+
 def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     normalized_create_type = _validate_create_type(payload.get("create_type", ""))
     config = CREATE_TYPE_CONFIG[normalized_create_type]
@@ -3014,6 +3269,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         )
     elif normalized_create_type == "intimate_companion":
         content = _build_intimate_companion_draft(form_data, normalized_display_name, normalized_input_mode)
+    elif normalized_create_type == "reply_assistant":
+        content = _build_reply_assistant_draft(form_data, normalized_display_name, normalized_input_mode)
     else:
         content = _build_relationship_draft(form_data, normalized_display_name, normalized_input_mode)
 
@@ -3042,6 +3299,14 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         source_repos=list(config["source_repos"]) if normalized_create_type == "self_unified" else ([normalized_source_repo] if normalized_source_repo else list(config["source_repos"])),
         source_hint=config["source_hint"],
         generated_at=generated_at,
+        reply_mode=content.get("reply_mode", ""),
+        target_person_type=content.get("target_person_type", ""),
+        target_person_label=content.get("target_person_label", ""),
+        target_person_name=content.get("target_person_name", ""),
+        relationship_status=content.get("relationship_status", ""),
+        reply_goal=content.get("reply_goal", ""),
+        tone=content.get("tone", ""),
+        target_person_description=content.get("target_person_description", ""),
     )
 
     return {
@@ -3077,4 +3342,18 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "intimate_message_simulation": content.get("intimate_message_simulation"),
         "intimate_relationship_maintenance": content.get("intimate_relationship_maintenance"),
         "intimate_past_relationship": content.get("intimate_past_relationship"),
+        "reply_mode": content.get("reply_mode", ""),
+        "target_person_type": content.get("target_person_type", ""),
+        "target_person_label": content.get("target_person_label", ""),
+        "target_person_name": content.get("target_person_name", ""),
+        "relationship_status": content.get("relationship_status", ""),
+        "reply_goal": content.get("reply_goal", ""),
+        "tone": content.get("tone", ""),
+        "target_person_description": content.get("target_person_description", ""),
+        "reply_assistant_profile": content.get("reply_assistant_profile"),
+        "reply_assistant_memory_base": content.get("reply_assistant_memory_base"),
+        "reply_assistant_understanding_layer": content.get("reply_assistant_understanding_layer"),
+        "reply_assistant_reply_candidates": content.get("reply_assistant_reply_candidates", []),
+        "reply_assistant_predicted_replies": content.get("reply_assistant_predicted_replies", []),
+        "reply_assistant_risk_flags": content.get("reply_assistant_risk_flags", []),
     }

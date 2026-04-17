@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 const navItems = [
   { to: '/', label: '首页' },
+  { to: '/reply-assistant', label: '我该怎么回' },
   { to: '/seed', label: 'Seed' },
   { to: '/favorites', label: '收藏' },
   { to: '/create', label: '创建' },

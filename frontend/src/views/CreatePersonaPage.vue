@@ -8,7 +8,7 @@ import {
   type CreateCatalogResponse,
 } from '@/services/createCatalogService'
 
-type MainPathKey = 'self' | 'source' | 'work' | 'intimate' | 'family'
+type MainPathKey = 'self' | 'source' | 'work' | 'intimate' | 'reply_assistant' | 'family'
 
 type MainPathSection = {
   key: MainPathKey
@@ -49,6 +49,12 @@ const mainPathSections: MainPathSection[] = [
     groupKeys: ['relationship_intimate'],
   },
   {
+    key: 'reply_assistant',
+    title: '我该怎么回',
+    description: '收到一句话，不知道怎么回，就从这里开始。',
+    groupKeys: ['reply_assistant'],
+  },
+  {
     key: 'family',
     title: '家人陪伴',
     description: '统一入口，进入后再选妈妈、父母或其他家人。',
@@ -73,11 +79,13 @@ const displayLabelMap: Record<string, string> = {
   relationship_management: '关系经营',
   relationship_understanding: '关系经营',
   relationship_maintenance: '关系经营',
-  message_simulation: '关系经营',
+  message_simulation: '我该怎么回',
+  reply_assistant: '我该怎么回',
   partner_maintenance: '关系经营',
   past_relation_mirror: '过去关系 / 自我镜像',
   'npy-skill': '理想伴侣',
-  'crush-skill': '关系经营',
+  'crush-skill': '我该怎么回',
+  crush: '我该怎么回',
   'partner-skill': '关系经营',
   'first-love-skill': '初恋',
   'shuixian-skill': '自我镜像',
@@ -143,7 +151,8 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'ex-skill': 'relationship_intimate_ex',
   'relationship-training-skill': 'relationship_intimate_relationship_training',
   'npy-skill': 'relationship_intimate_ideal_partner',
-  'crush-skill': 'intimate_companion_relationship_management',
+  'crush-skill': 'reply_assistant_single_message',
+  'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill': 'reply_assistant_single_message',
   'partner-skill': 'relationship_intimate_partner',
   'first-love-skill': 'relationship_intimate_first_love',
   'shuixian-skill': 'relationship_intimate_self_mirror',
@@ -173,7 +182,8 @@ const inputModeBySourceRepo: Record<string, string> = {
   'ex-skill': 'ex',
   'relationship-training-skill': 'relationship_training',
   'npy-skill': 'ideal_partner',
-  'crush-skill': 'relationship_management',
+  'crush-skill': 'single_message',
+  'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill': 'single_message',
   'partner-skill': 'partner',
   'first-love-skill': 'first_love',
   'shuixian-skill': 'self_mirror',
@@ -217,9 +227,10 @@ const groups = computed(() => {
       relationship_workplace: 2,
       relationship_academia: 3,
       relationship_intimate: 4,
-      relationship_family: 5,
-      digital_twin: 6,
-      protection: 7,
+      reply_assistant: 5,
+      relationship_family: 6,
+      digital_twin: 7,
+      protection: 8,
     }
     return (order[left.group] ?? 99) - (order[right.group] ?? 99)
   })
@@ -269,6 +280,9 @@ function getWizardTypeForGroup(group: string) {
   }
   if (group === 'relationship_intimate') {
     return 'intimate_companion'
+  }
+  if (group === 'reply_assistant') {
+    return 'reply_assistant'
   }
   if (group === 'relationship_workplace' || group === 'relationship_academia') {
     return 'relationship_persona'

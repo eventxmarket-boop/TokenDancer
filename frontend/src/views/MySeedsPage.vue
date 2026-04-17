@@ -13,6 +13,7 @@ const typeLabels: Record<string, string> = {
   source_persona: '资料',
   relationship_persona: '关系',
   intimate_companion: '关系经营',
+  reply_assistant: '我该怎么回',
   family_companion: '家人陪伴',
   reunion_persona: '重逢人格',
 }
@@ -39,7 +40,8 @@ function formatWeight(value?: number | null) {
 }
 
 function seedFocusLabel(seed: CreatedPersonaSummary) {
-  if (normalizePersonaType(seed.persona_type) !== 'intimate_companion') {
+  const normalizedType = normalizePersonaType(seed.persona_type)
+  if (normalizedType !== 'intimate_companion' && normalizedType !== 'reply_assistant') {
     return ''
   }
   const focus = String(seed.analysis_focus || '').trim()
@@ -76,6 +78,7 @@ const groupedSeeds = computed(() => {
     'source_persona',
     'relationship_persona',
     'intimate_companion',
+    'reply_assistant',
     'family_companion',
     'reunion_persona',
   ]

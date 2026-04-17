@@ -5,6 +5,7 @@ import FavoritesPage from '@/views/FavoritesPage.vue'
 import CreatePersonaPage from '@/views/CreatePersonaPage.vue'
 import CreateWizardPage from '@/views/CreateWizardPage.vue'
 import CreateResultPage from '@/views/CreateResultPage.vue'
+import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -55,6 +56,12 @@ const router = createRouter({
       name: 'create-result',
       component: CreateResultPage,
       meta: { title: '创建结果' },
+    },
+    {
+      path: '/reply-assistant',
+      name: 'reply-assistant',
+      component: ReplyAssistantPage,
+      meta: { title: '我该怎么回' },
     },
     {
       path: '/character/:id',

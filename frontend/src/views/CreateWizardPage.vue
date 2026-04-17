@@ -21,6 +21,7 @@ type CreateType =
   | 'family_companion'
   | 'reunion_persona'
   | 'intimate_companion'
+  | 'reply_assistant'
 
 type SelfCreateMode = 'light' | 'standard' | 'deep'
 
@@ -115,6 +116,17 @@ const formState = reactive({
   relationship_goals: '',
   key_memories: '',
   shared_memories: '',
+  target_person_type: 'crush',
+  target_person_label: '暧昧 / crush',
+  target_person_name: '',
+  reply_mode: 'single_message',
+  relationship_status: '',
+  reply_goal: '',
+  tone: '',
+  target_person_description: '',
+  single_message_text: '',
+  reply_style_samples: '',
+  reply_material_notes: '',
 })
 
 const typeCards = [
@@ -141,6 +153,12 @@ const typeCards = [
     title: '关系经营',
     description: '先看清关系，再调整表达、改善相处、继续经营。',
     hint: '从关系经营开始',
+  },
+  {
+    type: 'reply_assistant' as const,
+    title: '我该怎么回',
+    description: '收到一句话，不知道怎么回，就从这里开始。',
+    hint: '从回复开始',
   },
 ]
 
@@ -175,6 +193,10 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     message_simulation: '关系经营',
     past_relation_mirror: '过去关系 / 自我镜像',
   },
+  reply_assistant: {
+    single_message: '单条消息',
+    material_distill: '材料蒸馏',
+  },
   family_companion: {
     mother: '妈妈',
     parents: '父母',
@@ -188,6 +210,17 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     voice_notes: '语音 / 口述',
   },
 }
+
+const replyAssistantTargetTypeOptions = [
+  ['crush', '暧昧 / crush'],
+  ['partner', '伴侣'],
+  ['ex', '前任'],
+  ['colleague', '同事'],
+  ['boss', '上司 / 领导'],
+  ['client', '客户 / 对接方'],
+  ['friend', '朋友'],
+  ['family', '家人'],
+] as const
 
 const inputModeBySourceRepo: Record<string, string> = {
   'self-skill': 'manual_profile',
@@ -210,6 +243,7 @@ const inputModeBySourceRepo: Record<string, string> = {
   'digital-twin-skill': 'multi_source',
   'immortal-skill': 'multi_source',
   'anti-distill': 'documents',
+  'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill': 'single_message',
   'relationship-training-skill': 'relationship_management',
   xinyi: 'relationship_management',
   'relationship-training-skill+xinyi': 'relationship_management',
@@ -252,6 +286,8 @@ const sourceRepoByInputMode: Record<string, string> = {
   message_simulation: 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill',
   partner_maintenance: 'relationship-training-skill+xinyi+partner-skill+npy-skill',
   past_relation_mirror: 'ex-skill+first-love-skill+shuixian-skill',
+  single_message: 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill',
+  material_distill: 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill',
 }
 
 const schemaKeyBySourceRepo: Record<string, string> = {
@@ -278,6 +314,7 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'first-love-skill': 'intimate_companion_past_relation_mirror',
   'shuixian-skill': 'intimate_companion_past_relation_mirror',
   'ex-skill+first-love-skill+shuixian-skill': 'intimate_companion_past_relation_mirror',
+  'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill': 'reply_assistant_single_message',
   'parents-skills': 'relationship_family_parents',
   'reunion-skill': 'relationship_family_reunion',
   MamaSkill: 'relationship_family_mama',
@@ -291,6 +328,7 @@ const schemaKeyBySourceRepo: Record<string, string> = {
 const isFamilyCompanion = computed(() => createType.value === 'family_companion' || createType.value === 'reunion_persona')
 const isReunionPersona = computed(() => createType.value === 'reunion_persona')
 const isSelfUnified = computed(() => createType.value === 'self_unified')
+const isReplyAssistant = computed(() => createType.value === 'reply_assistant')
 
 const stepLabels = computed(() =>
   isSelfUnified.value
@@ -299,12 +337,17 @@ const stepLabels = computed(() =>
     ? ['选择关系类型', '填写信息', '确认结果', '生成结果']
     : isReunionPersona.value
     ? ['选择材料', '填写信息', '确认结果', '生成结果']
+    : isReplyAssistant.value
+    ? ['选择入口', '选择模式', '填写信息', '生成结果']
     : ['选择类型', '选择方式', '填写信息', '生成结果'],
 )
 
 const currentInputs = computed(() => {
   if (createType.value === 'intimate_companion') {
     return intimateModeCards
+  }
+  if (createType.value === 'reply_assistant') {
+    return Object.entries(inputModeLabels.reply_assistant || {})
   }
 
   return Object.entries(inputModeLabels[createType.value] || {})
@@ -368,6 +411,7 @@ function createEmptyMaterialState(): CreateWizardRawMaterials {
 const familyMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
 const reunionMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
 const intimateMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
+const replyAssistantMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
 const selfMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
 const sourceMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
 const relationshipMaterialState = ref<CreateWizardRawMaterials>(createEmptyMaterialState())
@@ -425,6 +469,9 @@ const currentTypeLabel = computed(() => {
   if (createType.value === 'intimate_companion') {
     return '关系经营'
   }
+  if (createType.value === 'reply_assistant') {
+    return '我该怎么回'
+  }
   if (createType.value === 'family_companion') {
     return '家人陪伴'
   }
@@ -464,7 +511,8 @@ function normalizeCreateType(value: string): CreateType {
     value === 'relationship_persona' ||
     value === 'family_companion' ||
     value === 'reunion_persona' ||
-    value === 'intimate_companion'
+    value === 'intimate_companion' ||
+    value === 'reply_assistant'
   ) {
     return value
   }
@@ -477,18 +525,10 @@ function inferCreateTypeFromQuery() {
     return normalizeCreateType(explicit)
   }
 
-  if (explicit === 'relationship_persona') {
-    const relationGroup = readQueryValue('group')
-    if (relationGroup === 'relationship_family') {
-      return readQueryValue('source_repo') === 'reunion-skill' ? 'reunion_persona' : 'family_companion'
-    }
-    if (relationGroup === 'relationship_intimate') {
-      return 'intimate_companion'
-    }
-    return 'relationship_persona'
-  }
-
   const group = readQueryValue('group')
+  if (group === 'reply_assistant') {
+    return 'reply_assistant'
+  }
   if (group === 'source') {
     return 'source_persona'
   }
@@ -534,6 +574,9 @@ function resolveInputMode(createTypeValue: CreateType, sourceRepo: string, schem
   if (createTypeValue === 'intimate_companion') {
     return 'relationship_management'
   }
+  if (createTypeValue === 'reply_assistant') {
+    return 'single_message'
+  }
 
   return 'colleague'
 }
@@ -548,6 +591,9 @@ function resolveSchemaKey(createTypeValue: CreateType, sourceRepo: string, input
   }
   if (createTypeValue === 'intimate_companion') {
     return `intimate_companion_${normalizedInputMode || 'relationship_management'}`
+  }
+  if (createTypeValue === 'reply_assistant') {
+    return `reply_assistant_${normalizedInputMode || 'single_message'}`
   }
   if (sourceRepo && schemaKeyBySourceRepo[sourceRepo]) {
     return schemaKeyBySourceRepo[sourceRepo]
@@ -573,6 +619,9 @@ function getDefaultGroupForType(type: CreateType) {
   if (type === 'intimate_companion') {
     return 'relationship_intimate'
   }
+  if (type === 'reply_assistant') {
+    return 'reply_assistant'
+  }
   return 'relationship_workplace'
 }
 
@@ -592,6 +641,9 @@ function getDefaultSourceRepoForType(type: CreateType) {
   if (type === 'intimate_companion') {
     return 'relationship-training-skill+xinyi+partner-skill+npy-skill'
   }
+  if (type === 'reply_assistant') {
+    return 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill'
+  }
   return 'colleague-skill'
 }
 
@@ -610,6 +662,9 @@ function getDefaultDisplayNameForType(type: CreateType) {
   }
   if (type === 'intimate_companion') {
     return '关系经营'
+  }
+  if (type === 'reply_assistant') {
+    return '我该怎么回'
   }
   return '关系人格'
 }
@@ -665,6 +720,9 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
   }
   if (type === 'intimate_companion') {
     return 'relationship_intimate'
+  }
+  if (type === 'reply_assistant') {
+    return 'reply_assistant'
   }
 
   if (mode === 'colleague' || mode === 'boss') {
@@ -723,6 +781,19 @@ function getInputModeNote(type: CreateType, mode: string) {
     if (mode === 'mama') return '适合妈妈视角。'
   }
 
+  if (type === 'reply_assistant') {
+    if (mode === 'single_message') return '输入一条消息，直接给候选回法和预判。'
+    if (mode === 'material_distill') return '输入聊天记录或材料，先蒸馏出对方的回复风格。'
+    if (mode === 'crush') return '适合暧昧 / crush 的回复场景。'
+    if (mode === 'partner') return '适合伴侣的稳定关系回复。'
+    if (mode === 'ex') return '适合前任或过去关系的回复。'
+    if (mode === 'colleague') return '适合同事的工作回复。'
+    if (mode === 'boss') return '适合上司 / 领导的沟通回复。'
+    if (mode === 'client') return '适合客户 / 对接方的回复。'
+    if (mode === 'friend') return '适合朋友的日常回复。'
+    if (mode === 'family') return '适合家人的回复。'
+  }
+
   if (type === 'intimate_companion') {
     if (
       mode === 'relationship_management' ||
@@ -751,6 +822,19 @@ function getInputModeNote(type: CreateType, mode: string) {
     if (mode === 'voice_notes') return '适合先整理口述回忆。'
   }
 
+  if (type === 'reply_assistant') {
+    if (mode === 'single_message') return '输入一条消息，直接给候选回法和预判。'
+    if (mode === 'material_distill') return '输入聊天记录或材料，先蒸馏出对方的回复风格。'
+    if (mode === 'crush') return '适合暧昧 / crush 的回复场景。'
+    if (mode === 'partner') return '适合伴侣的稳定关系回复。'
+    if (mode === 'ex') return '适合前任或过去关系的回复。'
+    if (mode === 'colleague') return '适合同事的工作回复。'
+    if (mode === 'boss') return '适合上司 / 领导的沟通回复。'
+    if (mode === 'client') return '适合客户 / 对接方的回复。'
+    if (mode === 'friend') return '适合朋友的日常回复。'
+    if (mode === 'family') return '适合家人的回复。'
+  }
+
   return '适合继续完善。'
 }
 
@@ -764,6 +848,7 @@ function getRelationshipLabel(mode: string) {
   } as const
   return (
     (mode === 'relationship_management' ? '关系经营' : '') ||
+    inputModeLabels.reply_assistant[mode] ||
     inputModeLabels.relationship_persona[mode] ||
     inputModeLabels.intimate_companion[mode] ||
     intimateLegacyLabel[mode as keyof typeof intimateLegacyLabel] ||
@@ -860,6 +945,7 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   familyMaterialState.value = createEmptyMaterialState()
   reunionMaterialState.value = createEmptyMaterialState()
   intimateMaterialState.value = createEmptyMaterialState()
+  replyAssistantMaterialState.value = createEmptyMaterialState()
   selfMaterialState.value = createEmptyMaterialState()
   sourceMaterialState.value = createEmptyMaterialState()
   relationshipMaterialState.value = createEmptyMaterialState()
@@ -954,6 +1040,21 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
     formState.relationship_goals = '让沟通更顺畅\n让关系更稳定'
     formState.key_memories = '常聊的话题\n一起经历过的重要时刻'
   }
+
+  if (type === 'reply_assistant') {
+    formState.target_person_type = 'crush'
+    formState.target_person_label = '暧昧 / crush'
+    formState.target_person_name = displayName || '暧昧对象'
+    formState.reply_mode = mode || 'single_message'
+    formState.relationship_status = '关系状态待补充'
+    formState.reply_goal = '先把话接住，再给更合适的回应。'
+    formState.tone = '自然、克制、清楚。'
+    formState.target_person_description = '把对方的话、关系状态和目标一起整理出来。'
+    formState.single_message_text = '把对方原话贴在这里。'
+    formState.reply_style_samples = '稳妥版\n自然版\n主动版\n克制版'
+    formState.reply_material_notes = '把聊天记录、文件、图片或 OCR 材料补充进来。'
+    formState.relation_boundaries = '不替你做最终决定，不夸大未确认的信息。'
+  }
 }
 
 function buildEntryDefaults() {
@@ -998,6 +1099,7 @@ function saveStateSnapshot() {
     familyMaterialState: familyMaterialState.value,
     reunionMaterialState: reunionMaterialState.value,
     intimateMaterialState: intimateMaterialState.value,
+    replyAssistantMaterialState: replyAssistantMaterialState.value,
     selfMaterialState: selfMaterialState.value,
     sourceMaterialState: sourceMaterialState.value,
     relationshipMaterialState: relationshipMaterialState.value,
@@ -1020,6 +1122,7 @@ function loadStateSnapshot() {
     familyMaterialState?: CreateWizardRawMaterials
     reunionMaterialState?: CreateWizardRawMaterials
     intimateMaterialState?: CreateWizardRawMaterials
+    replyAssistantMaterialState?: CreateWizardRawMaterials
     selfMaterialState?: CreateWizardRawMaterials
     sourceMaterialState?: CreateWizardRawMaterials
     relationshipMaterialState?: CreateWizardRawMaterials
@@ -1069,6 +1172,9 @@ function loadStateSnapshot() {
   if (snapshot.intimateMaterialState) {
     intimateMaterialState.value = snapshot.intimateMaterialState
   }
+  if (snapshot.replyAssistantMaterialState) {
+    replyAssistantMaterialState.value = snapshot.replyAssistantMaterialState
+  }
   if (snapshot.selfMaterialState) {
     selfMaterialState.value = snapshot.selfMaterialState
   }
@@ -1102,6 +1208,15 @@ function loadStateSnapshot() {
     ])
     const familySources = new Set(['MamaSkill', 'parents-skills', 'MamaSkill+parents-skills+darwin-skill', 'parents-skills+MamaSkill'])
     const reunionSources = new Set(['reunion-skill'])
+    const replySources = new Set([
+      'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill',
+      'crush-skill',
+      'colleague-skill',
+      'boss-skills',
+      'partner-skill',
+      'npy-skill',
+      'ex-skill',
+    ])
 
     if (
       selectedGroup.value === 'relationship_intimate' ||
@@ -1133,6 +1248,20 @@ function loadStateSnapshot() {
       selectedSourceRepo.value = 'reunion-skill'
       selectedName.value = selectedName.value || '重逢人格'
     } else if (
+      selectedGroup.value === 'reply_assistant' ||
+      replySources.has(selectedSourceRepo.value) ||
+      inputMode.value === 'single_message' ||
+      inputMode.value === 'material_distill' ||
+      selectedSchemaKey.value?.startsWith('reply_assistant_')
+    ) {
+      createType.value = 'reply_assistant'
+      selectedGroup.value = 'reply_assistant'
+      selectedSourceRepo.value = 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill'
+      if (!inputMode.value || inputMode.value === 'single_message' || inputMode.value === 'material_distill') {
+        inputMode.value = normalizeCreateWizardInputMode(createType.value, inputMode.value || 'single_message')
+      }
+      selectedName.value = selectedName.value || '我该怎么回'
+    } else if (
       selectedGroup.value === 'relationship_family' ||
       familyModes.has(inputMode.value) ||
       familySources.has(selectedSourceRepo.value)
@@ -1140,6 +1269,25 @@ function loadStateSnapshot() {
       createType.value = 'family_companion'
       selectedGroup.value = 'relationship_family'
     }
+  }
+
+  if (createType.value === 'reply_assistant') {
+    const replySources = new Set([
+      'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill',
+      'crush-skill',
+      'colleague-skill',
+      'boss-skills',
+      'partner-skill',
+      'npy-skill',
+      'ex-skill',
+    ])
+    selectedGroup.value = 'reply_assistant'
+    if (!replySources.has(selectedSourceRepo.value)) {
+      selectedSourceRepo.value = 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill'
+    }
+    inputMode.value = normalizeCreateWizardInputMode(createType.value, inputMode.value || 'single_message')
+    selectedName.value = selectedName.value || '我该怎么回'
+    selectedSchemaKey.value = selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value)
   }
 
   if (createType.value === 'self_unified') {
@@ -1251,6 +1399,8 @@ function selectType(type: CreateType) {
     inputMode.value = 'chat_history'
   } else if (type === 'intimate_companion') {
     inputMode.value = 'relationship_management'
+  } else if (type === 'reply_assistant') {
+    inputMode.value = 'single_message'
   } else {
     inputMode.value = 'colleague'
   }
@@ -1267,7 +1417,8 @@ function selectInputMode(mode: string) {
     createType.value === 'relationship_persona' ||
     createType.value === 'family_companion' ||
     createType.value === 'reunion_persona' ||
-    createType.value === 'intimate_companion'
+    createType.value === 'intimate_companion' ||
+    createType.value === 'reply_assistant'
   ) {
     if (createType.value === 'family_companion') {
       selectedSourceRepo.value = 'parents-skills+MamaSkill'
@@ -1279,6 +1430,11 @@ function selectInputMode(mode: string) {
       selectedSourceRepo.value =
         sourceRepoByInputMode[normalizedMode] || 'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill'
       selectedName.value = getRelationshipLabel(normalizedMode) || selectedName.value
+    } else if (createType.value === 'reply_assistant') {
+      selectedSourceRepo.value =
+        sourceRepoByInputMode[normalizedMode] ||
+        'relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill'
+      selectedName.value = getDefaultDisplayNameForType(createType.value)
     } else {
       selectedSourceRepo.value = sourceRepoByInputMode[normalizedMode] || selectedSourceRepo.value
       selectedName.value = getRelationshipLabel(normalizedMode) || selectedName.value
@@ -1288,7 +1444,10 @@ function selectInputMode(mode: string) {
   }
   selectedSchemaKey.value = resolveSchemaKey(createType.value, selectedSourceRepo.value, normalizedMode, selectedName.value)
   resetFormForType(createType.value, selectedName.value, normalizedMode)
-  step.value = createType.value === 'family_companion' || createType.value === 'reunion_persona' ? 2 : 3
+  step.value =
+    createType.value === 'family_companion' || createType.value === 'reunion_persona' || createType.value === 'reply_assistant'
+      ? 2
+      : 3
 }
 
 function goStep(nextStep: number) {
@@ -1329,6 +1488,10 @@ function buildReunionRawMaterials() {
 
 function buildIntimateRawMaterials() {
   return { ...intimateMaterialState.value }
+}
+
+function buildReplyAssistantRawMaterials() {
+  return { ...replyAssistantMaterialState.value }
 }
 
 function buildSelfRawMaterials() {
@@ -1388,15 +1551,25 @@ async function generateDraft() {
       create_mode: createType.value === 'self_unified' ? createMode.value : '',
       input_mode: inputMode.value,
       family_subtype: createType.value === 'family_companion' ? inputMode.value : '',
+      target_person_type: createType.value === 'reply_assistant' ? formState.target_person_type : undefined,
+      reply_mode: createType.value === 'reply_assistant' ? inputMode.value : undefined,
+      target_person_label: createType.value === 'reply_assistant' ? formState.target_person_label : undefined,
+      target_person_name: createType.value === 'reply_assistant' ? formState.target_person_name : undefined,
+      relationship_status: createType.value === 'reply_assistant' ? formState.relationship_status : undefined,
+      reply_goal: createType.value === 'reply_assistant' ? formState.reply_goal : undefined,
+      tone: createType.value === 'reply_assistant' ? formState.tone : undefined,
+      target_person_description: createType.value === 'reply_assistant' ? formState.target_person_description : undefined,
       input_modes: createType.value === 'self_unified' ? [...selfInputModes.value] : [inputMode.value],
       schema_key: selectedSchemaKey.value || resolveSchemaKey(createType.value, selectedSourceRepo.value, inputMode.value, selectedName.value),
       raw_materials:
-      createType.value === 'family_companion'
+        createType.value === 'family_companion'
           ? buildFamilyRawMaterials()
           : createType.value === 'reunion_persona'
             ? buildReunionRawMaterials()
             : createType.value === 'intimate_companion'
               ? buildIntimateRawMaterials()
+              : createType.value === 'reply_assistant'
+                ? buildReplyAssistantRawMaterials()
               : createType.value === 'self_unified'
                 ? buildSelfRawMaterials()
                 : createType.value === 'source_persona'
@@ -1428,6 +1601,11 @@ async function generateDraft() {
                     ...formState,
                     raw_materials: buildIntimateRawMaterials(),
                   }
+                : createType.value === 'reply_assistant'
+                  ? {
+                      ...formState,
+                      raw_materials: buildReplyAssistantRawMaterials(),
+                    }
                 : createType.value === 'source_persona'
                   ? {
                       ...formState,
@@ -2146,8 +2324,104 @@ watch(
             </label>
           </div>
 
-        <div v-else class="wizard-form">
-          <div class="form-grid">
+          <div v-else-if="createType === 'reply_assistant'" class="wizard-form">
+            <div class="form-grid">
+              <label class="form-field">
+                <span>人物类型</span>
+                <select v-model="formState.target_person_type" class="field-input">
+                  <option v-for="[value, label] in replyAssistantTargetTypeOptions" :key="value" :value="value">
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>对方称呼</span>
+                <input v-model="formState.target_person_name" class="field-input" type="text" placeholder="例如：小林 / 甲方 / 妈妈" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>当前关系状态</span>
+                <textarea
+                  v-model="formState.relationship_status"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="例如：暧昧期 / 合作中 / 冷战中 / 日常沟通"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>你想达到的目标</span>
+                <textarea
+                  v-model="formState.reply_goal"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="例如：接住情绪、稳住局面、推进一步、先不激化"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>语气要求</span>
+                <textarea
+                  v-model="formState.tone"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="例如：自然、克制、清楚、不油腻"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>一句话原文</span>
+                <textarea
+                  v-model="formState.single_message_text"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="把对方原话直接贴进来"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>候选回复风格</span>
+                <textarea
+                  v-model="formState.reply_style_samples"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="稳妥版 / 自然版 / 主动版 / 克制版"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>补充说明</span>
+                <textarea
+                  v-model="formState.reply_material_notes"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="可以补充聊天记录、文件、图片或 OCR 材料"
+                ></textarea>
+              </label>
+            </div>
+
+            <MaterialInputPanel
+              v-model="replyAssistantMaterialState"
+              path-type="relationship"
+              :supports-guided-prompts="false"
+            />
+
+            <label class="form-field">
+              <span>人物描述 / 场景补充</span>
+              <textarea
+                v-model="formState.target_person_description"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="补充对方说话风格、场景、关系变化或雷区"
+              ></textarea>
+            </label>
+          </div>
+
+          <div v-else-if="createType === 'relationship_persona'" class="wizard-form">
+            <div class="form-grid">
               <label class="form-field">
                 <span>关系类型</span>
                 <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="同事 / 导师 / 父母 / 伴侣" />
@@ -2235,6 +2509,17 @@ watch(
               <template v-else-if="createType === 'intimate_companion'">
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>
                 <p class="state-copy">{{ formState.relationship_stage || '还没有填写关系阶段。' }}</p>
+              </template>
+              <template v-else-if="createType === 'reply_assistant'">
+                <h3>{{ formState.target_person_name || '未填写对方称呼' }}</h3>
+                <p class="state-copy">
+                  {{ formState.reply_goal || '还没有说明你想达到的目标。' }}
+                </p>
+                <ul class="summary-panel__list">
+                  <li><span>人物类型</span><strong>{{ replyAssistantTargetTypeOptions.find(([value]) => value === formState.target_person_type)?.[1] || formState.target_person_type }}</strong></li>
+                  <li><span>关系状态</span><strong>{{ formState.relationship_status || '未填写' }}</strong></li>
+                  <li><span>语气要求</span><strong>{{ formState.tone || '未填写' }}</strong></li>
+                </ul>
               </template>
               <template v-else>
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>

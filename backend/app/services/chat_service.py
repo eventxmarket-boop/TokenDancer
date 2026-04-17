@@ -27,6 +27,7 @@ from app.services.intimate_companion_service import build_intimate_companion_con
 from app.services.relationship_management_service import build_relationship_management_context
 from app.services.past_relationship_service import build_past_relationship_context
 from app.services.reunion_persona_service import build_reunion_persona_context
+from app.services.reply_assistant_service import build_reply_assistant_context
 from app.services.zhangxuefeng_research import (
     classify_zhangxuefeng_question,
     research_education_question,
@@ -518,6 +519,10 @@ async def chat_with_persona(
             "partner-skill+npy-skill",
             "ex-skill+first-love-skill+shuixian-skill",
         }
+    is_reply_assistant = create_type == "reply_assistant"
+    if not is_reply_assistant:
+        reply_source_repo = str(persona_meta.get("source_repo") or "").strip()
+        is_reply_assistant = reply_source_repo == "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill"
 
     normalized_message = user_message.strip()
     if not normalized_message:
@@ -547,6 +552,8 @@ async def chat_with_persona(
         aux_context = build_family_companion_context(persona, history, normalized_message)
     elif is_reunion_persona:
         aux_context = build_reunion_persona_context(persona, history, normalized_message)
+    elif is_reply_assistant:
+        aux_context = build_reply_assistant_context(persona, history, normalized_message)
     elif is_intimate_companion:
         intimate_mode = str(persona_meta.get("input_mode") or "").strip()
         if intimate_mode in {
