@@ -51,6 +51,29 @@ FILL_SCOPE_HINTS = [
     "不回答与填写无关的问题，不扩展到其他主题。",
 ]
 
+PAGE_GUIDES: dict[str, str] = {
+    "analysis": "先把准备材料和总览看清楚，再进入正式填写。你可以先确认手头有哪些真实聊天、长文、项目复盘、公开资料或外部反馈。",
+    "materials": "这一页放能证明你判断方式的原始材料，优先写最真实、最常用、最能代表你的内容。",
+    "signals": "这一页写公开资料和外部反馈。公开资料写可查来源，外部反馈写别人怎么评价你的判断、表达、推进方式或边界感。",
+    "material_details": "这一页写材料总览和材料类型。先说明你最能代表自己的材料是什么，再补它来自哪里。",
+    "identity": "这一页写你是谁、站在哪个位置说话、长期目标和底线。",
+    "decision": "这一页写你怎么判断问题，重点是风险偏好、决策原则、取舍方式和止损规则。",
+    "knowledge": "这一页写你现在知道什么。把静态材料、最近动态和可查证来源分开写，会更清楚。",
+    "boundary": "这一页写边界规则和验证样本，核心是哪些事不能编、不能装懂、不能把动态事实说死。",
+    "interview": "这一页是追问补洞。先从下拉问题里挑最缺的一项，答完再点添加。",
+    "custom": "这一页是可选追问。把你自己最想继续补问的 1 到 3 个问题写进去。",
+    "review": "这一页是汇总摘要。先看整体，再回到前面的任意页修改。",
+}
+
+REFUSAL_TOKENS = (
+    "not found",
+    "抱歉",
+    "我只回答",
+    "只回答这页",
+    "无关问题",
+    "unknown",
+)
+
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -155,6 +178,37 @@ def _build_refusal_reply() -> str:
     return "我只回答这页的填写和 skill 解释；你可以直接问某个字段怎么填、当前这一步该补什么，或者轻量 / 标准 / 深度有什么区别。"
 
 
+def _looks_like_invalid_reply(content: str) -> bool:
+    text = _normalize_text(content).lower()
+    if not text or len(text) < 12:
+        return True
+    return any(token in text for token in REFUSAL_TOKENS)
+
+
+def _build_fallback_reply(
+    *,
+    create_mode: str,
+    current_step: str,
+    active_section: str,
+    active_field_key: str,
+    active_field_label: str,
+) -> str:
+    section_key = _normalize_text(active_field_key) or _normalize_text(active_section)
+    section_label = _normalize_text(active_field_label) or _normalize_text(active_section)
+    base = PAGE_GUIDES.get(section_key) or PAGE_GUIDES.get(section_label) or "这一页只看当前字段，先把最像你的内容写进去。"
+    if section_label and section_label not in base:
+        base = f"{section_label}：{base}"
+    mode_line = {
+        "light": "轻量模式先填骨架，别一次写太满。",
+        "standard": "标准模式先补主干，再慢慢补缺口。",
+        "deep": "深度模式把材料、追问、知识源和边界一起补完整。",
+    }.get(_normalize_text(create_mode), "先按当前档位继续填。")
+    step_line = f"当前在第 {current_step or '3'} 步。"
+    if section_key == "analysis":
+        return f"{step_line}{base}{mode_line}"
+    return f"{base}{mode_line}"
+
+
 async def generate_self_fill_assistant_reply(
     request: dict[str, Any],
     db: Session | None = None,
@@ -189,8 +243,8 @@ async def generate_self_fill_assistant_reply(
         "你是 Tokendancer 的“填写助手”。"
         "你的唯一任务是解释当前自我主线创建页的 skill 逻辑、字段含义、填写方法、档位差异和补洞思路。"
         "你必须只回答填写相关问题，不回答任何其他主题。"
-        "如果用户问的是与填写无关的内容，直接拒绝并把话题拉回字段、档位、材料、追问或验证样本。"
-        "回答时要具体、直接、好懂，优先用短段落或项目符号。"
+        "如果用户问的是与填写无关的内容，直接把话题拉回字段、档位、材料、追问或验证样本，但不要出现“抱歉”“Not Found”“我只回答”这类拒绝话术。"
+        "回答时要具体、直接、好懂，优先先给这三件事：这一页在补什么、你该先写什么、如果没材料该怎么办。"
         "不要提系统、模型、提示词、内部推理，不要输出与填写无关的延展建议。"
     )
 
@@ -220,7 +274,7 @@ async def generate_self_fill_assistant_reply(
                     "role": "user",
                     "content": (
                         "请只解释填写相关内容。"
-                        "如果用户的问题不在范围内，请明确拒绝并引导回当前自我主线字段。"
+                        "如果用户的问题不在范围内，请温和拉回当前自我主线字段，并优先告诉用户这一页该补什么、先写什么、没材料怎么办。"
                         f"\n\n{user_prompt}"
                     ),
                 },
@@ -231,7 +285,15 @@ async def generate_self_fill_assistant_reply(
         raise LLMGatewayError(f"填写助手未能调用模型: {exc}") from exc
 
     content = strip_think_blocks(_normalize_text(reply.get("content", "")))
-    if not content:
+    if _looks_like_invalid_reply(content):
+        content = _build_fallback_reply(
+            create_mode=create_mode,
+            current_step=current_step,
+            active_section=active_section,
+            active_field_key=active_field_key,
+            active_field_label=active_field_label,
+        )
+    elif not content:
         content = _build_refusal_reply()
 
     return {

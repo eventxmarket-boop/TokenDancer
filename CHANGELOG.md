@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.59 - 2026-04-17
+
+- Simplified the self-unified creation wizard copy so each page feels lighter and more step-by-step.
+- Hardened the embedded fill assistant so refused or invalid model outputs fall back to clear page-specific guidance instead of showing `Not Found`.
+- Kept the assistant scoped to the current page while making its answers more concrete about what to fill and what to do when materials are missing.
+
 ## V1.4.58 - 2026-04-17
 
 - Reworked the self-unified creation flow into a step-by-step page wizard.

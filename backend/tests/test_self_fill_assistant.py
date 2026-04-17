@@ -55,7 +55,30 @@ class SelfFillAssistantTests(unittest.TestCase):
             result = self.run_async(generate_self_fill_assistant_reply(payload, db=None))
 
         self.assertEqual(result["mode"], "self_fill_assistant")
-        self.assertIn("我只回答这页的填写和 skill 解释", result["reply"])
+        self.assertIn("这一页", result["reply"])
+        self.assertIn("标准模式", result["reply"])
+
+    def test_self_fill_assistant_invalid_model_output_falls_back_to_page_guidance(self):
+        payload = {
+            "message": "这个字段怎么填？",
+            "create_mode": "deep",
+            "current_step": "3",
+            "active_section": "自我知识源层",
+            "active_field_key": "knowledge",
+            "active_field_label": "自我知识源层",
+            "form_snapshot": {},
+        }
+
+        with patch(
+            "app.services.self_fill_assistant_service.generate_reply",
+            new=AsyncMock(return_value={"content": "Not Found"}),
+        ):
+            result = self.run_async(generate_self_fill_assistant_reply(payload, db=None))
+
+        self.assertEqual(result["mode"], "self_fill_assistant")
+        self.assertIn("自我知识源层", result["reply"])
+        self.assertNotIn("Not Found", result["reply"])
+        self.assertNotIn("抱歉", result["reply"])
 
     @staticmethod
     def run_async(awaitable):

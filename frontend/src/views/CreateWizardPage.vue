@@ -453,68 +453,68 @@ const selfFillPageCards: SelfFillPageCard[] = [
   {
     key: 'analysis',
     title: '准备与分析',
-    description: '先看要准备什么，再开始逐页填写。',
-    summary: '先把素材范围、填写项数量和当前档位看清楚，再进入下一页。',
+    description: '先看准备什么，再开始填写。',
+    summary: '先把素材范围、填写项数量和当前档位看清楚。',
   },
   {
     key: 'materials',
     title: '材料层',
-    description: '先放能证明你判断方式的素材。',
-    summary: '把真实聊天、长文、决策记录、项目复盘或 OCR 材料先放进来。',
+    description: '先放最像你的素材。',
+    summary: '把真实聊天、长文、决策记录或项目复盘先放进来。',
   },
   {
     key: 'signals',
     title: '公开资料 / 外部反馈',
-    description: '把可查资料和别人评价补上。',
-    summary: '这一步会帮助系统区分稳定人格和动态事实。',
+    description: '补可查资料和别人评价。',
+    summary: '这一步用来区分稳定人格和动态事实。',
   },
   {
     key: 'material_details',
     title: '材料说明',
-    description: '说明你最代表自己的材料是什么。',
-    summary: '写你最能代表自己的材料总览和材料类型。',
+    description: '写材料总览。',
+    summary: '先说明你最能代表自己的材料是什么。',
   },
   {
     key: 'identity',
     title: '自我身份层',
-    description: '写你是谁、站在哪。',
+    description: '写你是谁。',
     summary: '把长期目标、价值锚点、底线和角色定位写清楚。',
   },
   {
     key: 'decision',
     title: '自我判断层',
-    description: '写你怎么判断问题。',
+    description: '写你怎么判断。',
     summary: '把风险偏好、决策原则、取舍方式和止损规则写清楚。',
   },
   {
     key: 'knowledge',
     title: '自我知识源层',
     description: '写你现在知道什么。',
-    summary: '把静态材料、最近动态和可查证来源写清楚。',
+    summary: '把静态材料、最近动态和可查证来源分开写。',
   },
   {
     key: 'boundary',
     title: '边界规则 / 验证样本',
     description: '写不能越线的地方。',
-    summary: '把不编造、不过度承诺、验证样本和边界规则写清楚。',
+    summary: '把不编造、不装懂和验证样本写清楚。',
   },
   {
     key: 'interview',
     title: '追问补洞',
-    description: '用更少问题补关键缺口。',
-    summary: '先从下拉问题补洞，再用回答修正分析报告。',
+    description: '用少量问题补缺口。',
+    summary: '先从下拉问题补洞，再修正分析报告。',
   },
   {
     key: 'custom',
     title: '可选追问',
-    description: '补 1 到 3 个你自己想问的问题。',
-    summary: '把你自己最想追问的补充问题写进去。',
+    description: '补你自己的问题。',
+    summary: '把你最想追问的 1 到 3 个问题写进去。',
   },
   {
     key: 'review',
     title: '汇总摘要',
-    description: '全部填完后回头看一眼，再继续修改。',
-    summary: '把前面填过的内容收成一页摘要，方便你回头逐项修改。',
+    description: '全部填完后看总览。',
+    summary: '把前面填过的内容收成一页摘要。',
   },
 ]
 
@@ -542,16 +542,16 @@ const selfFillCurrentInfoPageIndex = computed(() => {
 const selfFillPrepHints = computed(() => {
   const hints = [
     `这条主线一共 ${selfFillInfoPageCount.value} 个填写项，外加 1 个准备页和 1 个汇总页。`,
-    '建议先准备真实聊天、长文表达、项目复盘或决策记录。',
-    '如果有公开资料、外部反馈或可查来源，也可以一并放在旁边。',
+    '先准备真实聊天、长文表达、项目复盘或决策记录。',
+    '有公开资料、外部反馈或可查来源也可以一起放在旁边。',
   ]
 
   if (createMode.value === 'light') {
-    hints.unshift('轻量模式适合先拿 1 到 2 个最像你的材料试跑。')
+    hints.unshift('轻量模式先拿 1 到 2 个最像你的材料试跑。')
   } else if (createMode.value === 'standard') {
-    hints.unshift('标准模式适合先补全主线，再逐页补缺口。')
+    hints.unshift('标准模式先补主线，再逐页补缺口。')
   } else {
-    hints.unshift('深度模式适合把材料、追问、知识源和边界一次补完整。')
+    hints.unshift('深度模式把材料、追问、知识源和边界一起补完整。')
   }
 
   return hints
@@ -908,7 +908,7 @@ function addSelfInterviewEntry() {
 const selfFillAssistantQuickPrompts = [
   {
     label: '这个字段怎么填',
-    prompt: '这个字段怎么填？请结合当前页面解释它的作用和填写重点。',
+    prompt: '这个字段怎么填？请结合当前页面解释它的作用、填写重点和没有材料时怎么写。',
   },
   {
     label: '轻量/标准/深度',
@@ -927,7 +927,7 @@ const selfFillAssistantQuickPrompts = [
 function createSelfFillAssistantGreeting(): SelfFillAssistantMessage {
   return {
     role: 'assistant',
-    content: `我是填写助手，只解释这页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段含义、skill 逻辑、追问补洞或档位区别。`,
+    content: `我是填写助手，只解释这页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段作用、怎么填、没材料怎么办。`,
   }
 }
 
@@ -2746,12 +2746,11 @@ watch(
           <div v-if="createType === 'self_unified'" class="wizard-form wizard-form--self-fill">
             <div class="summary-panel summary-panel--compact self-fill-intro">
               <p class="eyebrow">自我主线</p>
-              <h3>按页填写，而不是一次铺开</h3>
-              <p class="state-copy">轻量先试，标准继续补，深度再拉满。你可以随时上一步、下一步，或者直接点右侧页签跳回去改。</p>
-              <p class="state-copy state-copy--muted">{{ selfModeJourneyCopy[createMode] }} {{ selfModeNextStepCopy[createMode] }}</p>
+              <h3>按页填，一次只做一项</h3>
+              <p class="state-copy">你可以随时上一步、下一步，或者直接点右侧页签跳回去改。</p>
+              <p class="state-copy state-copy--muted">{{ selfModeJourneyCopy[createMode] }}</p>
               <ul class="summary-panel__list">
                 <li><span>填写项</span><strong>{{ selfFillInfoPageCount }} 项</strong></li>
-                <li><span>辅助页</span><strong>2 页</strong></li>
                 <li><span>页面总数</span><strong>{{ selfFillPageCount }} 页</strong></li>
                 <li><span>当前档位</span><strong>{{ selfModeLabels[createMode] }}</strong></li>
               </ul>
@@ -2790,7 +2789,7 @@ watch(
                 <div class="summary-panel summary-panel--compact self-fill-page__summary">
                   <h3>{{ selfFillCurrentPage.summary }}</h3>
                   <p class="state-copy">
-                    {{ selfFillCurrentPageIsHelper ? '这一页先帮你看清结构，再继续往下填。' : '这一页只聚焦一个信息点，填完就可以下一步。' }}
+                    {{ selfFillCurrentPageIsHelper ? '这一页先看清结构，再继续往下填。' : '这一页只填一个信息点。' }}
                   </p>
                   <p class="state-copy state-copy--muted">可以随时回到任一页继续修改，不用一次填完。</p>
                 </div>
