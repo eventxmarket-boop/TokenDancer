@@ -1,3 +1,9 @@
+## V1.4.78 - 2026-04-18
+
+- Strengthened reply assistant context by sending recent turns into each generation request.
+- Locked target person and scene after a conversation starts, with a simple warning that switching mid-chat can skew the answer.
+- Kept the reply assistant history local while making reopened conversations feel more continuous.
+
 ## V1.4.77 - 2026-04-18
 
 - Moved the reply page `+`, advanced toggle, file, and image buttons onto one compact row above the send button.

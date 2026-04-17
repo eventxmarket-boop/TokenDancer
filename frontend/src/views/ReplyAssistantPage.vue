@@ -185,6 +185,10 @@ const historyItems = computed(() =>
   }),
 )
 
+const conversationLocked = computed(() => turns.value.some((turn) => turn.role === 'user'))
+const lockedTargetLabel = computed(() => targetPersonOptions.find(([value]) => value === form.target_person_type)?.[1] || '')
+const lockedSceneLabel = computed(() => sceneOptions.find(([value]) => value === form.scene_type)?.[1] || '')
+
 function createEmptyHistoryForm() {
   return {
     message: '',
@@ -516,7 +520,13 @@ function buildConversationContext() {
   const extras = [rawMaterials.value.image_notes_text, rawMaterials.value.voice_notes_text, rawMaterials.value.recent_context_text]
     .filter(Boolean)
     .join('\n')
-  return [advancedText, extras].filter(Boolean).join('\n')
+  const recentTurns = turns.value
+    .filter((turn) => turn.role === 'user' || turn.role === 'assistant')
+    .slice(-6)
+    .map((turn) => `${turn.role === 'user' ? '用户' : '助手'}：${normalizeText(turn.content)}`)
+    .filter(Boolean)
+    .join('\n')
+  return [recentTurns, advancedText, extras].filter(Boolean).join('\n')
 }
 
 function buildThreadContext() {
@@ -671,6 +681,26 @@ function removeImageDocument(index: number) {
   rawMaterials.value.uploaded_image_documents = rawMaterials.value.uploaded_image_documents.filter((_, itemIndex) => itemIndex !== index)
 }
 
+function onTargetPersonTypeChange(event: Event) {
+  const nextValue = (event.target as HTMLSelectElement | null)?.value || form.target_person_type
+  if (conversationLocked.value && nextValue !== form.target_person_type) {
+    error.value = '这段对话已经开始，切换对象可能导致回答偏差。建议新开一个对话。'
+    return
+  }
+  error.value = ''
+  form.target_person_type = nextValue as ReplyAssistantTargetType
+}
+
+function onSceneTypeChange(event: Event) {
+  const nextValue = (event.target as HTMLSelectElement | null)?.value || form.scene_type
+  if (conversationLocked.value && nextValue !== form.scene_type) {
+    error.value = '这段对话已经开始，切换场景可能导致回答偏差。建议新开一个对话。'
+    return
+  }
+  error.value = ''
+  form.scene_type = nextValue as ReplyAssistantSceneType
+}
+
 async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
   const prompt = rewriteMode === 'default' ? form.message.trim() : (lastPrompt.value || form.message.trim())
   if (!prompt) {
@@ -822,7 +852,12 @@ if (activeHistoryId.value) {
       <div class="reply-composer__row">
         <label class="reply-select">
           <span>对方</span>
-          <select v-model="form.target_person_type" class="field-input field-input--compact">
+          <select
+            :value="form.target_person_type"
+            class="field-input field-input--compact"
+            :disabled="conversationLocked"
+            @change="onTargetPersonTypeChange"
+          >
             <option v-for="[value, label] in targetPersonOptions" :key="value" :value="value">
               {{ label }}
             </option>
@@ -830,13 +865,22 @@ if (activeHistoryId.value) {
         </label>
         <label class="reply-select">
           <span>场景</span>
-          <select v-model="form.scene_type" class="field-input field-input--compact">
+          <select
+            :value="form.scene_type"
+            class="field-input field-input--compact"
+            :disabled="conversationLocked"
+            @change="onSceneTypeChange"
+          >
             <option v-for="[value, label] in sceneOptions" :key="value" :value="value">
               {{ label }}
             </option>
           </select>
         </label>
       </div>
+
+      <p v-if="conversationLocked" class="reply-lock-tip">
+        当前对话已锁定为「{{ lockedTargetLabel }} / {{ lockedSceneLabel }}」。中途切换会让回答偏差，建议新开一个对话。
+      </p>
 
       <label class="reply-input">
         <textarea
@@ -1235,6 +1279,17 @@ if (activeHistoryId.value) {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
+}
+
+.reply-lock-tip {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 16px;
+  background: rgba(255, 159, 138, 0.12);
+  border: 1px solid rgba(255, 159, 138, 0.18);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 
 .field-input--compact {
