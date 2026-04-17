@@ -8,8 +8,6 @@ import CreateResultPage from '@/views/CreateResultPage.vue'
 import ReplyAssistantLandingPage from '@/views/ReplyAssistantLandingPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
 import HowToDoPage from '@/views/HowToDoPage.vue'
-import HowToDoDetailPage from '@/views/HowToDoDetailPage.vue'
-import HowToDoSongAddPage from '@/views/HowToDoSongAddPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -78,18 +76,6 @@ const router = createRouter({
       name: 'how-to-do',
       component: HowToDoPage,
       meta: { title: '排盘' },
-    },
-    {
-      path: '/how-to-do/detail',
-      name: 'how-to-do-detail',
-      component: HowToDoDetailPage,
-      meta: { title: '卦详情' },
-    },
-    {
-      path: '/how-to-do/songs/add',
-      name: 'how-to-do-songs-add',
-      component: HowToDoSongAddPage,
-      meta: { title: '添加歌诀' },
     },
     {
       path: '/how-to-do/:pathMatch(.*)*',

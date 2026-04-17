@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
 import { requestHowToDo, type HowToDoCatalogCard, type HowToDoResponse } from '@/services/howToDoService'
 
 type MainTab = 'cast' | 'sundial' | 'songs' | 'catalog'
@@ -56,12 +55,10 @@ const songNotes = ref<SongNote[]>([])
 const songTitle = ref('')
 const songContent = ref('')
 const timeNow = ref(new Date())
-const showProcess = ref(false)
 const showResultBoard = ref(true)
 const showHidden = ref(true)
 const useSymbols = ref(false)
 const showNaYin = ref(false)
-const weakenRelated = ref(false)
 let timer: number | undefined
 
 const currentTimeText = computed(() => timeNow.value.toLocaleString('zh-CN'))
@@ -250,12 +247,10 @@ function resetCast() {
   castText.value = ''
   result.value = null
   selectedCatalog.value = null
-  showProcess.value = false
   showResultBoard.value = true
   showHidden.value = true
   useSymbols.value = false
   showNaYin.value = false
-  weakenRelated.value = false
 }
 
 function useCurrentTime() {
@@ -311,11 +306,6 @@ function copyHexagram() {
   void navigator.clipboard.writeText(text || '暂无可复制内容')
 }
 
-function shareScreenshot() {
-  const text = result.value?.summary || '当前卦象'
-  void navigator.clipboard.writeText(text)
-}
-
 onMounted(() => {
   loadNotes()
   void loadCatalog()
@@ -357,14 +347,6 @@ onBeforeUnmount(() => {
 
     <div class="how-to-do-layout">
       <article class="summary-panel how-to-do-panel">
-        <div class="how-to-do-panel__head">
-          <div>
-            <p class="eyebrow">当前页</p>
-            <h3>{{ mainTabs.find((item) => item.key === activeTab)?.label }}</h3>
-            <p class="hero-text">{{ mainTabs.find((item) => item.key === activeTab)?.hint }}</p>
-          </div>
-        </div>
-
         <template v-if="activeTab === 'cast'">
           <div class="how-to-do-toggle-row">
             <button
@@ -416,17 +398,16 @@ onBeforeUnmount(() => {
             ></textarea>
           </label>
 
+          <p class="how-to-do-note">
+            使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。
+          </p>
+
           <div class="how-to-do-actions how-to-do-actions--left">
-            <button class="secondary-btn" type="button" @click="showProcess = !showProcess">起图流程？</button>
             <button class="secondary-btn" type="button" @click="resetCast">重置排盘信息</button>
             <button class="primary-btn" type="button" :disabled="loading" @click="cast">
               {{ loading ? '排盘中...' : '开始占卜' }}
             </button>
           </div>
-
-          <p v-if="showProcess" class="how-to-do-note">
-            使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。
-          </p>
         </template>
 
         <template v-else-if="activeTab === 'sundial'">
@@ -452,7 +433,6 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-else-if="activeTab === 'songs'">
-          <div class="how-to-do-note">歌诀分为我添加的和内置内容。</div>
           <div class="how-to-do-mode-row">
             <button
               type="button"
@@ -473,9 +453,6 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="songTab === 'mine'">
-            <p class="how-to-do-note">
-              暂无手动添加的歌诀，可点击右下角加号手动添加歌诀。
-            </p>
             <label class="field-label">
               标题
               <input v-model="songTitle" type="text" class="field-input" placeholder="例如：先看动爻" />
@@ -499,12 +476,8 @@ onBeforeUnmount(() => {
                 <div class="empty-panel__icon">＋</div>
                 <div class="empty-panel__copy">
                   <strong>暂无手动添加的歌诀。</strong>
-                  <p>你可以打开右下角加号，先加一条自己的口诀。</p>
                 </div>
               </div>
-            </div>
-            <div class="how-to-do-actions how-to-do-actions--left">
-              <RouterLink class="secondary-btn" to="/how-to-do/songs/add">添加歌诀</RouterLink>
             </div>
           </div>
 
@@ -517,7 +490,6 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-else-if="activeTab === 'catalog'">
-          <div class="how-to-do-note">六十四卦按宫分组，方便直接查找。</div>
           <label class="field-label">
             搜索
             <input v-model="catalogQuery" class="field-input" placeholder="输入卦名、宫名或标签" />
@@ -606,42 +578,11 @@ onBeforeUnmount(() => {
                 <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
                 <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
                 <button class="chip-btn" :class="{ 'chip-btn--active': showNaYin }" type="button" @click="showNaYin = !showNaYin">显示纳音</button>
-                <button class="chip-btn" :class="{ 'chip-btn--active': weakenRelated }" type="button" @click="weakenRelated = !weakenRelated">弱化关联变爻</button>
               </div>
-            </div>
-
-            <div class="how-to-do-detail-box">
-              <p class="eyebrow">卦辞爻辞</p>
-              <p>{{ result.ai_interpretation }}</p>
-            </div>
-
-            <div class="how-to-do-detail-box">
-              <p class="eyebrow">结果反馈</p>
-              <div class="how-to-do-suggestions">
-                <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
-              </div>
-            </div>
-
-            <div class="how-to-do-detail-box">
-              <p class="eyebrow">卦象数据创建时间</p>
-              <p>{{ castResult?.timestamp || '—' }}</p>
-            </div>
-
-            <div v-if="castResult?.mutual_hexagram" class="how-to-do-detail-box">
-              <p class="eyebrow">互卦</p>
-              <strong>{{ castResult.mutual_hexagram.name }}卦</strong>
-              <p>{{ castResult.mutual_hexagram.meaning }}</p>
-            </div>
-
-            <div v-if="selectedCatalog" class="how-to-do-detail-box">
-              <p class="eyebrow">六十四卦</p>
-              <strong>{{ selectedCatalog.name }}</strong>
-              <p>{{ selectedCatalog.tag }} · {{ selectedCatalog.meaning }}</p>
             </div>
 
             <div class="how-to-do-actions how-to-do-actions--left">
               <button class="secondary-btn" type="button" @click="sharePage">分享当页URL</button>
-              <button class="secondary-btn" type="button" @click="shareScreenshot">分享当页截图</button>
               <button class="secondary-btn" type="button" @click="copyHexagram">复制卦象</button>
             </div>
           </div>
@@ -650,25 +591,8 @@ onBeforeUnmount(() => {
         <template v-else-if="activeTab === 'sundial'">
           <p class="eyebrow">日晷</p>
           <h3>{{ currentTimeText }}</h3>
-          <div class="how-to-do-card-grid">
-            <div class="how-to-do-result-card">
-              <span>农历参考</span>
-              <strong>{{ chineseCalendarText }}</strong>
-            </div>
-            <div class="how-to-do-result-card">
-              <span>当前节气</span>
-              <strong>{{ solarTerms.current }}</strong>
-            </div>
-            <div class="how-to-do-result-card">
-              <span>下一节气</span>
-              <strong>{{ solarTerms.next }}</strong>
-            </div>
-            <div class="how-to-do-result-card">
-              <span>更新时间</span>
-              <strong>{{ currentTimeText }}</strong>
-            </div>
-          </div>
           <div class="how-to-do-detail-box">
+            <p>{{ chineseCalendarText }}</p>
             <p>当前是 {{ solarTerms.current }} 节气，下一节气是 {{ solarTerms.next }}。</p>
           </div>
           <div class="how-to-do-actions how-to-do-actions--left">
@@ -677,8 +601,6 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-else-if="activeTab === 'songs'">
-          <p class="eyebrow">歌诀</p>
-          <h3>共 {{ songNotes.length + builtInSongs.length }} 条歌诀</h3>
           <div class="how-to-do-mode-row">
             <button
               type="button"
@@ -710,7 +632,6 @@ onBeforeUnmount(() => {
               <div class="empty-panel__icon">◎</div>
               <div class="empty-panel__copy">
                 <strong>暂无手动添加的歌诀。</strong>
-                <p>可点击右下角加号手动添加歌诀。</p>
               </div>
             </div>
           </div>
@@ -721,37 +642,29 @@ onBeforeUnmount(() => {
               <p>{{ item.content }}</p>
             </div>
           </div>
-
-          <div class="how-to-do-actions how-to-do-actions--left">
-            <RouterLink class="secondary-btn" to="/how-to-do/songs/add">＋</RouterLink>
-          </div>
         </template>
 
         <template v-else-if="activeTab === 'catalog'">
-          <p class="eyebrow">六十四卦</p>
-          <h3>卦库</h3>
-          <div class="how-to-do-card-grid">
-            <div class="how-to-do-result-card">
-              <span>卦库数量</span>
-              <strong>{{ catalogCards.length }} 卦</strong>
-            </div>
-            <div class="how-to-do-result-card">
-              <span>当前选中</span>
-              <strong>{{ selectedCatalog?.name || '未选择' }}</strong>
-            </div>
-          </div>
-
-          <div v-if="selectedCatalog" class="how-to-do-detail-box">
-            <p class="eyebrow">卦象详情</p>
-            <strong>{{ selectedCatalog.name }}</strong>
-            <p>{{ selectedCatalog.palace }} · {{ selectedCatalog.tag }}</p>
-            <p>{{ selectedCatalog.meaning }}</p>
-          </div>
-
-          <div class="how-to-do-actions how-to-do-actions--left">
-            <button class="primary-btn" type="button" :disabled="loading" @click="loadCatalog">
-              {{ loading ? '加载中...' : '刷新卦库' }}
-            </button>
+          <div class="liuyao-catalog-groups">
+            <section v-for="group in filteredCatalogGroups" :key="group.palace" class="liuyao-catalog-group">
+              <div class="liuyao-catalog-group__head">
+                <h4>{{ group.palace }}</h4>
+              </div>
+              <div class="liuyao-catalog-grid">
+                <button
+                  v-for="card in group.cards"
+                  :key="`${card.number}-${card.name}`"
+                  type="button"
+                  class="liuyao-catalog-card"
+                  :class="{ 'is-selected': selectedCatalog?.number === card.number }"
+                  @click="selectedCatalog = card"
+                >
+                  <strong>{{ card.name }}</strong>
+                  <span>{{ card.tag }}</span>
+                  <p>{{ card.meaning }}</p>
+                </button>
+              </div>
+            </section>
           </div>
         </template>
       </article>

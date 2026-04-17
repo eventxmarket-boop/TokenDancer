@@ -1,3 +1,9 @@
+## V1.4.89 - 2026-04-18
+
+- Removed more non-source liu-yao extras from `我该怎么做` so the board stays closer to the referenced layout.
+- Removed the separate detail and song-add routes from the visible router so the module no longer exposes extra surfaces.
+- Corrected the panel title ordering to better match the source-style hexagram name presentation.
+
 ## V1.4.88 - 2026-04-18
 
 - Reworked the cast result into a more source-like six-yao panel with direct question, cast method, category, time, and shensha rows.

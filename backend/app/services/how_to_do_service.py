@@ -514,7 +514,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     line_details = [_build_line_detail(position, item, seed_value, question) for position, item in enumerate(lines, start=1)]
     day_label = datetime.now().strftime("%Y年%m月%d日%H:%M:%S %A")
     day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")
-    panel_title = f"{upper['meaning']}{lower['meaning']}{name}"
+    panel_title = f"{lower['meaning']}{upper['meaning']}{name}"
     panel_subtitle = f"{hexagram_spec['palace'].replace('宫', '')}·{hexagram_spec['tag']}" if hexagram_spec["tag"] else hexagram_spec["palace"].replace("宫", "")
     time_line = f"{datetime.now().strftime('%Y年%m月%d日%H:%M:%S')} {day_label.split(' ')[-1]}农历三月初二"
     suggestions = [
