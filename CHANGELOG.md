@@ -1,3 +1,9 @@
+## V1.4.84 - 2026-04-18
+
+- Removed the embedded `我该怎么做` feature and its route, returning the app to the no-feature state before that module was introduced.
+- Deleted the standalone frontend page, frontend service, backend schema, backend router, backend service, and related tests so the feature can be fully stripped.
+- Left the rest of the reply assistant and seed flows untouched.
+
 ## V1.4.83 - 2026-04-18
 
 - Added a dedicated six-yao path under `我该怎么做` with separate time-cast and manual-cast inputs.
