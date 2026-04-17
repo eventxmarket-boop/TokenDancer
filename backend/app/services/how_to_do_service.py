@@ -28,6 +28,59 @@ CAST_MODE_LABELS = {
     "taiji": "太极丸起卦",
 }
 
+FIVE_ELEMENTS = ["木", "火", "土", "金", "水"]
+
+PALACE_ELEMENTS = {
+    "乾宫": "金",
+    "兑宫": "金",
+    "离宫": "火",
+    "震宫": "木",
+    "巽宫": "木",
+    "坎宫": "水",
+    "艮宫": "土",
+    "坤宫": "土",
+}
+
+BRANCH_ELEMENTS = {
+    "子": "水",
+    "丑": "土",
+    "寅": "木",
+    "卯": "木",
+    "辰": "土",
+    "巳": "火",
+    "午": "火",
+    "未": "土",
+    "申": "金",
+    "酉": "金",
+    "戌": "土",
+    "亥": "水",
+}
+
+TRIGRAM_NAJIA = {
+    "乾": {"inner": ["甲子", "甲寅", "甲辰"], "outer": ["壬午", "壬申", "壬戌"]},
+    "兑": {"inner": ["丁巳", "丁卯", "丁丑"], "outer": ["丁亥", "丁酉", "丁未"]},
+    "离": {"inner": ["己卯", "己丑", "己亥"], "outer": ["己酉", "己未", "己巳"]},
+    "震": {"inner": ["庚子", "庚寅", "庚辰"], "outer": ["庚午", "庚申", "庚戌"]},
+    "巽": {"inner": ["辛丑", "辛亥", "辛酉"], "outer": ["辛未", "辛巳", "辛卯"]},
+    "坎": {"inner": ["戊寅", "戊辰", "戊午"], "outer": ["戊申", "戊戌", "戊子"]},
+    "艮": {"inner": ["丙辰", "丙午", "丙申"], "outer": ["丙戌", "丙子", "丙寅"]},
+    "坤": {"inner": ["乙未", "乙巳", "乙卯"], "outer": ["癸丑", "癸亥", "癸酉"]},
+}
+
+SIX_SPIRIT_ORDER = ["青龙", "朱雀", "勾陈", "螣蛇", "白虎", "玄武"]
+DAY_STEM_SPIRIT_START = {
+    "甲": "青龙",
+    "乙": "青龙",
+    "丙": "朱雀",
+    "丁": "朱雀",
+    "戊": "勾陈",
+    "己": "螣蛇",
+    "庚": "白虎",
+    "辛": "白虎",
+    "壬": "玄武",
+    "癸": "玄武",
+}
+
 TRIGRAMS = [
     {"name": "乾", "symbol": "☰", "meaning": "天"},
     {"name": "兑", "symbol": "☱", "meaning": "泽"},
@@ -485,12 +538,113 @@ def _shi_ying_positions(hexagram_name: str) -> tuple[int, int]:
     return SHI_YING_MAP.get(tag, (0, 0))
 
 
-def _build_line_detail(position: int, line: dict[str, Any], seed: str, question: str, shi_position: int = 0, ying_position: int = 0) -> dict[str, Any]:
-    rng = _make_rng(seed, question, position, line.get("yin_yang"))
-    hidden_relation = rng.choice(RELATIONS)
-    hidden_stem = rng.choice(["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"])
-    hidden_branch = BRANCHES[(position + 2) % len(BRANCHES)]
-    hidden_element = rng.choice(["金", "木", "水", "火", "土"])
+def _generates(source: str, target: str) -> bool:
+    return {
+        "木": "火",
+        "火": "土",
+        "土": "金",
+        "金": "水",
+        "水": "木",
+    }.get(source) == target
+
+
+def _controls(source: str, target: str) -> bool:
+    return {
+        "木": "土",
+        "土": "水",
+        "水": "火",
+        "火": "金",
+        "金": "木",
+    }.get(source) == target
+
+
+def _bar_text(yin_yang: str) -> str:
+    return "▅▅▅" if yin_yang == "阳" else "▅ ▅"
+
+
+def _relation_for(palace_element: str, line_element: str) -> str:
+    if palace_element == line_element:
+        return "兄弟"
+    if _generates(line_element, palace_element):
+        return "父母"
+    if _generates(palace_element, line_element):
+        return "子孙"
+    if _controls(palace_element, line_element):
+        return "妻财"
+    if _controls(line_element, palace_element):
+        return "官鬼"
+    return "兄弟"
+
+
+def _hexagram_trigrams(hexagram_name: str) -> tuple[str, str]:
+    binary = HEXAGRAM_NAME_TO_BINARY.get(hexagram_name, "")
+    if len(binary) != 6:
+        return "乾", "乾"
+    lower_binary = binary[:3]
+    upper_binary = binary[3:]
+    lower = TRIGRAMS[_trigram_index([{"yin_yang": "阳" if ch == "1" else "阴"} for ch in lower_binary])]["name"]
+    upper = TRIGRAMS[_trigram_index([{"yin_yang": "阳" if ch == "1" else "阴"} for ch in upper_binary])]["name"]
+    return lower, upper
+
+
+def _hexagram_static_lines(hexagram_name: str) -> list[dict[str, Any]]:
+    spec = HEXAGRAM_SPECS.get(hexagram_name, {"palace": "乾宫", "tag": ""})
+    palace_element = PALACE_ELEMENTS.get(spec["palace"], "金")
+    lower, upper = _hexagram_trigrams(hexagram_name)
+    lower_najia = TRIGRAM_NAJIA[lower]["inner"]
+    upper_najia = TRIGRAM_NAJIA[upper]["outer"]
+    static_lines: list[dict[str, Any]] = []
+    for position in range(1, 7):
+        stem_branch = lower_najia[position - 1] if position <= 3 else upper_najia[position - 4]
+        branch = stem_branch[-1]
+        line_element = BRANCH_ELEMENTS.get(branch, "土")
+        static_lines.append(
+            {
+                "position": position,
+                "stem_branch": stem_branch,
+                "element": line_element,
+                "relation": _relation_for(palace_element, line_element),
+            }
+        )
+    return static_lines
+
+
+def _six_spirits_for_day(day_stem: str) -> list[str]:
+    start = DAY_STEM_SPIRIT_START.get(day_stem, "青龙")
+    start_index = SIX_SPIRIT_ORDER.index(start)
+    return [SIX_SPIRIT_ORDER[(start_index + offset) % len(SIX_SPIRIT_ORDER)] for offset in range(6)]
+
+
+def _hidden_spirits_for(hexagram_name: str, line_infos: list[dict[str, Any]]) -> dict[int, str]:
+    spec = HEXAGRAM_SPECS.get(hexagram_name, {"palace": "乾宫"})
+    pure_hexagram = next(
+        (
+            meaning_key
+            for palace, guas in PALACE_GUA_CATALOG
+            if palace == spec["palace"]
+            for _, _, meaning_key in guas[:1]
+        ),
+        hexagram_name,
+    )
+    palace_lines = _hexagram_static_lines(pure_hexagram)
+    current_relations = {item["relation"] for item in line_infos}
+    missing_relations = set(RELATIONS) - current_relations
+    hidden_map: dict[int, str] = {}
+    for current, palace_line in zip(line_infos, palace_lines):
+        if palace_line["relation"] in missing_relations and palace_line["relation"] != current["relation"]:
+            hidden_map[current["position"]] = f"{palace_line['relation']}{palace_line['stem_branch']}{palace_line['element']}"
+    return hidden_map
+
+
+def _build_line_detail(
+    position: int,
+    line: dict[str, Any],
+    static_line: dict[str, Any],
+    six_spirit: str,
+    shi_position: int = 0,
+    ying_position: int = 0,
+    hidden_spirit: str = "",
+) -> dict[str, Any]:
     change_mark = ""
     if line["is_changing"]:
         change_mark = "o" if line["yin_yang"] == "阳" else "x"
@@ -501,12 +655,13 @@ def _build_line_detail(position: int, line: dict[str, Any], seed: str, question:
         "guidance": line["guidance"],
         "is_changing": line["is_changing"],
         "yin_yang": line["yin_yang"],
+        "bar_text": _bar_text(line["yin_yang"]),
         "change_mark": change_mark,
-        "six_spirit": SIX_SPIRITS[(position - 1) % len(SIX_SPIRITS)],
-        "relation": RELATIONS[(position - 1) % len(RELATIONS)],
-        "stem_branch": f"{rng.choice(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'])}{BRANCHES[(position - 1) % len(BRANCHES)]}",
-        "nayin": rng.choice(["海中金", "炉中火", "大林木", "路旁土", "剑锋金", "山头火", "涧下水", "城头土"]),
-        "hidden_spirit": f"{hidden_relation}{hidden_stem}{hidden_branch}{hidden_element}" if position == 5 else "",
+        "six_spirit": six_spirit,
+        "relation": static_line["relation"],
+        "stem_branch": static_line["stem_branch"],
+        "nayin": "",
+        "hidden_spirit": hidden_spirit,
         "shi_ying": "世" if position == shi_position else "应" if position == ying_position else "",
     }
 
@@ -593,6 +748,12 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     mutual_hexagram = _build_mutual_hexagram(lines)
     hexagram_spec = HEXAGRAM_SPECS.get(name, {"palace": "未知宫", "tag": ""})
     shi_position, ying_position = _shi_ying_positions(name)
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    day_ganzhi = _day_ganzhi(now)
+    day_stem = day_ganzhi[0]
+    six_spirits = _six_spirits_for_day(day_stem)
+    static_lines = _hexagram_static_lines(name)
+    hidden_spirits = _hidden_spirits_for(name, static_lines)
     transformed_hexagram = None
     transformed_line_details: list[dict[str, Any]] = []
     if changing_lines:
@@ -600,8 +761,12 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             {
                 **item,
                 "is_changing": False,
-                "yin_yang": "阴" if item["yin_yang"] == "阳" else "阳",
-                "text": _line_text(item["position"], "阴" if item["yin_yang"] == "阳" else "阳", False),
+                "yin_yang": ("阴" if item["yin_yang"] == "阳" else "阳") if item["value"] in {6, 9} else item["yin_yang"],
+                "text": _line_text(
+                    item["position"],
+                    ("阴" if item["yin_yang"] == "阳" else "阳") if item["value"] in {6, 9} else item["yin_yang"],
+                    False,
+                ),
             }
             for item in lines
         ]
@@ -619,8 +784,19 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "panel_title": f"{transformed_lower['meaning']}{transformed_upper['meaning']}{transformed_name}",
             "panel_subtitle": f"{transformed_spec['palace'].replace('宫', '')}·{transformed_spec['tag']}" if transformed_spec["tag"] else transformed_spec["palace"].replace("宫", ""),
         }
+        transformed_static_lines = _hexagram_static_lines(transformed_name)
+        transformed_hidden_spirits = _hidden_spirits_for(transformed_name, transformed_static_lines)
+        transformed_shi, transformed_ying = _shi_ying_positions(transformed_name)
         transformed_line_details = [
-            _build_line_detail(position, item, seed_value + "-transformed", question, *_shi_ying_positions(transformed_name))
+            _build_line_detail(
+                position,
+                item,
+                transformed_static_lines[position - 1],
+                six_spirits[position - 1],
+                transformed_shi,
+                transformed_ying,
+                transformed_hidden_spirits.get(position, ""),
+            )
             for position, item in enumerate(transformed_lines, start=1)
         ]
 
@@ -652,8 +828,18 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         "驿马": BRANCHES[_stable_seed(seed_value, question, "yi-ma") % len(BRANCHES)],
         "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
     }
-    line_details = [_build_line_detail(position, item, seed_value, question, shi_position, ying_position) for position, item in enumerate(lines, start=1)]
-    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    line_details = [
+        _build_line_detail(
+            position,
+            item,
+            static_lines[position - 1],
+            six_spirits[position - 1],
+            shi_position,
+            ying_position,
+            hidden_spirits.get(position, ""),
+        )
+        for position, item in enumerate(lines, start=1)
+    ]
     day_label = now.strftime("%Y年%m月%d日%H:%M:%S %A")
     day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")
     panel_title = f"{lower['meaning']}{upper['meaning']}{name}"

@@ -264,7 +264,7 @@ async function cast() {
                 <div class="liuyao-result-grid__cell">
                   <div class="liuyao-result-grid__topline">
                     <span class="liuyao-result-grid__relation">{{ line.relation }}{{ line.stem_branch }}</span>
-                    <span class="liuyao-result-grid__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
+                    <span class="liuyao-result-grid__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
                     <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
                     <span v-if="line.shi_ying" class="liuyao-result-grid__marker">{{ line.shi_ying }}</span>
                   </div>
@@ -274,7 +274,7 @@ async function cast() {
                 <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__cell liuyao-result-grid__cell--right">
                   <div class="liuyao-result-grid__topline">
                     <span class="liuyao-result-grid__relation">{{ transformedLineDetails[index]?.relation }}{{ transformedLineDetails[index]?.stem_branch }}</span>
-                    <span class="liuyao-result-grid__bars">{{ transformedLineDetails[index]?.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
+                    <span class="liuyao-result-grid__bars">{{ transformedLineDetails[index]?.bar_text || (transformedLineDetails[index]?.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
                     <span v-if="transformedLineDetails[index]?.change_mark" class="is-change-mark">{{ transformedLineDetails[index]?.change_mark }}</span>
                     <span v-if="transformedLineDetails[index]?.shi_ying" class="liuyao-result-grid__marker">{{ transformedLineDetails[index]?.shi_ying }}</span>
                   </div>

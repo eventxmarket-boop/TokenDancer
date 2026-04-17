@@ -1,3 +1,8 @@
+## V1.4.102 - 2026-04-18
+
+- Replaced the fake liu-yao line-detail generation with palace-based 纳甲/六亲 calculation so visible relations and stem-branches no longer repeat in a fixed mock order.
+- Fixed transformed-hexagram generation to flip only moving lines instead of inverting all six lines, and aligned the board bars with each line's real yin-yang value.
+
 ## V1.4.101 - 2026-04-18
 
 - Switched liu-yao random casting to true system randomness so repeated casts no longer reuse a seed-derived pseudo-random result.

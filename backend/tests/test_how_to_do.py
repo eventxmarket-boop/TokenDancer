@@ -7,10 +7,39 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from main import app
-from app.services.how_to_do_service import ALL_GUA_CATALOG, generate_how_to_do_runtime
+from app.services.how_to_do_service import ALL_GUA_CATALOG, _build_cast_result, generate_how_to_do_runtime
 
 
 class HowToDoTests(unittest.TestCase):
+    def test_cast_relations_follow_hexagram_palace_rules(self):
+        result = _build_cast_result(
+            question="测试",
+            category="朋友关系",
+            cast_mode="manual",
+            cast_seed="2026/04/18 07:30:00",
+            manual_lines=[7, 8, 8, 8, 8, 8],
+        )
+
+        self.assertEqual(result["raw_result"]["hexagram_name"], "复")
+        relations = [item["relation"] for item in result["raw_result"]["line_details"]]
+        self.assertEqual(relations, ["妻财", "官鬼", "兄弟", "兄弟", "妻财", "子孙"])
+
+    def test_transformed_hexagram_only_changes_moving_lines(self):
+        result = _build_cast_result(
+            question="测试",
+            category="朋友关系",
+            cast_mode="manual",
+            cast_seed="2026/04/18 07:31:00",
+            manual_lines=[6, 7, 8, 9, 7, 8],
+        )
+
+        raw_lines = result["raw_result"]["lines"]
+        transformed = result["raw_result"]["transformed_line_details"]
+        self.assertTrue(transformed)
+        for index, line in enumerate(raw_lines):
+            expected = ("阴" if line["yin_yang"] == "阳" else "阳") if line["value"] in {6, 9} else line["yin_yang"]
+            self.assertEqual(transformed[index]["yin_yang"], expected)
+
     def test_how_to_do_catalog_contains_all_sixty_four_hexagrams(self):
         with TestClient(app) as client:
             response = client.post("/persona-api/how-to-do", json={"section": "catalog", "use_ai": False})
