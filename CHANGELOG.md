@@ -1,7 +1,8 @@
-## V1.4.93 - 2026-04-18
+## V1.4.94 - 2026-04-18
 
-- Restored the Ganzhi time line on the liu-yao board so the panel shows the full `年/月/日/时(旬空)` line.
-- Kept main hexagram and transformed hexagram panels visible side by side while defaulting hidden spirit, symbol bars, and nayin to on.
+- Replaced the category datalist with a usable select and expanded the category list to cover more liu-yao cases.
+- Restored manual input as a six-step dropdown flow and kept the main / transformed hexagrams aligned in one frame.
+- Normalized the cast seed to a readable time string instead of a raw timestamp.
 
 ## V1.4.90 - 2026-04-18
 

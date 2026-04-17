@@ -22,6 +22,7 @@ SECTION_LABELS = {
 }
 
 CAST_MODE_LABELS = {
+    "manual": "手动输入",
     "character": "汉字起卦",
     "number": "数字起卦",
     "coin": "硬币起卦",
@@ -523,12 +524,18 @@ def _build_mutual_hexagram(lines: list[dict[str, Any]]) -> dict[str, Any] | None
     }
 
 
-def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_text: str = "") -> list[dict[str, Any]]:
+def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_text: str = "", manual_lines: list[int] | None = None) -> list[dict[str, Any]]:
     rng = _make_rng(seed, mode, cast_mode, question, source_text)
     lines: list[dict[str, Any]] = []
+    manual_lines = manual_lines or []
     for position in range(1, 7):
       # 6/7/8/9 代表老阴、少阳、少阴、老阳
-        if cast_mode == "character":
+        if cast_mode == "manual":
+            if position <= len(manual_lines) and manual_lines[position - 1] in {6, 7, 8, 9}:
+                value = manual_lines[position - 1]
+            else:
+                value = rng.choice([6, 7, 8, 9])
+        elif cast_mode == "character":
             base = sum(ord(ch) for ch in source_text or question or seed) + position * 17
             value = [6, 7, 8, 9][base % 4]
         elif cast_mode == "number":
@@ -556,9 +563,9 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
     return lines
 
 
-def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: str, source_text: str = "") -> dict[str, Any]:
+def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: str, source_text: str = "", manual_lines: list[int] | None = None) -> dict[str, Any]:
     seed_value = cast_seed or datetime.now().isoformat(timespec="seconds")
-    lines = _build_lines(seed_value, "cast", cast_mode, question, source_text)
+    lines = _build_lines(seed_value, "cast", cast_mode, question, source_text, manual_lines=manual_lines)
     binary = _binary_from_lines(lines)
     hexagram_number, name = _hexagram_lookup(binary)
     upper = TRIGRAMS[_trigram_index(lines[3:])]
@@ -846,6 +853,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     question = _normalize_text(request.get("question"))
     category = _normalize_text(request.get("category"))
     cast_seed = _normalize_text(request.get("cast_seed"))
+    manual_lines = request.get("manual_lines") or []
     character_text = _normalize_text(request.get("character_text"))
     number_text = _normalize_text(request.get("number_text"))
     use_ai = bool(request.get("use_ai", True))
@@ -858,9 +866,9 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         base_result = _build_songs_result()
     elif section == "cast":
         source_text = character_text or number_text or question
-        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=source_text)
+        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=source_text, manual_lines=manual_lines)
     elif section == "detail":
-        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=character_text or number_text or question)
+        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=character_text or number_text or question, manual_lines=manual_lines)
     else:
         raise ValueError(f"不支持的模块: {section}")
 
