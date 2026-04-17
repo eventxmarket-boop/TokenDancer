@@ -1,3 +1,8 @@
+## V1.4.90 - 2026-04-18
+
+- Added the transformed hexagram board to `我该怎么做` so changing lines now render a second hexagram panel instead of only the main one.
+- Kept the board layout source-like while filling the missing变卦 section that was previously only present in raw data.
+
 ## V1.4.89 - 2026-04-18
 
 - Removed more non-source liu-yao extras from `我该怎么做` so the board stays closer to the referenced layout.

@@ -120,6 +120,11 @@ const castLineDetails = computed(() => {
   if (!Array.isArray(list)) return []
   return [...list].reverse()
 })
+const transformedLineDetails = computed(() => {
+  const list = castResult.value?.transformed_line_details
+  if (!Array.isArray(list)) return []
+  return [...list].reverse()
+})
 const castQuestionText = computed(() => {
   const text = result.value?.question?.trim() || question.value.trim() || ''
   return text || '搜索'
@@ -574,6 +579,31 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
+              <div v-if="castResult?.transformed_hexagram" class="liuyao-result-board__transformed">
+                <p class="liuyao-result-board__title">
+                  {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
+                </p>
+                <div class="liuyao-line-board">
+                  <div
+                    v-for="line in transformedLineDetails"
+                    :key="`transformed-${line.position}`"
+                    class="liuyao-line-board__row"
+                    :class="{ 'is-changing': line.is_changing }"
+                  >
+                    <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
+                    <div class="liuyao-line-board__content">
+                      <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
+                      <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                      <div class="liuyao-line-board__bars">{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</div>
+                      <div class="liuyao-line-board__tags">
+                        <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
+                        <span v-if="showNaYin">{{ line.nayin }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="how-to-do-toggle-row" style="margin-top: 1rem;">
                 <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
                 <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
@@ -1001,6 +1031,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 0.8rem;
   padding: 1rem 0;
+}
+
+.liuyao-result-board__transformed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .liuyao-result-board__time {

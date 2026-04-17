@@ -461,6 +461,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     mutual_hexagram = _build_mutual_hexagram(lines)
     hexagram_spec = HEXAGRAM_SPECS.get(name, {"palace": "未知宫", "tag": ""})
     transformed_hexagram = None
+    transformed_line_details: list[dict[str, Any]] = []
     if changing_lines:
         transformed_lines = [
             {
@@ -482,6 +483,10 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "upper_trigram": transformed_upper["name"],
             "lower_trigram": transformed_lower["name"],
         }
+        transformed_line_details = [
+            _build_line_detail(position, item, seed_value + "-transformed", question)
+            for position, item in enumerate(transformed_lines, start=1)
+        ]
 
     summary = (
         f"本卦为{name}卦（第{hexagram_number}卦），{_hexagram_meaning(name)}。"
@@ -542,6 +547,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "lines": lines,
             "line_details": line_details,
             "transformed_hexagram": transformed_hexagram,
+            "transformed_line_details": transformed_line_details,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "day_label": time_line,
             "panel_title": panel_title,
