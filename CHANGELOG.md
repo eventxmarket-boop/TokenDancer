@@ -1,3 +1,9 @@
+## V1.4.96 - 2026-04-18
+
+- Added proper `世/应` markers to the liu-yao board based on hexagram tag mapping.
+- Added changing-line `o/x` markers so moving lines are rendered like the source board.
+- Kept the main and transformed hexagrams aligned in a single frame with the source-style board layout.
+
 ## V1.4.95 - 2026-04-18
 
 - Removed the duplicate transformed-hexagram title from the top header and kept only the right-aligned title within the transformed board.

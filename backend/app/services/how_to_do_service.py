@@ -196,6 +196,17 @@ HEXAGRAM_SPECS = {
     "比": {"palace": "坤宫", "tag": "归魂"},
 }
 
+SHI_YING_MAP = {
+    "六冲": (6, 3),
+    "一世": (1, 4),
+    "二世": (2, 5),
+    "三世": (3, 6),
+    "四世": (4, 1),
+    "五世": (5, 2),
+    "游魂": (4, 1),
+    "归魂": (2, 6),
+}
+
 GROUNDING_SNIPPETS = [
     "六爻更适合先看局势变化，再决定进退。",
     "有动爻时，先看变化位，再看整体趋势。",
@@ -465,12 +476,21 @@ def _line_text(position: int, yin_yang: str, is_changing: bool) -> str:
     return f"{prefix}：{'阳' if yin_yang == '阳' else '阴'}{'（动）' if is_changing else ''}"
 
 
-def _build_line_detail(position: int, line: dict[str, Any], seed: str, question: str) -> dict[str, Any]:
+def _shi_ying_positions(hexagram_name: str) -> tuple[int, int]:
+    spec = HEXAGRAM_SPECS.get(hexagram_name, {})
+    tag = spec.get("tag", "")
+    return SHI_YING_MAP.get(tag, (0, 0))
+
+
+def _build_line_detail(position: int, line: dict[str, Any], seed: str, question: str, shi_position: int = 0, ying_position: int = 0) -> dict[str, Any]:
     rng = _make_rng(seed, question, position, line.get("yin_yang"))
     hidden_relation = rng.choice(RELATIONS)
     hidden_stem = rng.choice(["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"])
     hidden_branch = BRANCHES[(position + 2) % len(BRANCHES)]
     hidden_element = rng.choice(["金", "木", "水", "火", "土"])
+    change_mark = ""
+    if line["is_changing"]:
+        change_mark = "o" if line["yin_yang"] == "阳" else "x"
     return {
         "position": position,
         "position_name": line["position_name"],
@@ -478,12 +498,13 @@ def _build_line_detail(position: int, line: dict[str, Any], seed: str, question:
         "guidance": line["guidance"],
         "is_changing": line["is_changing"],
         "yin_yang": line["yin_yang"],
+        "change_mark": change_mark,
         "six_spirit": SIX_SPIRITS[(position - 1) % len(SIX_SPIRITS)],
         "relation": RELATIONS[(position - 1) % len(RELATIONS)],
         "stem_branch": f"{rng.choice(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'])}{BRANCHES[(position - 1) % len(BRANCHES)]}",
         "nayin": rng.choice(["海中金", "炉中火", "大林木", "路旁土", "剑锋金", "山头火", "涧下水", "城头土"]),
         "hidden_spirit": f"{hidden_relation}{hidden_stem}{hidden_branch}{hidden_element}" if position == 5 else "",
-        "shi_ying": "世" if position == 1 else "应" if position == 4 else "",
+        "shi_ying": "世" if position == shi_position else "应" if position == ying_position else "",
     }
 
 
@@ -573,6 +594,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     changing_lines = [item["position"] for item in lines if item["is_changing"]]
     mutual_hexagram = _build_mutual_hexagram(lines)
     hexagram_spec = HEXAGRAM_SPECS.get(name, {"palace": "未知宫", "tag": ""})
+    shi_position, ying_position = _shi_ying_positions(name)
     transformed_hexagram = None
     transformed_line_details: list[dict[str, Any]] = []
     if changing_lines:
@@ -597,7 +619,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "lower_trigram": transformed_lower["name"],
         }
         transformed_line_details = [
-            _build_line_detail(position, item, seed_value + "-transformed", question)
+            _build_line_detail(position, item, seed_value + "-transformed", question, *_shi_ying_positions(transformed_name))
             for position, item in enumerate(transformed_lines, start=1)
         ]
 
@@ -629,7 +651,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         "驿马": BRANCHES[_stable_seed(seed_value, question, "yi-ma") % len(BRANCHES)],
         "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
     }
-    line_details = [_build_line_detail(position, item, seed_value, question) for position, item in enumerate(lines, start=1)]
+    line_details = [_build_line_detail(position, item, seed_value, question, shi_position, ying_position) for position, item in enumerate(lines, start=1)]
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
     day_label = now.strftime("%Y年%m月%d日%H:%M:%S %A")
     day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")

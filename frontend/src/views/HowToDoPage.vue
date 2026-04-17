@@ -282,6 +282,7 @@ async function cast() {
                     <div v-if="line.hidden_spirit" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
                     <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
                     <div class="liuyao-line-board__tags">
+                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
                       <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
                       <span>{{ line.nayin }}</span>
                     </div>
@@ -307,6 +308,7 @@ async function cast() {
                     <div v-if="line.hidden_spirit" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
                     <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
                     <div class="liuyao-line-board__tags">
+                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
                       <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
                       <span>{{ line.nayin }}</span>
                     </div>
@@ -546,6 +548,11 @@ async function cast() {
   gap: 0.35rem 0.6rem;
   font-size: 0.84rem;
   color: var(--text-secondary);
+}
+
+.is-change-mark {
+  color: #c2410c;
+  font-weight: 800;
 }
 
 @media (max-width: 768px) {
