@@ -5,6 +5,7 @@ import FavoritesPage from '@/views/FavoritesPage.vue'
 import CreatePersonaPage from '@/views/CreatePersonaPage.vue'
 import CreateWizardPage from '@/views/CreateWizardPage.vue'
 import CreateResultPage from '@/views/CreateResultPage.vue'
+import ReplyAssistantLandingPage from '@/views/ReplyAssistantLandingPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
 import HowToDoPage from '@/views/HowToDoPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
@@ -61,6 +62,12 @@ const router = createRouter({
     {
       path: '/reply-assistant',
       name: 'reply-assistant',
+      component: ReplyAssistantLandingPage,
+      meta: { title: '我该怎么回' },
+    },
+    {
+      path: '/reply-assistant/workbench',
+      name: 'reply-assistant-workbench',
       component: ReplyAssistantPage,
       meta: { title: '我该怎么回' },
     },

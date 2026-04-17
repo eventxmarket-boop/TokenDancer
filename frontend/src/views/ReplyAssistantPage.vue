@@ -131,7 +131,7 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
       <p class="hero-text">直接贴消息，系统只给你能直接发的结果，不展示内部分析过程。</p>
     </div>
     <div class="hero-actions">
-      <RouterLink class="secondary-btn" to="/">回首页</RouterLink>
+      <RouterLink class="secondary-btn" to="/reply-assistant">回入口页</RouterLink>
     </div>
   </section>
 

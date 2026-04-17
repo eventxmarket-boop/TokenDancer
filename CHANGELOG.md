@@ -1,3 +1,9 @@
+## V1.4.68 - 2026-04-17
+
+- Split `我该怎么回` into a top-level landing page and a deeper reply workbench route.
+- Added a homepage-style dual-sticker landing page for `我该怎么回` and `我该怎么做` so the section entrance mirrors the home screen.
+- Kept the existing reply assistant functionality intact on a separate workbench route while preserving the same top-level nav experience.
+
 ## V1.4.67 - 2026-04-17
 
 - Converted the family-companion fill flow to the same one-page-one-item pattern used by the self-mainline flow.

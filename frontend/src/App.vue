@@ -30,7 +30,7 @@ function toggleTheme() {
 }
 
 const isReplyMenuActive = computed(
-  () => route.path === '/reply-assistant' || route.path === '/how-to-do',
+  () => route.path === '/reply-assistant' || route.path === '/reply-assistant/workbench' || route.path === '/how-to-do',
 )
 
 const isSeedMenuActive = computed(
@@ -76,7 +76,7 @@ watch(
           <div class="nav-group" :class="{ 'nav-group--active': isReplyMenuActive }">
             <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">我该怎么回</RouterLink>
             <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
-              <RouterLink to="/reply-assistant" class="nav-dropdown__item">我该怎么回</RouterLink>
+              <RouterLink to="/reply-assistant/workbench" class="nav-dropdown__item">我该怎么回</RouterLink>
               <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>
             </div>
           </div>
