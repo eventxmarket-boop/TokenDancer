@@ -1,3 +1,8 @@
+## V1.4.100 - 2026-04-18
+
+- Adjusted each liu-yao row to horizontal layout so entries now read like `父母甲巳 ▅ ▅`.
+- Moved `↑伏...` onto its own line below the bars for both the main and transformed hexagrams.
+
 ## V1.4.99 - 2026-04-18
 
 - Switched transformed-hexagram titles to full names such as `水泽节（坎·一世）` instead of the shortened trigram-only label.

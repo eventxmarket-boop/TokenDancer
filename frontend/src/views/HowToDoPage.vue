@@ -262,23 +262,23 @@ async function cast() {
                 <div class="liuyao-result-grid__spirit">{{ line.six_spirit }}</div>
 
                 <div class="liuyao-result-grid__cell">
-                  <div class="liuyao-result-grid__relation">{{ line.relation }}{{ line.stem_branch }}</div>
-                  <div class="liuyao-result-grid__line">
-                    <span v-if="line.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ line.hidden_spirit }}</span>
+                  <div class="liuyao-result-grid__topline">
+                    <span class="liuyao-result-grid__relation">{{ line.relation }}{{ line.stem_branch }}</span>
                     <span class="liuyao-result-grid__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
                     <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
                     <span v-if="line.shi_ying" class="liuyao-result-grid__marker">{{ line.shi_ying }}</span>
                   </div>
+                  <div v-if="line.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ line.hidden_spirit }}</div>
                 </div>
 
                 <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__cell liuyao-result-grid__cell--right">
-                  <div class="liuyao-result-grid__relation">{{ transformedLineDetails[index]?.relation }}{{ transformedLineDetails[index]?.stem_branch }}</div>
-                  <div class="liuyao-result-grid__line">
-                    <span v-if="transformedLineDetails[index]?.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ transformedLineDetails[index]?.hidden_spirit }}</span>
+                  <div class="liuyao-result-grid__topline">
+                    <span class="liuyao-result-grid__relation">{{ transformedLineDetails[index]?.relation }}{{ transformedLineDetails[index]?.stem_branch }}</span>
                     <span class="liuyao-result-grid__bars">{{ transformedLineDetails[index]?.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
                     <span v-if="transformedLineDetails[index]?.change_mark" class="is-change-mark">{{ transformedLineDetails[index]?.change_mark }}</span>
                     <span v-if="transformedLineDetails[index]?.shi_ying" class="liuyao-result-grid__marker">{{ transformedLineDetails[index]?.shi_ying }}</span>
                   </div>
+                  <div v-if="transformedLineDetails[index]?.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ transformedLineDetails[index]?.hidden_spirit }}</div>
                 </div>
               </template>
             </div>
@@ -476,7 +476,7 @@ async function cast() {
   line-height: 1.45;
 }
 
-.liuyao-result-grid__line {
+.liuyao-result-grid__topline {
   display: flex;
   align-items: center;
   gap: 0.35rem;
