@@ -1,3 +1,10 @@
+## V1.4.85 - 2026-04-18
+
+- Re-embedded the `我该怎么做` module as a standalone six-yao toolset again, using the `likeSo/liu-yao` library as the new source reference.
+- Restored the top-level entry, landing page, route, backend router, frontend service, and backend runtime so the module can be removed later as one strip-friendly unit.
+- Completed the full six-yao surface with cast, hexagram catalog, calendar, clock, records, and songs views under the same project UI system.
+- Added regression coverage for the 64-hexagram catalog and the AI-backed cast flow.
+
 ## V1.4.84 - 2026-04-18
 
 - Removed the embedded `我该怎么做` feature and its route, returning the app to the no-feature state before that module was introduced.

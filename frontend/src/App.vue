@@ -33,6 +33,9 @@ const seedNavTarget = computed(() => {
 const replyNavLabel = computed(() => {
   return '我该怎么回'
 })
+const howToDoNavLabel = computed(() => {
+  return '我该怎么做'
+})
 
 function applyTheme(mode: 'day' | 'night') {
   if (typeof document === 'undefined') {
@@ -49,6 +52,8 @@ function toggleTheme() {
 const isReplyMenuActive = computed(
   () => route.path === '/reply-assistant' || route.path === '/reply-assistant/workbench',
 )
+
+const isHowToDoMenuActive = computed(() => route.path === '/how-to-do')
 
 const isSeedMenuActive = computed(
   () => route.path.startsWith('/create') || route.path === '/',
@@ -100,6 +105,13 @@ watch(
             <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">{{ replyNavLabel }}</RouterLink>
             <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
               <RouterLink to="/reply-assistant/workbench" class="nav-dropdown__item">我该怎么回</RouterLink>
+            </div>
+          </div>
+
+          <div class="nav-group" :class="{ 'nav-group--active': isHowToDoMenuActive }">
+            <RouterLink to="/how-to-do" class="nav-dropdown__trigger">{{ howToDoNavLabel }}</RouterLink>
+            <div class="nav-dropdown" aria-label="我该怎么做 下拉菜单">
+              <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>
             </div>
           </div>
 
