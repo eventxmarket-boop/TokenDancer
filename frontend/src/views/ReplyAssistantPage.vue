@@ -354,19 +354,11 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 </script>
 
 <template>
-  <section class="page-hero page-hero--single reply-assistant-hero">
-    <div class="hero-copy">
-      <h1>我该怎么回</h1>
-    </div>
-    <RouterLink class="text-link" to="/reply-assistant">入口</RouterLink>
-  </section>
-
   <section class="section-card reply-shell">
     <div class="reply-thread">
       <article v-for="turn in turns" :key="turn.id" class="reply-turn" :class="`reply-turn--${turn.role}`">
-        <div class="reply-turn__meta">
-          <span class="reply-turn__tag">{{ turn.role === 'user' ? '我' : '助手' }}</span>
-          <span v-if="turn.mode && turn.role === 'assistant' && turn.mode !== 'default'" class="reply-turn__mode">
+        <div v-if="turn.role === 'assistant'" class="reply-turn__meta">
+          <span v-if="turn.mode && turn.mode !== 'default'" class="reply-turn__mode">
             {{ rewriteButtons.find((item) => item.mode === turn.mode)?.label || '重写' }}
           </span>
         </div>
@@ -411,9 +403,6 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
       </article>
 
       <article v-if="loading" class="reply-turn reply-turn--assistant">
-        <div class="reply-turn__meta">
-          <span class="reply-turn__tag">助手</span>
-        </div>
         <p class="reply-turn__text">生成中…</p>
       </article>
     </div>
@@ -574,11 +563,6 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 </template>
 
 <style scoped>
-.reply-assistant-hero {
-  align-items: center;
-  justify-content: space-between;
-}
-
 .reply-shell {
   display: grid;
   gap: 1rem;
@@ -616,7 +600,6 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
   margin-bottom: 0.7rem;
 }
 
-.reply-turn__tag,
 .reply-turn__mode {
   display: inline-flex;
   align-items: center;

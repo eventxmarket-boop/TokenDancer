@@ -1,3 +1,8 @@
+## V1.4.74 - 2026-04-18
+
+- Removed the remaining top-facing labels from `我该怎么回` so the page opens straight into the conversation window.
+- Removed the assistant label from the chat flow and kept the screen focused on the actual reply output and composer.
+
 ## V1.4.73 - 2026-04-18
 
 - Reworked `我该怎么回` into a chat-window layout with a bottom composer, quick context expansion, file/image attach buttons, and an advanced drawer.
