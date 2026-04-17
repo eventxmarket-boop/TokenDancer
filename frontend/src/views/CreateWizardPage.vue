@@ -429,6 +429,227 @@ const selfModeNextStepCopy: Record<SelfCreateMode, string> = {
   deep: '当前已经是最完整路径',
 }
 
+type SelfFillPageKey =
+  | 'materials'
+  | 'analysis'
+  | 'signals'
+  | 'material_details'
+  | 'identity'
+  | 'decision'
+  | 'knowledge'
+  | 'boundary'
+  | 'interview'
+  | 'custom'
+  | 'review'
+
+type SelfFillPageCard = {
+  key: SelfFillPageKey
+  title: string
+  description: string
+  summary: string
+}
+
+const selfFillPageCards: SelfFillPageCard[] = [
+  {
+    key: 'analysis',
+    title: '准备与分析',
+    description: '先看要准备什么，再开始逐页填写。',
+    summary: '先把素材范围、填写项数量和当前档位看清楚，再进入下一页。',
+  },
+  {
+    key: 'materials',
+    title: '材料层',
+    description: '先放能证明你判断方式的素材。',
+    summary: '把真实聊天、长文、决策记录、项目复盘或 OCR 材料先放进来。',
+  },
+  {
+    key: 'signals',
+    title: '公开资料 / 外部反馈',
+    description: '把可查资料和别人评价补上。',
+    summary: '这一步会帮助系统区分稳定人格和动态事实。',
+  },
+  {
+    key: 'material_details',
+    title: '材料说明',
+    description: '说明你最代表自己的材料是什么。',
+    summary: '写你最能代表自己的材料总览和材料类型。',
+  },
+  {
+    key: 'identity',
+    title: '自我身份层',
+    description: '写你是谁、站在哪。',
+    summary: '把长期目标、价值锚点、底线和角色定位写清楚。',
+  },
+  {
+    key: 'decision',
+    title: '自我判断层',
+    description: '写你怎么判断问题。',
+    summary: '把风险偏好、决策原则、取舍方式和止损规则写清楚。',
+  },
+  {
+    key: 'knowledge',
+    title: '自我知识源层',
+    description: '写你现在知道什么。',
+    summary: '把静态材料、最近动态和可查证来源写清楚。',
+  },
+  {
+    key: 'boundary',
+    title: '边界规则 / 验证样本',
+    description: '写不能越线的地方。',
+    summary: '把不编造、不过度承诺、验证样本和边界规则写清楚。',
+  },
+  {
+    key: 'interview',
+    title: '追问补洞',
+    description: '用更少问题补关键缺口。',
+    summary: '先从下拉问题补洞，再用回答修正分析报告。',
+  },
+  {
+    key: 'custom',
+    title: '可选追问',
+    description: '补 1 到 3 个你自己想问的问题。',
+    summary: '把你自己最想追问的补充问题写进去。',
+  },
+  {
+    key: 'review',
+    title: '汇总摘要',
+    description: '全部填完后回头看一眼，再继续修改。',
+    summary: '把前面填过的内容收成一页摘要，方便你回头逐项修改。',
+  },
+]
+
+const selfFillPageIndex = ref(0)
+const selfFillCurrentPage = computed(() => selfFillPageCards[selfFillPageIndex.value] || selfFillPageCards[0])
+const selfFillInfoPageCards = computed(() => selfFillPageCards.filter((item) => item.key !== 'analysis' && item.key !== 'review'))
+const selfFillInfoPageCount = computed(() => selfFillInfoPageCards.value.length)
+const selfFillPageCount = computed(() => selfFillPageCards.length)
+const selfFillPageNavItems = computed(() =>
+  selfFillPageCards.map((item, index) => ({
+    ...item,
+    index,
+    active: index === selfFillPageIndex.value,
+    completed: index < selfFillPageIndex.value,
+    isReview: item.key === 'review',
+  }))
+)
+const selfFillCurrentPageIsHelper = computed(() =>
+  selfFillCurrentPage.value.key === 'analysis' || selfFillCurrentPage.value.key === 'review'
+)
+const selfFillCurrentInfoPageIndex = computed(() => {
+  const index = selfFillInfoPageCards.value.findIndex((item) => item.key === selfFillCurrentPage.value.key)
+  return index >= 0 ? index + 1 : 0
+})
+const selfFillPrepHints = computed(() => {
+  const hints = [
+    `这条主线一共 ${selfFillInfoPageCount.value} 个填写项，外加 1 个准备页和 1 个汇总页。`,
+    '建议先准备真实聊天、长文表达、项目复盘或决策记录。',
+    '如果有公开资料、外部反馈或可查来源，也可以一并放在旁边。',
+  ]
+
+  if (createMode.value === 'light') {
+    hints.unshift('轻量模式适合先拿 1 到 2 个最像你的材料试跑。')
+  } else if (createMode.value === 'standard') {
+    hints.unshift('标准模式适合先补全主线，再逐页补缺口。')
+  } else {
+    hints.unshift('深度模式适合把材料、追问、知识源和边界一次补完整。')
+  }
+
+  return hints
+})
+const selfFillReviewRows = computed(() => [
+  { key: 'name', label: '名称', value: formState.name || '未填写', pageKey: 'materials' as SelfFillPageKey },
+  { key: 'mode', label: '蒸馏深度', value: selfModeLabels[createMode.value], pageKey: 'materials' as SelfFillPageKey },
+  {
+    key: 'sources',
+    label: '公开资料 / 知识源',
+    value: formState.self_public_sources_text || '未填写',
+    pageKey: 'signals' as SelfFillPageKey,
+  },
+  {
+    key: 'feedback',
+    label: '他人评价 / 外部反馈',
+    value: formState.self_external_feedback_text || '未填写',
+    pageKey: 'signals' as SelfFillPageKey,
+  },
+  {
+    key: 'material',
+    label: '材料说明',
+    value: formState.work_system_summary || '未填写',
+    pageKey: 'material_details' as SelfFillPageKey,
+  },
+  {
+    key: 'identity',
+    label: '自我身份层',
+    value: formState.reply_persona_summary || '未填写',
+    pageKey: 'identity' as SelfFillPageKey,
+  },
+  {
+    key: 'decision',
+    label: '自我判断层',
+    value: formState.thinking_dna_summary || '未填写',
+    pageKey: 'decision' as SelfFillPageKey,
+  },
+  {
+    key: 'knowledge',
+    label: '自我知识源层',
+    value: formState.memory_evidence_summary || '未填写',
+    pageKey: 'knowledge' as SelfFillPageKey,
+  },
+  {
+    key: 'boundary',
+    label: '边界规则',
+    value: formState.reflection_rules_summary || '未填写',
+    pageKey: 'boundary' as SelfFillPageKey,
+  },
+  {
+    key: 'interview',
+    label: '追问补洞',
+    value: `${selfInterviewEntries.value.length} 项已完成`,
+    pageKey: 'interview' as SelfFillPageKey,
+  },
+  {
+    key: 'custom',
+    label: '可选追问',
+    value: formState.self_interview_custom_questions_text || '未填写',
+    pageKey: 'custom' as SelfFillPageKey,
+  },
+])
+
+function jumpToSelfFillReviewTarget(item: { key: string; pageKey: SelfFillPageKey }) {
+  if (item.key === 'mode') {
+    goStep(1)
+    return
+  }
+  goSelfFillPageByKey(item.pageKey)
+}
+
+function resetSelfFillPageIndex() {
+  selfFillPageIndex.value = 0
+}
+
+function goSelfFillPage(nextIndex: number) {
+  selfFillPageIndex.value = Math.min(Math.max(nextIndex, 0), selfFillPageCards.length - 1)
+}
+
+function goSelfFillPageByKey(key: SelfFillPageKey) {
+  const index = selfFillPageCards.findIndex((item) => item.key === key)
+  if (index >= 0) {
+    goSelfFillPage(index)
+  }
+}
+
+function nextSelfFillPage() {
+  if (selfFillCurrentPage.value.key === 'review') {
+    goStep(4)
+    return
+  }
+  goSelfFillPage(selfFillPageIndex.value + 1)
+}
+
+function prevSelfFillPage() {
+  goSelfFillPage(selfFillPageIndex.value - 1)
+}
+
 const selfInterviewQuestionOptions: SelfInterviewQuestionOption[] = [
   {
     key: 'long_term_goal',
@@ -767,14 +988,15 @@ async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput
   selfFillAssistantLoading.value = true
 
   try {
+    const currentPage = selfFillCurrentPage.value
     const payload: SelfFillAssistantRequestPayload = {
       message,
       create_mode: createMode.value,
       current_step: String(step.value),
-      active_section: '自我主线',
-      active_field_key: '',
-      active_field_label: '',
-      field_context: selfModeJourneyCopy[createMode.value],
+      active_section: currentPage.title,
+      active_field_key: currentPage.key,
+      active_field_label: currentPage.title,
+      field_context: `${selfModeJourneyCopy[createMode.value]} · ${currentPage.summary}`,
       conversation_context: priorMessages
         .slice(-8)
         .map((item) => `${item.role === 'user' ? '用户' : '助手'}：${item.content}`)
@@ -1097,6 +1319,7 @@ function selectSelfMode(mode: SelfCreateMode) {
   inputMode.value = 'manual_profile'
   selfInputModes.value = ['manual_profile']
   resetFormForType(createType.value, selectedName.value, inputMode.value)
+  resetSelfFillPageIndex()
   resetSelfFillAssistantConversation()
   step.value = 2
 }
@@ -1751,6 +1974,7 @@ function loadStateSnapshot() {
   if (createType.value === 'self_unified') {
     formState.name = normalizeSelfUnifiedDisplayName(formState.name)
     hydrateSelfInterviewEntriesFromText(formState.self_interview_answers_text)
+    resetSelfFillPageIndex()
     if (!selfFillAssistantMessages.value.length) {
       resetSelfFillAssistantConversation()
     }
@@ -1773,6 +1997,7 @@ function applyQueryDefaults() {
 
   resetFormForType(createType.value, selectedName.value, inputMode.value)
   if (createType.value === 'self_unified') {
+    resetSelfFillPageIndex()
     resetSelfFillAssistantConversation()
   }
 }
@@ -2518,339 +2743,433 @@ watch(
             <p class="section-note">{{ isFamilyCompanion ? (isReunionPersona ? '先看一眼记忆与护栏，再继续生成。' : '先看一眼，再继续生成。') : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
           </div>
 
-          <div v-if="createType === 'self_unified'" class="wizard-form">
-            <div class="summary-panel summary-panel--compact">
+          <div v-if="createType === 'self_unified'" class="wizard-form wizard-form--self-fill">
+            <div class="summary-panel summary-panel--compact self-fill-intro">
               <p class="eyebrow">自我主线</p>
-              <h3>素材收集 → 分析报告 → 追问补洞 → 能力配置 → 生成</h3>
-              <p class="state-copy">先把资料池放进来，再生成分析报告和补洞问题，最后再收敛成正式自我主线。</p>
+              <h3>按页填写，而不是一次铺开</h3>
+              <p class="state-copy">轻量先试，标准继续补，深度再拉满。你可以随时上一步、下一步，或者直接点右侧页签跳回去改。</p>
               <p class="state-copy state-copy--muted">{{ selfModeJourneyCopy[createMode] }} {{ selfModeNextStepCopy[createMode] }}</p>
+              <ul class="summary-panel__list">
+                <li><span>填写项</span><strong>{{ selfFillInfoPageCount }} 项</strong></li>
+                <li><span>辅助页</span><strong>2 页</strong></li>
+                <li><span>页面总数</span><strong>{{ selfFillPageCount }} 页</strong></li>
+                <li><span>当前档位</span><strong>{{ selfModeLabels[createMode] }}</strong></li>
+              </ul>
+              <ul class="self-fill-prep-list">
+                <li v-for="hint in selfFillPrepHints" :key="hint">{{ hint }}</li>
+              </ul>
             </div>
 
-            <MaterialInputPanel
-              v-model="selfMaterialState"
-              path-type="self"
-              :supports-guided-prompts="false"
-            />
-
-            <div class="summary-panel summary-panel--compact">
-              <p class="eyebrow">分析报告</p>
-              <h3>先把素材整理成可检查的中间报告</h3>
-              <p class="state-copy">这一步会把身份、判断、表达、工作方式、时间线、外部反馈和缺口先整理出来。</p>
-            </div>
-
-            <div class="summary-panel summary-panel--compact self-fill-assistant-panel">
-              <div class="self-fill-assistant-panel__head">
-                <div>
-                  <p class="eyebrow">填写助手</p>
-                  <h3>只解释这页怎么填</h3>
-                </div>
-                <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">
-                  打开填写助手
-                </button>
-              </div>
-              <p class="state-copy">它会调用大模型解释当前自我主线的 skill 逻辑、字段含义和补洞顺序，只回答填写相关问题。</p>
-              <div class="self-fill-assistant-panel__chips">
+            <div class="self-fill-layout">
+              <aside class="self-fill-rail">
                 <button
-                  v-for="item in selfFillAssistantQuickPrompts"
-                  :key="item.label"
+                  v-for="page in selfFillPageNavItems"
+                  :key="page.key"
                   type="button"
-                  class="ghost-button ghost-button--small"
-                  @click="openSelfFillAssistantDialog(item.prompt)"
+                  class="self-fill-rail__button"
+                  :class="{ active: page.active, completed: page.completed, helper: page.isReview || page.key === 'analysis' }"
+                  @click="goSelfFillPage(page.index)"
                 >
-                  {{ item.label }}
+                  <span class="self-fill-rail__index">{{ page.isReview ? '汇总' : page.index + 1 }}</span>
+                  <span class="self-fill-rail__body">
+                    <strong>{{ page.title }}</strong>
+                    <small>{{ page.description }}</small>
+                  </span>
                 </button>
-              </div>
-            </div>
+              </aside>
 
-            <div class="form-grid">
-              <label class="form-field">
-                <span>名称</span>
-                <input v-model="formState.name" class="field-input" type="text" placeholder="例如：更完整的我" />
-              </label>
-              <label class="form-field">
-                <span>蒸馏深度</span>
-                <input :value="selfModeLabels[createMode]" class="field-input" type="text" readonly />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>公开资料 / 知识源</span>
-                <textarea
-                  v-model="formState.self_public_sources_text"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="GitHub / 博客 / 作品集 / 公众号 / 视频号 / B站 / 其他可查资料"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>他人评价 / 外部反馈</span>
-                <textarea
-                  v-model="formState.self_external_feedback_text"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="别人怎么评价你的判断、表达、推进方式或边界感"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>材料说明</span>
-                <textarea
-                  v-model="formState.work_system_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="先写最能代表你的材料是什么"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>材料类型</span>
-                <textarea
-                  v-model="formState.work_system_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：真实聊天 / 长文表达 / 决策记录 / 项目复盘"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>自我身份层</span>
-                <textarea
-                  v-model="formState.reply_persona_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="你是谁、站在什么位置说话"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>自我身份要点</span>
-                <textarea
-                  v-model="formState.reply_persona_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：长期目标 / 价值锚点 / 底线 / 经验标签"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>自我判断层</span>
-                <textarea
-                  v-model="formState.thinking_dna_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="你做判断时最看重什么"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>自我判断要点</span>
-                <textarea
-                  v-model="formState.thinking_dna_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：风险偏好 / 决策原则 / 取舍方式 / 止损规则"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>自我知识源层</span>
-                <textarea
-                  v-model="formState.memory_evidence_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="静态材料、最近动态、指定网站 / 项目 / 文档"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>知识源要点</span>
-                <textarea
-                  v-model="formState.memory_evidence_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：静态材料 / 动态来源 / 可查证信息源"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>边界规则</span>
-                <textarea
-                  v-model="formState.reflection_rules_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="不编造经历、不假装熟悉、不把动态事实说死"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>验证样本</span>
-                <textarea
-                  v-model="formState.self_validation_samples_text"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：要不要接 offer / 要不要转方向 / 要不要先做 MVP"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="summary-panel summary-panel--compact">
-              <p class="eyebrow">追问补洞</p>
-              <h3>把分析报告里缺的关键问题补全</h3>
-              <p class="state-copy">先从下拉框选一个问题，系统会自动弹出对话框。回答后点“添加”，会同步进分析报告的缺口补全里。</p>
-
-              <div class="self-interview-builder">
-                <label class="form-field self-interview-builder__select">
-                  <span>选择问题</span>
-                  <select
-                    v-model="selfInterviewSelectedOptionKey"
-                    class="field-input"
-                    @change="openSelfInterviewDialog(selfInterviewSelectedOptionKey)"
-                  >
-                    <option v-for="option in selfInterviewQuestionOptions" :key="option.key" :value="option.key">
-                      {{ option.label }} · {{ option.dimension }}
-                    </option>
-                  </select>
-                </label>
-
-                <div class="self-interview-builder__status">
-                  <strong>已添加 {{ selfInterviewEntries.length }} / {{ selfInterviewQuestionOptions.length }} 项</strong>
-                  <span>同一个问题会自动覆盖旧答案，方便你持续修正。</span>
+              <section class="self-fill-page">
+                <div class="section-head self-fill-page__head">
+                  <div>
+                    <p class="eyebrow">{{ selfFillCurrentPage.key === 'review' ? '汇总页' : selfFillCurrentPageIsHelper ? '准备页' : `第 ${selfFillCurrentInfoPageIndex} 项` }}</p>
+                    <h3>{{ selfFillCurrentPage.title }}</h3>
+                  </div>
+                  <p class="section-note">{{ selfFillCurrentPage.description }}</p>
                 </div>
 
-                <div v-if="selfInterviewEntries.length" class="self-interview-builder__list">
-                  <article v-for="entry in selfInterviewEntries" :key="entry.id" class="self-interview-builder__item">
-                    <div class="self-interview-builder__item-head">
+                <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                  <h3>{{ selfFillCurrentPage.summary }}</h3>
+                  <p class="state-copy">
+                    {{ selfFillCurrentPageIsHelper ? '这一页先帮你看清结构，再继续往下填。' : '这一页只聚焦一个信息点，填完就可以下一步。' }}
+                  </p>
+                  <p class="state-copy state-copy--muted">可以随时回到任一页继续修改，不用一次填完。</p>
+                </div>
+
+                <div class="self-fill-page__toolbar">
+                  <button class="ghost-button ghost-button--small" type="button" :disabled="selfFillPageIndex === 0" @click="prevSelfFillPage">
+                    上一步
+                  </button>
+                  <button class="ghost-button ghost-button--small" type="button" @click="openSelfFillAssistantDialog()">
+                    打开填写助手
+                  </button>
+                  <button class="primary-btn primary-btn--small" type="button" @click="nextSelfFillPage">
+                    {{ selfFillCurrentPage.key === 'review' ? '去总汇总' : '下一步' }}
+                  </button>
+                </div>
+
+                <div v-if="selfFillCurrentPage.key === 'analysis'" class="self-fill-page__content">
+                  <div class="summary-panel summary-panel--compact">
+                    <p class="eyebrow">准备资料</p>
+                    <h3>先把素材放旁边，再逐页填写</h3>
+                    <p class="state-copy">建议先准备真实聊天、长文表达、项目复盘、决策记录、公开资料和外部反馈。填写助手会随时解释每一页要做什么。</p>
+                  </div>
+                  <div class="self-fill-assistant-panel self-fill-assistant-panel--inline">
+                    <div class="self-fill-assistant-panel__head">
                       <div>
-                        <p class="self-interview-builder__item-dimension">{{ entry.dimension }}</p>
-                        <h4>{{ entry.question }}</h4>
+                        <p class="eyebrow">填写助手</p>
+                        <h3>只解释怎么填，不回答别的</h3>
                       </div>
-                      <div class="self-interview-builder__item-actions">
-                        <button type="button" class="ghost-button ghost-button--small" @click="editSelfInterviewEntry(entry.key)">编辑</button>
-                        <button type="button" class="ghost-button ghost-button--small" @click="removeSelfInterviewEntry(entry.key)">移除</button>
-                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">
+                        打开填写助手
+                      </button>
                     </div>
-                    <p class="self-interview-builder__item-answer">{{ entry.answer }}</p>
+                    <p class="state-copy">它会调用大模型解释当前页的 skill 逻辑、字段含义、补洞顺序和档位区别。</p>
+                    <div class="self-fill-assistant-panel__chips">
+                      <button
+                        v-for="item in selfFillAssistantQuickPrompts"
+                        :key="item.label"
+                        type="button"
+                        class="ghost-button ghost-button--small"
+                        @click="openSelfFillAssistantDialog(item.prompt)"
+                      >
+                        {{ item.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'materials'" class="self-fill-page__content">
+                  <MaterialInputPanel
+                    v-model="selfMaterialState"
+                    path-type="self"
+                    :supports-guided-prompts="false"
+                  />
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'signals'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>公开资料 / 知识源</span>
+                    <textarea
+                      v-model="formState.self_public_sources_text"
+                      class="field-input wizard-textarea"
+                      rows="5"
+                      placeholder="GitHub / 博客 / 作品集 / 公众号 / 视频号 / B站 / 其他可查资料"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充外部反馈</summary>
+                    <label class="form-field">
+                      <span>他人评价 / 外部反馈</span>
+                      <textarea
+                        v-model="formState.self_external_feedback_text"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="别人怎么评价你的判断、表达、推进方式或边界感"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'material_details'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>材料说明</span>
+                    <textarea
+                      v-model="formState.work_system_summary"
+                      class="field-input wizard-textarea"
+                      rows="6"
+                      placeholder="先写最能代表你的材料是什么"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充材料类型</summary>
+                    <label class="form-field">
+                      <span>材料类型</span>
+                      <textarea
+                        v-model="formState.work_system_points"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="每行一条：真实聊天 / 长文表达 / 决策记录 / 项目复盘"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'identity'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>自我身份层</span>
+                    <textarea
+                      v-model="formState.reply_persona_summary"
+                      class="field-input wizard-textarea"
+                      rows="6"
+                      placeholder="你是谁、站在什么位置说话"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充身份要点</summary>
+                    <label class="form-field">
+                      <span>自我身份要点</span>
+                      <textarea
+                        v-model="formState.reply_persona_points"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="每行一条：长期目标 / 价值锚点 / 底线 / 经验标签"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'decision'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>自我判断层</span>
+                    <textarea
+                      v-model="formState.thinking_dna_summary"
+                      class="field-input wizard-textarea"
+                      rows="6"
+                      placeholder="你做判断时最看重什么"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充判断要点</summary>
+                    <label class="form-field">
+                      <span>自我判断要点</span>
+                      <textarea
+                        v-model="formState.thinking_dna_points"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="每行一条：风险偏好 / 决策原则 / 取舍方式 / 止损规则"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'knowledge'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>自我知识源层</span>
+                    <textarea
+                      v-model="formState.memory_evidence_summary"
+                      class="field-input wizard-textarea"
+                      rows="6"
+                      placeholder="静态材料、最近动态、指定网站 / 项目 / 文档"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充知识源要点</summary>
+                    <label class="form-field">
+                      <span>知识源要点</span>
+                      <textarea
+                        v-model="formState.memory_evidence_points"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="每行一条：静态材料 / 动态来源 / 可查证信息源"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'boundary'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>边界规则</span>
+                    <textarea
+                      v-model="formState.reflection_rules_summary"
+                      class="field-input wizard-textarea"
+                      rows="6"
+                      placeholder="不编造经历、不假装熟悉、不把动态事实说死"
+                    ></textarea>
+                  </label>
+                  <details class="self-fill-more">
+                    <summary>补充验证样本</summary>
+                    <label class="form-field">
+                      <span>验证样本</span>
+                      <textarea
+                        v-model="formState.self_validation_samples_text"
+                        class="field-input wizard-textarea"
+                        rows="4"
+                        placeholder="每行一条：要不要接 offer / 要不要转方向 / 要不要先做 MVP"
+                      ></textarea>
+                    </label>
+                  </details>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'interview'" class="self-fill-page__content">
+                  <div class="summary-panel summary-panel--compact">
+                    <p class="eyebrow">追问补洞</p>
+                    <h3>把分析报告里缺的关键问题补全</h3>
+                    <p class="state-copy">先从下拉框选一个问题，系统会自动弹出对话框。回答后点“添加”，会同步进分析报告的缺口补全里。</p>
+                  </div>
+
+                  <div class="self-interview-builder">
+                    <label class="form-field self-interview-builder__select">
+                      <span>选择问题</span>
+                      <select
+                        v-model="selfInterviewSelectedOptionKey"
+                        class="field-input"
+                        @change="openSelfInterviewDialog(selfInterviewSelectedOptionKey)"
+                      >
+                        <option v-for="option in selfInterviewQuestionOptions" :key="option.key" :value="option.key">
+                          {{ option.label }} · {{ option.dimension }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <div class="self-interview-builder__status">
+                      <strong>已添加 {{ selfInterviewEntries.length }} / {{ selfInterviewQuestionOptions.length }} 项</strong>
+                      <span>同一个问题会自动覆盖旧答案，方便你持续修正。</span>
+                    </div>
+
+                    <div v-if="selfInterviewEntries.length" class="self-interview-builder__list">
+                      <article v-for="entry in selfInterviewEntries" :key="entry.id" class="self-interview-builder__item">
+                        <div class="self-interview-builder__item-head">
+                          <div>
+                            <p class="self-interview-builder__item-dimension">{{ entry.dimension }}</p>
+                            <h4>{{ entry.question }}</h4>
+                          </div>
+                          <div class="self-interview-builder__item-actions">
+                            <button type="button" class="ghost-button ghost-button--small" @click="editSelfInterviewEntry(entry.key)">编辑</button>
+                            <button type="button" class="ghost-button ghost-button--small" @click="removeSelfInterviewEntry(entry.key)">移除</button>
+                          </div>
+                        </div>
+                        <p class="self-interview-builder__item-answer">{{ entry.answer }}</p>
+                      </article>
+                    </div>
+                    <p v-else class="state-copy state-copy--muted">还没有添加问题，先从下拉框选一个吧。</p>
+                  </div>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'custom'" class="self-fill-page__content">
+                  <label class="form-field">
+                    <span>可选追问（补充）</span>
+                    <textarea
+                      v-model="formState.self_interview_custom_questions_text"
+                      class="field-input wizard-textarea"
+                      rows="7"
+                      placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div v-else-if="selfFillCurrentPage.key === 'review'" class="self-fill-page__content">
+                  <div class="summary-panel summary-panel--compact">
+                    <p class="eyebrow">汇总摘要</p>
+                    <h3>全部填完后，再看一眼整体</h3>
+                    <p class="state-copy">你可以直接回到任意一页修改，这里只是帮你把所有内容收拢成一张总览。</p>
+                  </div>
+                  <div class="self-fill-review-grid">
+                    <article v-for="item in selfFillReviewRows" :key="item.key" class="self-fill-review-card">
+                      <div class="self-fill-review-card__head">
+                      <div>
+                          <p class="self-fill-review-card__label">{{ item.label }}</p>
+                          <h4>{{ item.value }}</h4>
+                        </div>
+                        <button type="button" class="ghost-button ghost-button--small" @click="jumpToSelfFillReviewTarget(item)">
+                          编辑
+                        </button>
+                      </div>
+                      <p class="self-fill-review-card__meta">点击可回到对应页继续修改。</p>
+                    </article>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div v-if="selfFillAssistantOpen" class="self-fill-assistant-modal" @click.self="closeSelfFillAssistantDialog">
+              <div class="self-fill-assistant-modal__panel">
+                <div class="self-fill-assistant-modal__head">
+                  <div>
+                    <p class="eyebrow">填写助手</p>
+                    <h3>只解释当前页面的填写方法</h3>
+                    <p class="section-note section-note--subtle">
+                      当前档位：{{ selfModeLabels[createMode] }} · 只回答 skill 解释和字段填写
+                    </p>
+                  </div>
+                  <button type="button" class="ghost-button ghost-button--small" @click="closeSelfFillAssistantDialog">关闭</button>
+                </div>
+
+                <div class="self-fill-assistant-chat">
+                  <article
+                    v-for="(message, index) in selfFillAssistantMessages"
+                    :key="`${message.role}-${index}`"
+                    class="self-fill-assistant-chat__message"
+                    :class="`self-fill-assistant-chat__message--${message.role}`"
+                  >
+                    <span class="self-fill-assistant-chat__role">{{ message.role === 'user' ? '我' : '填写助手' }}</span>
+                    <p>{{ message.content }}</p>
                   </article>
                 </div>
-                <p v-else class="state-copy state-copy--muted">还没有添加问题，先从下拉框选一个吧。</p>
+
+                <p v-if="selfFillAssistantError" class="state-copy state-copy--error">{{ selfFillAssistantError }}</p>
+
+                <div class="self-fill-assistant-panel__chips self-fill-assistant-panel__chips--modal">
+                  <button
+                    v-for="item in selfFillAssistantQuickPrompts"
+                    :key="`modal-${item.label}`"
+                    type="button"
+                    class="ghost-button ghost-button--small"
+                    @click="sendSelfFillAssistantPrompt(item.prompt)"
+                  >
+                    {{ item.label }}
+                  </button>
+                </div>
+
+                <label class="form-field">
+                  <span>输入问题</span>
+                  <textarea
+                    v-model="selfFillAssistantInput"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="例如：这个字段怎么填？轻量和标准有什么区别？"
+                    @keydown.enter.exact.prevent="sendSelfFillAssistantMessage()"
+                  ></textarea>
+                </label>
+
+                <div class="wizard-actions wizard-actions--inline">
+                  <button class="ghost-btn" type="button" @click="closeSelfFillAssistantDialog">关闭</button>
+                  <button class="primary-btn" type="button" :disabled="selfFillAssistantLoading" @click="sendSelfFillAssistantMessage()">
+                    {{ selfFillAssistantLoading ? '发送中...' : '发送' }}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <label class="form-field">
-              <span>可选追问（补充）</span>
-              <textarea
-                v-model="formState.self_interview_custom_questions_text"
-                class="field-input wizard-textarea"
-                rows="4"
-                placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
-              ></textarea>
-            </label>
-          </div>
-
-          <div v-if="selfFillAssistantOpen" class="self-fill-assistant-modal" @click.self="closeSelfFillAssistantDialog">
-            <div class="self-fill-assistant-modal__panel">
-              <div class="self-fill-assistant-modal__head">
-                <div>
-                  <p class="eyebrow">填写助手</p>
-                  <h3>只解释当前页面的填写方法</h3>
-                  <p class="section-note section-note--subtle">
-                    当前档位：{{ selfModeLabels[createMode] }} · 只回答 skill 解释和字段填写
-                  </p>
+            <div v-if="selfInterviewDialogOpen" class="self-interview-modal" @click.self="closeSelfInterviewDialog">
+              <div class="self-interview-modal__panel">
+                <div class="self-interview-modal__head">
+                  <div>
+                    <p class="eyebrow">追问补洞</p>
+                    <h3>补全这个关键问题</h3>
+                    <p class="section-note section-note--subtle">
+                      {{ selfInterviewDialogDimension }} · {{ selfInterviewDialogReason }}
+                    </p>
+                  </div>
+                  <button type="button" class="ghost-button ghost-button--small" @click="closeSelfInterviewDialog">关闭</button>
                 </div>
-                <button type="button" class="ghost-button ghost-button--small" @click="closeSelfFillAssistantDialog">关闭</button>
-              </div>
 
-              <div class="self-fill-assistant-chat">
-                <article
-                  v-for="(message, index) in selfFillAssistantMessages"
-                  :key="`${message.role}-${index}`"
-                  class="self-fill-assistant-chat__message"
-                  :class="`self-fill-assistant-chat__message--${message.role}`"
-                >
-                  <span class="self-fill-assistant-chat__role">{{ message.role === 'user' ? '我' : '填写助手' }}</span>
-                  <p>{{ message.content }}</p>
-                </article>
-              </div>
-
-              <p v-if="selfFillAssistantError" class="state-copy state-copy--error">{{ selfFillAssistantError }}</p>
-
-              <div class="self-fill-assistant-panel__chips self-fill-assistant-panel__chips--modal">
-                <button
-                  v-for="item in selfFillAssistantQuickPrompts"
-                  :key="`modal-${item.label}`"
-                  type="button"
-                  class="ghost-button ghost-button--small"
-                  @click="sendSelfFillAssistantPrompt(item.prompt)"
-                >
-                  {{ item.label }}
-                </button>
-              </div>
-
-              <label class="form-field">
-                <span>输入问题</span>
-                <textarea
-                  v-model="selfFillAssistantInput"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="例如：这个字段怎么填？轻量和标准有什么区别？"
-                  @keydown.enter.exact.prevent="sendSelfFillAssistantMessage()"
-                ></textarea>
-              </label>
-
-              <div class="wizard-actions wizard-actions--inline">
-                <button class="ghost-btn" type="button" @click="closeSelfFillAssistantDialog">关闭</button>
-                <button class="primary-btn" type="button" :disabled="selfFillAssistantLoading" @click="sendSelfFillAssistantMessage()">
-                  {{ selfFillAssistantLoading ? '发送中...' : '发送' }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="selfInterviewDialogOpen" class="self-interview-modal" @click.self="closeSelfInterviewDialog">
-            <div class="self-interview-modal__panel">
-              <div class="self-interview-modal__head">
-                <div>
-                  <p class="eyebrow">追问补洞</p>
-                  <h3>补全这个关键问题</h3>
-                  <p class="section-note section-note--subtle">
-                    {{ selfInterviewDialogDimension }} · {{ selfInterviewDialogReason }}
-                  </p>
+                <div class="form-grid">
+                  <label class="form-field">
+                    <span>问题</span>
+                    <textarea
+                      v-model="selfInterviewDialogQuestion"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      :readonly="selfInterviewDialogKey !== 'custom_question'"
+                    ></textarea>
+                  </label>
+                  <label class="form-field">
+                    <span>回答</span>
+                    <textarea
+                      v-model="selfInterviewDialogAnswer"
+                      class="field-input wizard-textarea"
+                      rows="4"
+                      placeholder="把你的真实回答写下来"
+                    ></textarea>
+                  </label>
                 </div>
-                <button type="button" class="ghost-button ghost-button--small" @click="closeSelfInterviewDialog">关闭</button>
-              </div>
 
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>问题</span>
-                  <textarea
-                    v-model="selfInterviewDialogQuestion"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    :readonly="selfInterviewDialogKey !== 'custom_question'"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>回答</span>
-                  <textarea
-                    v-model="selfInterviewDialogAnswer"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="把你的真实回答写下来"
-                  ></textarea>
-                </label>
-              </div>
+                <p v-if="selfInterviewDialogError" class="state-copy state-copy--error">{{ selfInterviewDialogError }}</p>
 
-              <p v-if="selfInterviewDialogError" class="state-copy state-copy--error">{{ selfInterviewDialogError }}</p>
-
-              <div class="wizard-actions wizard-actions--inline">
-                <button class="ghost-btn" type="button" @click="closeSelfInterviewDialog">取消</button>
-                <button class="primary-btn" type="button" @click="addSelfInterviewEntry">添加</button>
+                <div class="wizard-actions wizard-actions--inline">
+                  <button class="ghost-btn" type="button" @click="closeSelfInterviewDialog">取消</button>
+                  <button class="primary-btn" type="button" @click="addSelfInterviewEntry">添加</button>
+                </div>
               </div>
             </div>
           </div>
@@ -3269,6 +3588,191 @@ watch(
   margin-top: 0.85rem;
 }
 
+.wizard-form--self-fill {
+  gap: 1rem;
+}
+
+.self-fill-intro {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.self-fill-prep-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.self-fill-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.self-fill-rail {
+  display: grid;
+  gap: 0.6rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.self-fill-rail__button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 159, 138, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.self-fill-rail__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 159, 138, 0.32);
+  box-shadow: 0 16px 32px rgba(255, 159, 138, 0.08);
+}
+
+.self-fill-rail__button.active {
+  border-color: rgba(255, 159, 138, 0.55);
+  background: rgba(255, 247, 244, 0.96);
+}
+
+.self-fill-rail__button.completed {
+  border-color: rgba(120, 194, 173, 0.22);
+}
+
+.self-fill-rail__button.helper {
+  background: rgba(245, 248, 255, 0.9);
+}
+
+.self-fill-rail__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  border-radius: 999px;
+  background: rgba(255, 159, 138, 0.12);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.self-fill-rail__body {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.self-fill-rail__body strong {
+  font-size: 0.95rem;
+}
+
+.self-fill-rail__body small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.self-fill-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.self-fill-page__head {
+  margin-bottom: -0.1rem;
+}
+
+.self-fill-page__summary {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.self-fill-page__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.primary-btn--small {
+  min-height: 40px;
+  padding: 0.64rem 1rem;
+}
+
+.self-fill-page__content {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.self-fill-more {
+  border: 1px dashed rgba(255, 159, 138, 0.18);
+  border-radius: 1rem;
+  padding: 0.85rem 0.95rem;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.self-fill-more > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.self-fill-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.self-fill-review-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 159, 138, 0.12);
+  border-radius: 1.15rem;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.self-fill-review-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.self-fill-review-card__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.self-fill-review-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.self-fill-review-card__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.self-fill-assistant-panel--inline {
+  margin-top: 0.25rem;
+}
+
 .self-interview-builder__select {
   width: 100%;
 }
@@ -3536,6 +4040,27 @@ watch(
     max-height: 94vh;
     padding: 1rem;
     border-radius: 22px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .self-fill-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .self-fill-rail {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .self-fill-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .self-fill-review-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

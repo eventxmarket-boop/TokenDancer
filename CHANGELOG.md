@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.58 - 2026-04-17
+
+- Reworked the self-unified creation flow into a step-by-step page wizard.
+- Added a preparation page, single-page fill navigation, and a final summary page for self creation.
+- Kept the existing skill and field logic intact while changing only the interaction pattern.
+- Added direct jump-back editing so users can revise any filled item at any time.
+
 ## V1.4.57 - 2026-04-17
 
 - Added an embedded "填写助手" inside the self-unified creation flow.
