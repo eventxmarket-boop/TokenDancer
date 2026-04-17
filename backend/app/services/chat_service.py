@@ -27,6 +27,7 @@ from app.services.intimate_companion_service import build_intimate_companion_con
 from app.services.relationship_management_service import build_relationship_management_context
 from app.services.past_relationship_service import build_past_relationship_context
 from app.services.reunion_persona_service import build_reunion_persona_context
+from app.services.self_unified_service import build_self_unified_context
 from app.services.reply_assistant_service import build_reply_assistant_context
 from app.services.zhangxuefeng_research import (
     classify_zhangxuefeng_question,
@@ -523,6 +524,10 @@ async def chat_with_persona(
     if not is_reply_assistant:
         reply_source_repo = str(persona_meta.get("source_repo") or "").strip()
         is_reply_assistant = reply_source_repo == "relationship-training-skill+xinyi+partner-skill+npy-skill+crush-skill+ex-skill+colleague-skill+teammate-skill"
+    is_self_unified = create_type == "self_unified"
+    if not is_self_unified:
+        self_source_repo = str(persona_meta.get("source_repo") or "").strip()
+        is_self_unified = self_source_repo == "self-skill+nuwa-skill+forge-skill+digital-life"
 
     normalized_message = user_message.strip()
     if not normalized_message:
@@ -548,6 +553,8 @@ async def chat_with_persona(
         if question_class in {"fact_required", "hybrid"}:
             research = await research_education_question(normalized_message, classification=question_class)
             facts_context = _format_research_context(research)
+    elif is_self_unified:
+        aux_context = build_self_unified_context(persona, history, normalized_message)
     elif is_family_companion:
         aux_context = build_family_companion_context(persona, history, normalized_message)
     elif is_reunion_persona:

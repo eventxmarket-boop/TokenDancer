@@ -107,6 +107,54 @@ const editableDraft = reactive<CreateWizardDraft>({
   self_persona_unified: {
     create_mode: 'standard',
     input_modes: [],
+    materials_summary: '',
+    self_identity: {
+      role: '',
+      long_term_goals: [],
+      value_anchors: [],
+      bottom_lines: [],
+      self_positioning: '',
+      experience_tags: [],
+    },
+    self_decision_rules: {
+      risk_preference: '',
+      selection_principles: [],
+      decision_frames: [],
+      tradeoff_style: [],
+      stop_loss_rules: [],
+      push_rules: [],
+      non_binding_promises: [],
+      safety_buffer_rules: [],
+    },
+    self_voice: {
+      tone: '',
+      sentence_style: [],
+      expression_rhythm: '',
+      humor_style: '',
+      conclusion_style: '',
+      direct_when: [],
+      soft_when: [],
+    },
+    self_knowledge_sources: {
+      static_materials: [],
+      recent_updates: [],
+      designated_sources: [],
+      dynamic_sources: [],
+      verify_first_question_types: [],
+      do_not_assume_facts: [],
+    },
+    self_boundary_rules: {
+      forbidden_actions: [],
+      caution_notes: [],
+      do_not_invent_experiences: true,
+      do_not_fake_familiarity: true,
+      do_not_override_values: true,
+      do_not_overstate_dynamic_facts: true,
+    },
+    question_routing: [],
+    deep_dive_questions: [],
+    deep_dive_answers: [],
+    validation_samples: [],
     work_system: { summary: '', points: [] },
     reply_persona: { summary: '', points: [] },
     thinking_dna: { summary: '', points: [] },
@@ -783,31 +831,81 @@ const selfUnifiedLayers = computed(() => {
 
   return [
     {
-      title: '做事方式',
-      summary: unified.work_system?.summary || '',
-      points: unified.work_system?.points || [],
+      title: '自我身份层',
+      summary: unified.self_identity?.self_positioning || unified.self_identity?.role || unified.work_system?.summary || '',
+      points: [
+        ...(unified.self_identity?.long_term_goals || []),
+        ...(unified.self_identity?.value_anchors || []),
+        ...(unified.self_identity?.bottom_lines || []),
+        ...(unified.self_identity?.experience_tags || []),
+      ],
     },
     {
-      title: '回复方式',
-      summary: unified.reply_persona?.summary || '',
-      points: unified.reply_persona?.points || [],
+      title: '自我判断层',
+      summary: unified.self_decision_rules?.risk_preference || unified.thinking_dna?.summary || '',
+      points: [
+        ...(unified.self_decision_rules?.selection_principles || []),
+        ...(unified.self_decision_rules?.decision_frames || []),
+        ...(unified.self_decision_rules?.tradeoff_style || []),
+      ],
     },
     {
-      title: '思考方式',
-      summary: unified.thinking_dna?.summary || '',
-      points: unified.thinking_dna?.points || [],
+      title: '自我表达层',
+      summary: unified.self_voice?.tone || unified.reply_persona?.summary || '',
+      points: [
+        ...(unified.self_voice?.sentence_style || []),
+        ...(unified.self_voice?.direct_when || []),
+        ...(unified.self_voice?.soft_when || []),
+      ],
     },
     {
-      title: '生活痕迹',
-      summary: unified.memory_evidence?.summary || '',
-      points: unified.memory_evidence?.points || [],
-    },
-    {
-      title: '反思规则',
-      summary: unified.reflection_rules?.summary || '',
-      points: unified.reflection_rules?.points || [],
+      title: '自我知识源层',
+      summary: unified.self_knowledge_sources?.static_materials?.[0] || unified.memory_evidence?.summary || '',
+      points: [
+        ...(unified.self_knowledge_sources?.static_materials || []),
+        ...(unified.self_knowledge_sources?.recent_updates || []),
+        ...(unified.self_knowledge_sources?.designated_sources || []),
+        ...(unified.self_knowledge_sources?.verify_first_question_types || []),
+      ],
     },
   ]
+})
+
+const selfBoundaryLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  return [
+    ...(unified.self_boundary_rules?.forbidden_actions || []),
+    ...(unified.self_boundary_rules?.caution_notes || []),
+  ]
+})
+
+const selfRoutingLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  return (unified.question_routing || []).map((route) => `${route.topic}：${Object.entries(route.weights || {})
+    .map(([key, value]) => `${key} ${Number(value).toFixed(2)}`)
+    .join(' / ')}`)
+})
+
+const selfDeepDiveLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  return (unified.deep_dive_answers || []).map((item) => `${item.question}：${item.answer || '未填写'}`)
+})
+
+const selfValidationLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  return (unified.validation_samples || []).map((sample) => `${sample.question}：${sample.expected_behavior?.join(' / ') || '未填写'}`)
 })
 
 type SelfUnifiedLayerKey = 'work_system' | 'reply_persona' | 'thinking_dna' | 'memory_evidence' | 'reflection_rules'
@@ -817,6 +915,54 @@ function ensureSelfUnifiedDraft() {
     editableDraft.self_persona_unified = {
       create_mode: 'standard',
       input_modes: [],
+      materials_summary: '',
+      self_identity: {
+        role: '',
+        long_term_goals: [],
+        value_anchors: [],
+        bottom_lines: [],
+        self_positioning: '',
+        experience_tags: [],
+      },
+      self_decision_rules: {
+        risk_preference: '',
+        selection_principles: [],
+        decision_frames: [],
+        tradeoff_style: [],
+        stop_loss_rules: [],
+        push_rules: [],
+        non_binding_promises: [],
+        safety_buffer_rules: [],
+      },
+      self_voice: {
+        tone: '',
+        sentence_style: [],
+        expression_rhythm: '',
+        humor_style: '',
+        conclusion_style: '',
+        direct_when: [],
+        soft_when: [],
+      },
+      self_knowledge_sources: {
+        static_materials: [],
+        recent_updates: [],
+        designated_sources: [],
+        dynamic_sources: [],
+        verify_first_question_types: [],
+        do_not_assume_facts: [],
+      },
+      self_boundary_rules: {
+        forbidden_actions: [],
+        caution_notes: [],
+        do_not_invent_experiences: true,
+        do_not_fake_familiarity: true,
+        do_not_override_values: true,
+        do_not_overstate_dynamic_facts: true,
+      },
+      question_routing: [],
+      deep_dive_questions: [],
+      deep_dive_answers: [],
+      validation_samples: [],
       work_system: { summary: '', points: [] },
       reply_persona: { summary: '', points: [] },
       thinking_dna: { summary: '', points: [] },
@@ -1167,7 +1313,7 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
-          <p class="eyebrow">五层结构</p>
+          <p class="eyebrow">四层结构</p>
           <div class="self-unified-grid">
             <div v-for="layer in selfUnifiedLayers" :key="layer.title" class="self-unified-grid__item">
               <span>{{ layer.title }}</span>
@@ -1180,8 +1326,52 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">边界规则</p>
+          <h3>保持自我主线不乱编、不乱演、不乱说死</h3>
+          <div class="family-grid">
+            <div v-for="line in selfBoundaryLines" :key="line" class="family-grid__item">
+              <span>边界</span>
+              <strong>{{ line }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">问题路由</p>
+          <h3>不同问题走不同权重</h3>
+          <div class="family-grid">
+            <div v-for="line in selfRoutingLines" :key="line" class="family-grid__item">
+              <span>路由</span>
+              <strong>{{ line }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">深挖层</p>
+          <h3>补足 8 到 12 个关键问题</h3>
+          <div class="family-grid">
+            <div v-for="line in selfDeepDiveLines" :key="line" class="family-grid__item">
+              <span>追问</span>
+              <strong>{{ line }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">验证样本</p>
+          <h3>用题目检查像不像本人</h3>
+          <div class="family-grid">
+            <div v-for="line in selfValidationLines" :key="line" class="family-grid__item">
+              <span>验证</span>
+              <strong>{{ line }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
           <p class="eyebrow">材料输入层</p>
-          <h3>已基于输入材料生成自我主线</h3>
+          <h3>已基于素材生成自我主线</h3>
           <div class="family-grid">
             <div v-for="line in selfMaterialLines" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
@@ -1376,7 +1566,7 @@ onMounted(() => {
           </label>
           <template v-if="draft?.meta.create_type === 'self_unified'">
             <label class="form-field">
-              <span>做事方式</span>
+              <span>自我身份层</span>
               <textarea
                 :value="getUnifiedLayerSummary('work_system')"
                 class="field-input wizard-textarea"
@@ -1385,36 +1575,7 @@ onMounted(() => {
               ></textarea>
             </label>
             <label class="form-field">
-              <span>做事方式要点</span>
-              <textarea
-                :value="getUnifiedLayerPointsText('work_system')"
-                class="field-input wizard-textarea"
-                rows="4"
-                placeholder="每行一条"
-                @input="handleUnifiedLayerPointsInput('work_system', $event)"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>回复方式</span>
-              <textarea
-                :value="getUnifiedLayerSummary('reply_persona')"
-                class="field-input wizard-textarea"
-                rows="4"
-                @input="handleUnifiedLayerSummaryInput('reply_persona', $event)"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>回复方式要点</span>
-              <textarea
-                :value="getUnifiedLayerPointsText('reply_persona')"
-                class="field-input wizard-textarea"
-                rows="4"
-                placeholder="每行一条"
-                @input="handleUnifiedLayerPointsInput('reply_persona', $event)"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>思考方式</span>
+              <span>自我判断层</span>
               <textarea
                 :value="getUnifiedLayerSummary('thinking_dna')"
                 class="field-input wizard-textarea"
@@ -1423,17 +1584,16 @@ onMounted(() => {
               ></textarea>
             </label>
             <label class="form-field">
-              <span>思考方式要点</span>
+              <span>自我表达层</span>
               <textarea
-                :value="getUnifiedLayerPointsText('thinking_dna')"
+                :value="getUnifiedLayerSummary('reply_persona')"
                 class="field-input wizard-textarea"
                 rows="4"
-                placeholder="每行一条"
-                @input="handleUnifiedLayerPointsInput('thinking_dna', $event)"
+                @input="handleUnifiedLayerSummaryInput('reply_persona', $event)"
               ></textarea>
             </label>
             <label class="form-field">
-              <span>生活痕迹</span>
+              <span>自我知识源层</span>
               <textarea
                 :value="getUnifiedLayerSummary('memory_evidence')"
                 class="field-input wizard-textarea"
@@ -1442,17 +1602,7 @@ onMounted(() => {
               ></textarea>
             </label>
             <label class="form-field">
-              <span>生活痕迹要点</span>
-              <textarea
-                :value="getUnifiedLayerPointsText('memory_evidence')"
-                class="field-input wizard-textarea"
-                rows="4"
-                placeholder="每行一条"
-                @input="handleUnifiedLayerPointsInput('memory_evidence', $event)"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>反思规则</span>
+              <span>边界规则</span>
               <textarea
                 :value="getUnifiedLayerSummary('reflection_rules')"
                 class="field-input wizard-textarea"
@@ -1461,13 +1611,13 @@ onMounted(() => {
               ></textarea>
             </label>
             <label class="form-field">
-              <span>反思规则要点</span>
+              <span>深挖答案</span>
               <textarea
-                :value="getUnifiedLayerPointsText('reflection_rules')"
+                :value="getUnifiedLayerPointsText('memory_evidence')"
                 class="field-input wizard-textarea"
                 rows="4"
-                placeholder="每行一条"
-                @input="handleUnifiedLayerPointsInput('reflection_rules', $event)"
+                placeholder="每行一条，按追问顺序填写"
+                @input="handleUnifiedLayerPointsInput('memory_evidence', $event)"
               ></textarea>
             </label>
           </template>

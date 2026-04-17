@@ -37,7 +37,7 @@ from app.services.reply_assistant_service import (
     build_reply_assistant_profile,
     infer_reply_assistant_focus,
 )
-from app.services.self_persona_unified_service import build_self_persona_draft
+from app.services.self_unified_service import build_self_persona_draft
 
 
 class CreateWizardError(RuntimeError):
@@ -1164,6 +1164,7 @@ def _build_self_draft(form_data: dict[str, Any], display_name: str = "") -> dict
         "name": _normalize_text(form_data.get("name")) or _normalize_text(display_name) or "我的人格",
         "create_mode": _normalize_text(form_data.get("create_mode")) or "standard",
         "input_modes": form_data.get("input_modes") or [form_data.get("input_mode") or "manual_profile"],
+        "raw_materials": raw_materials,
     }
 
     for layer_key, fallback in [

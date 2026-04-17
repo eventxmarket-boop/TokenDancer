@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.created_persona import CreatedPersona
 from app.schemas.create_wizard import CreateWizardDraft
+from app.services.self_unified_service import format_self_unified_layers
 from app.services import ocr_service
 
 
@@ -880,7 +881,22 @@ def load_created_persona_summary(
     profile = _normalize_text(draft.profile)
     unified = getattr(draft, "self_persona_unified", None)
     if isinstance(unified, dict):
-        profile = _normalize_text((unified.get("work_system") or {}).get("summary")) or profile
+        self_identity = unified.get("self_identity") or {}
+        self_decision_rules = unified.get("self_decision_rules") or {}
+        self_voice = unified.get("self_voice") or {}
+        self_knowledge_sources = unified.get("self_knowledge_sources") or {}
+        profile = _normalize_text(self_identity.get("self_positioning") or self_identity.get("role")) or profile
+        if not profile:
+            profile = _normalize_text((unified.get("work_system") or {}).get("summary")) or profile
+        summary_bits = [
+            _normalize_text(self_identity.get("self_positioning") or self_identity.get("role")),
+            _normalize_text(self_decision_rules.get("risk_preference")),
+            _normalize_text(self_voice.get("tone")),
+            _normalize_text(" / ".join((self_knowledge_sources.get("static_materials") or [])[:2])),
+        ]
+        summary_bits = [bit for bit in summary_bits if bit]
+        if summary_bits:
+            profile = " / ".join(summary_bits[:4])
     relation_type = _normalize_text(getattr(draft, "relationship_type", ""))
     persona_profile = getattr(draft, "persona_profile", None)
     intimate_profile = getattr(draft, "relationship_profile", None)
@@ -922,7 +938,8 @@ def load_created_persona_summary(
         "input_mode": _normalize_text(getattr(draft.meta, "input_mode", "")),
         "avatar": None,
         "intro": intro or (profile[:80] if profile else record.summary),
-        "profile": draft.profile,
+        "profile": profile or draft.profile,
+        "self_unified_layers": format_self_unified_layers(draft.model_dump()),
         "tags": [tag for tag in [display_type, relation_type] if tag],
         "topics": [],
         "recommendedQuestions": [],

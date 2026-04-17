@@ -62,6 +62,8 @@ const formState = reactive({
   memory_evidence_points: '',
   reflection_rules_summary: '',
   reflection_rules_points: '',
+  self_deep_dive_answers_text: '',
+  self_validation_samples_text: '',
   target_name: '',
   material_type: '',
   material_description: '',
@@ -749,10 +751,10 @@ function resolveGroupForTypeAndMode(type: CreateType, mode: string) {
 
 function getInputModeNote(type: CreateType, mode: string) {
   if (type === 'self_unified') {
-    if (mode === 'manual_profile') return '适合先从你自己的想法开始。'
-    if (mode === 'chat_history') return '适合把对话里的表达方式整理出来。'
-    if (mode === 'documents') return '适合把已有材料补充进去。'
-    if (mode === 'memory_notes') return '适合把记忆片段补进去。'
+    if (mode === 'manual_profile') return '先写身份、判断和表达底色。'
+    if (mode === 'chat_history') return '适合把真实聊天当作素材输入。'
+    if (mode === 'documents') return '适合把文章、笔记和项目材料补进去。'
+    if (mode === 'memory_notes') return '适合补最近变化和记忆片段。'
   }
 
   if (type === 'source_persona') {
@@ -954,16 +956,18 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
 
   if (type === 'self_unified') {
     formState.name = displayName || '自我主线'
-    formState.work_system_summary = '把做事方式整理成可以继续使用的人格骨架。'
-    formState.work_system_points = '先看目标\n再看路径\n再看边界'
-    formState.reply_persona_summary = '把回复方式整理成更像自己的表达。'
-    formState.reply_persona_points = '直接一点\n清楚一点\n保留边界'
-    formState.thinking_dna_summary = '把判断路径和取舍逻辑整理出来。'
+    formState.work_system_summary = '先放能证明你判断方式的素材。'
+    formState.work_system_points = '真实聊天\n长文表达\n项目复盘\n决策记录'
+    formState.reply_persona_summary = '把最稳定的自我定位写出来。'
+    formState.reply_persona_points = '我最在意什么\n我最坚持什么\n我站在什么位置说话'
+    formState.thinking_dna_summary = '把判断顺序和决策原则写出来。'
     formState.thinking_dna_points = '先问条件\n再看出路\n再算代价'
-    formState.memory_evidence_summary = '把聊天片段、文字材料和生活痕迹整理进去。'
-    formState.memory_evidence_points = '聊天记录\n文字片段\n文件材料'
-    formState.reflection_rules_summary = '把容易失真和需要保留的边界先写清楚。'
-    formState.reflection_rules_points = '不夸张\n不越界\n不替自己下定论'
+    formState.memory_evidence_summary = '把静态材料和动态知识源写出来。'
+    formState.memory_evidence_points = '笔记 / 文章 / 公开表达\n指定网站 / 项目 / 文档'
+    formState.reflection_rules_summary = '把边界规则和验证样本写出来。'
+    formState.reflection_rules_points = '不编造经历\n不假装熟悉\n不把动态事实说死'
+    formState.self_deep_dive_answers_text = ''
+    formState.self_validation_samples_text = '要不要接某个 offer？\n要不要转方向？\n要不要先做 MVP？\n这件事该止损还是继续推进？'
   }
 
   if (type === 'source_persona') {
@@ -2052,120 +2056,10 @@ watch(
           </div>
 
           <div v-if="createType === 'self_unified'" class="wizard-form">
-            <div class="form-grid">
-              <label class="form-field">
-                <span>名称</span>
-                <input v-model="formState.name" class="field-input" type="text" placeholder="例如：更完整的我" />
-              </label>
-              <label class="form-field">
-                <span>创建深度</span>
-                <input :value="selfModeLabels[createMode]" class="field-input" type="text" readonly />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>做事方式摘要</span>
-                <textarea
-                  v-model="formState.work_system_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="先写你做事时最稳定的样子"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>做事方式要点</span>
-                <textarea
-                  v-model="formState.work_system_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：先看目标 / 再看路径 / 再看边界"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>回复方式</span>
-                <textarea
-                  v-model="formState.reply_persona_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="你希望这个人格怎么开口说话"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>回复方式要点</span>
-                <textarea
-                  v-model="formState.reply_persona_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：直接一点 / 清楚一点 / 保留边界"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>思考方式</span>
-                <textarea
-                  v-model="formState.thinking_dna_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="你做判断时最看重什么"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>思考方式要点</span>
-                <textarea
-                  v-model="formState.thinking_dna_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：先问条件 / 再看出路 / 再算代价"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>生活痕迹</span>
-                <textarea
-                  v-model="formState.memory_evidence_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="可写聊天记录、文本片段或数字痕迹"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>生活痕迹要点</span>
-                <textarea
-                  v-model="formState.memory_evidence_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：聊天片段 / 文字材料 / 文件内容"
-                ></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>反思规则</span>
-                <textarea
-                  v-model="formState.reflection_rules_summary"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="你希望这个人格保留什么边界"
-                ></textarea>
-              </label>
-              <label class="form-field">
-                <span>反思规则要点</span>
-                <textarea
-                  v-model="formState.reflection_rules_points"
-                  class="field-input wizard-textarea"
-                  rows="4"
-                  placeholder="每行一条：不夸张 / 不越界 / 不替自己下定论"
-                ></textarea>
-              </label>
+            <div class="summary-panel summary-panel--compact">
+              <p class="eyebrow">自我主线</p>
+              <h3>素材驱动、判断优先、可持续更新</h3>
+              <p class="state-copy">先把能证明你怎么判断、怎么说话、怎么查证的材料放进来，再补结构和追问。</p>
             </div>
 
             <MaterialInputPanel
@@ -2174,16 +2068,132 @@ watch(
               :supports-guided-prompts="false"
             />
 
+            <div class="form-grid">
+              <label class="form-field">
+                <span>名称</span>
+                <input v-model="formState.name" class="field-input" type="text" placeholder="例如：更完整的我" />
+              </label>
+              <label class="form-field">
+                <span>蒸馏深度</span>
+                <input :value="selfModeLabels[createMode]" class="field-input" type="text" readonly />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>材料说明</span>
+                <textarea
+                  v-model="formState.work_system_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="先写最能代表你的材料是什么"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>材料类型</span>
+                <textarea
+                  v-model="formState.work_system_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：真实聊天 / 长文表达 / 决策记录 / 项目复盘"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>自我身份层</span>
+                <textarea
+                  v-model="formState.reply_persona_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="你是谁、站在什么位置说话"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>自我身份要点</span>
+                <textarea
+                  v-model="formState.reply_persona_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：长期目标 / 价值锚点 / 底线 / 经验标签"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>自我判断层</span>
+                <textarea
+                  v-model="formState.thinking_dna_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="你做判断时最看重什么"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>自我判断要点</span>
+                <textarea
+                  v-model="formState.thinking_dna_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：风险偏好 / 决策原则 / 取舍方式 / 止损规则"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>自我知识源层</span>
+                <textarea
+                  v-model="formState.memory_evidence_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="静态材料、最近动态、指定网站 / 项目 / 文档"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>知识源要点</span>
+                <textarea
+                  v-model="formState.memory_evidence_points"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：静态材料 / 动态来源 / 可查证信息源"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>边界规则</span>
+                <textarea
+                  v-model="formState.reflection_rules_summary"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="不编造经历、不假装熟悉、不把动态事实说死"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>验证样本</span>
+                <textarea
+                  v-model="formState.self_validation_samples_text"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="每行一条：要不要接 offer / 要不要转方向 / 要不要先做 MVP"
+                ></textarea>
+              </label>
+            </div>
+
             <div class="summary-panel summary-panel--compact">
-              <p class="eyebrow">输入方式</p>
-              <h3>可多选</h3>
-              <p class="state-copy">你可以同时保留手动填写、聊天记录、文本材料和记忆片段。</p>
-              <ul class="summary-panel__list">
-                <li v-for="option in selfInputModeOptions" :key="option.key">
-                  <span>{{ option.label }}</span>
-                  <strong>{{ selfInputModes.includes(option.key) ? '已选择' : '未选择' }}</strong>
-                </li>
-              </ul>
+              <p class="eyebrow">追问补洞</p>
+              <h3>把 8 到 12 个关键问题补全</h3>
+              <p class="state-copy">例如：哪类问题你会坚定、哪些问题你会保留余地、什么场景你会更直接。</p>
+              <textarea
+                v-model="formState.self_deep_dive_answers_text"
+                class="field-input wizard-textarea"
+                rows="10"
+                placeholder="按顺序补充回答：\n1. 哪类问题你会特别坚定？\n2. 哪类问题你会保留余地？\n3. 你做过最典型的一次错误判断是什么？\n4. 哪些原则是你后来才形成的？\n5. 你会如何权衡长期和短期？\n6. 你最讨厌哪种建议方式？\n7. 什么场景下你会故意说得更直接？\n8. 什么场景下你会更克制？"
+              ></textarea>
             </div>
           </div>
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.self_unified_service import format_self_unified_for_prompt
+
 
 PLATFORM_CONSTRAINT = (
     "你不是在表演角色，你要用该人格的判断方式、思考路径和表达倾向帮助用户解决问题。"
@@ -75,12 +77,21 @@ def build_persona_system_prompt_with_context(
 
     self_unified = persona.get("self_persona_unified") or {}
     if self_unified:
-        _append_layer_section(parts, "做事方式", self_unified.get("work_system"))
-        _append_layer_section(parts, "回复方式", self_unified.get("reply_persona"))
-        _append_layer_section(parts, "思考方式", self_unified.get("thinking_dna"))
-        _append_layer_section(parts, "生活痕迹", self_unified.get("memory_evidence"))
-        _append_layer_section(parts, "反思规则", self_unified.get("reflection_rules"))
+        unified_prompt = format_self_unified_for_prompt(persona)
+        if unified_prompt:
+            parts.append(unified_prompt)
+        else:
+            _append_layer_section(parts, "做事方式", self_unified.get("work_system"))
+            _append_layer_section(parts, "回复方式", self_unified.get("reply_persona"))
+            _append_layer_section(parts, "思考方式", self_unified.get("thinking_dna"))
+            _append_layer_section(parts, "生活痕迹", self_unified.get("memory_evidence"))
+            _append_layer_section(parts, "反思规则", self_unified.get("reflection_rules"))
         _append_section(parts, "边界规则", persona.get("guardrails", ""))
+        _append_layer_section(parts, "自我身份层", self_unified.get("self_identity"))
+        _append_layer_section(parts, "自我判断层", self_unified.get("self_decision_rules"))
+        _append_layer_section(parts, "自我表达层", self_unified.get("self_voice"))
+        _append_layer_section(parts, "自我知识源层", self_unified.get("self_knowledge_sources"))
+        _append_layer_section(parts, "自我边界", self_unified.get("self_boundary_rules"))
     reunion_persona = persona.get("reunion_persona_profile") or {}
     reunion_memory = persona.get("reunion_memory_base") or {}
     reunion_policy = persona.get("reunion_memory_retrieval_policy") or {}

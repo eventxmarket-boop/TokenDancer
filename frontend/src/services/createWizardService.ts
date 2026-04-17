@@ -373,9 +373,96 @@ export type SelfPersonaUnifiedLayer = {
   points: string[]
 }
 
+export type SelfUnifiedTextBlock = SelfPersonaUnifiedLayer
+
+export type SelfUnifiedIdentity = {
+  role: string
+  long_term_goals: string[]
+  value_anchors: string[]
+  bottom_lines: string[]
+  self_positioning: string
+  experience_tags: string[]
+}
+
+export type SelfUnifiedDecisionRules = {
+  risk_preference: string
+  selection_principles: string[]
+  decision_frames: string[]
+  tradeoff_style: string[]
+  stop_loss_rules: string[]
+  push_rules: string[]
+  non_binding_promises: string[]
+  safety_buffer_rules: string[]
+}
+
+export type SelfUnifiedVoice = {
+  tone: string
+  sentence_style: string[]
+  expression_rhythm: string
+  humor_style: string
+  conclusion_style: string
+  direct_when: string[]
+  soft_when: string[]
+}
+
+export type SelfUnifiedKnowledgeSourceItem = {
+  label: string
+  kind: string
+  detail: string
+  freshness: string
+  priority: number
+}
+
+export type SelfUnifiedKnowledgeSources = {
+  static_materials: string[]
+  recent_updates: string[]
+  designated_sources: string[]
+  dynamic_sources: SelfUnifiedKnowledgeSourceItem[]
+  verify_first_question_types: string[]
+  do_not_assume_facts: string[]
+}
+
+export type SelfUnifiedBoundaryRules = {
+  forbidden_actions: string[]
+  caution_notes: string[]
+  do_not_invent_experiences: boolean
+  do_not_fake_familiarity: boolean
+  do_not_override_values: boolean
+  do_not_overstate_dynamic_facts: boolean
+}
+
+export type SelfUnifiedQuestionRoute = {
+  topic: string
+  weights: Record<string, number>
+  notes: string[]
+}
+
+export type SelfUnifiedDeepDiveItem = {
+  question: string
+  answer: string
+  follow_up_needed: boolean
+}
+
+export type SelfUnifiedValidationSample = {
+  question: string
+  expected_behavior: string[]
+  expected_not: string[]
+  notes: string
+}
+
 export type SelfPersonaUnifiedDraft = {
   create_mode: string
   input_modes: string[]
+  materials_summary?: string
+  self_identity?: SelfUnifiedIdentity
+  self_decision_rules?: SelfUnifiedDecisionRules
+  self_voice?: SelfUnifiedVoice
+  self_knowledge_sources?: SelfUnifiedKnowledgeSources
+  self_boundary_rules?: SelfUnifiedBoundaryRules
+  question_routing?: SelfUnifiedQuestionRoute[]
+  deep_dive_questions?: string[]
+  deep_dive_answers?: SelfUnifiedDeepDiveItem[]
+  validation_samples?: SelfUnifiedValidationSample[]
   work_system: SelfPersonaUnifiedLayer
   reply_persona: SelfPersonaUnifiedLayer
   thinking_dna: SelfPersonaUnifiedLayer

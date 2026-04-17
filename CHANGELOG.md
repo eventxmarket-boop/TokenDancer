@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.53 - 2026-04-17
+
+- Upgraded the self-main creation flow from a form-style profile into a source-driven self-distillation workflow.
+- Split self personas into identity, decision-rules, voice, and knowledge-sources layers.
+- Added question-type routing so self personas answer differently across career, learning, product, decision, and reflection scenarios.
+- Introduced dynamic knowledge-source support for time-sensitive self questions.
+- Added boundary rules and validation cases so the self line reflects how the person actually judges, not just how they talk.
+
 ## V1.4.52 - 2026-04-17
 
 - Rebuilt `我该怎么回` around a strict answer-first output protocol.

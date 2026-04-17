@@ -16,7 +16,20 @@ from app.schemas.reunion_persona import (
     ReunionPersonaRetrievalPolicy,
     ReunionPersonaSafetyGuardrails,
 )
-from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft, SelfPersonaUnifiedLayer
+from app.schemas.self_unified import (
+    SelfPersonaUnifiedDraft,
+    SelfPersonaUnifiedLayer,
+    SelfUnifiedBoundaryRules,
+    SelfUnifiedDeepDiveItem,
+    SelfUnifiedDecisionRules,
+    SelfUnifiedIdentity,
+    SelfUnifiedKnowledgeSourceItem,
+    SelfUnifiedKnowledgeSources,
+    SelfUnifiedQuestionRoute,
+    SelfUnifiedTextBlock,
+    SelfUnifiedValidationSample,
+    SelfUnifiedVoice,
+)
 
 __all__ = [
     "CreatedPersonaDetailResponse",
@@ -32,6 +45,16 @@ __all__ = [
     "ReunionPersonaProfile",
     "ReunionPersonaRetrievalPolicy",
     "ReunionPersonaSafetyGuardrails",
+    "SelfUnifiedBoundaryRules",
+    "SelfUnifiedDeepDiveItem",
+    "SelfUnifiedDecisionRules",
+    "SelfUnifiedIdentity",
+    "SelfUnifiedKnowledgeSourceItem",
+    "SelfUnifiedKnowledgeSources",
+    "SelfUnifiedQuestionRoute",
+    "SelfUnifiedTextBlock",
+    "SelfUnifiedValidationSample",
+    "SelfUnifiedVoice",
     "SelfPersonaUnifiedDraft",
     "SelfPersonaUnifiedLayer",
 ]

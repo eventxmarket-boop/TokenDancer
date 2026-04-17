@@ -27,7 +27,7 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'self',
     title: '自我主线',
-    description: '从你的做事方式、表达习惯、思考路径和生活痕迹出发。',
+    description: '从你的素材、判断规则、表达方式和知识源出发。',
     groupKeys: ['self'],
   },
   {
