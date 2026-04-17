@@ -13,11 +13,6 @@ import {
   type UploadedImageDocument,
   type TextMaterialDocument,
 } from '@/services/createWizardService'
-import {
-  requestSelfFillAssistant,
-  type SelfFillAssistantRequestPayload,
-  type SelfFillAssistantResponse,
-} from '@/services/selfFillAssistantService'
 
 type CreateType =
   | 'self_unified'
@@ -419,8 +414,8 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 
 const selfModeJourneyCopy: Record<SelfCreateMode, string> = {
   light: '先试轻量，确认骨架后再补到标准。',
-  standard: '在轻量基础上补缺口，形成稳定主线。',
-  deep: '在标准基础上再补摘要与验证，拉满深度。',
+  standard: '在轻量基础上补缺口。',
+  deep: '在标准基础上再补摘要与验证。',
 }
 
 const selfModeNextStepCopy: Record<SelfCreateMode, string> = {
@@ -924,6 +919,115 @@ const selfFillAssistantQuickPrompts = [
   },
 ] as const
 
+const selfFillPageAssistantGuides: Record<string, { title: string; purpose: string; fill: string; noMaterial: string }> = {
+  analysis: {
+    title: '准备与分析',
+    purpose: '先看清这条主线要准备什么，再开始填。',
+    fill: '先准备你最像自己的材料，再往下走。',
+    noMaterial: '没材料也可以先写你手头最常见的一两条线索。',
+  },
+  materials: {
+    title: '材料层',
+    purpose: '这一页放能证明你判断方式的原始材料。',
+    fill: '优先写真实聊天、长文、项目复盘、决策记录。',
+    noMaterial: '没材料时先写你能想到的代表性片段，不用一次写满。',
+  },
+  signals: {
+    title: '公开资料 / 外部反馈',
+    purpose: '这一页补可查来源和别人对你的反馈。',
+    fill: '公开资料写 GitHub、博客、作品集、公众号等；反馈写别人怎么评价你。',
+    noMaterial: '没资料时先留空公开来源，外部反馈可以后补。',
+  },
+  material_details: {
+    title: '材料说明',
+    purpose: '这一页写材料总览。',
+    fill: '先写你最能代表自己的材料是什么，再补材料类型。',
+    noMaterial: '如果暂时没法分类，先写一段总说明。',
+  },
+  identity: {
+    title: '自我身份层',
+    purpose: '这一页写你是谁。',
+    fill: '写长期目标、价值锚点、底线和角色定位。',
+    noMaterial: '没法完整写时，先写你最想保持的样子。',
+  },
+  decision: {
+    title: '自我判断层',
+    purpose: '这一页写你怎么判断。',
+    fill: '写风险偏好、决策原则、取舍方式、止损规则。',
+    noMaterial: '先写你做决定时最常看的 1 到 2 个条件。',
+  },
+  knowledge: {
+    title: '自我知识源层',
+    purpose: '这一页写你现在知道什么。',
+    fill: '把静态材料、最近动态、可查来源分开写。',
+    noMaterial: '没材料时先写你以后准备优先查的来源。',
+  },
+  boundary: {
+    title: '边界规则 / 验证样本',
+    purpose: '这一页写不能越线的地方。',
+    fill: '写不编造、不装懂、哪些样本可以拿来验证。',
+    noMaterial: '先写一条最硬的边界，再补测试样本。',
+  },
+  interview: {
+    title: '追问补洞',
+    purpose: '这一页补缺口。',
+    fill: '从下拉框选一个问题，答完点添加。',
+    noMaterial: '如果暂时没有答案，就先选最容易回答的问题。',
+  },
+  custom: {
+    title: '可选追问',
+    purpose: '这一页补你自己想追问的内容。',
+    fill: '写 1 到 3 个你最想让系统继续追问的问题。',
+    noMaterial: '没想好时可以先空着，后面随时补。',
+  },
+  review: {
+    title: '汇总摘要',
+    purpose: '这一页看总览。',
+    fill: '回头检查前面的内容，点任意卡片可以直接改。',
+    noMaterial: '如果发现缺东西，就直接跳回对应页补。',
+  },
+}
+
+function buildSelfFillAssistantReply(messageText: string) {
+  const page = selfFillCurrentPage.value
+  const guide = selfFillPageAssistantGuides[page.key] || selfFillPageAssistantGuides.analysis
+  const text = String(messageText || '').trim()
+  const modeLabel = selfModeLabels[createMode.value]
+  const question = text || '这页怎么填'
+  const isMeaningQuestion = /是.*什么|什么意思|作用|干什么|为什么/.test(question)
+  const isHowQuestion = /怎么填|如何填|怎么写|填什么|填写/.test(question)
+  const isNoMaterialQuestion = /没材料|没有材料|没资料|没有资料|空着|不知道写什么/.test(question)
+  const isModeQuestion = /轻量|标准|深度|档位/.test(question)
+
+  if (isModeQuestion) {
+    if (createMode.value === 'light') {
+      return '轻量模式先填骨架，先试 1 到 2 个最像你的材料。'
+    }
+    if (createMode.value === 'standard') {
+      return '标准模式先补主干，再逐页补缺口。'
+    }
+    return '深度模式把材料、追问、知识源和边界一起补完整。'
+  }
+
+  const lines = [
+    `${guide.title}：${guide.purpose}`,
+    `当前档位：${modeLabel}。`,
+  ]
+
+  if (isMeaningQuestion || isHowQuestion) {
+    lines.push(`怎么填：${guide.fill}`)
+  }
+  if (isNoMaterialQuestion || (!isMeaningQuestion && !isHowQuestion && question.length < 10)) {
+    lines.push(`没材料怎么办：${guide.noMaterial}`)
+  }
+
+  if (!isMeaningQuestion && !isHowQuestion && !isNoMaterialQuestion && !isModeQuestion) {
+    lines.push(`这页先按这个顺序写：${guide.fill}`)
+  }
+
+  return lines.join('\n')
+}
+
 function createSelfFillAssistantGreeting(): SelfFillAssistantMessage {
   return {
     role: 'assistant',
@@ -953,28 +1057,6 @@ function closeSelfFillAssistantDialog() {
   selfFillAssistantError.value = ''
 }
 
-function buildSelfFillAssistantFormSnapshot() {
-  return {
-    name: formState.name,
-    create_mode: createMode.value,
-    work_system_summary: formState.work_system_summary,
-    work_system_points: formState.work_system_points,
-    reply_persona_summary: formState.reply_persona_summary,
-    reply_persona_points: formState.reply_persona_points,
-    thinking_dna_summary: formState.thinking_dna_summary,
-    thinking_dna_points: formState.thinking_dna_points,
-    memory_evidence_summary: formState.memory_evidence_summary,
-    memory_evidence_points: formState.memory_evidence_points,
-    reflection_rules_summary: formState.reflection_rules_summary,
-    reflection_rules_points: formState.reflection_rules_points,
-    self_public_sources_text: formState.self_public_sources_text,
-    self_external_feedback_text: formState.self_external_feedback_text,
-    self_validation_samples_text: formState.self_validation_samples_text,
-    self_interview_answers_text: formState.self_interview_answers_text,
-    self_interview_custom_questions_text: formState.self_interview_custom_questions_text,
-  }
-}
-
 async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput.value) {
   const message = messageText.trim()
   if (!message || selfFillAssistantLoading.value) {
@@ -982,42 +1064,12 @@ async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput
   }
 
   selfFillAssistantError.value = ''
-  const priorMessages = [...selfFillAssistantMessages.value]
-  selfFillAssistantMessages.value = [...priorMessages, { role: 'user', content: message }]
+  selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'user', content: message }]
   selfFillAssistantInput.value = ''
   selfFillAssistantLoading.value = true
-
-  try {
-    const currentPage = selfFillCurrentPage.value
-    const payload: SelfFillAssistantRequestPayload = {
-      message,
-      create_mode: createMode.value,
-      current_step: String(step.value),
-      active_section: currentPage.title,
-      active_field_key: currentPage.key,
-      active_field_label: currentPage.title,
-      field_context: `${selfModeJourneyCopy[createMode.value]} · ${currentPage.summary}`,
-      conversation_context: priorMessages
-        .slice(-8)
-        .map((item) => `${item.role === 'user' ? '用户' : '助手'}：${item.content}`)
-        .join('\n'),
-      form_snapshot: buildSelfFillAssistantFormSnapshot(),
-    }
-    const result: SelfFillAssistantResponse = await requestSelfFillAssistant(payload)
-    selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: result.reply }]
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : '填写助手暂时不可用'
-    selfFillAssistantError.value = message
-    selfFillAssistantMessages.value = [
-      ...selfFillAssistantMessages.value,
-      {
-        role: 'assistant',
-        content: `抱歉，${message}。我只回答这页的填写和 skill 解释。`,
-      },
-    ]
-  } finally {
-    selfFillAssistantLoading.value = false
-  }
+  const reply = buildSelfFillAssistantReply(message)
+  selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: reply }]
+  selfFillAssistantLoading.value = false
 }
 
 function sendSelfFillAssistantPrompt(prompt: string) {
@@ -2772,7 +2824,6 @@ watch(
                   <span class="self-fill-rail__index">{{ page.isReview ? '汇总' : page.index + 1 }}</span>
                   <span class="self-fill-rail__body">
                     <strong>{{ page.title }}</strong>
-                    <small>{{ page.description }}</small>
                   </span>
                 </button>
               </aside>
@@ -2789,9 +2840,9 @@ watch(
                 <div class="summary-panel summary-panel--compact self-fill-page__summary">
                   <h3>{{ selfFillCurrentPage.summary }}</h3>
                   <p class="state-copy">
-                    {{ selfFillCurrentPageIsHelper ? '这一页先看清结构，再继续往下填。' : '这一页只填一个信息点。' }}
+                    {{ selfFillCurrentPageIsHelper ? '先看结构，再继续往下填。' : '这一页只填一个信息点。' }}
                   </p>
-                  <p class="state-copy state-copy--muted">可以随时回到任一页继续修改，不用一次填完。</p>
+                  <p v-if="selfFillCurrentPageIsHelper || selfFillCurrentPage.key === 'review'" class="state-copy state-copy--muted">可以随时回到任一页继续修改。</p>
                 </div>
 
                 <div class="self-fill-page__toolbar">
@@ -2810,7 +2861,7 @@ watch(
                   <div class="summary-panel summary-panel--compact">
                     <p class="eyebrow">准备资料</p>
                     <h3>先把素材放旁边，再逐页填写</h3>
-                    <p class="state-copy">建议先准备真实聊天、长文表达、项目复盘、决策记录、公开资料和外部反馈。填写助手会随时解释每一页要做什么。</p>
+                    <p class="state-copy">建议先准备真实聊天、长文表达、项目复盘、决策记录和公开资料。</p>
                   </div>
                   <div class="self-fill-assistant-panel self-fill-assistant-panel--inline">
                     <div class="self-fill-assistant-panel__head">
@@ -2822,7 +2873,7 @@ watch(
                         打开填写助手
                       </button>
                     </div>
-                    <p class="state-copy">它会调用大模型解释当前页的 skill 逻辑、字段含义、补洞顺序和档位区别。</p>
+                    <p class="state-copy">它只解释当前页的 skill 逻辑、字段含义和补洞顺序。</p>
                     <div class="self-fill-assistant-panel__chips">
                       <button
                         v-for="item in selfFillAssistantQuickPrompts"
@@ -4021,6 +4072,38 @@ watch(
     max-width: 100%;
   }
 
+  .self-fill-prep-list {
+    display: none;
+  }
+
+  .self-fill-intro {
+    gap: 0.55rem;
+  }
+
+  .self-fill-intro .summary-panel__list {
+    gap: 0.25rem;
+  }
+
+  .self-fill-page__summary {
+    gap: 0.3rem;
+  }
+
+  .self-fill-page__summary .state-copy--muted {
+    display: none;
+  }
+
+  .self-fill-page__toolbar {
+    gap: 0.45rem;
+  }
+
+  .self-fill-rail__button {
+    padding: 0.78rem 0.9rem;
+  }
+
+  .self-fill-rail__body small {
+    display: none;
+  }
+
   .self-interview-modal {
     padding: 0.65rem;
   }
@@ -4058,8 +4141,22 @@ watch(
     grid-template-columns: 1fr;
   }
 
+  .self-fill-review-card__head,
+  .self-fill-assistant-panel__head,
+  .self-fill-page__head {
+    flex-direction: column;
+  }
+
   .self-fill-review-grid {
     grid-template-columns: 1fr;
+  }
+
+  .self-fill-page__toolbar .ghost-button {
+    width: 100%;
+  }
+
+  .self-fill-page__toolbar .primary-btn {
+    width: 100%;
   }
 }
 </style>

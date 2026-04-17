@@ -1,4 +1,8 @@
-# Changelog
+## V1.4.61 - 2026-04-17
+
+- Further simplified the self-unified creation wizard for small-screen use.
+- Trimmed the step rail and repeated helper copy so each screen feels closer to a one-step flow.
+- Kept the embedded fill assistant scoped to the current page while making its guidance more compact and page-specific.
 
 ## V1.4.59 - 2026-04-17
 
