@@ -1,3 +1,8 @@
+## V1.4.104 - 2026-04-18
+
+- Corrected the liu-yao board subtitle for `地雷复` so it now displays `坤·六合` instead of the wrong `坤·一世`.
+- Kept the underlying 世应 mapping unchanged while fixing only the visible title tag.
+
 ## V1.4.103 - 2026-04-18
 
 - Bound liu-yao cast results to the user-entered cast time so the displayed time,干支, and 旬空 now follow the selected起卦时间 instead of the server clock.
