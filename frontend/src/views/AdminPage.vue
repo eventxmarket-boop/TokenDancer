@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  deleteReplyCorpus,
   activateLlmConfig,
   getLlmConfig,
+  getReplyCorpusDashboard,
   saveLlmConfig,
+  saveReplyCorpus,
+  updateReplyCorpus,
   updateLlmConfig,
   type LlmConfig,
   type LlmConfigPayload,
+  type ReplyCorpus,
+  type ReplyCorpusPayload,
 } from '@/services/adminService'
 
 const loading = ref(true)
@@ -17,6 +23,12 @@ const notice = ref('')
 const items = ref<LlmConfig[]>([])
 const current = ref<LlmConfig | null>(null)
 const editingId = ref<number | null>(null)
+const corpusLoading = ref(true)
+const corpusSaving = ref(false)
+const corpusError = ref('')
+const corpusNotice = ref('')
+const corpusItems = ref<ReplyCorpus[]>([])
+const corpusEditingId = ref<number | null>(null)
 
 const emptyForm = (): LlmConfigPayload => ({
   provider: 'openai_compatible',
@@ -30,6 +42,16 @@ const emptyForm = (): LlmConfigPayload => ({
 })
 
 const form = reactive<LlmConfigPayload>(emptyForm())
+const emptyCorpusForm = (): ReplyCorpusPayload => ({
+  id: null,
+  title: '',
+  corpus_type: '高情商回复',
+  content: '',
+  sort_order: 0,
+  is_enabled: true,
+})
+
+const corpusForm = reactive<ReplyCorpusPayload>(emptyCorpusForm())
 
 const effectiveConfig = computed(
   () => current.value || items.value.find((item) => item.is_default && item.is_enabled) || null,
@@ -76,6 +98,42 @@ const loadDashboard = async () => {
   }
 }
 
+const applyToCorpusForm = (corpus: ReplyCorpus | null) => {
+  const next = corpus
+    ? {
+        id: corpus.id,
+        title: corpus.title || '',
+        corpus_type: corpus.corpus_type || '高情商回复',
+        content: corpus.content || '',
+        sort_order: corpus.sort_order ?? 0,
+        is_enabled: corpus.is_enabled,
+      }
+    : {
+        ...emptyCorpusForm(),
+        id: null,
+      }
+
+  corpusEditingId.value = corpus ? corpus.id : null
+  Object.assign(corpusForm, next)
+}
+
+const loadReplyCorpusDashboard = async () => {
+  corpusLoading.value = true
+  corpusError.value = ''
+
+  try {
+    const dashboard = await getReplyCorpusDashboard()
+    corpusItems.value = dashboard.items
+    applyToCorpusForm(dashboard.items[0] || null)
+  } catch (cause) {
+    corpusError.value = cause instanceof Error ? cause.message : '加载语料失败'
+    corpusItems.value = []
+    applyToCorpusForm(null)
+  } finally {
+    corpusLoading.value = false
+  }
+}
+
 const resetForm = () => {
   notice.value = ''
   applyToForm(null)
@@ -84,6 +142,16 @@ const resetForm = () => {
 const editConfig = (config: LlmConfig) => {
   notice.value = ''
   applyToForm(config)
+}
+
+const resetCorpusForm = () => {
+  corpusNotice.value = ''
+  applyToCorpusForm(null)
+}
+
+const editCorpus = (corpus: ReplyCorpus) => {
+  corpusNotice.value = ''
+  applyToCorpusForm(corpus)
 }
 
 const submitForm = async () => {
@@ -140,8 +208,66 @@ const activateConfig = async (id: number) => {
   }
 }
 
+const submitCorpusForm = async () => {
+  if (corpusSaving.value) {
+    return
+  }
+
+  corpusSaving.value = true
+  corpusError.value = ''
+  corpusNotice.value = ''
+
+  const payload: ReplyCorpusPayload = {
+    ...corpusForm,
+    id: corpusEditingId.value,
+    title: corpusForm.title.trim(),
+    corpus_type: corpusForm.corpus_type.trim() || '高情商回复',
+    content: corpusForm.content.trim(),
+    sort_order: Number(corpusForm.sort_order || 0),
+  }
+
+  try {
+    if (corpusEditingId.value) {
+      await updateReplyCorpus(corpusEditingId.value, payload)
+      corpusNotice.value = '语料已更新'
+    } else {
+      await saveReplyCorpus(payload)
+      corpusNotice.value = '语料已保存'
+    }
+    await loadReplyCorpusDashboard()
+  } catch (cause) {
+    corpusError.value = cause instanceof Error ? cause.message : '保存语料失败'
+  } finally {
+    corpusSaving.value = false
+  }
+}
+
+const removeCorpus = async (id: number) => {
+  if (!window.confirm('删除后无法找回，确定要删除这条语料吗？')) {
+    return
+  }
+
+  corpusSaving.value = true
+  corpusError.value = ''
+  corpusNotice.value = ''
+
+  try {
+    await deleteReplyCorpus(id)
+    corpusNotice.value = '语料已删除'
+    await loadReplyCorpusDashboard()
+    if (corpusEditingId.value === id) {
+      resetCorpusForm()
+    }
+  } catch (cause) {
+    corpusError.value = cause instanceof Error ? cause.message : '删除语料失败'
+  } finally {
+    corpusSaving.value = false
+  }
+}
+
 onMounted(() => {
   void loadDashboard()
+  void loadReplyCorpusDashboard()
 })
 </script>
 
@@ -291,6 +417,118 @@ onMounted(() => {
           </div>
         </article>
       </div>
+    </article>
+
+    <article class="section-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">我该怎么回</p>
+          <h3>语料开口</h3>
+          <p class="section-note">把高情商回复、职场婉拒、安抚接话这类样例放进来，启用后会进入回复助手。</p>
+        </div>
+        <div class="hero-actions">
+          <button class="ghost-btn" type="button" @click="resetCorpusForm">新建语料</button>
+        </div>
+      </div>
+
+      <div v-if="corpusLoading" class="state-panel">
+        <p class="eyebrow">加载中</p>
+        <h3>正在读取回复语料…</h3>
+      </div>
+
+      <div v-else class="admin-grid">
+        <section class="mini-panel">
+          <p class="side-title">语料编辑</p>
+          <form class="admin-form" @submit.prevent="submitCorpusForm">
+            <div class="form-grid">
+              <label class="form-field">
+                <span>标题</span>
+                <input v-model="corpusForm.title" class="field-input" type="text" placeholder="例如：高情商回复" />
+              </label>
+              <label class="form-field">
+                <span>类型</span>
+                <select v-model="corpusForm.corpus_type" class="field-input">
+                  <option value="高情商回复">高情商回复</option>
+                  <option value="职场婉拒">职场婉拒</option>
+                  <option value="安抚接话">安抚接话</option>
+                  <option value="边界表达">边界表达</option>
+                  <option value="推进关系">推进关系</option>
+                  <option value="其他">其他</option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>排序</span>
+                <input v-model.number="corpusForm.sort_order" class="field-input" type="number" step="1" />
+              </label>
+            </div>
+
+            <label class="form-field" style="margin-top: 12px;">
+              <span>语料内容</span>
+              <textarea
+                v-model="corpusForm.content"
+                class="field-input"
+                rows="8"
+                placeholder="建议直接粘贴回复样例，比如：场景 / 原话 / 参考回复。"
+              />
+            </label>
+
+            <div class="toggle-row">
+              <label class="field-check">
+                <input v-model="corpusForm.is_enabled" type="checkbox" />
+                <span>启用</span>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button class="primary-btn" type="submit" :disabled="corpusSaving">
+                {{ corpusEditingId ? '保存修改' : '保存语料' }}
+              </button>
+              <button class="secondary-btn" type="button" @click="loadReplyCorpusDashboard">刷新</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="mini-panel">
+          <p class="side-title">已保存语料</p>
+          <div v-if="!corpusItems.length" class="state-copy">
+            现在还没有回复语料，先贴一条就能开始用。
+          </div>
+          <div v-else class="config-list">
+            <article v-for="corpus in corpusItems" :key="corpus.id" class="config-card">
+              <div class="config-card__head">
+                <div>
+                  <p class="spotlight-card__label">#{{ corpus.id }}</p>
+                  <h4>{{ corpus.title || corpus.corpus_type }}</h4>
+                </div>
+                <div class="config-badges">
+                  <span class="status-pill" :class="{ active: corpus.is_enabled }">
+                    {{ corpus.is_enabled ? '启用' : '停用' }}
+                  </span>
+                  <span class="status-pill active">
+                    {{ corpus.corpus_type }}
+                  </span>
+                </div>
+              </div>
+
+              <p class="state-copy">
+                {{ corpus.content.slice(0, 120) }}{{ corpus.content.length > 120 ? '…' : '' }}
+              </p>
+
+              <div class="form-actions">
+                <button class="secondary-btn" type="button" @click="editCorpus(corpus)">编辑</button>
+                <button class="ghost-btn" type="button" @click="removeCorpus(corpus.id)">删除</button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <p v-if="corpusNotice" class="state-copy" style="color: #4d8a62; margin-top: 12px;">
+        {{ corpusNotice }}
+      </p>
+      <p v-if="corpusError" class="state-copy" style="color: #c85d4c; margin-top: 12px;">
+        {{ corpusError }}
+      </p>
     </article>
   </section>
 </template>

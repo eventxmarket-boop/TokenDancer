@@ -7,12 +7,24 @@ from app.schemas.llm_config import (
     LLMConfigPublic,
     LLMConfigUpsertRequest,
 )
+from app.schemas.reply_corpus import (
+    ReplyCorpusDashboardResponse,
+    ReplyCorpusPublic,
+    ReplyCorpusUpsertRequest,
+)
 from app.services.llm_config_service import (
     LLMConfigServiceError,
     activate_llm_config,
     get_llm_config_dashboard,
     save_llm_config,
     update_llm_config,
+)
+from app.services.reply_corpus_service import (
+    ReplyCorpusServiceError,
+    delete_reply_corpus,
+    get_reply_corpus_dashboard,
+    save_reply_corpus,
+    update_reply_corpus,
 )
 
 router = APIRouter()
@@ -51,4 +63,40 @@ def activate_llm_config_route(config_id: int, db: Session = Depends(get_db)):
     try:
         return activate_llm_config(db, config_id)
     except LLMConfigServiceError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/persona-api/admin/reply-corpus", response_model=ReplyCorpusDashboardResponse)
+def read_reply_corpus_dashboard(db: Session = Depends(get_db)):
+    try:
+        return get_reply_corpus_dashboard(db)
+    except ReplyCorpusServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/persona-api/admin/reply-corpus", response_model=ReplyCorpusPublic)
+def create_or_update_reply_corpus(payload: ReplyCorpusUpsertRequest, db: Session = Depends(get_db)):
+    try:
+        return save_reply_corpus(db, payload)
+    except ReplyCorpusServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/persona-api/admin/reply-corpus/{corpus_id}", response_model=ReplyCorpusPublic)
+def replace_reply_corpus(
+    corpus_id: int,
+    payload: ReplyCorpusUpsertRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        return update_reply_corpus(db, corpus_id, payload)
+    except ReplyCorpusServiceError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/persona-api/admin/reply-corpus/{corpus_id}", response_model=ReplyCorpusPublic)
+def remove_reply_corpus(corpus_id: int, db: Session = Depends(get_db)):
+    try:
+        return delete_reply_corpus(db, corpus_id)
+    except ReplyCorpusServiceError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

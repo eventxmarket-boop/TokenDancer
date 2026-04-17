@@ -1,3 +1,9 @@
+## V1.4.80 - 2026-04-18
+
+- Added a dedicated admin opening for `我该怎么回` reply corpora so users can feed targeted examples like high-EQ replies and workplace refusals.
+- Kept the corpus flow separate from LLM config, using it only as prompt grounding for the reply assistant instead of training or long-term memory.
+- Added admin CRUD for reply corpora and wired the enabled corpus text into the reply assistant runtime and chat bridge.
+
 ## V1.4.79 - 2026-04-18
 
 - Added hidden recent-turn payloads so reply generation can compress the latest chat context without changing the UI.

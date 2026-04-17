@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.services.intimate_companion_service import detect_emotional_state
 from app.services.llm_gateway import LLMGatewayError, generate_reply
 from app.services.ocr_service import summarize_ocr_results
+from app.services.reply_corpus_service import build_reply_corpus_context
 from app.services.text_sanitizer import strip_think_blocks
 
 
@@ -445,6 +446,15 @@ def _build_reply_assistant_analysis(
     }
 
 
+def _format_reply_corpus_context(raw_context: str) -> str:
+    corpus = _normalize_text(raw_context)
+    if not corpus:
+        return ""
+    if len(corpus) <= 3200:
+        return corpus
+    return corpus[:3199].rstrip("，,。！？!?；; ") + "…"
+
+
 def _build_public_fallback_response(
     *,
     message: str,
@@ -802,6 +812,7 @@ async def generate_reply_assistant_runtime(
     turns_summary = _summarize_recent_turns(conversation_turns)
     if turns_summary:
         conversation_context = "\n".join(part for part in (conversation_context, turns_summary) if part).strip()
+    reference_corpus = _format_reply_corpus_context(build_reply_corpus_context(db))
 
     analysis_result = _build_reply_assistant_analysis(
         target_person_type=target_person_type,
@@ -836,6 +847,7 @@ async def generate_reply_assistant_runtime(
         "recommended_reply 必须是可直接复制发送的最终回复，不要出现“你可以这样回”“我先接住”“如果你愿意我可以继续帮你整理”等系统味句子。"
         "risk_note 要短，说明一个风险点。"
         "likely_consequence 要短，说明这样回复后大概会发生什么。"
+        "下面会附带一段管理员维护的回复语料，只用于风格 grounding 和措辞参考，不是训练数据，不要机械照搬。"
         f"当前重写模式是：{_rewrite_mode_label(rewrite_mode)}。"
         f"回复风格要求：{_rewrite_mode_instruction(rewrite_mode)}"
     )
@@ -853,6 +865,7 @@ async def generate_reply_assistant_runtime(
             "relationship_status": relationship_status,
             "conversation_context": conversation_context,
             "conversation_turns": _normalize_conversation_turns(conversation_turns),
+            "reference_corpus": reference_corpus,
             "rewrite_mode": rewrite_mode,
             "analysis_result": analysis_result,
             "output_protocol": {
@@ -1253,6 +1266,7 @@ def build_reply_assistant_context(
     persona: dict[str, Any],
     history: list[dict[str, str]],
     user_message: str,
+    reference_corpus: str = "",
 ) -> str:
     profile = persona.get("reply_assistant_profile") or {}
     memory_base = persona.get("reply_assistant_memory_base") or persona.get("relationship_management_memory_base") or persona.get("intimate_memory_base") or persona.get("memory_base") or {}
@@ -1299,6 +1313,9 @@ def build_reply_assistant_context(
         lines.append(f"当前目标：{reply_goal}")
     if tone:
         lines.append(f"语气要求：{tone}")
+    if _normalize_text(reference_corpus):
+        lines.append("管理员语料（仅用于措辞参考，不是训练数据）")
+        lines.append(_format_reply_corpus_context(reference_corpus))
     if selected.get("selected_memories"):
         lines.append("当前召回：")
         lines.extend(f"- {item}" for item in selected["selected_memories"][:4])

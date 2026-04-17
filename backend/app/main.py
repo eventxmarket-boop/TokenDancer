@@ -31,7 +31,7 @@ from app.routers.subscriptions import router as subscriptions_router
 from app.routers.billing import router as billing_router
 from app.routers.reply_assistant import router as reply_assistant_router
 from app.routers.self_fill_assistant import router as self_fill_assistant_router
-from app.models import User, Product, Cart, CartItem, Order, OrderItem, RedeemCode, RedeemLog, APIKey, UsageRecord, BalanceLedger, CreatedPersona  # noqa: F401
+from app.models import User, Product, Cart, CartItem, Order, OrderItem, RedeemCode, RedeemLog, APIKey, UsageRecord, BalanceLedger, CreatedPersona, ReplyCorpus  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.token_grant import TokenGrant  # noqa: F401
 

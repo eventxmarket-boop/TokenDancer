@@ -29,6 +29,7 @@ from app.services.past_relationship_service import build_past_relationship_conte
 from app.services.reunion_persona_service import build_reunion_persona_context
 from app.services.self_unified_service import build_self_unified_context
 from app.services.reply_assistant_service import build_reply_assistant_context
+from app.services.reply_corpus_service import build_reply_corpus_context
 from app.services.zhangxuefeng_research import (
     classify_zhangxuefeng_question,
     research_education_question,
@@ -560,7 +561,12 @@ async def chat_with_persona(
     elif is_reunion_persona:
         aux_context = build_reunion_persona_context(persona, history, normalized_message)
     elif is_reply_assistant:
-        aux_context = build_reply_assistant_context(persona, history, normalized_message)
+        aux_context = build_reply_assistant_context(
+            persona,
+            history,
+            normalized_message,
+            reference_corpus=build_reply_corpus_context(db),
+        )
     elif is_intimate_companion:
         intimate_mode = str(persona_meta.get("input_mode") or "").strip()
         if intimate_mode in {

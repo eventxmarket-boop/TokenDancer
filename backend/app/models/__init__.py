@@ -24,6 +24,7 @@ from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
 from app.models.created_persona import CreatedPersona
 from app.models.llm_config import LLMConfig
+from app.models.reply_corpus import ReplyCorpus
 
 __all__ = [
     "Base",
@@ -54,4 +55,5 @@ __all__ = [
     "ChatMessage",
     "CreatedPersona",
     "LLMConfig",
+    "ReplyCorpus",
 ]
