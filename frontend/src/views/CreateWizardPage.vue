@@ -25,6 +25,23 @@ type CreateType =
 
 type SelfCreateMode = 'light' | 'standard' | 'deep'
 
+type SelfInterviewQuestionOption = {
+  key: string
+  label: string
+  question: string
+  dimension: string
+  reason: string
+}
+
+type SelfInterviewEntry = {
+  id: string
+  key: string
+  question: string
+  answer: string
+  dimension: string
+  reason: string
+}
+
 const router = useRouter()
 const route = useRoute()
 
@@ -388,6 +405,256 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
   light: '轻量模式',
   standard: '标准模式',
   deep: '深度模式',
+}
+
+const selfInterviewQuestionOptions: SelfInterviewQuestionOption[] = [
+  {
+    key: 'long_term_goal',
+    label: '长期目标',
+    question: '如果只能保留一个长期方向，你会先保留哪一个？',
+    dimension: '长期目标',
+    reason: '确认你真正想长期押注的方向。',
+  },
+  {
+    key: 'value_anchor',
+    label: '价值锚点',
+    question: '哪三个价值一旦被碰到，你会立刻停下来？',
+    dimension: '价值锚点',
+    reason: '确认你最不愿意让步的部分。',
+  },
+  {
+    key: 'decision_rule',
+    label: '判断规则',
+    question: '你做重大判断时最先看的三个条件是什么？',
+    dimension: '核心判断规则',
+    reason: '确认你最常用的判断顺序。',
+  },
+  {
+    key: 'expression_style',
+    label: '表达风格',
+    question: '哪些场景你会说得更直，哪些场景你会收一点？',
+    dimension: '表达风格',
+    reason: '确认你在不同场景里的表达切换。',
+  },
+  {
+    key: 'work_style',
+    label: '做事方式',
+    question: '你更常用哪种做事顺序：先保底、先推进还是先验证？',
+    dimension: '做事方式',
+    reason: '确认你做事时最稳定的节奏。',
+  },
+  {
+    key: 'mistake_case',
+    label: '错误判断',
+    question: '你做过最典型的一次错误判断是什么？',
+    dimension: '阶段变化',
+    reason: '从错误里看判断逻辑的修正点。',
+  },
+  {
+    key: 'recent_change',
+    label: '最近变化',
+    question: '最近你新增了什么观点、偏好或做法？',
+    dimension: '近期变化',
+    reason: '让动态事实能被持续更新。',
+  },
+  {
+    key: 'external_feedback',
+    label: '外部反馈',
+    question: '别人最常怎么评价你的判断、表达、推进方式或边界感？',
+    dimension: '他人评价',
+    reason: '从外部视角校准自我描述。',
+  },
+  {
+    key: 'public_sources',
+    label: '公开资料',
+    question: '你愿意让系统优先查哪些可公开验证的资料源？',
+    dimension: '公开资料源',
+    reason: '让动态问题能先查再答。',
+  },
+  {
+    key: 'boundary_rule',
+    label: '边界规则',
+    question: '哪些事情你不允许系统为了“像你”而编造？',
+    dimension: '边界规则',
+    reason: '避免人格越写越假。',
+  },
+  {
+    key: 'stop_loss',
+    label: '止损规则',
+    question: '什么信号出现时，你会判断该止损了？',
+    dimension: '止损规则',
+    reason: '补上你判断中的止损阈值。',
+  },
+  {
+    key: 'push_rule',
+    label: '推进规则',
+    question: '什么信号出现时，你会判断值得继续推进？',
+    dimension: '推进规则',
+    reason: '补上你判断中的推进阈值。',
+  },
+  {
+    key: 'custom_question',
+    label: '自定义补充',
+    question: '自定义补充',
+    dimension: '自定义补充',
+    reason: '把你最想追问的问题自己写进来。',
+  },
+]
+
+const selfInterviewEntries = ref<SelfInterviewEntry[]>([])
+const selfInterviewSelectedOptionKey = ref(selfInterviewQuestionOptions[0]?.key || 'long_term_goal')
+const selfInterviewDialogOpen = ref(false)
+const selfInterviewDialogQuestion = ref('')
+const selfInterviewDialogAnswer = ref('')
+const selfInterviewDialogDimension = ref('')
+const selfInterviewDialogReason = ref('')
+const selfInterviewDialogKey = ref('')
+const selfInterviewDialogError = ref('')
+
+function createSelfInterviewEntryId() {
+  const fallback = `self-interview-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return fallback
+}
+
+function splitQuestionAnswerLine(value: string): [string, string] {
+  const text = String(value || '').trim()
+  if (!text) {
+    return ['', '']
+  }
+
+  const separators = ['｜', '|', '：', ':']
+  for (const separator of separators) {
+    const index = text.indexOf(separator)
+    if (index > 0) {
+      return [text.slice(0, index).trim(), text.slice(index + 1).trim()]
+    }
+  }
+
+  return [text, '']
+}
+
+function parseSelfInterviewEntriesText(value: string) {
+  return String(value || '')
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [question, answer] = splitQuestionAnswerLine(line)
+      if (!question && !answer) {
+        return null
+      }
+      const option = selfInterviewQuestionOptions.find((item) => item.question === question || item.label === question)
+      return {
+        id: createSelfInterviewEntryId(),
+        key: option?.key || `legacy-${index}`,
+        question,
+        answer,
+        dimension: option?.dimension || '历史补充',
+        reason: option?.reason || '从历史保存内容里恢复',
+      } as SelfInterviewEntry
+    })
+    .filter(Boolean) as SelfInterviewEntry[]
+}
+
+function serializeSelfInterviewEntries(entries: SelfInterviewEntry[]) {
+  return entries
+    .map((entry) => {
+      const question = String(entry.question || '').trim()
+      const answer = String(entry.answer || '').trim()
+      if (!question && !answer) {
+        return ''
+      }
+      return `${question || '未命名问题'}｜${answer}`
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+function syncSelfInterviewTextFromEntries() {
+  formState.self_interview_answers_text = serializeSelfInterviewEntries(selfInterviewEntries.value)
+}
+
+function resetSelfInterviewEntries() {
+  selfInterviewEntries.value = []
+  selfInterviewSelectedOptionKey.value = selfInterviewQuestionOptions[0]?.key || 'long_term_goal'
+  selfInterviewDialogOpen.value = false
+  selfInterviewDialogQuestion.value = ''
+  selfInterviewDialogAnswer.value = ''
+  selfInterviewDialogDimension.value = ''
+  selfInterviewDialogReason.value = ''
+  selfInterviewDialogKey.value = ''
+  selfInterviewDialogError.value = ''
+  syncSelfInterviewTextFromEntries()
+}
+
+function hydrateSelfInterviewEntriesFromText(value: string) {
+  const entries = parseSelfInterviewEntriesText(value)
+  selfInterviewEntries.value = entries
+  syncSelfInterviewTextFromEntries()
+}
+
+function openSelfInterviewDialog(key = selfInterviewSelectedOptionKey.value) {
+  const option = selfInterviewQuestionOptions.find((item) => item.key === key) || selfInterviewQuestionOptions[0]
+  if (!option) {
+    return
+  }
+
+  selfInterviewSelectedOptionKey.value = option.key
+  const existing = selfInterviewEntries.value.find((entry) => entry.key === option.key)
+
+  selfInterviewDialogOpen.value = true
+  selfInterviewDialogKey.value = option.key
+  selfInterviewDialogDimension.value = option.dimension
+  selfInterviewDialogReason.value = option.reason
+  selfInterviewDialogQuestion.value = existing?.question || option.question
+  selfInterviewDialogAnswer.value = existing?.answer || ''
+  selfInterviewDialogError.value = ''
+}
+
+function closeSelfInterviewDialog() {
+  selfInterviewDialogOpen.value = false
+  selfInterviewDialogError.value = ''
+}
+
+function removeSelfInterviewEntry(key: string) {
+  selfInterviewEntries.value = selfInterviewEntries.value.filter((entry) => entry.key !== key)
+  syncSelfInterviewTextFromEntries()
+}
+
+function editSelfInterviewEntry(key: string) {
+  openSelfInterviewDialog(key)
+}
+
+function addSelfInterviewEntry() {
+  const question = selfInterviewDialogQuestion.value.trim()
+  const answer = selfInterviewDialogAnswer.value.trim()
+  if (!question) {
+    selfInterviewDialogError.value = '请先补一个问题。'
+    return
+  }
+  if (!answer) {
+    selfInterviewDialogError.value = '请先填写回答。'
+    return
+  }
+
+  const option = selfInterviewQuestionOptions.find((item) => item.key === selfInterviewDialogKey.value)
+  const nextEntry: SelfInterviewEntry = {
+    id: selfInterviewEntries.value.find((entry) => entry.key === selfInterviewDialogKey.value)?.id || createSelfInterviewEntryId(),
+    key: selfInterviewDialogKey.value || option?.key || `custom-${Date.now()}`,
+    question,
+    answer,
+    dimension: option?.dimension || '自定义补充',
+    reason: option?.reason || '手动补充',
+  }
+
+  const nextEntries = selfInterviewEntries.value.filter((entry) => entry.key !== nextEntry.key)
+  nextEntries.push(nextEntry)
+  selfInterviewEntries.value = nextEntries
+  syncSelfInterviewTextFromEntries()
+  closeSelfInterviewDialog()
 }
 
 function createEmptyMaterialState(): CreateWizardRawMaterials {
@@ -957,6 +1224,7 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   relationshipMaterialState.value = createEmptyMaterialState()
   familyMaterialFileName.value = ''
   reunionMaterialFileName.value = ''
+  resetSelfInterviewEntries()
 
   if (type === 'self_unified') {
     formState.name = displayName || '自我主线'
@@ -1324,6 +1592,7 @@ function loadStateSnapshot() {
 
   if (createType.value === 'self_unified') {
     formState.name = normalizeSelfUnifiedDisplayName(formState.name)
+    hydrateSelfInterviewEntriesFromText(formState.self_interview_answers_text)
   }
 
   return true
@@ -1657,6 +1926,16 @@ watch(
   () => {
     if (!isBootstrapping.value) {
       saveStateSnapshot()
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  selfInterviewEntries,
+  () => {
+    if (!isBootstrapping.value) {
+      syncSelfInterviewTextFromEntries()
     }
   },
   { deep: true },
@@ -2222,13 +2501,44 @@ watch(
             <div class="summary-panel summary-panel--compact">
               <p class="eyebrow">追问补洞</p>
               <h3>把分析报告里缺的关键问题补全</h3>
-              <p class="state-copy">例如：哪类问题你会坚定、哪些问题会保留余地、什么场景会更直接、哪些边界绝不碰。</p>
-              <textarea
-                v-model="formState.self_interview_answers_text"
-                class="field-input wizard-textarea"
-                rows="10"
-                placeholder="按顺序补充回答：\n1. 哪类问题你会特别坚定？\n2. 哪类问题你会保留余地？\n3. 你做过最典型的一次错误判断是什么？\n4. 哪些原则是你后来才形成的？\n5. 你会如何权衡长期和短期？\n6. 你最讨厌哪种建议方式？\n7. 什么场景下你会故意说得更直接？\n8. 什么场景下你会更克制？"
-              ></textarea>
+              <p class="state-copy">先从下拉框选一个问题，系统会自动弹出对话框。回答后点“添加”，会同步进分析报告的缺口补全里。</p>
+
+              <div class="self-interview-builder">
+                <label class="form-field self-interview-builder__select">
+                  <span>选择问题</span>
+                  <select
+                    v-model="selfInterviewSelectedOptionKey"
+                    class="field-input"
+                    @change="openSelfInterviewDialog(selfInterviewSelectedOptionKey)"
+                  >
+                    <option v-for="option in selfInterviewQuestionOptions" :key="option.key" :value="option.key">
+                      {{ option.label }} · {{ option.dimension }}
+                    </option>
+                  </select>
+                </label>
+
+                <div class="self-interview-builder__status">
+                  <strong>已添加 {{ selfInterviewEntries.length }} / {{ selfInterviewQuestionOptions.length }} 项</strong>
+                  <span>同一个问题会自动覆盖旧答案，方便你持续修正。</span>
+                </div>
+
+                <div v-if="selfInterviewEntries.length" class="self-interview-builder__list">
+                  <article v-for="entry in selfInterviewEntries" :key="entry.id" class="self-interview-builder__item">
+                    <div class="self-interview-builder__item-head">
+                      <div>
+                        <p class="self-interview-builder__item-dimension">{{ entry.dimension }}</p>
+                        <h4>{{ entry.question }}</h4>
+                      </div>
+                      <div class="self-interview-builder__item-actions">
+                        <button type="button" class="ghost-button ghost-button--small" @click="editSelfInterviewEntry(entry.key)">编辑</button>
+                        <button type="button" class="ghost-button ghost-button--small" @click="removeSelfInterviewEntry(entry.key)">移除</button>
+                      </div>
+                    </div>
+                    <p class="self-interview-builder__item-answer">{{ entry.answer }}</p>
+                  </article>
+                </div>
+                <p v-else class="state-copy state-copy--muted">还没有添加问题，先从下拉框选一个吧。</p>
+              </div>
             </div>
 
             <label class="form-field">
@@ -2240,6 +2550,49 @@ watch(
                 placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
               ></textarea>
             </label>
+          </div>
+
+          <div v-if="selfInterviewDialogOpen" class="self-interview-modal" @click.self="closeSelfInterviewDialog">
+            <div class="self-interview-modal__panel">
+              <div class="self-interview-modal__head">
+                <div>
+                  <p class="eyebrow">追问补洞</p>
+                  <h3>补全这个关键问题</h3>
+                  <p class="section-note section-note--subtle">
+                    {{ selfInterviewDialogDimension }} · {{ selfInterviewDialogReason }}
+                  </p>
+                </div>
+                <button type="button" class="ghost-button ghost-button--small" @click="closeSelfInterviewDialog">关闭</button>
+              </div>
+
+              <div class="form-grid">
+                <label class="form-field">
+                  <span>问题</span>
+                  <textarea
+                    v-model="selfInterviewDialogQuestion"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    :readonly="selfInterviewDialogKey !== 'custom_question'"
+                  ></textarea>
+                </label>
+                <label class="form-field">
+                  <span>回答</span>
+                  <textarea
+                    v-model="selfInterviewDialogAnswer"
+                    class="field-input wizard-textarea"
+                    rows="4"
+                    placeholder="把你的真实回答写下来"
+                  ></textarea>
+                </label>
+              </div>
+
+              <p v-if="selfInterviewDialogError" class="state-copy state-copy--error">{{ selfInterviewDialogError }}</p>
+
+              <div class="wizard-actions wizard-actions--inline">
+                <button class="ghost-btn" type="button" @click="closeSelfInterviewDialog">取消</button>
+                <button class="primary-btn" type="button" @click="addSelfInterviewEntry">添加</button>
+              </div>
+            </div>
           </div>
 
           <div v-else-if="createType === 'source_persona'" class="wizard-form">
@@ -2650,6 +3003,124 @@ watch(
   min-height: 36px;
 }
 
+.self-interview-builder {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.85rem;
+}
+
+.self-interview-builder__select {
+  width: 100%;
+}
+
+.self-interview-builder__status {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(255, 159, 138, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.self-interview-builder__status strong {
+  color: var(--text);
+}
+
+.self-interview-builder__list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.self-interview-builder__item {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.self-interview-builder__item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.self-interview-builder__item-dimension {
+  margin: 0 0 0.22rem;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.self-interview-builder__item-head h4 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.self-interview-builder__item-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.self-interview-builder__item-answer {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.self-interview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(18, 24, 31, 0.54);
+  backdrop-filter: blur(10px);
+}
+
+.self-interview-modal__panel {
+  width: min(880px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 244, 0.98));
+  box-shadow: 0 30px 90px rgba(37, 28, 22, 0.26);
+}
+
+.self-interview-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.wizard-actions--inline {
+  justify-content: flex-end;
+}
+
+.state-copy--error {
+  color: #c45849;
+}
+
+.state-copy--muted {
+  color: var(--muted);
+}
+
 @media (max-width: 640px) {
   .inline-meta {
     margin-top: 0.1rem;
@@ -2667,6 +3138,27 @@ watch(
 
   .ghost-button--small {
     width: auto;
+  }
+
+  .self-interview-builder__item-head,
+  .self-interview-modal__head {
+    flex-direction: column;
+  }
+
+  .self-interview-builder__item-actions,
+  .wizard-actions--inline {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .self-interview-modal {
+    padding: 0.65rem;
+  }
+
+  .self-interview-modal__panel {
+    max-height: 94vh;
+    padding: 1rem;
+    border-radius: 22px;
   }
 }
 </style>

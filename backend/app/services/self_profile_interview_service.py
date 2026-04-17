@@ -57,6 +57,17 @@ def _dedupe_questions(questions: list[tuple[str, str, str]]) -> list[tuple[str, 
     return result
 
 
+def _split_question_answer_line(value: str) -> tuple[str, str]:
+    text = _normalize_text(value)
+    if not text:
+        return "", ""
+    for delimiter in ["｜", "|", "：", ":"]:
+        if delimiter in text:
+            left, right = text.split(delimiter, 1)
+            return _normalize_text(left), _normalize_text(right)
+    return "", text
+
+
 def build_self_profile_interview_pack(
     form_data: dict[str, Any],
     analysis_report: dict[str, Any] | None = None,
@@ -122,16 +133,48 @@ def build_self_profile_interview_pack(
     deduped = _dedupe_questions(questions)
     selected = deduped[:15]
 
-    answer_lines = _split_lines(
+    answer_text = (
         form_data.get("self_interview_answers_text")
+        or form_data.get("self_interview_pairs_text")
         or form_data.get("self_deep_dive_answers_text")
         or form_data.get("deep_dive_answers_text")
     )
+    raw_answer_lines = _split_lines(answer_text)
+    explicit_pairs: list[tuple[str, str]] = []
+    legacy_answers: list[str] = []
+    for line in raw_answer_lines:
+        question, answer = _split_question_answer_line(line)
+        if question and answer:
+            explicit_pairs.append((question, answer))
+        elif answer:
+            legacy_answers.append(answer)
 
     items: list[dict[str, Any]] = []
     answered_count = 0
-    for index, (dimension, question, reason) in enumerate(selected):
-        answer = answer_lines[index] if index < len(answer_lines) else ""
+    used_questions: set[str] = set()
+
+    if explicit_pairs:
+        for question, answer in explicit_pairs:
+            used_questions.add(question)
+            items.append(
+                {
+                    "question": question,
+                    "dimension": "自定义补洞",
+                    "reason": "用户通过下拉选项补充的追问",
+                    "answer": answer,
+                    "follow_up_needed": False,
+                }
+            )
+            answered_count += 1
+
+    legacy_index = 0
+    for dimension, question, reason in selected:
+        if _normalize_text(question) in used_questions:
+            continue
+        answer = ""
+        if not explicit_pairs and legacy_index < len(legacy_answers):
+            answer = legacy_answers[legacy_index]
+            legacy_index += 1
         follow_up_needed = not bool(answer)
         if answer:
             answered_count += 1
@@ -145,10 +188,15 @@ def build_self_profile_interview_pack(
             }
         )
 
+    items = items[:15]
     return {
         "question_count": len(items),
         "answered_count": answered_count,
         "unanswered_count": max(len(items) - answered_count, 0),
         "questions": items,
-        "answer_notes": _split_lines(form_data.get("self_interview_answer_notes_text") or form_data.get("self_deep_dive_answers_text")),
+        "answer_notes": _split_lines(
+            form_data.get("self_interview_answer_notes_text")
+            or form_data.get("self_deep_dive_answers_text")
+            or form_data.get("deep_dive_answers_text")
+        ),
     }

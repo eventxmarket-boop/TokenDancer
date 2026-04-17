@@ -1,5 +1,11 @@
 # Changelog
 
+## V1.4.55 - 2026-04-17
+
+- Reworked the self-main follow-up section into a structured question picker with a modal answer dialog and add/remove entries.
+- Kept the self interview flow compatible with the backend by serializing answers as `问题｜答案` lines.
+- Preserved the existing self-unified skill mapping and the optional custom follow-up text field as an embedded upgrade, not a replacement.
+
 ## V1.4.54 - 2026-04-17
 
 - Upgraded the self-main creation flow into an embedded source-driven distillation chain with a structured analysis report and follow-up interview stage.
