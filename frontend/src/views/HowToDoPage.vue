@@ -21,8 +21,6 @@ const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
 const showHidden = ref(true)
-const useSymbols = ref(false)
-const showNaYin = ref(false)
 
 const castResult = computed(() => result.value?.raw_result as Record<string, any> | undefined)
 const castLineDetails = computed(() => {
@@ -64,8 +62,6 @@ function resetCast() {
   result.value = null
   showResultBoard.value = true
   showHidden.value = true
-  useSymbols.value = false
-  showNaYin.value = false
 }
 
 function getCurrentCastPrompt() {
@@ -204,58 +200,57 @@ async function cast() {
         </button>
 
         <div v-if="showResultBoard" class="liuyao-result-board">
+          <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
           <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
           <p class="liuyao-result-board__title">{{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span></p>
 
-          <div class="liuyao-line-board">
-            <div
-              v-for="line in castLineDetails"
-              :key="line.position"
-              class="liuyao-line-board__row"
-              :class="{ 'is-changing': line.is_changing }"
-            >
-              <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
-              <div class="liuyao-line-board__content">
-                <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
-                <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
-                <div class="liuyao-line-board__bars">{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</div>
-                <div class="liuyao-line-board__tags">
-                  <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
-                  <span v-if="showNaYin">{{ line.nayin }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="castResult?.transformed_hexagram" class="liuyao-result-board__transformed">
-            <p class="liuyao-result-board__title">
-              {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
-            </p>
-            <div class="liuyao-line-board">
-              <div
-                v-for="line in transformedLineDetails"
-                :key="`transformed-${line.position}`"
-                class="liuyao-line-board__row"
-                :class="{ 'is-changing': line.is_changing }"
-              >
-                <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
-                <div class="liuyao-line-board__content">
-                  <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
-                  <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
-                  <div class="liuyao-line-board__bars">{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</div>
-                  <div class="liuyao-line-board__tags">
-                    <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
-                    <span v-if="showNaYin">{{ line.nayin }}</span>
+          <div class="liuyao-result-boards">
+            <div class="liuyao-result-boards__item">
+              <div class="liuyao-line-board">
+                <div
+                  v-for="line in castLineDetails"
+                  :key="line.position"
+                  class="liuyao-line-board__row"
+                  :class="{ 'is-changing': line.is_changing }"
+                >
+                  <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
+                  <div class="liuyao-line-board__content">
+                    <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
+                    <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                    <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
+                    <div class="liuyao-line-board__tags">
+                      <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
+                      <span>{{ line.nayin }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="how-to-do-toggle-row" style="margin-top: 1rem;">
-            <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
-            <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
-            <button class="chip-btn" :class="{ 'chip-btn--active': showNaYin }" type="button" @click="showNaYin = !showNaYin">显示纳音</button>
+            <div v-if="castResult?.transformed_hexagram" class="liuyao-result-boards__item">
+              <p class="liuyao-result-board__title">
+                {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
+              </p>
+              <div class="liuyao-line-board">
+                <div
+                  v-for="line in transformedLineDetails"
+                  :key="`transformed-${line.position}`"
+                  class="liuyao-line-board__row"
+                  :class="{ 'is-changing': line.is_changing }"
+                >
+                  <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
+                  <div class="liuyao-line-board__content">
+                    <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
+                    <div v-if="line.hidden_spirit && showHidden" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                    <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
+                    <div class="liuyao-line-board__tags">
+                      <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
+                      <span>{{ line.nayin }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -377,6 +372,14 @@ async function cast() {
   padding: 1rem 0;
 }
 
+.liuyao-result-board__ganzhi {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .liuyao-result-board__time {
   margin: 0;
   color: var(--text-secondary);
@@ -390,12 +393,18 @@ async function cast() {
   color: var(--text-primary);
 }
 
-.liuyao-result-board__transformed {
+.liuyao-result-boards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.liuyao-result-boards__item {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding-top: 0.25rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 0.25rem 0 0;
 }
 
 .liuyao-line-board {
@@ -457,6 +466,10 @@ async function cast() {
 
 @media (max-width: 768px) {
   .how-to-do-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .liuyao-result-boards {
     grid-template-columns: 1fr;
   }
 }

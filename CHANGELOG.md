@@ -1,7 +1,7 @@
-## V1.4.92 - 2026-04-18
+## V1.4.93 - 2026-04-18
 
-- Removed the remaining copy-hexagram action from `我该怎么做` so the page is down to the core board only.
-- Kept the liu-yao module focused on cast, result, and transformed-hexagram display without extra share actions.
+- Restored the Ganzhi time line on the liu-yao board so the panel shows the full `年/月/日/时(旬空)` line.
+- Kept main hexagram and transformed hexagram panels visible side by side while defaulting hidden spirit, symbol bars, and nayin to on.
 
 ## V1.4.90 - 2026-04-18
 

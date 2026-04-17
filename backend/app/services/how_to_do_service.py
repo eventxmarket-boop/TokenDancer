@@ -4,6 +4,7 @@ import hashlib
 import json
 import random
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -123,6 +124,9 @@ HEXAGRAM_MEANINGS = {
     "巽": "渗透推进，柔中有力", "兑": "交流顺畅，利于沟通", "涣": "离散化解，先疏后聚", "节": "有节有度，守住边界",
     "中孚": "诚信内在，沟通更稳", "小过": "小事可成，不宜过大", "既济": "事情已成，注意后续", "未济": "未成之局，先别定论",
 }
+
+STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 
 HEXAGRAM_SPECS = {
     "乾": {"palace": "乾宫", "tag": "六冲"},
@@ -353,6 +357,108 @@ def _make_rng(*parts: Any) -> random.Random:
     return random.Random(_stable_seed(*parts))
 
 
+def _sexagenary_name(index: int) -> str:
+    return f"{STEMS[index % 10]}{BRANCHES[index % 12]}"
+
+
+def _year_ganzhi(dt: datetime) -> str:
+    adjusted_year = dt.year - 1 if (dt.month, dt.day) < (2, 4) else dt.year
+    return _sexagenary_name((adjusted_year - 1984) % 60)
+
+
+def _month_branch_index(dt: datetime) -> int:
+    mapping = {
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
+        6: 6,
+        7: 7,
+        8: 8,
+        9: 9,
+        10: 10,
+        11: 11,
+        12: 0,
+    }
+    branch_index = mapping.get(dt.month, 1)
+    if dt.month == 1 and (dt.month, dt.day) < (2, 4):
+        branch_index = 1
+    return branch_index
+
+
+def _month_ganzhi(dt: datetime) -> str:
+    year_stem = _year_ganzhi(dt)[0]
+    first_stem_map = {
+        "甲": "丙",
+        "己": "丙",
+        "乙": "戊",
+        "庚": "戊",
+        "丙": "庚",
+        "辛": "庚",
+        "丁": "壬",
+        "壬": "壬",
+        "戊": "甲",
+        "癸": "甲",
+    }
+    first_stem = first_stem_map[year_stem]
+    branch_index = _month_branch_index(dt)
+    month_offset = (branch_index - 2) % 12
+    stem_index = (STEMS.index(first_stem) + month_offset) % 10
+    return f"{STEMS[stem_index]}{BRANCHES[branch_index]}"
+
+
+def _day_ganzhi(dt: datetime) -> str:
+    jdn = dt.toordinal() + 1721424
+    return _sexagenary_name((jdn + 49) % 60)
+
+
+def _hour_branch_index(dt: datetime) -> int:
+    return ((dt.hour + 1) // 2) % 12
+
+
+def _hour_ganzhi(dt: datetime) -> str:
+    day_stem = _day_ganzhi(dt)[0]
+    first_stem_map = {
+        "甲": "甲",
+        "己": "甲",
+        "乙": "丙",
+        "庚": "丙",
+        "丙": "戊",
+        "辛": "戊",
+        "丁": "庚",
+        "壬": "庚",
+        "戊": "壬",
+        "癸": "壬",
+    }
+    first_stem = first_stem_map[day_stem]
+    branch_index = _hour_branch_index(dt)
+    stem_index = (STEMS.index(first_stem) + branch_index) % 10
+    return f"{STEMS[stem_index]}{BRANCHES[branch_index]}"
+
+
+def _xunkong(dt: datetime) -> str:
+    day_index = (dt.toordinal() + 1721424 + 49) % 60
+    groups = [
+        ("戌", "亥"),
+        ("申", "酉"),
+        ("午", "未"),
+        ("辰", "巳"),
+        ("寅", "卯"),
+        ("子", "丑"),
+    ]
+    empty_a, empty_b = groups[day_index // 10]
+    return f"旬空{empty_a}{empty_b}"
+
+
+def _ganzhi_line(dt: datetime) -> str:
+    year = _year_ganzhi(dt)
+    month = _month_ganzhi(dt)
+    day = _day_ganzhi(dt)
+    hour = _hour_ganzhi(dt)
+    return f"{year}年{month}月{day}日{hour}时({_xunkong(dt)})"
+
+
 def _line_text(position: int, yin_yang: str, is_changing: bool) -> str:
     prefix = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"][position - 1]
     return f"{prefix}：{'阳' if yin_yang == '阳' else '阴'}{'（动）' if is_changing else ''}"
@@ -517,11 +623,13 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
     }
     line_details = [_build_line_detail(position, item, seed_value, question) for position, item in enumerate(lines, start=1)]
-    day_label = datetime.now().strftime("%Y年%m月%d日%H:%M:%S %A")
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    day_label = now.strftime("%Y年%m月%d日%H:%M:%S %A")
     day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")
     panel_title = f"{lower['meaning']}{upper['meaning']}{name}"
     panel_subtitle = f"{hexagram_spec['palace'].replace('宫', '')}·{hexagram_spec['tag']}" if hexagram_spec["tag"] else hexagram_spec["palace"].replace("宫", "")
-    time_line = f"{datetime.now().strftime('%Y年%m月%d日%H:%M:%S')} {day_label.split(' ')[-1]}农历三月初二"
+    time_line = f"{now.strftime('%Y年%m月%d日%H:%M:%S')} {day_label.split(' ')[-1]}农历三月初二"
+    ganzhi_line = _ganzhi_line(now)
     suggestions = [
         "先看动爻在哪一层，再判断该守还是该推。",
         "有变卦时，优先看变化方向，不要只盯本卦。",
@@ -550,6 +658,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
             "transformed_line_details": transformed_line_details,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "day_label": time_line,
+            "ganzhi_line": ganzhi_line,
             "panel_title": panel_title,
             "panel_subtitle": panel_subtitle,
             "hexagram_tag": hexagram_spec["tag"],
