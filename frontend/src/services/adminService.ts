@@ -1,3 +1,5 @@
+import { authHeaders } from '@/services/authService'
+
 const API_PREFIX = '/persona-api'
 
 export type LlmConfig = {
@@ -57,16 +59,16 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export async function getLlmConfig(): Promise<LlmConfigDashboard> {
-  const response = await fetch(`${API_PREFIX}/admin/llm-config`)
+  const response = await fetch(`${API_PREFIX}/admin/llm-config`, {
+    headers: authHeaders(),
+  })
   return readJson<LlmConfigDashboard>(response)
 }
 
 export async function saveLlmConfig(payload: LlmConfigPayload): Promise<LlmConfig> {
   const response = await fetch(`${API_PREFIX}/admin/llm-config`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   })
 
@@ -76,9 +78,7 @@ export async function saveLlmConfig(payload: LlmConfigPayload): Promise<LlmConfi
 export async function updateLlmConfig(id: number, payload: LlmConfigPayload): Promise<LlmConfig> {
   const response = await fetch(`${API_PREFIX}/admin/llm-config/${encodeURIComponent(String(id))}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   })
 
@@ -88,6 +88,7 @@ export async function updateLlmConfig(id: number, payload: LlmConfigPayload): Pr
 export async function activateLlmConfig(id: number): Promise<LlmConfig> {
   const response = await fetch(`${API_PREFIX}/admin/llm-config/${encodeURIComponent(String(id))}/activate`, {
     method: 'POST',
+    headers: authHeaders(),
   })
 
   return readJson<LlmConfig>(response)
