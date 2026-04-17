@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const mobileNavItems = [
-  { to: '/seed', label: 'Seed' },
+  { to: '/', label: 'Seed' },
   { to: '/reply-assistant', label: '我该怎么回' },
   { to: '/favorites', label: '收藏' },
   { to: '/me', label: '个人' },
@@ -33,7 +33,7 @@ const isReplyMenuActive = computed(
 )
 
 const isSeedMenuActive = computed(
-  () => route.path === '/seed' || route.path.startsWith('/create') || route.path === '/',
+  () => route.path.startsWith('/create') || route.path === '/',
 )
 
 onMounted(() => {
@@ -71,10 +71,10 @@ watch(
       <div class="topbar__actions">
         <nav class="desktop-nav" aria-label="主导航">
           <div class="nav-group" :class="{ 'nav-group--active': isSeedMenuActive }">
-            <RouterLink to="/seed" class="nav-dropdown__trigger">Seed</RouterLink>
+            <RouterLink to="/" class="nav-dropdown__trigger">Seed</RouterLink>
             <div class="nav-dropdown" aria-label="Seed 下拉菜单">
               <RouterLink to="/create" class="nav-dropdown__item">创建</RouterLink>
-              <RouterLink to="/seed" class="nav-dropdown__item">Seed</RouterLink>
+              <RouterLink to="/" class="nav-dropdown__item">Seed</RouterLink>
             </div>
           </div>
 

@@ -1,3 +1,9 @@
+## V1.4.70 - 2026-04-17
+
+- Kept the original home page content intact while making the top-level `Seed` entry point back to `/`.
+- Pointed the `Seed` dropdown's `Seed` item back to the original home page and kept `创建` pointing to the create flow.
+- Preserved the rest of the top navigation layout, including `我该怎么回`, `收藏`, and `个人`.
+
 ## V1.4.69 - 2026-04-17
 
 - Replaced the top-level `首页` nav item with a single `Seed` entry.
