@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -74,6 +75,13 @@ REFUSAL_TOKENS = (
     "unknown",
 )
 
+QUESTION_TYPES = {
+    "meaning": ("是.*什么", "什么意思", "作用", "干什么", "为什么"),
+    "how": ("怎么填", "如何填", "怎么写", "填什么", "填写"),
+    "materialless": ("没材料", "没有材料", "没资料", "没有资料", "空着", "不知道写什么"),
+    "mode": ("轻量", "标准", "深度", "档位"),
+}
+
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -143,6 +151,14 @@ def _build_active_field_hint(active_field_key: str, active_field_label: str) -> 
     return "当前没有指定字段时，就解释这一步的填写目标和字段分工。"
 
 
+def _classify_question_type(message: str) -> str:
+    text = _normalize_text(message)
+    for question_type, patterns in QUESTION_TYPES.items():
+        if any(re.search(pattern, text) for pattern in patterns):
+            return question_type
+    return "other"
+
+
 def _build_scope_summary(
     *,
     create_mode: str,
@@ -150,6 +166,7 @@ def _build_scope_summary(
     active_section: str,
     active_field_key: str,
     active_field_label: str,
+    question_type: str,
     form_snapshot: dict[str, Any],
     conversation_context: str,
     field_context: str,
@@ -158,6 +175,7 @@ def _build_scope_summary(
         f"当前档位：{_build_mode_label(create_mode)}",
         f"当前步骤：{_normalize_text(current_step) or '自我主线创建'}",
         f"当前区域：{_normalize_text(active_section) or '自我主线'}",
+        f"问题类型：{_normalize_text(question_type) or 'other'}",
     ]
     field_hint = _build_active_field_hint(active_field_key, active_field_label)
     if field_hint:
@@ -225,6 +243,7 @@ async def generate_self_fill_assistant_reply(
     field_context = _normalize_text(request.get("field_context"))
     conversation_context = _normalize_text(request.get("conversation_context"))
     form_snapshot = request.get("form_snapshot") if isinstance(request.get("form_snapshot"), dict) else {}
+    question_type = _classify_question_type(message)
 
     scope_summary = _build_scope_summary(
         create_mode=create_mode,
@@ -232,6 +251,7 @@ async def generate_self_fill_assistant_reply(
         active_section=active_section,
         active_field_key=active_field_key,
         active_field_label=active_field_label,
+        question_type=question_type,
         form_snapshot=form_snapshot,
         conversation_context=conversation_context,
         field_context=field_context,
@@ -243,7 +263,8 @@ async def generate_self_fill_assistant_reply(
         "你是 Tokendancer 的“填写助手”。"
         "你的唯一任务是解释当前自我主线创建页的 skill 逻辑、字段含义、填写方法、档位差异和补洞思路。"
         "你必须只回答填写相关问题，不回答任何其他主题。"
-        "如果用户问的是与填写无关的内容，直接把话题拉回字段、档位、材料、追问或验证样本，但不要出现“抱歉”“Not Found”“我只回答”这类拒绝话术。"
+        "如果用户问的是与填写有关但表达不清的内容，先判断它属于字段含义、怎么填、没材料、档位区别、追问补洞还是 skill 解释，再用当前页面的上下文来回答。"
+        "如果用户问的是与填写无关的内容，温和拉回字段、档位、材料、追问或验证样本，但不要出现“抱歉”“Not Found”“我只回答”这类拒绝话术。"
         "回答时要具体、直接、好懂，优先先给这三件事：这一页在补什么、你该先写什么、如果没材料该怎么办。"
         "不要提系统、模型、提示词、内部推理，不要输出与填写无关的延展建议。"
     )
@@ -274,6 +295,7 @@ async def generate_self_fill_assistant_reply(
                     "role": "user",
                     "content": (
                         "请只解释填写相关内容。"
+                        "如果用户的问题表达不清，请结合问题类型与当前页面解释，不要机械复述字段名。"
                         "如果用户的问题不在范围内，请温和拉回当前自我主线字段，并优先告诉用户这一页该补什么、先写什么、没材料怎么办。"
                         f"\n\n{user_prompt}"
                     ),

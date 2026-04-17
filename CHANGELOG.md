@@ -1,3 +1,9 @@
+## V1.4.62 - 2026-04-17
+
+- Restored the fill assistant to the model-backed runtime so it can actually read the current page, question type, and form context.
+- Added question classification on the backend so the assistant can better distinguish meaning, how-to-fill, missing-material, and depth-related questions.
+- Kept a page-specific fallback in place so the assistant still answers the current page even when the model is unavailable.
+
 ## V1.4.61 - 2026-04-17
 
 - Further simplified the self-unified creation wizard for small-screen use.

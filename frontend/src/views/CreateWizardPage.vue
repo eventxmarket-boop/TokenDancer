@@ -13,6 +13,11 @@ import {
   type UploadedImageDocument,
   type TextMaterialDocument,
 } from '@/services/createWizardService'
+import {
+  requestSelfFillAssistant,
+  type SelfFillAssistantRequestPayload,
+  type SelfFillAssistantResponse,
+} from '@/services/selfFillAssistantService'
 
 type CreateType =
   | 'self_unified'
@@ -1031,7 +1036,7 @@ function buildSelfFillAssistantReply(messageText: string) {
 function createSelfFillAssistantGreeting(): SelfFillAssistantMessage {
   return {
     role: 'assistant',
-    content: `我是填写助手，只解释这页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段作用、怎么填、没材料怎么办。`,
+    content: `我是填写助手，只解释当前页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段作用、怎么填、没材料怎么办。`,
   }
 }
 
@@ -1057,6 +1062,28 @@ function closeSelfFillAssistantDialog() {
   selfFillAssistantError.value = ''
 }
 
+function buildSelfFillAssistantFormSnapshot() {
+  return {
+    name: formState.name,
+    create_mode: createMode.value,
+    work_system_summary: formState.work_system_summary,
+    work_system_points: formState.work_system_points,
+    reply_persona_summary: formState.reply_persona_summary,
+    reply_persona_points: formState.reply_persona_points,
+    thinking_dna_summary: formState.thinking_dna_summary,
+    thinking_dna_points: formState.thinking_dna_points,
+    memory_evidence_summary: formState.memory_evidence_summary,
+    memory_evidence_points: formState.memory_evidence_points,
+    reflection_rules_summary: formState.reflection_rules_summary,
+    reflection_rules_points: formState.reflection_rules_points,
+    self_public_sources_text: formState.self_public_sources_text,
+    self_external_feedback_text: formState.self_external_feedback_text,
+    self_validation_samples_text: formState.self_validation_samples_text,
+    self_interview_answers_text: formState.self_interview_answers_text,
+    self_interview_custom_questions_text: formState.self_interview_custom_questions_text,
+  }
+}
+
 async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput.value) {
   const message = messageText.trim()
   if (!message || selfFillAssistantLoading.value) {
@@ -1064,12 +1091,36 @@ async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput
   }
 
   selfFillAssistantError.value = ''
-  selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'user', content: message }]
+  const priorMessages = [...selfFillAssistantMessages.value]
+  selfFillAssistantMessages.value = [...priorMessages, { role: 'user', content: message }]
   selfFillAssistantInput.value = ''
   selfFillAssistantLoading.value = true
-  const reply = buildSelfFillAssistantReply(message)
-  selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: reply }]
-  selfFillAssistantLoading.value = false
+
+  try {
+    const currentPage = selfFillCurrentPage.value
+    const payload: SelfFillAssistantRequestPayload = {
+      message,
+      create_mode: createMode.value,
+      current_step: String(step.value),
+      active_section: currentPage.title,
+      active_field_key: currentPage.key,
+      active_field_label: currentPage.title,
+      field_context: `${selfModeJourneyCopy[createMode.value]} · ${currentPage.summary}`,
+      conversation_context: priorMessages
+        .slice(-6)
+        .map((item) => `${item.role === 'user' ? '用户' : '助手'}：${item.content}`)
+        .join('\n'),
+      form_snapshot: buildSelfFillAssistantFormSnapshot(),
+    }
+    const result: SelfFillAssistantResponse = await requestSelfFillAssistant(payload)
+    const reply = String(result.reply || '').trim() || buildSelfFillAssistantReply(message)
+    selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: reply }]
+  } catch {
+    const reply = buildSelfFillAssistantReply(message)
+    selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: reply }]
+  } finally {
+    selfFillAssistantLoading.value = false
+  }
 }
 
 function sendSelfFillAssistantPrompt(prompt: string) {
