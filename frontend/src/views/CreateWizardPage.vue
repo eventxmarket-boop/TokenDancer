@@ -13,6 +13,11 @@ import {
   type UploadedImageDocument,
   type TextMaterialDocument,
 } from '@/services/createWizardService'
+import {
+  requestSelfFillAssistant,
+  type SelfFillAssistantRequestPayload,
+  type SelfFillAssistantResponse,
+} from '@/services/selfFillAssistantService'
 
 type CreateType =
   | 'self_unified'
@@ -40,6 +45,11 @@ type SelfInterviewEntry = {
   answer: string
   dimension: string
   reason: string
+}
+
+type SelfFillAssistantMessage = {
+  role: 'user' | 'assistant'
+  content: string
 }
 
 const router = useRouter()
@@ -522,6 +532,11 @@ const selfInterviewDialogDimension = ref('')
 const selfInterviewDialogReason = ref('')
 const selfInterviewDialogKey = ref('')
 const selfInterviewDialogError = ref('')
+const selfFillAssistantOpen = ref(false)
+const selfFillAssistantLoading = ref(false)
+const selfFillAssistantError = ref('')
+const selfFillAssistantInput = ref('')
+const selfFillAssistantMessages = ref<SelfFillAssistantMessage[]>([])
 
 function createSelfInterviewEntryId() {
   const fallback = `self-interview-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -667,6 +682,125 @@ function addSelfInterviewEntry() {
   selfInterviewEntries.value = nextEntries
   syncSelfInterviewTextFromEntries()
   closeSelfInterviewDialog()
+}
+
+const selfFillAssistantQuickPrompts = [
+  {
+    label: '这个字段怎么填',
+    prompt: '这个字段怎么填？请结合当前页面解释它的作用和填写重点。',
+  },
+  {
+    label: '轻量/标准/深度',
+    prompt: '轻量、标准、深度这三个档位到底有什么区别？',
+  },
+  {
+    label: '分析报告作用',
+    prompt: '分析报告这一块是做什么的？',
+  },
+  {
+    label: '追问补洞',
+    prompt: '追问补洞这一块为什么要做？',
+  },
+] as const
+
+function createSelfFillAssistantGreeting(): SelfFillAssistantMessage {
+  return {
+    role: 'assistant',
+    content: `我是填写助手，只解释这页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段含义、skill 逻辑、追问补洞或档位区别。`,
+  }
+}
+
+function resetSelfFillAssistantConversation() {
+  selfFillAssistantMessages.value = [createSelfFillAssistantGreeting()]
+  selfFillAssistantInput.value = ''
+  selfFillAssistantError.value = ''
+}
+
+function openSelfFillAssistantDialog(preferredPrompt = '') {
+  if (!selfFillAssistantMessages.value.length) {
+    resetSelfFillAssistantConversation()
+  }
+  selfFillAssistantOpen.value = true
+  selfFillAssistantError.value = ''
+  if (preferredPrompt) {
+    selfFillAssistantInput.value = preferredPrompt
+  }
+}
+
+function closeSelfFillAssistantDialog() {
+  selfFillAssistantOpen.value = false
+  selfFillAssistantError.value = ''
+}
+
+function buildSelfFillAssistantFormSnapshot() {
+  return {
+    name: formState.name,
+    create_mode: createMode.value,
+    work_system_summary: formState.work_system_summary,
+    work_system_points: formState.work_system_points,
+    reply_persona_summary: formState.reply_persona_summary,
+    reply_persona_points: formState.reply_persona_points,
+    thinking_dna_summary: formState.thinking_dna_summary,
+    thinking_dna_points: formState.thinking_dna_points,
+    memory_evidence_summary: formState.memory_evidence_summary,
+    memory_evidence_points: formState.memory_evidence_points,
+    reflection_rules_summary: formState.reflection_rules_summary,
+    reflection_rules_points: formState.reflection_rules_points,
+    self_public_sources_text: formState.self_public_sources_text,
+    self_external_feedback_text: formState.self_external_feedback_text,
+    self_validation_samples_text: formState.self_validation_samples_text,
+    self_interview_answers_text: formState.self_interview_answers_text,
+    self_interview_custom_questions_text: formState.self_interview_custom_questions_text,
+  }
+}
+
+async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput.value) {
+  const message = messageText.trim()
+  if (!message || selfFillAssistantLoading.value) {
+    return
+  }
+
+  selfFillAssistantError.value = ''
+  const priorMessages = [...selfFillAssistantMessages.value]
+  selfFillAssistantMessages.value = [...priorMessages, { role: 'user', content: message }]
+  selfFillAssistantInput.value = ''
+  selfFillAssistantLoading.value = true
+
+  try {
+    const payload: SelfFillAssistantRequestPayload = {
+      message,
+      create_mode: createMode.value,
+      current_step: String(step.value),
+      active_section: '自我主线',
+      active_field_key: '',
+      active_field_label: '',
+      field_context: selfModeJourneyCopy[createMode.value],
+      conversation_context: priorMessages
+        .slice(-8)
+        .map((item) => `${item.role === 'user' ? '用户' : '助手'}：${item.content}`)
+        .join('\n'),
+      form_snapshot: buildSelfFillAssistantFormSnapshot(),
+    }
+    const result: SelfFillAssistantResponse = await requestSelfFillAssistant(payload)
+    selfFillAssistantMessages.value = [...selfFillAssistantMessages.value, { role: 'assistant', content: result.reply }]
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : '填写助手暂时不可用'
+    selfFillAssistantError.value = message
+    selfFillAssistantMessages.value = [
+      ...selfFillAssistantMessages.value,
+      {
+        role: 'assistant',
+        content: `抱歉，${message}。我只回答这页的填写和 skill 解释。`,
+      },
+    ]
+  } finally {
+    selfFillAssistantLoading.value = false
+  }
+}
+
+function sendSelfFillAssistantPrompt(prompt: string) {
+  selfFillAssistantInput.value = prompt
+  void sendSelfFillAssistantMessage(prompt)
 }
 
 function createEmptyMaterialState(): CreateWizardRawMaterials {
@@ -963,6 +1097,7 @@ function selectSelfMode(mode: SelfCreateMode) {
   inputMode.value = 'manual_profile'
   selfInputModes.value = ['manual_profile']
   resetFormForType(createType.value, selectedName.value, inputMode.value)
+  resetSelfFillAssistantConversation()
   step.value = 2
 }
 
@@ -1396,6 +1531,8 @@ function saveStateSnapshot() {
     selfMaterialState: selfMaterialState.value,
     sourceMaterialState: sourceMaterialState.value,
     relationshipMaterialState: relationshipMaterialState.value,
+    selfFillAssistantMessages: selfFillAssistantMessages.value,
+    selfFillAssistantInput: selfFillAssistantInput.value,
     formState: { ...formState },
   })
 }
@@ -1419,6 +1556,8 @@ function loadStateSnapshot() {
     selfMaterialState?: CreateWizardRawMaterials
     sourceMaterialState?: CreateWizardRawMaterials
     relationshipMaterialState?: CreateWizardRawMaterials
+    selfFillAssistantMessages?: SelfFillAssistantMessage[]
+    selfFillAssistantInput?: string
     formState?: Record<string, string>
   }>()
 
@@ -1476,6 +1615,12 @@ function loadStateSnapshot() {
   }
   if (snapshot.relationshipMaterialState) {
     relationshipMaterialState.value = snapshot.relationshipMaterialState
+  }
+  if (Array.isArray(snapshot.selfFillAssistantMessages) && snapshot.selfFillAssistantMessages.length > 0) {
+    selfFillAssistantMessages.value = snapshot.selfFillAssistantMessages
+  }
+  if (snapshot.selfFillAssistantInput) {
+    selfFillAssistantInput.value = snapshot.selfFillAssistantInput
   }
 
   if (createType.value === 'relationship_persona') {
@@ -1606,6 +1751,9 @@ function loadStateSnapshot() {
   if (createType.value === 'self_unified') {
     formState.name = normalizeSelfUnifiedDisplayName(formState.name)
     hydrateSelfInterviewEntriesFromText(formState.self_interview_answers_text)
+    if (!selfFillAssistantMessages.value.length) {
+      resetSelfFillAssistantConversation()
+    }
   }
 
   return true
@@ -1624,6 +1772,9 @@ function applyQueryDefaults() {
   selfInputModes.value = createType.value === 'self_unified' ? ['manual_profile'] : [defaults.inputMode || 'manual_profile']
 
   resetFormForType(createType.value, selectedName.value, inputMode.value)
+  if (createType.value === 'self_unified') {
+    resetSelfFillAssistantConversation()
+  }
 }
 
 function hasEntryQuery() {
@@ -2387,6 +2538,30 @@ watch(
               <p class="state-copy">这一步会把身份、判断、表达、工作方式、时间线、外部反馈和缺口先整理出来。</p>
             </div>
 
+            <div class="summary-panel summary-panel--compact self-fill-assistant-panel">
+              <div class="self-fill-assistant-panel__head">
+                <div>
+                  <p class="eyebrow">填写助手</p>
+                  <h3>只解释这页怎么填</h3>
+                </div>
+                <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">
+                  打开填写助手
+                </button>
+              </div>
+              <p class="state-copy">它会调用大模型解释当前自我主线的 skill 逻辑、字段含义和补洞顺序，只回答填写相关问题。</p>
+              <div class="self-fill-assistant-panel__chips">
+                <button
+                  v-for="item in selfFillAssistantQuickPrompts"
+                  :key="item.label"
+                  type="button"
+                  class="ghost-button ghost-button--small"
+                  @click="openSelfFillAssistantDialog(item.prompt)"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+            </div>
+
             <div class="form-grid">
               <label class="form-field">
                 <span>名称</span>
@@ -2576,6 +2751,65 @@ watch(
                 placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
               ></textarea>
             </label>
+          </div>
+
+          <div v-if="selfFillAssistantOpen" class="self-fill-assistant-modal" @click.self="closeSelfFillAssistantDialog">
+            <div class="self-fill-assistant-modal__panel">
+              <div class="self-fill-assistant-modal__head">
+                <div>
+                  <p class="eyebrow">填写助手</p>
+                  <h3>只解释当前页面的填写方法</h3>
+                  <p class="section-note section-note--subtle">
+                    当前档位：{{ selfModeLabels[createMode] }} · 只回答 skill 解释和字段填写
+                  </p>
+                </div>
+                <button type="button" class="ghost-button ghost-button--small" @click="closeSelfFillAssistantDialog">关闭</button>
+              </div>
+
+              <div class="self-fill-assistant-chat">
+                <article
+                  v-for="(message, index) in selfFillAssistantMessages"
+                  :key="`${message.role}-${index}`"
+                  class="self-fill-assistant-chat__message"
+                  :class="`self-fill-assistant-chat__message--${message.role}`"
+                >
+                  <span class="self-fill-assistant-chat__role">{{ message.role === 'user' ? '我' : '填写助手' }}</span>
+                  <p>{{ message.content }}</p>
+                </article>
+              </div>
+
+              <p v-if="selfFillAssistantError" class="state-copy state-copy--error">{{ selfFillAssistantError }}</p>
+
+              <div class="self-fill-assistant-panel__chips self-fill-assistant-panel__chips--modal">
+                <button
+                  v-for="item in selfFillAssistantQuickPrompts"
+                  :key="`modal-${item.label}`"
+                  type="button"
+                  class="ghost-button ghost-button--small"
+                  @click="sendSelfFillAssistantPrompt(item.prompt)"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+
+              <label class="form-field">
+                <span>输入问题</span>
+                <textarea
+                  v-model="selfFillAssistantInput"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="例如：这个字段怎么填？轻量和标准有什么区别？"
+                  @keydown.enter.exact.prevent="sendSelfFillAssistantMessage()"
+                ></textarea>
+              </label>
+
+              <div class="wizard-actions wizard-actions--inline">
+                <button class="ghost-btn" type="button" @click="closeSelfFillAssistantDialog">关闭</button>
+                <button class="primary-btn" type="button" :disabled="selfFillAssistantLoading" @click="sendSelfFillAssistantMessage()">
+                  {{ selfFillAssistantLoading ? '发送中...' : '发送' }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div v-if="selfInterviewDialogOpen" class="self-interview-modal" @click.self="closeSelfInterviewDialog">
@@ -3103,6 +3337,100 @@ watch(
   white-space: pre-wrap;
 }
 
+.self-fill-assistant-panel {
+  gap: 0.9rem;
+}
+
+.self-fill-assistant-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.self-fill-assistant-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.self-fill-assistant-panel__chips--modal {
+  margin-top: -0.1rem;
+}
+
+.self-fill-assistant-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(18, 24, 31, 0.54);
+  backdrop-filter: blur(10px);
+}
+
+.self-fill-assistant-modal__panel {
+  width: min(920px, 100%);
+  max-height: min(90vh, 920px);
+  overflow: auto;
+  display: grid;
+  gap: 0.95rem;
+  padding: 1.25rem;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 244, 0.99));
+  box-shadow: 0 30px 90px rgba(37, 28, 22, 0.28);
+}
+
+.self-fill-assistant-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.self-fill-assistant-chat {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 42vh;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.self-fill-assistant-chat__message {
+  display: grid;
+  gap: 0.38rem;
+  max-width: 88%;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  border: 1px solid var(--line);
+}
+
+.self-fill-assistant-chat__message p {
+  margin: 0;
+}
+
+.self-fill-assistant-chat__message--assistant {
+  justify-self: start;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.self-fill-assistant-chat__message--user {
+  justify-self: end;
+  background: rgba(255, 159, 138, 0.12);
+  border-color: rgba(255, 159, 138, 0.2);
+}
+
+.self-fill-assistant-chat__role {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .self-interview-modal {
   position: fixed;
   inset: 0;
@@ -3171,10 +3499,23 @@ watch(
     flex-direction: column;
   }
 
+  .self-fill-assistant-panel__head,
+  .self-fill-assistant-modal__head {
+    flex-direction: column;
+  }
+
   .self-interview-builder__item-actions,
   .wizard-actions--inline {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .self-fill-assistant-panel__chips {
+    width: 100%;
+  }
+
+  .self-fill-assistant-chat__message {
+    max-width: 100%;
   }
 
   .self-interview-modal {
@@ -3182,6 +3523,16 @@ watch(
   }
 
   .self-interview-modal__panel {
+    max-height: 94vh;
+    padding: 1rem;
+    border-radius: 22px;
+  }
+
+  .self-fill-assistant-modal {
+    padding: 0.65rem;
+  }
+
+  .self-fill-assistant-modal__panel {
     max-height: 94vh;
     padding: 1rem;
     border-radius: 22px;

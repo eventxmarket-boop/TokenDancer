@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.57 - 2026-04-17
+
+- Added an embedded "填写助手" inside the self-unified creation flow.
+- Kept the helper scoped to self skill explanation and form-filling guidance only.
+- Reused the large-model runtime through a dedicated fill-assistant endpoint.
+- Added an in-page chat dialog and quick prompts for self-form explanations.
+
 ## V1.4.56 - 2026-04-17
 
 - Turned the self-main depth selector into a real upgrade path from light to standard to deep.
