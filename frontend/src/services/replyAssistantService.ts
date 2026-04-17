@@ -13,51 +13,16 @@ export type ReplyAssistantRequestPayload = {
   tone_hint?: string
   relationship_status?: string
   conversation_context?: string
+  rewrite_mode?: string
   raw_materials?: UniversalCreateWizardRawMaterials | Record<string, unknown>
-}
-
-export type ReplyAssistantUnderstandingResult = {
-  meaning_guess: string
-  emotion_guess: string
-  intent_guess: string
-  relationship_state_guess: string
-  scene_guess: string
-  risk_flags: string[]
-}
-
-export type ReplyAssistantReplyCandidate = {
-  label: string
-  text: string
-  style_tags: string[]
-  reason: string
-}
-
-export type ReplyAssistantPredictedReply = {
-  label: string
-  text: string
-  risk_level: string
-}
-
-export type ReplyAssistantToneProfile = {
-  label: string
-  style_tags: string[]
-  guidance: string
 }
 
 export type ReplyAssistantResponse = {
   mode: 'reply_assistant'
-  target_person_type: string
-  target_person_label: string
-  scene_type: string
-  scene_label: string
-  understanding_result: ReplyAssistantUnderstandingResult
-  reply_candidates: ReplyAssistantReplyCandidate[]
-  predicted_replies: ReplyAssistantPredictedReply[]
-  risk_flags: string[]
-  tone_profile: ReplyAssistantToneProfile
+  judgment: string
   recommended_reply: string
-  material_summary: string
-  context_summary: string
+  risk_note: string
+  likely_consequence: string
 }
 
 async function readErrorMessage(response: Response): Promise<string> {

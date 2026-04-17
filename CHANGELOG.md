@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.52 - 2026-04-17
+
+- Rebuilt `我该怎么回` around a strict answer-first output protocol.
+- Ensured the reply assistant actually calls the model after skill-side preprocessing.
+- Kept skills as internal filters and constraints instead of exposing their intermediate reasoning to users.
+- Collapsed advanced materials into an optional section instead of defaulting to a create-like form.
+- Changed the default response shape to one short judgment, one directly sendable reply, one risk note, and one likely consequence.
+
 ## V1.4.51 - 2026-04-17
 
 - Added a direct-use top-level feature: 我该怎么回.

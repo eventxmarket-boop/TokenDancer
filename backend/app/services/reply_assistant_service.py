@@ -92,6 +92,31 @@ SCENE_TYPES = {
     "repair": "解释误会 / 修复",
 }
 
+REWRITE_MODE_HINTS = {
+    "default": "默认",
+    "alt": "换一个版本",
+    "soft": "更软一点",
+    "boundary": "更有边界一点",
+    "formal": "更正式一点",
+    "short": "更简短一点",
+}
+
+BANNED_USER_OUTPUT_PHRASES = (
+    "我先接住",
+    "如果你愿意",
+    "继续帮你整理",
+    "可以先这样回",
+    "前任这条",
+    "冷战 / 冲突下可以先这样回",
+    "你可以这样回",
+    "我帮你整理",
+    "系统",
+    "分析",
+    "风格标签",
+    "候选回复",
+    "材料摘要",
+)
+
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -291,6 +316,220 @@ def _build_tone_profile(target_person_type: str, scene_type: str, target_goal: s
         "style_tags": tags,
         "guidance": guidance,
     }
+
+
+def _rewrite_mode_label(rewrite_mode: str) -> str:
+    return REWRITE_MODE_HINTS.get(_normalize_text(rewrite_mode), "默认")
+
+
+def _rewrite_mode_instruction(rewrite_mode: str) -> str:
+    mode = _normalize_text(rewrite_mode)
+    if mode == "alt":
+        return "给出一个和默认版本不同的表达，避免和上一版重复。"
+    if mode == "soft":
+        return "语气更柔和一点，但仍然要直接可发。"
+    if mode == "boundary":
+        return "边界感更强一点，保持礼貌但不要示弱。"
+    if mode == "formal":
+        return "语气更正式、更稳、更像工作沟通。"
+    if mode == "short":
+        return "尽量更短，适合即时发送。"
+    return "给出默认最优答案。"
+
+
+def _trim_sentence(text: str, max_chars: int = 58) -> str:
+    cleaned = _normalize_text(text)
+    if len(cleaned) <= max_chars:
+        return cleaned
+    for separator in ("。", "！", "!", "？", "?", "；", ";"):
+        prefix = cleaned.split(separator, 1)[0].strip()
+        if 12 <= len(prefix) <= max_chars:
+            return prefix.rstrip("，,") + "。"
+    return cleaned[: max_chars - 1].rstrip("，,。！？!?；; ") + "…"
+
+
+def _contains_banned_user_output(text: str) -> bool:
+    normalized = _normalize_text(text)
+    if not normalized:
+        return True
+    lower = normalized.lower()
+    return any(phrase.lower() in lower for phrase in BANNED_USER_OUTPUT_PHRASES)
+
+
+def _build_reply_assistant_analysis(
+    *,
+    target_person_type: str,
+    scene_type: str,
+    message: str,
+    current_context: str,
+    relationship_status: str,
+    target_goal: str,
+    tone_hint: str,
+    raw_materials: dict[str, Any],
+    conversation_context: str = "",
+) -> dict[str, Any]:
+    understanding_result = _build_understanding_result(
+        target_person_type=target_person_type,
+        scene_type=scene_type,
+        message=message,
+        current_context=current_context,
+        relationship_status=relationship_status,
+        target_goal=target_goal,
+        tone_hint=tone_hint,
+        raw_materials=raw_materials,
+    )
+    focus = infer_reply_assistant_focus(
+        message,
+        current_context,
+        relationship_status,
+        target_goal,
+        tone_hint,
+        conversation_context,
+        target_person_type=target_person_type,
+    )
+
+    tone_constraints = list(understanding_result.get("risk_flags", []))
+    if _is_work_person(target_person_type) or scene_type in {"work_report", "follow_up", "formal_notice"}:
+        tone_constraints.extend(["简明", "正式", "可执行", "少承诺"])
+    elif _normalize_text(target_person_type) in {"crush", "partner", "ex"}:
+        tone_constraints.extend(["自然", "体面", "保留边界"])
+    else:
+        tone_constraints.extend(["自然", "礼貌", "好接话"])
+
+    if _normalize_text(tone_hint):
+        tone_constraints.append(_normalize_text(tone_hint))
+    if _normalize_text(target_goal):
+        tone_constraints.append(_normalize_text(target_goal))
+    if isinstance(focus, dict) and focus.get("message_push"):
+        tone_constraints.append("可直接发送")
+
+    return {
+        "meaning_guess": understanding_result.get("meaning_guess", ""),
+        "emotion_guess": understanding_result.get("emotion_guess", ""),
+        "intent_guess": understanding_result.get("intent_guess", ""),
+        "relationship_state_guess": understanding_result.get("relationship_state_guess", ""),
+        "scene_guess": understanding_result.get("scene_guess", ""),
+        "risk_flags": _merge_unique_lines(understanding_result.get("risk_flags")),
+        "tone_constraints": _merge_unique_lines(tone_constraints)[:8],
+        "person_type_bias": _build_target_person_label(target_person_type),
+        "scene_bias": _build_scene_label(scene_type),
+    }
+
+
+def _build_public_fallback_response(
+    *,
+    message: str,
+    target_person_type: str,
+    scene_type: str,
+    target_goal: str,
+    rewrite_mode: str,
+    analysis_result: dict[str, Any],
+) -> dict[str, Any]:
+    target_label = _build_target_person_label(target_person_type)
+    scene_label = _build_scene_label(scene_type)
+    goal = _normalize_text(target_goal) or "先把话说清楚"
+    mode_label = _rewrite_mode_label(rewrite_mode)
+
+    risk_flags = _merge_unique_lines(analysis_result.get("risk_flags"))
+    if _is_work_person(target_person_type) or scene_type in {"work_report", "follow_up", "formal_notice"}:
+        judgment = "这是工作沟通，先把结论说清楚，再留出下一步空间。"
+        if scene_type == "follow_up":
+            recommended_reply = "收到，我这边今天内把进展整理好再同步你。"
+        elif scene_type == "formal_notice":
+            recommended_reply = "收到，我会按这个安排处理。"
+        elif scene_type == "work_report":
+            recommended_reply = "我先按这个方向推进，整理好后第一时间同步你。"
+        else:
+            recommended_reply = "收到，我先确认一下，整理好后再同步你。"
+        risk_note = "别写太长，也别一次性承诺过满，工作场景更看重清楚和可执行。"
+        likely_consequence = "这样回通常能把节奏稳住，但对方大概率还会继续确认进度或细节。"
+    elif _normalize_text(target_person_type) in {"crush", "partner", "ex"}:
+        if scene_type == "repair":
+            judgment = "对方在等你接住情绪，先稳住，再把关系拉回可沟通。"
+            recommended_reply = "我不是想绕开你，我只是想把话说清楚，我们先把这件事讲明白。"
+            risk_note = "别一下子解释太多，先把态度放稳。"
+            likely_consequence = "这样回更容易把话题拉回沟通，但如果语气太硬，冲突会继续升温。"
+        elif scene_type == "push_forward":
+            judgment = "对方在试你的态度，既要接住，也别把话说死。"
+            recommended_reply = "我懂你的意思，我也想把关系往前走一点，但我希望我们慢慢来。"
+            risk_note = "推进可以有，但别一下子压得太紧。"
+            likely_consequence = "这样回会给对方继续聊的空间，也更容易把节奏带稳。"
+        elif scene_type == "rejection":
+            judgment = "现在更适合体面收住，不要把边界说得太冲。"
+            recommended_reply = "我明白你的意思，但我这边先不往这个方向走了。"
+            risk_note = "别写太多理由，越解释越容易显得在回避。"
+            likely_consequence = "这样回能把边界立住，但对方可能会短暂降温。"
+        else:
+            judgment = "这更像是在试你的回应节奏，先接住，再决定要不要往前。"
+            recommended_reply = "我看懂你的意思了，我们先把这件事说清楚。"
+            risk_note = "别太油，也别太冷，先让对话落到实处。"
+            likely_consequence = "这样回通常能继续聊下去，但也会把对方的期待摆到台面上。"
+    else:
+        judgment = "对方在等一个清楚、体面的回应，别绕。"
+        if scene_type == "rejection":
+            recommended_reply = "我明白你的意思，但这次我先不这样安排。"
+            risk_note = "拒绝时尽量简洁，别给太多开放式余地。"
+            likely_consequence = "这样回会显得体面，但对方可能会追问原因。"
+        elif scene_type == "formal_notice":
+            recommended_reply = "收到，我先按这个方向处理。"
+            risk_note = "正式场景别加太多情绪词。"
+            likely_consequence = "这样回会更稳，但对方可能继续等你的后续动作。"
+        else:
+            recommended_reply = "我明白你的意思，我们先把这件事说清楚。"
+            risk_note = "别把话说得太满，也别刻意拉长。"
+            likely_consequence = "这样回通常能把对话往下接，但对方也可能继续确认你的立场。"
+
+    if _normalize_text(rewrite_mode) == "soft":
+        recommended_reply = _trim_sentence(
+            recommended_reply.replace("说清楚", "慢慢说清楚").replace("先不往这个方向走了", "先不往这个方向走"),
+            64,
+        )
+        risk_note = _trim_sentence(risk_note.replace("别", "尽量别"), 64)
+    elif _normalize_text(rewrite_mode) == "boundary":
+        recommended_reply = _trim_sentence(
+            recommended_reply.replace("我明白你的意思", "我明白你的意思，但我这边的边界也想先说清楚"),
+            64,
+        )
+    elif _normalize_text(rewrite_mode) == "formal":
+        recommended_reply = _trim_sentence(
+            recommended_reply.replace("我", "我这边").replace("先", "先行"),
+            64,
+        )
+        risk_note = _trim_sentence(risk_note.replace("别", "尽量不要"), 64)
+    elif _normalize_text(rewrite_mode) == "short":
+        recommended_reply = _trim_sentence(recommended_reply, 34)
+        risk_note = _trim_sentence(risk_note, 40)
+        likely_consequence = _trim_sentence(likely_consequence, 42)
+
+    return {
+        "mode": "reply_assistant",
+        "judgment": _trim_sentence(judgment, 60),
+        "recommended_reply": _trim_sentence(recommended_reply, 80),
+        "risk_note": _trim_sentence(risk_note, 60),
+        "likely_consequence": _trim_sentence(likely_consequence, 70),
+    }
+
+
+def _normalize_public_reply_response(payload: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    response = dict(fallback)
+    if not isinstance(payload, dict):
+        return response
+
+    judgment = _trim_sentence(_normalize_text(payload.get("judgment")), 60)
+    recommended_reply = _trim_sentence(_normalize_text(payload.get("recommended_reply")), 80)
+    risk_note = _trim_sentence(_normalize_text(payload.get("risk_note")), 60)
+    likely_consequence = _trim_sentence(_normalize_text(payload.get("likely_consequence")), 70)
+
+    if judgment and not _contains_banned_user_output(judgment):
+        response["judgment"] = judgment
+    if recommended_reply and not _contains_banned_user_output(recommended_reply):
+        response["recommended_reply"] = recommended_reply
+    if risk_note and not _contains_banned_user_output(risk_note):
+        response["risk_note"] = risk_note
+    if likely_consequence and not _contains_banned_user_output(likely_consequence):
+        response["likely_consequence"] = likely_consequence
+
+    return response
 
 
 def _build_reply_candidates_runtime(
@@ -516,7 +755,6 @@ async def generate_reply_assistant_runtime(
         raise ValueError("message 不能为空")
 
     target_person_type = _normalize_text(request.get("target_person_type")) or "friend"
-    target_person_label = _normalize_text(request.get("target_person_label")) or _build_target_person_label(target_person_type)
     scene_type = _normalize_text(request.get("scene_type")) or _infer_scene_type(
         message,
         request.get("current_context"),
@@ -529,34 +767,44 @@ async def generate_reply_assistant_runtime(
     tone_hint = _normalize_text(request.get("tone_hint"))
     relationship_status = _normalize_text(request.get("relationship_status"))
     conversation_context = _normalize_text(request.get("conversation_context"))
+    rewrite_mode = _normalize_text(request.get("rewrite_mode")) or "default"
     raw_materials = request.get("raw_materials") if isinstance(request.get("raw_materials"), dict) else {}
 
-    fallback = _build_fallback_reply_assistant_response(
-        message=message,
+    analysis_result = _build_reply_assistant_analysis(
         target_person_type=target_person_type,
-        target_person_label=target_person_label,
         scene_type=scene_type,
+        message=message,
         current_context=current_context,
+        relationship_status=relationship_status,
         target_goal=target_goal,
         tone_hint=tone_hint,
-        relationship_status=relationship_status,
         raw_materials=raw_materials,
+        conversation_context=conversation_context,
+    )
+    fallback = _build_public_fallback_response(
+        message=message,
+        target_person_type=target_person_type,
+        scene_type=scene_type,
+        target_goal=target_goal,
+        rewrite_mode=rewrite_mode,
+        analysis_result=analysis_result,
     )
 
     if db is None:
         return fallback
 
+    target_person_label = _build_target_person_label(target_person_type)
     system_prompt = (
         "你是 Tokendancer 的直用型回复助手“我该怎么回”。"
-        "你的任务是：用户直接贴一句话或一段聊天，你要给出理解、回复候选、风险提示和下一句预测。"
-        "只输出严格 JSON 对象，不要输出 markdown，不要输出代码块，不要输出解释性前言。"
-        "JSON 必须包含 mode、target_person_type、target_person_label、scene_type、scene_label、understanding_result、reply_candidates、predicted_replies、risk_flags、tone_profile、recommended_reply、material_summary、context_summary。"
-        "understanding_result 必须包含 meaning_guess、emotion_guess、intent_guess、relationship_state_guess、scene_guess、risk_flags。"
-        "reply_candidates 必须是对象数组，每项至少包含 label、text、style_tags、reason。"
-        "predicted_replies 必须是对象数组，每项至少包含 label、text、risk_level。"
-        "tone_profile 必须包含 label、style_tags、guidance。"
-        "工作沟通场景要更正式、简明、可执行，不要过度承诺。"
-        "亲密关系场景要更自然、体面、保留边界，不要太油。"
+        "用户只需要看到最终结果，不要解释你的分析过程，不要提系统、模型、风格标签、材料摘要、候选列表。"
+        "只输出严格 JSON 对象，不要输出 markdown，不要输出代码块，不要输出多余前言。"
+        "JSON 必须且只能包含 judgment、recommended_reply、risk_note、likely_consequence。"
+        "judgment 要短、像人话，优先 40 到 60 个汉字以内。"
+        "recommended_reply 必须是可直接复制发送的最终回复，不要出现“你可以这样回”“我先接住”“如果你愿意我可以继续帮你整理”等系统味句子。"
+        "risk_note 要短，说明一个风险点。"
+        "likely_consequence 要短，说明这样回复后大概会发生什么。"
+        f"当前重写模式是：{_rewrite_mode_label(rewrite_mode)}。"
+        f"回复风格要求：{_rewrite_mode_instruction(rewrite_mode)}"
     )
 
     user_prompt = json.dumps(
@@ -571,29 +819,44 @@ async def generate_reply_assistant_runtime(
             "tone_hint": tone_hint,
             "relationship_status": relationship_status,
             "conversation_context": conversation_context,
-            "material_summary": fallback.get("material_summary", ""),
-            "fallback": fallback,
+            "rewrite_mode": rewrite_mode,
+            "analysis_result": analysis_result,
+            "output_protocol": {
+                "judgment": "一句简短判断",
+                "recommended_reply": "一条可直接发送的回复",
+                "risk_note": "一句风险提示",
+                "likely_consequence": "一句可能后果",
+            },
         },
         ensure_ascii=False,
         indent=2,
     )
 
-    try:
-        reply = await generate_reply(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            db=db,
-        )
-    except LLMGatewayError:
-        return fallback
+    response: dict[str, Any] = dict(fallback)
+    for attempt in range(2):
+        try:
+            reply = await generate_reply(
+                [
+                    {"role": "system", "content": system_prompt if attempt == 0 else system_prompt + "严格禁止输出解释、前言、候选或多余标题。"},
+                    {"role": "user", "content": user_prompt},
+                ],
+                db=db,
+            )
+        except LLMGatewayError:
+            return fallback
 
-    parsed = _extract_json_object(str(reply.get("content", "")))
-    response = _normalize_reply_assistant_response(parsed or {}, fallback)
-    response["material_summary"] = response.get("material_summary") or fallback.get("material_summary", "")
-    response["context_summary"] = response.get("context_summary") or fallback.get("context_summary", "")
-    return response
+        parsed = _extract_json_object(str(reply.get("content", ""))) or {}
+        response = _normalize_public_reply_response(parsed, fallback)
+        if (
+            response["judgment"]
+            and response["recommended_reply"]
+            and response["risk_note"]
+            and response["likely_consequence"]
+            and not any(_contains_banned_user_output(response[field]) for field in ("judgment", "recommended_reply", "risk_note", "likely_consequence"))
+        ):
+            return response
+
+    return response if response["recommended_reply"] else fallback
 
 
 def infer_reply_assistant_focus(*values: Any, target_person_type: str = "") -> dict[str, float | str]:

@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import MaterialInputPanel from '@/components/shared/MaterialInputPanel.vue'
-import {
-  requestReplyAssistant,
-  type ReplyAssistantResponse,
-} from '@/services/replyAssistantService'
+import { requestReplyAssistant, type ReplyAssistantResponse } from '@/services/replyAssistantService'
 import type { UniversalCreateWizardRawMaterials } from '@/services/createWizardService'
 
 type ReplyAssistantTargetType =
@@ -28,6 +25,8 @@ type ReplyAssistantSceneType =
   | 'formal_notice'
   | 'rejection'
   | 'repair'
+
+type RewriteMode = 'alt' | 'soft' | 'boundary' | 'formal' | 'short'
 
 const targetPersonOptions: Array<[ReplyAssistantTargetType, string]> = [
   ['crush', '暧昧对象'],
@@ -53,21 +52,12 @@ const sceneOptions: Array<[ReplyAssistantSceneType, string, string]> = [
   ['repair', '解释误会 / 修复', '澄清误会、修复关系、缓和气氛。'],
 ]
 
-const toneQuickActions = [
-  { label: '更自然一点', value: '自然、清楚、不过度用力。' },
-  { label: '更正式一点', value: '正式、克制、可执行。' },
-  { label: '更有边界一点', value: '礼貌但不越界。' },
-  { label: '更推进一点', value: '适度主动，给下一步空间。' },
-  { label: '更简短一点', value: '短一些，适合即时回复。' },
-]
-
-const goalQuickActions = [
-  { label: '更稳妥', value: '更稳妥' },
-  { label: '更自然', value: '更自然' },
-  { label: '更推进', value: '更推进' },
-  { label: '更克制', value: '更克制' },
-  { label: '更职业', value: '更职业' },
-  { label: '更有边界', value: '更有边界' },
+const rewriteButtons: Array<{ label: string; mode: RewriteMode }> = [
+  { label: '换一个版本', mode: 'alt' },
+  { label: '更软一点', mode: 'soft' },
+  { label: '更有边界一点', mode: 'boundary' },
+  { label: '更正式一点', mode: 'formal' },
+  { label: '更简短一点', mode: 'short' },
 ]
 
 function createEmptyMaterialState(): UniversalCreateWizardRawMaterials {
@@ -96,12 +86,10 @@ function createEmptyMaterialState(): UniversalCreateWizardRawMaterials {
 
 const form = reactive({
   message: '',
+  current_context: '',
   target_person_type: 'crush' as ReplyAssistantTargetType,
   scene_type: 'daily' as ReplyAssistantSceneType,
-  current_context: '',
   target_goal: '更稳妥',
-  tone_hint: '',
-  relationship_status: '',
   conversation_context: '',
 })
 
@@ -110,15 +98,7 @@ const loading = ref(false)
 const error = ref('')
 const result = ref<ReplyAssistantResponse | null>(null)
 
-function applyTonePreset(value: string) {
-  form.tone_hint = value
-}
-
-function applyGoalPreset(value: string) {
-  form.target_goal = value
-}
-
-async function generateReply() {
+async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
   loading.value = true
   error.value = ''
 
@@ -130,9 +110,8 @@ async function generateReply() {
       scene_type: form.scene_type,
       current_context: form.current_context,
       target_goal: form.target_goal,
-      tone_hint: form.tone_hint,
-      relationship_status: form.relationship_status,
       conversation_context: form.conversation_context,
+      rewrite_mode: rewriteMode,
       raw_materials: rawMaterials.value,
     })
   } catch (cause) {
@@ -149,7 +128,7 @@ async function generateReply() {
     <div class="hero-copy">
       <p class="eyebrow">回复助手</p>
       <h1>我该怎么回</h1>
-      <p class="hero-text">直接贴消息、选人物和场景，系统会帮你理解、拟回复、预判下一句。</p>
+      <p class="hero-text">直接贴消息，系统只给你能直接发的结果，不展示内部分析过程。</p>
     </div>
     <div class="hero-actions">
       <RouterLink class="secondary-btn" to="/">回首页</RouterLink>
@@ -165,7 +144,7 @@ async function generateReply() {
               <p class="eyebrow">输入区</p>
               <h3>对方发来的内容</h3>
             </div>
-            <p class="section-note">可以直接贴单条消息，也可以把整段聊天一起放进来。</p>
+            <p class="section-note">贴一句话就能用，也可以把整段聊天一起放进来。</p>
           </div>
 
           <label class="form-field">
@@ -207,83 +186,42 @@ async function generateReply() {
             </label>
           </div>
 
-          <div class="form-grid">
-            <label class="form-field">
-              <span>当前关系 / 状态</span>
-              <textarea
-                v-model="form.relationship_status"
-                class="field-input reply-assistant-textarea"
-                rows="4"
-                placeholder="例如：暧昧期、合作中、冷战后、第一次沟通"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>你想达到什么目标</span>
-              <textarea
-                v-model="form.target_goal"
-                class="field-input reply-assistant-textarea"
-                rows="4"
-                placeholder="例如：更自然、更正式、更有边界、更推进、更克制"
-              ></textarea>
-            </label>
-          </div>
+          <label class="form-field">
+            <span>你的目标</span>
+            <textarea
+              v-model="form.target_goal"
+              class="field-input reply-assistant-textarea"
+              rows="4"
+              placeholder="例如：更自然、更正式、更有边界、更推进、更克制"
+            ></textarea>
+          </label>
 
-          <div class="form-grid">
-            <label class="form-field">
-              <span>语气要求</span>
-              <textarea
-                v-model="form.tone_hint"
-                class="field-input reply-assistant-textarea"
-                rows="4"
-                placeholder="例如：自然、礼貌、体面、正式、简短"
-              ></textarea>
-            </label>
-            <label class="form-field">
-              <span>多轮聊天 / 额外上下文</span>
-              <textarea
-                v-model="form.conversation_context"
-                class="field-input reply-assistant-textarea"
-                rows="4"
-                placeholder="把前后聊天一起贴进来，系统会一起看"
-              ></textarea>
-            </label>
-          </div>
-
-          <div class="quick-actions">
-            <button
-              v-for="item in toneQuickActions"
-              :key="item.label"
-              class="chip-btn"
-              type="button"
-              @click="applyTonePreset(item.value)"
-            >
-              {{ item.label }}
-            </button>
-          </div>
-
-          <div class="quick-actions">
-            <button
-              v-for="item in goalQuickActions"
-              :key="item.label"
-              class="chip-btn"
-              type="button"
-              @click="applyGoalPreset(item.value)"
-            >
-              {{ item.label }}
-            </button>
-          </div>
-
-          <MaterialInputPanel
-            v-model="rawMaterials"
-            path-type="relationship"
-            :supports-guided-prompts="false"
-          />
-
-          <div class="hero-actions">
-            <button class="primary-btn" type="button" :disabled="loading || !form.message.trim()" @click="generateReply">
+          <div class="hero-actions reply-assistant-actions">
+            <button class="primary-btn" type="button" :disabled="loading || !form.message.trim()" @click="generateReply()">
               {{ loading ? '生成中…' : '生成回复建议' }}
             </button>
           </div>
+
+          <details class="advanced-panel">
+            <summary>高级补充材料（可选）</summary>
+            <div class="advanced-panel__body">
+              <label class="form-field">
+                <span>多轮聊天 / 额外上下文</span>
+                <textarea
+                  v-model="form.conversation_context"
+                  class="field-input reply-assistant-textarea"
+                  rows="4"
+                  placeholder="把前后聊天一起贴进来，系统会一起看"
+                ></textarea>
+              </label>
+
+              <MaterialInputPanel
+                v-model="rawMaterials"
+                path-type="relationship"
+                :supports-guided-prompts="false"
+              />
+            </div>
+          </details>
 
           <div v-if="error" class="state-panel">
             <p class="eyebrow">生成失败</p>
@@ -295,72 +233,37 @@ async function generateReply() {
 
       <div class="reply-assistant-column reply-assistant-column--output">
         <article class="summary-panel">
-          <p class="eyebrow">输出区</p>
-          <h3>对方这句话可能什么意思</h3>
-          <p class="state-copy">
-            {{ result?.understanding_result.meaning_guess || '先填上面内容，再生成理解结果。' }}
-          </p>
-          <ul class="summary-panel__list">
-            <li><span>情绪</span><strong>{{ result?.understanding_result.emotion_guess || '未生成' }}</strong></li>
-            <li><span>意图</span><strong>{{ result?.understanding_result.intent_guess || '未生成' }}</strong></li>
-            <li><span>关系状态</span><strong>{{ result?.understanding_result.relationship_state_guess || '未生成' }}</strong></li>
-            <li><span>场景判断</span><strong>{{ result?.understanding_result.scene_guess || '未生成' }}</strong></li>
-          </ul>
+          <p class="eyebrow">一句判断</p>
+          <h3>{{ result?.judgment || '先输入内容，再生成一句判断。' }}</h3>
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">推荐回复</p>
-          <h3>我该怎么回</h3>
-          <p class="state-copy">{{ result?.recommended_reply || '这里会显示一条最适合先发出去的建议。' }}</p>
-        </article>
-
-        <article class="summary-panel">
-          <p class="eyebrow">候选回复</p>
-          <div class="reply-candidate-list">
-            <div v-for="item in result?.reply_candidates || []" :key="`${item.label}-${item.text}`" class="reply-candidate-card">
-              <div class="reply-candidate-card__top">
-                <strong>{{ item.label }}</strong>
-                <span class="tag-chip">{{ item.style_tags.join(' / ') || '平衡' }}</span>
-              </div>
-              <p>{{ item.text }}</p>
-              <small v-if="item.reason">{{ item.reason }}</small>
-            </div>
+          <p class="eyebrow">主推荐回复</p>
+          <div class="reply-main">
+            <p class="state-copy">{{ result?.recommended_reply || '这里会显示一条能直接复制发送的回复。' }}</p>
+          </div>
+          <div class="rewrite-actions">
+            <button
+              v-for="item in rewriteButtons"
+              :key="item.mode"
+              class="chip-btn"
+              type="button"
+              :disabled="loading || !form.message.trim()"
+              @click="generateReply(item.mode)"
+            >
+              {{ item.label }}
+            </button>
           </div>
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">风险提示</p>
-          <div class="tag-row">
-            <span v-for="flag in result?.risk_flags || []" :key="flag" class="tag-chip">{{ flag }}</span>
-            <span v-if="!(result?.risk_flags || []).length" class="tag-chip">生成后会显示风险提示</span>
-          </div>
+          <p class="eyebrow">一句风险提示</p>
+          <p class="state-copy">{{ result?.risk_note || '这里会提示一个需要注意的点。' }}</p>
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">对方下一句可能怎么回</p>
-          <div class="reply-candidate-list">
-            <div v-for="item in result?.predicted_replies || []" :key="`${item.label}-${item.text}`" class="reply-candidate-card">
-              <div class="reply-candidate-card__top">
-                <strong>{{ item.label }}</strong>
-                <span class="tag-chip">{{ item.risk_level || '中' }}</span>
-              </div>
-              <p>{{ item.text }}</p>
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-panel">
-          <p class="eyebrow">风格标签</p>
-          <h3>{{ result?.tone_profile.label || '未生成' }}</h3>
-          <p class="state-copy">{{ result?.tone_profile.guidance || '这里会显示语气风格建议。' }}</p>
-          <div class="tag-row">
-            <span v-for="tag in result?.tone_profile.style_tags || []" :key="tag" class="tag-chip">{{ tag }}</span>
-          </div>
-        </article>
-
-        <article class="summary-panel">
-          <p class="eyebrow">材料摘要</p>
-          <p class="state-copy">{{ result?.material_summary || '文本文件、图片和 OCR 材料会在这里汇总。' }}</p>
+          <p class="eyebrow">一句可能后果</p>
+          <p class="state-copy">{{ result?.likely_consequence || '这里会提示这样回复大概会带来的走向。' }}</p>
         </article>
       </div>
     </div>
@@ -384,47 +287,48 @@ async function generateReply() {
   padding-bottom: 2rem;
 }
 
-.quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin: 0.5rem 0;
-}
-
 .reply-assistant-textarea {
   min-height: 110px;
 }
 
-.reply-candidate-list {
-  display: grid;
-  gap: 0.75rem;
+.reply-assistant-actions {
+  margin-top: 0.25rem;
 }
 
-.reply-candidate-card {
+.advanced-panel {
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 0.9rem 1rem;
-  background: rgba(255, 255, 255, 0.76);
+  border-radius: 20px;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.58);
 }
 
-.reply-candidate-card__top {
+.advanced-panel summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.advanced-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.reply-main {
+  min-height: 72px;
+}
+
+.rewrite-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.45rem;
-}
-
-.reply-candidate-card p {
-  margin: 0;
-  line-height: 1.6;
-}
-
-.reply-candidate-card small {
-  display: block;
-  margin-top: 0.45rem;
-  color: var(--muted);
+  gap: 0.65rem;
+  margin-top: 0.9rem;
 }
 
 @media (max-width: 980px) {
