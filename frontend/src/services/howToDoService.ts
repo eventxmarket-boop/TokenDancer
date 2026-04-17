@@ -6,6 +6,8 @@ export type HowToDoRequestPayload = {
   mode: HowToDoMode
   question?: string
   cast_seed?: string
+  liuyao_cast_mode?: 'time' | 'manual'
+  liuyao_lines?: number[]
   birth_year?: number
   birth_month?: number
   birth_day?: number

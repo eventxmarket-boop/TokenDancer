@@ -6,12 +6,15 @@ from pydantic import BaseModel, Field
 
 
 HowToDoMode = Literal["zhouyi", "liuyao", "bazi"]
+HowToDoLiuYaoCastMode = Literal["time", "manual"]
 
 
 class HowToDoRequest(BaseModel):
     mode: HowToDoMode = "zhouyi"
     question: str = ""
     cast_seed: str = ""
+    liuyao_cast_mode: HowToDoLiuYaoCastMode = "time"
+    liuyao_lines: list[int] = Field(default_factory=list)
     birth_year: int | None = None
     birth_month: int | None = None
     birth_day: int | None = None

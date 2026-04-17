@@ -1,3 +1,9 @@
+## V1.4.83 - 2026-04-18
+
+- Added a dedicated six-yao path under `我该怎么做` with separate time-cast and manual-cast inputs.
+- Expanded the six-yao result to show the main hexagram, transformed hexagram, changing lines, and line-level guidance.
+- Kept Zhouyi and BaZi unchanged while isolating the new six-yao flow so it can be stripped independently if needed.
+
 ## V1.4.82 - 2026-04-18
 
 - Added an embedded `我该怎么做` consultation page that maps the Zhouyi AI repo into a single, strip-friendly UI module.

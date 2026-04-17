@@ -63,6 +63,35 @@ class HowToDoTests(unittest.TestCase):
         self.assertTrue(result["cards"])
         self.assertNotEqual(result["ai_interpretation"], "")
 
+    def test_how_to_do_liuyao_manual_cast_returns_transformed_hexagram(self):
+        payload = {
+            "mode": "liuyao",
+            "question": "这个项目要不要继续推进？",
+            "cast_seed": "liuyao-seed",
+            "liuyao_cast_mode": "manual",
+            "liuyao_lines": [9, 8, 7, 6, 7, 8],
+            "use_ai": True,
+        }
+
+        with patch(
+            "app.services.how_to_do_service.generate_reply",
+            return_value={
+                "content": "当前局势已经出现变化，先看动爻再判断推进节奏。",
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+            },
+        ) as mocked_generate:
+            result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
+
+        self.assertEqual(result["mode"], "liuyao")
+        self.assertTrue(mocked_generate.called)
+        self.assertIn("起卦方式", [card["label"] for card in result["cards"]])
+        self.assertIn("变卦", [card["label"] for card in result["cards"]])
+        self.assertIn("transformed_hexagram", result["raw_result"])
+        self.assertTrue(result["raw_result"]["lines"])
+        self.assertEqual(result["ai_interpretation"], "当前局势已经出现变化，先看动爻再判断推进节奏。")
+
 
 if __name__ == "__main__":
     unittest.main()

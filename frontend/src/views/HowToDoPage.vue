@@ -10,11 +10,21 @@ type ModeOption = {
 
 const modeOptions: ModeOption[] = [
   { key: 'zhouyi', label: '周易64卦', hint: '问一件事，先看势，再看路。' },
-  { key: 'liuyao', label: '六爻', hint: '看当前局势和变化点。' },
+  { key: 'liuyao', label: '六爻', hint: '看本卦、动爻和变卦。' },
   { key: 'bazi', label: '八字', hint: '看长期节奏和结构。' },
 ]
 
 const activeMode = ref<HowToDoMode>('zhouyi')
+const liuyaoCastMode = ref<'time' | 'manual'>('time')
+const liuyaoLineOptions = [
+  { label: '初爻', hint: '起点' },
+  { label: '二爻', hint: '基础' },
+  { label: '三爻', hint: '变化' },
+  { label: '四爻', hint: '承上' },
+  { label: '五爻', hint: '主位' },
+  { label: '上爻', hint: '收尾' },
+]
+const liuyaoLineValues = ref<number[]>([7, 8, 8, 7, 8, 7])
 const question = ref('')
 const castSeed = ref(String(Date.now()))
 const birthYear = ref(new Date().getFullYear())
@@ -27,6 +37,10 @@ const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
 
 const activeOption = computed(() => modeOptions.find((item) => item.key === activeMode.value) || modeOptions[0])
+const liuyaoLines = computed(() => {
+  const lines = result.value?.raw_result?.lines
+  return Array.isArray(lines) ? (lines as Array<Record<string, any>>) : []
+})
 
 const modeTitle = computed(() => activeOption.value.label)
 const modeHint = computed(() => activeOption.value.hint)
@@ -52,6 +66,15 @@ async function submit() {
             gender: gender.value,
             use_ai: true,
           }
+        : activeMode.value === 'liuyao'
+          ? {
+              mode: activeMode.value,
+              question: question.value.trim(),
+              cast_seed: castSeed.value,
+              liuyao_cast_mode: liuyaoCastMode.value,
+              liuyao_lines: liuyaoCastMode.value === 'manual' ? [...liuyaoLineValues.value] : [],
+              use_ai: true,
+            }
         : {
             mode: activeMode.value,
             question: question.value.trim(),
@@ -144,6 +167,44 @@ onMounted(() => {
           </label>
         </div>
 
+        <div v-if="activeMode === 'liuyao'" class="how-to-do-liuyao">
+          <div class="how-to-do-toggle-row">
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': liuyaoCastMode === 'time' }"
+              @click="liuyaoCastMode = 'time'"
+            >
+              时间起卦
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': liuyaoCastMode === 'manual' }"
+              @click="liuyaoCastMode = 'manual'"
+            >
+              手动起卦
+            </button>
+          </div>
+
+          <p class="how-to-do-note">
+            时间起卦会按当前时间自动生成六爻。手动起卦请按从初爻到上爻填 6、7、8、9：6 老阴，7 少阳，8 少阴，9 老阳。
+          </p>
+
+          <div v-if="liuyaoCastMode === 'manual'" class="liuyao-line-grid">
+            <label v-for="(item, index) in liuyaoLineOptions" :key="item.label" class="field-label liuyao-line-field">
+              {{ item.label }}
+              <span class="liuyao-line-hint">{{ item.hint }}</span>
+              <select v-model.number="liuyaoLineValues[index]" class="field-input">
+                <option :value="6">6 老阴</option>
+                <option :value="7">7 少阳</option>
+                <option :value="8">8 少阴</option>
+                <option :value="9">9 老阳</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="how-to-do-actions">
           <button class="primary-btn" type="button" :disabled="loading" @click="submit">
             {{ loading ? '生成中...' : activeMode === 'bazi' ? '排盘' : '起卦' }}
@@ -161,6 +222,17 @@ onMounted(() => {
           <div v-for="card in result.cards" :key="card.label" class="how-to-do-result-card">
             <span>{{ card.label }}</span>
             <strong>{{ card.value }}</strong>
+          </div>
+        </div>
+
+        <div v-if="activeMode === 'liuyao' && liuyaoLines.length" class="how-to-do-line-summary">
+          <p class="eyebrow">爻位</p>
+          <div class="liuyao-line-summary-list">
+            <div v-for="line in liuyaoLines" :key="line.position" class="liuyao-line-summary-item" :class="{ 'is-changing': line.is_changing }">
+              <strong>{{ line.position_name }}</strong>
+              <span>{{ line.text }}</span>
+              <small>{{ line.guidance }}</small>
+            </div>
           </div>
         </div>
 
@@ -255,6 +327,41 @@ onMounted(() => {
   gap: 0.85rem;
 }
 
+.how-to-do-liuyao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.how-to-do-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.how-to-do-note {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.liuyao-line-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.liuyao-line-field {
+  gap: 0.35rem;
+}
+
+.liuyao-line-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 .how-to-do-gender {
   grid-column: span 2;
 }
@@ -318,12 +425,58 @@ onMounted(() => {
   margin-top: 1rem;
 }
 
+.how-to-do-line-summary {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.liuyao-line-summary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.liuyao-line-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-radius: 16px;
+  padding: 0.8rem 0.9rem;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.liuyao-line-summary-item.is-changing {
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.liuyao-line-summary-item strong {
+  font-size: 0.94rem;
+}
+
+.liuyao-line-summary-item span {
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.liuyao-line-summary-item small {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 @media (max-width: 920px) {
   .how-to-do-layout {
     grid-template-columns: 1fr;
   }
 
   .how-to-do-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .liuyao-line-summary-list,
+  .liuyao-line-grid {
     grid-template-columns: 1fr;
   }
 }

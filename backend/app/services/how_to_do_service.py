@@ -15,7 +15,7 @@ from app.services.text_sanitizer import strip_think_blocks
 
 MODE_LABELS = {
     "zhouyi": "周易64卦",
-    "liuyao": "六爻占卜",
+    "liuyao": "六爻排盘",
     "bazi": "八字排盘",
 }
 
@@ -190,6 +190,22 @@ GROUNDING_SNIPPETS = [
     "未济：事未成，先稳住再推进。",
 ]
 
+LIUYAO_CAST_LABELS = {
+    "time": "时间起卦",
+    "manual": "手动起卦",
+}
+
+LIUYAO_POSITION_NAMES = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"]
+
+LIUYAO_LINE_GUIDANCE = [
+    "看起点和底盘是否稳。",
+    "看基础支撑和配合是否顺。",
+    "看变化是不是已经冒头。",
+    "看外部推动和阻力。",
+    "看当前主位和核心趋势。",
+    "看收尾与结果走向。",
+]
+
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -274,6 +290,121 @@ def _build_hexagram(mode: str, question: str, cast_seed: str = "") -> dict[str, 
             "hexagram_name": name,
             "changing_lines": changing_lines,
             "lines": lines,
+        },
+    }
+
+
+def _liuyao_line_value(position: int, value: int) -> dict[str, Any]:
+    if value not in {6, 7, 8, 9}:
+        raise ValueError("六爻手动起卦需要 6 个爻值，且只能是 6/7/8/9")
+    is_yang = value in {7, 9}
+    is_changing = value in {6, 9}
+    return {
+        "position": position,
+        "position_name": LIUYAO_POSITION_NAMES[position - 1],
+        "value": value,
+        "is_changing": is_changing,
+        "yin_yang": "阳" if is_yang else "阴",
+        "text": f"{'九' if is_yang else '六'}{'（动）' if is_changing else ''}",
+        "guidance": LIUYAO_LINE_GUIDANCE[position - 1],
+    }
+
+
+def _liuyao_trigram(lines: list[dict[str, Any]]) -> dict[str, Any]:
+    return TRIGRAMS[_trigram_index(lines)]
+
+
+def _liuyao_binary(lines: list[dict[str, Any]]) -> str:
+    return "".join("1" if item["yin_yang"] == "阳" else "0" for item in reversed(lines))
+
+
+def _build_liuyao_hexagram(
+    line_values: list[int],
+    question: str,
+    cast_seed: str,
+    cast_mode: str,
+    *,
+    include_transformed: bool = True,
+) -> dict[str, Any]:
+    normalized_values = [int(item) for item in line_values[:6]]
+    if len(normalized_values) != 6:
+        raise ValueError("六爻排盘需要 6 个爻值")
+
+    lines = [_liuyao_line_value(index + 1, value) for index, value in enumerate(normalized_values)]
+    upper = _liuyao_trigram([item for item in lines[3:]][::-1])
+    lower = _liuyao_trigram([item for item in lines[:3]][::-1])
+    binary = _liuyao_binary(lines)
+    hexagram_number, name = _hexagram_lookup(binary)
+    changing_lines = [item["position"] for item in lines if item["is_changing"]]
+
+    transformed_hexagram = None
+    if include_transformed and changing_lines:
+        transformed_lines = [
+            {
+                **item,
+                "is_changing": False,
+                "yin_yang": "阴" if item["yin_yang"] == "阳" else "阳",
+                "text": "九" if item["yin_yang"] == "阴" else "六",
+            }
+            for item in lines
+        ]
+        transformed_binary = _liuyao_binary(transformed_lines)
+        transformed_number, transformed_name = _hexagram_lookup(transformed_binary)
+        transformed_upper = _liuyao_trigram([item for item in transformed_lines[3:]][::-1])
+        transformed_lower = _liuyao_trigram([item for item in transformed_lines[:3]][::-1])
+        transformed_hexagram = {
+            "hexagram_number": transformed_number,
+            "name": transformed_name,
+            "meaning": _hexagram_meaning(transformed_name),
+            "upper_trigram": transformed_upper["name"],
+            "lower_trigram": transformed_lower["name"],
+        }
+
+    summary = (
+        f"六爻起得{name}卦（第{hexagram_number}卦），{_hexagram_meaning(name)}。"
+        f" 起卦方式为{LIUYAO_CAST_LABELS.get(cast_mode, '时间起卦')}。"
+    )
+    if changing_lines:
+        summary += f" 动爻在第{'、'.join(f'{item}爻' for item in changing_lines)}，"
+        if transformed_hexagram:
+            summary += f"变卦为{transformed_hexagram['name']}卦。"
+        else:
+            summary += "先看动爻带来的变化。"
+    else:
+        summary += " 暂无动爻，先看本卦整体趋势。"
+    summary += " 六爻更适合先看局势变化，再决定进退。"
+
+    cards = [
+        {"label": "起卦方式", "value": LIUYAO_CAST_LABELS.get(cast_mode, "时间起卦")},
+        {"label": "本卦", "value": f"{name}卦"},
+        {"label": "上下卦", "value": f"{upper['name']} / {lower['name']}"},
+        {"label": "动爻", "value": "、".join(f"{item}爻" for item in changing_lines) if changing_lines else "无"},
+        {"label": "变卦", "value": f"{transformed_hexagram['name']}卦" if transformed_hexagram else "无"},
+    ]
+    suggestions = [
+        "先看动爻在哪一层，再判断该守还是该推。",
+        "有变卦时，优先看变化方向，不要只盯本卦。",
+        "六爻更适合看当前局势，先定节奏再动作。",
+    ]
+
+    return {
+        "method_label": MODE_LABELS.get("liuyao", "六爻排盘"),
+        "question": question,
+        "summary": summary,
+        "cards": cards,
+        "suggestions": suggestions,
+        "raw_result": {
+            "cast_mode": cast_mode,
+            "cast_method": LIUYAO_CAST_LABELS.get(cast_mode, "时间起卦"),
+            "hexagram_number": hexagram_number,
+            "hexagram_name": name,
+            "hexagram_meaning": _hexagram_meaning(name),
+            "upper_trigram": upper["name"],
+            "lower_trigram": lower["name"],
+            "binary": binary,
+            "changing_lines": changing_lines,
+            "lines": lines,
+            "transformed_hexagram": transformed_hexagram,
         },
     }
 
@@ -462,13 +593,27 @@ def _build_bazi_result(question: str, birth_year: int, birth_month: int, birth_d
 
 
 async def _interpret_with_llm(mode: str, question: str, base_result: dict[str, Any], db: Session | None) -> tuple[str, str]:
-    system_prompt = (
-        "你是 Tokendancer 的「我该怎么做」解释器。"
-        "请把周易64卦、六爻或八字结果翻译成一句能看懂、能行动的建议。"
-        "不要讲模型过程，不要写长篇，不要输出标题，只输出一段自然中文。"
-        "如果是卦象，重点说趋势、时机、风险；如果是八字，重点说节奏、平衡和长期倾向。"
-        "语气要克制、清楚、可执行。"
-    )
+    if mode == "liuyao":
+        system_prompt = (
+            "你是 Tokendancer 的六爻解读器。"
+            "请把六爻结果翻译成一段自然、克制、可行动的中文建议。"
+            "重点说本卦、动爻、变卦、当前局势、宜守宜进，不要讲推导过程，不要输出标题，不要长篇大论。"
+        )
+    elif mode == "bazi":
+        system_prompt = (
+            "你是 Tokendancer 的八字解读器。"
+            "请把八字结果翻译成一句能看懂、能行动的建议。"
+            "不要讲模型过程，不要写长篇，不要输出标题，只输出一段自然中文。"
+            "重点说节奏、平衡和长期倾向。语气要克制、清楚、可执行。"
+        )
+    else:
+        system_prompt = (
+            "你是 Tokendancer 的「我该怎么做」解释器。"
+            "请把周易64卦、六爻或八字结果翻译成一句能看懂、能行动的建议。"
+            "不要讲模型过程，不要写长篇，不要输出标题，只输出一段自然中文。"
+            "如果是卦象，重点说趋势、时机、风险；如果是八字，重点说节奏、平衡和长期倾向。"
+            "语气要克制、清楚、可执行。"
+        )
     user_prompt = json.dumps(
         {
             "mode": mode,
@@ -503,10 +648,26 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     mode = _normalize_text(request.get("mode")) or "zhouyi"
     question = _normalize_text(request.get("question"))
     cast_seed = _normalize_text(request.get("cast_seed"))
+    liuyao_cast_mode = _normalize_text(request.get("liuyao_cast_mode")) or "time"
+    liuyao_lines = request.get("liuyao_lines") or []
     use_ai = bool(request.get("use_ai", True))
 
-    if mode in {"zhouyi", "liuyao"}:
+    if mode == "zhouyi":
         base_result = _build_hexagram(mode, question, cast_seed)
+    elif mode == "liuyao":
+        if liuyao_cast_mode == "manual":
+            if not isinstance(liuyao_lines, list) or len(liuyao_lines) != 6:
+                raise ValueError("六爻手动起卦需要提供 6 个爻值")
+            normalized_lines = [int(item) for item in liuyao_lines]
+        else:
+            rng = _make_rng("liuyao", question, cast_seed or datetime.now().isoformat(timespec="seconds"), liuyao_cast_mode)
+            normalized_lines = [rng.choice([6, 7, 8, 9]) for _ in range(6)]
+        base_result = _build_liuyao_hexagram(
+            normalized_lines,
+            question=question,
+            cast_seed=cast_seed,
+            cast_mode=liuyao_cast_mode,
+        )
     elif mode == "bazi":
         birth_year = int(request.get("birth_year") or 0)
         birth_month = int(request.get("birth_month") or 0)
