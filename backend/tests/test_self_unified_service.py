@@ -40,6 +40,10 @@ class SelfUnifiedServiceTests(unittest.TestCase):
         self.assertIn("self_voice", unified)
         self.assertIn("self_knowledge_sources", unified)
         self.assertIn("self_boundary_rules", unified)
+        self.assertIn("profile_analysis_report", unified)
+        self.assertIn("profile_interview", unified)
+        self.assertTrue(unified["profile_analysis_report"]["report_summary"])
+        self.assertGreaterEqual(unified["profile_interview"]["question_count"], 10)
         self.assertGreaterEqual(len(unified["question_routing"]), 5)
         self.assertGreaterEqual(len(unified["deep_dive_questions"]), 8)
         self.assertGreaterEqual(len(unified["validation_samples"]), 1)
@@ -47,6 +51,8 @@ class SelfUnifiedServiceTests(unittest.TestCase):
         self.assertTrue(draft["profile"])
         self.assertTrue(draft["mindset"])
         self.assertTrue(draft["guardrails"])
+        self.assertIn("profile_analysis_report", draft)
+        self.assertIn("profile_interview", draft)
 
     def test_route_self_question_uses_topic_weights(self):
         route = route_self_question("要不要接这个 offer，还是先保底？")
@@ -69,4 +75,3 @@ class SelfUnifiedServiceTests(unittest.TestCase):
         self.assertIn("问题路由", context)
         self.assertIn("学习 / 技术 / 工具选择", context)
         self.assertIn("回答要求", context)
-

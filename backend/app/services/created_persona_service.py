@@ -881,6 +881,8 @@ def load_created_persona_summary(
     profile = _normalize_text(draft.profile)
     unified = getattr(draft, "self_persona_unified", None)
     if isinstance(unified, dict):
+        profile_analysis_report = unified.get("profile_analysis_report") or {}
+        profile_interview = unified.get("profile_interview") or {}
         self_identity = unified.get("self_identity") or {}
         self_decision_rules = unified.get("self_decision_rules") or {}
         self_voice = unified.get("self_voice") or {}
@@ -893,6 +895,12 @@ def load_created_persona_summary(
             _normalize_text(self_decision_rules.get("risk_preference")),
             _normalize_text(self_voice.get("tone")),
             _normalize_text(" / ".join((self_knowledge_sources.get("static_materials") or [])[:2])),
+            _normalize_text(profile_analysis_report.get("report_summary")),
+            _normalize_text(
+                f"追问 {profile_interview.get('answered_count', 0)}/{profile_interview.get('question_count', 0)}"
+                if isinstance(profile_interview, dict)
+                else ""
+            ),
         ]
         summary_bits = [bit for bit in summary_bits if bit]
         if summary_bits:

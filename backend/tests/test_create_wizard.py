@@ -33,7 +33,11 @@ class CreateWizardTests(unittest.TestCase):
                 "memory_evidence_points": "聊天记录\n文字片段\n文件材料",
                 "reflection_rules_summary": "把容易失真和需要保留的边界先写清楚。",
                 "reflection_rules_points": "不夸张\n不越界\n不替自己下定论",
+                "self_public_sources_text": "GitHub / 博客 / 作品集",
+                "self_external_feedback_text": "别人说我会先看边界。",
+                "self_interview_custom_questions_text": "你最想先补哪一块？",
                 "self_deep_dive_answers_text": "哪类问题你会特别坚定？\n哪类问题你会保留余地？\n你做过最典型的一次错误判断是什么？\n哪些原则是你后来才形成的？\n你会如何权衡长期和短期？\n你最讨厌哪种建议方式？\n什么场景下你会故意说得更直接？\n什么场景下你会更克制？",
+                "self_interview_answers_text": "我会特别坚定。\n我会保留余地。\n条件不足时我会下错结论。",
                 "self_validation_samples_text": "要不要接某个 offer？\n要不要转方向？\n要不要先做 MVP？\n这件事该止损还是继续推进？",
                 "raw_materials": {
                     "chat_history_text": "我在聊天里会先确认目标。",
@@ -99,6 +103,10 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("self_decision_rules", body["draft"]["self_persona_unified"])
         self.assertIn("self_knowledge_sources", body["draft"]["self_persona_unified"])
         self.assertIn("self_boundary_rules", body["draft"]["self_persona_unified"])
+        self.assertIn("profile_analysis_report", body["draft"])
+        self.assertIn("profile_interview", body["draft"])
+        self.assertTrue(body["draft"]["profile_analysis_report"]["report_summary"])
+        self.assertGreaterEqual(body["draft"]["profile_interview"]["question_count"], 10)
         self.assertGreaterEqual(len(body["draft"]["self_persona_unified"]["deep_dive_questions"]), 8)
         self.assertGreaterEqual(len(body["draft"]["self_persona_unified"]["validation_samples"]), 1)
         self.assertTrue(body["draft"]["self_persona_unified"]["work_system"]["summary"])

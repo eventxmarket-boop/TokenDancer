@@ -15,6 +15,8 @@ import {
   type ReunionPersonaRetrievalPolicy,
   type ReunionPersonaSafetyGuardrails,
   type SelfPersonaUnifiedDraft,
+  type SelfProfileAnalysisReport,
+  type SelfProfileInterviewPack,
   type RelationshipManagementProfile,
   type RelationshipManagementMemoryBase,
 } from '@/services/createWizardService'
@@ -108,6 +110,25 @@ const editableDraft = reactive<CreateWizardDraft>({
     create_mode: 'standard',
     input_modes: [],
     materials_summary: '',
+    profile_analysis_report: {
+      analysis_focus: '',
+      identity_summary: {},
+      core_beliefs: [],
+      expression_style: [],
+      work_style: [],
+      timeline: [],
+      external_feedback: [],
+      missing_dimensions: [],
+      source_snapshot: [],
+      report_summary: '',
+    },
+    profile_interview: {
+      question_count: 0,
+      answered_count: 0,
+      unanswered_count: 0,
+      questions: [],
+      answer_notes: [],
+    },
     self_identity: {
       role: '',
       long_term_goals: [],
@@ -882,6 +903,48 @@ const selfBoundaryLines = computed(() => {
   ]
 })
 
+const selfAnalysisReportLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  const report = (unified.profile_analysis_report || {}) as SelfProfileAnalysisReport
+  return [
+    { label: '分析重心', value: report.analysis_focus || '素材驱动 / 判断优先 / 可持续更新' },
+    { label: '身份概览', value: Object.entries(report.identity_summary || {}).map(([key, value]) => `${key}：${value}`).join(' / ') || '未填写' },
+    { label: '核心判断', value: report.core_beliefs?.join(' / ') || '未填写' },
+    { label: '表达风格', value: report.expression_style?.join(' / ') || '未填写' },
+    { label: '做事方式', value: report.work_style?.join(' / ') || '未填写' },
+    { label: '时间线', value: report.timeline?.join(' / ') || '未填写' },
+    { label: '外部反馈', value: report.external_feedback?.join(' / ') || '未填写' },
+    { label: '缺口', value: report.missing_dimensions?.join(' / ') || '未填写' },
+    { label: '公开来源', value: report.source_snapshot?.join(' / ') || '未填写' },
+    { label: '报告摘要', value: report.report_summary || '未填写' },
+  ]
+})
+
+const selfInterviewLines = computed(() => {
+  const unified = selfUnifiedDraft.value
+  if (!unified) {
+    return []
+  }
+  const interview = (unified.profile_interview || {}) as SelfProfileInterviewPack
+  return [
+    { label: '问题数量', value: `${interview.question_count || 0}` },
+    { label: '已答数量', value: `${interview.answered_count || 0}` },
+    { label: '未答数量', value: `${interview.unanswered_count || 0}` },
+    {
+      label: '补洞问题',
+      value: (interview.questions || []).map((item) => item.question).join(' / ') || '未填写',
+    },
+    {
+      label: '补洞答案',
+      value: (interview.questions || []).map((item) => item.answer || '未填写').join(' / ') || '未填写',
+    },
+    { label: '补洞提示', value: (interview.answer_notes || []).join(' / ') || '未填写' },
+  ]
+})
+
 const selfRoutingLines = computed(() => {
   const unified = selfUnifiedDraft.value
   if (!unified) {
@@ -890,14 +953,6 @@ const selfRoutingLines = computed(() => {
   return (unified.question_routing || []).map((route) => `${route.topic}：${Object.entries(route.weights || {})
     .map(([key, value]) => `${key} ${Number(value).toFixed(2)}`)
     .join(' / ')}`)
-})
-
-const selfDeepDiveLines = computed(() => {
-  const unified = selfUnifiedDraft.value
-  if (!unified) {
-    return []
-  }
-  return (unified.deep_dive_answers || []).map((item) => `${item.question}：${item.answer || '未填写'}`)
 })
 
 const selfValidationLines = computed(() => {
@@ -916,6 +971,25 @@ function ensureSelfUnifiedDraft() {
       create_mode: 'standard',
       input_modes: [],
       materials_summary: '',
+      profile_analysis_report: {
+        analysis_focus: '',
+        identity_summary: {},
+        core_beliefs: [],
+        expression_style: [],
+        work_style: [],
+        timeline: [],
+        external_feedback: [],
+        missing_dimensions: [],
+        source_snapshot: [],
+        report_summary: '',
+      },
+      profile_interview: {
+        question_count: 0,
+        answered_count: 0,
+        unanswered_count: 0,
+        questions: [],
+        answer_notes: [],
+      },
       self_identity: {
         role: '',
         long_term_goals: [],
@@ -1313,6 +1387,39 @@ onMounted(() => {
         </article>
 
         <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">五步蒸馏链</p>
+          <h3>素材收集 → 分析报告 → 追问补洞 → 能力配置 → 生成</h3>
+          <div class="family-grid">
+            <div v-for="line in selfAnalysisReportLines.slice(0, 4)" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">人物分析报告</p>
+          <h3>先把原始素材整理成可检查的中间层</h3>
+          <div class="family-grid">
+            <div v-for="line in selfAnalysisReportLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
+          <p class="eyebrow">追问补洞</p>
+          <h3>基于分析报告继续补深层判断</h3>
+          <div class="family-grid">
+            <div v-for="line in selfInterviewLines" :key="line.label" class="family-grid__item">
+              <span>{{ line.label }}</span>
+              <strong>{{ line.value }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
           <p class="eyebrow">四层结构</p>
           <div class="self-unified-grid">
             <div v-for="layer in selfUnifiedLayers" :key="layer.title" class="self-unified-grid__item">
@@ -1342,17 +1449,6 @@ onMounted(() => {
           <div class="family-grid">
             <div v-for="line in selfRoutingLines" :key="line" class="family-grid__item">
               <span>路由</span>
-              <strong>{{ line }}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article v-if="draft?.meta.create_type === 'self_unified'" class="draft-card">
-          <p class="eyebrow">深挖层</p>
-          <h3>补足 8 到 12 个关键问题</h3>
-          <div class="family-grid">
-            <div v-for="line in selfDeepDiveLines" :key="line" class="family-grid__item">
-              <span>追问</span>
               <strong>{{ line }}</strong>
             </div>
           </div>

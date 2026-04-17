@@ -3335,6 +3335,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "relationship_management_profile": content.get("relationship_management_profile"),
         "relationship_management_memory_base": content.get("relationship_management_memory_base"),
         "analysis_focus": content.get("analysis_focus", ""),
+        "profile_analysis_report": content.get("profile_analysis_report"),
+        "profile_interview": content.get("profile_interview"),
         "understanding_weight": content.get("understanding_weight", 0.0),
         "maintenance_weight": content.get("maintenance_weight", 0.0),
         "message_push_weight": content.get("message_push_weight", 0.0),

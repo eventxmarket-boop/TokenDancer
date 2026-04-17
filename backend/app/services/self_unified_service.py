@@ -8,6 +8,9 @@ from app.schemas.self_unified import (
     SelfUnifiedBoundaryRules,
     SelfUnifiedDeepDiveItem,
     SelfUnifiedDecisionRules,
+    SelfProfileAnalysisReport,
+    SelfProfileInterviewItem,
+    SelfProfileInterviewPack,
     SelfUnifiedIdentity,
     SelfUnifiedKnowledgeSourceItem,
     SelfUnifiedKnowledgeSources,
@@ -16,6 +19,8 @@ from app.schemas.self_unified import (
     SelfUnifiedValidationSample,
     SelfUnifiedVoice,
 )
+from app.services.self_profile_analysis_service import build_self_profile_analysis_report
+from app.services.self_profile_interview_service import build_self_profile_interview_pack
 
 
 class SelfUnifiedError(RuntimeError):
@@ -345,6 +350,8 @@ def _build_knowledge_sources(
     designated_sources = _merge_unique_lines(
         form_data.get("self_knowledge_sources_text"),
         form_data.get("knowledge_sources_text"),
+        form_data.get("self_public_sources_text"),
+        form_data.get("public_sources_text"),
     )
     dynamic_source_lines = _merge_unique_lines(
         form_data.get("self_knowledge_dynamic_text"),
@@ -515,8 +522,28 @@ def build_self_unified_draft(form_data: dict[str, Any]) -> dict[str, Any]:
     voice = _build_voice(form_data)
     knowledge_sources = _build_knowledge_sources(form_data, raw_materials, materials_summary)
     boundary_rules = _build_boundary_rules(form_data)
+    profile_analysis_report = build_self_profile_analysis_report(
+        form_data,
+        raw_materials,
+        identity_layer=identity_layer,
+        decision_rules=decision_rules,
+        voice=voice,
+        knowledge_sources=knowledge_sources,
+        boundary_rules=boundary_rules,
+    )
+    profile_interview = build_self_profile_interview_pack(form_data, profile_analysis_report)
     question_routing = _build_question_routing()
-    deep_dive_questions, deep_dive_answers = _build_deep_dive_items(form_data)
+    interview_questions = profile_interview.get("questions") or []
+    deep_dive_questions = [item.get("question", "") for item in interview_questions if _normalize_text(item.get("question"))]
+    deep_dive_answers = [
+        SelfUnifiedDeepDiveItem(
+            question=_normalize_text(item.get("question")),
+            answer=_normalize_text(item.get("answer")),
+            follow_up_needed=bool(item.get("follow_up_needed")),
+        )
+        for item in interview_questions
+        if _normalize_text(item.get("question"))
+    ]
     validation_samples = _build_validation_samples(form_data)
 
     legacy_work_system = _format_text_block(
@@ -590,6 +617,7 @@ def build_self_unified_draft(form_data: dict[str, Any]) -> dict[str, Any]:
             *boundary_rules.forbidden_actions[:4],
             *boundary_rules.caution_notes[:4],
             *knowledge_sources.do_not_assume_facts[:3],
+            profile_analysis_report.get("report_summary", ""),
         ]
     )
 
@@ -597,6 +625,8 @@ def build_self_unified_draft(form_data: dict[str, Any]) -> dict[str, Any]:
         create_mode=create_mode,
         input_modes=normalized_input_modes,
         materials_summary=materials_summary,
+        profile_analysis_report=SelfProfileAnalysisReport(**profile_analysis_report),
+        profile_interview=SelfProfileInterviewPack(**profile_interview),
         self_identity=identity_layer,
         self_decision_rules=decision_rules,
         self_voice=voice,
@@ -623,6 +653,9 @@ def build_self_unified_draft(form_data: dict[str, Any]) -> dict[str, Any]:
         "create_mode": create_mode,
         "input_modes": normalized_input_modes,
         "material_summary": materials_summary,
+        "analysis_focus": _normalize_text(profile_analysis_report.get("analysis_focus")) or "素材驱动 / 判断优先 / 可持续更新",
+        "profile_analysis_report": profile_analysis_report,
+        "profile_interview": profile_interview,
         "raw_materials": raw_materials,
         "self_persona_unified": self_persona_unified.model_dump(),
     }
@@ -638,6 +671,8 @@ def build_self_unified_context(persona: dict[str, Any], history: list[dict[str, 
     if not isinstance(payload, dict):
         payload = {}
     route = route_self_question(user_message, persona)
+    analysis_report = payload.get("profile_analysis_report") or {}
+    profile_interview = payload.get("profile_interview") or {}
     self_identity = payload.get("self_identity") or {}
     self_decision_rules = payload.get("self_decision_rules") or {}
     self_voice = payload.get("self_voice") or {}
@@ -659,6 +694,9 @@ def build_self_unified_context(persona: dict[str, Any], history: list[dict[str, 
         f"表达倾向：{_normalize_text(self_voice.get('tone')) or '清楚、克制、自然'}",
         f"知识源优先：{' / '.join(_split_lines(self_knowledge_sources.get('verify_first_question_types'))[:3])}",
         f"边界规则：{' / '.join(_split_lines(boundary_rules.get('forbidden_actions'))[:3])}",
+        f"分析报告：{_normalize_text(analysis_report.get('report_summary'))}",
+        f"分析缺口：{' / '.join(_split_lines(analysis_report.get('missing_dimensions'))[:4])}",
+        f"追问补洞：{_normalize_text(profile_interview.get('question_count'))} 个问题，已答 {_normalize_text(profile_interview.get('answered_count'))} 个",
     ]
     if notes:
         parts.append("路由提示：")
@@ -679,6 +717,8 @@ def format_self_unified_for_prompt(persona: dict[str, Any]) -> str:
         return ""
 
     parts: list[str] = []
+    profile_analysis_report = payload.get("profile_analysis_report") or {}
+    profile_interview = payload.get("profile_interview") or {}
     identity = payload.get("self_identity") or {}
     decision_rules = payload.get("self_decision_rules") or {}
     voice = payload.get("self_voice") or {}
@@ -695,6 +735,17 @@ def format_self_unified_for_prompt(persona: dict[str, Any]) -> str:
     _append_section("自我表达层", voice.get("tone"))
     _append_section("自我知识源层", " / ".join(_split_lines(knowledge_sources.get("static_materials"))[:6]))
     _append_section("自我边界", " / ".join(_split_lines(boundary_rules.get("forbidden_actions"))[:6]))
+    _append_section("人物分析报告", profile_analysis_report.get("report_summary"))
+    if isinstance(profile_interview, dict):
+        interview_lines = []
+        for item in (profile_interview.get("questions") or [])[:8]:
+            if not isinstance(item, dict):
+                continue
+            question = _normalize_text(item.get("question"))
+            answer = _normalize_text(item.get("answer"))
+            if question:
+                interview_lines.append(f"- {question}" + (f"｜{answer}" if answer else ""))
+        _append_section("追问补洞", "\n".join(interview_lines))
     return "\n\n".join(parts).strip()
 
 
@@ -703,6 +754,8 @@ def format_self_unified_layers(persona: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return {}
     return {
+        "profile_analysis_report": payload.get("profile_analysis_report") or {},
+        "profile_interview": payload.get("profile_interview") or {},
         "self_identity": payload.get("self_identity") or {},
         "self_decision_rules": payload.get("self_decision_rules") or {},
         "self_voice": payload.get("self_voice") or {},

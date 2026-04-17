@@ -1,5 +1,13 @@
 # Changelog
 
+## V1.4.54 - 2026-04-17
+
+- Upgraded the self-main creation flow into an embedded source-driven distillation chain with a structured analysis report and follow-up interview stage.
+- Added a reusable persona analysis report that summarizes identity, beliefs, expression style, work style, timeline, external feedback, and missing dimensions.
+- Added dynamic follow-up questions that are derived from the analysis report and can be answered to fill the gaps before final distillation.
+- Kept the existing self-unified layers and legacy compatibility fields intact so old self skills and saved objects still round-trip safely.
+- Surfaced the new five-step workflow in the self creation page and result page without replacing the original skill mapping layer.
+
 ## V1.4.53 - 2026-04-17
 
 - Upgraded the self-main creation flow from a form-style profile into a source-driven self-distillation workflow.

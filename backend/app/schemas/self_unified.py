@@ -83,10 +83,41 @@ class SelfUnifiedValidationSample(BaseModel):
     notes: str = ""
 
 
+class SelfProfileAnalysisReport(BaseModel):
+    analysis_focus: str = ""
+    identity_summary: dict[str, str] = Field(default_factory=dict)
+    core_beliefs: list[str] = Field(default_factory=list)
+    expression_style: list[str] = Field(default_factory=list)
+    work_style: list[str] = Field(default_factory=list)
+    timeline: list[str] = Field(default_factory=list)
+    external_feedback: list[str] = Field(default_factory=list)
+    missing_dimensions: list[str] = Field(default_factory=list)
+    source_snapshot: list[str] = Field(default_factory=list)
+    report_summary: str = ""
+
+
+class SelfProfileInterviewItem(BaseModel):
+    question: str = ""
+    dimension: str = ""
+    reason: str = ""
+    answer: str = ""
+    follow_up_needed: bool = False
+
+
+class SelfProfileInterviewPack(BaseModel):
+    question_count: int = 0
+    answered_count: int = 0
+    unanswered_count: int = 0
+    questions: list[SelfProfileInterviewItem] = Field(default_factory=list)
+    answer_notes: list[str] = Field(default_factory=list)
+
+
 class SelfPersonaUnifiedDraft(BaseModel):
     create_mode: str = "standard"
     input_modes: list[str] = Field(default_factory=list)
     materials_summary: str = ""
+    profile_analysis_report: SelfProfileAnalysisReport = Field(default_factory=SelfProfileAnalysisReport)
+    profile_interview: SelfProfileInterviewPack = Field(default_factory=SelfProfileInterviewPack)
     self_identity: SelfUnifiedIdentity = Field(default_factory=SelfUnifiedIdentity)
     self_decision_rules: SelfUnifiedDecisionRules = Field(default_factory=SelfUnifiedDecisionRules)
     self_voice: SelfUnifiedVoice = Field(default_factory=SelfUnifiedVoice)
@@ -105,4 +136,3 @@ class SelfPersonaUnifiedDraft(BaseModel):
 
 SelfUnifiedLayer = SelfUnifiedTextBlock
 SelfPersonaUnifiedLayer = SelfUnifiedTextBlock
-

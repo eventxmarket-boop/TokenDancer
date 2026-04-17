@@ -62,7 +62,11 @@ const formState = reactive({
   memory_evidence_points: '',
   reflection_rules_summary: '',
   reflection_rules_points: '',
+  self_public_sources_text: '',
+  self_external_feedback_text: '',
   self_deep_dive_answers_text: '',
+  self_interview_answers_text: '',
+  self_interview_custom_questions_text: '',
   self_validation_samples_text: '',
   target_name: '',
   material_type: '',
@@ -966,7 +970,11 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
     formState.memory_evidence_points = '笔记 / 文章 / 公开表达\n指定网站 / 项目 / 文档'
     formState.reflection_rules_summary = '把边界规则和验证样本写出来。'
     formState.reflection_rules_points = '不编造经历\n不假装熟悉\n不把动态事实说死'
+    formState.self_public_sources_text = 'GitHub / 博客 / 作品集 / 公众号 / 视频号 / B站'
+    formState.self_external_feedback_text = '他人评价、复盘记录、外部反馈'
     formState.self_deep_dive_answers_text = ''
+    formState.self_interview_answers_text = ''
+    formState.self_interview_custom_questions_text = ''
     formState.self_validation_samples_text = '要不要接某个 offer？\n要不要转方向？\n要不要先做 MVP？\n这件事该止损还是继续推进？'
   }
 
@@ -2058,8 +2066,8 @@ watch(
           <div v-if="createType === 'self_unified'" class="wizard-form">
             <div class="summary-panel summary-panel--compact">
               <p class="eyebrow">自我主线</p>
-              <h3>素材驱动、判断优先、可持续更新</h3>
-              <p class="state-copy">先把能证明你怎么判断、怎么说话、怎么查证的材料放进来，再补结构和追问。</p>
+              <h3>素材收集 → 分析报告 → 追问补洞 → 能力配置 → 生成</h3>
+              <p class="state-copy">先把资料池放进来，再生成分析报告和补洞问题，最后再收敛成正式自我主线。</p>
             </div>
 
             <MaterialInputPanel
@@ -2067,6 +2075,12 @@ watch(
               path-type="self"
               :supports-guided-prompts="false"
             />
+
+            <div class="summary-panel summary-panel--compact">
+              <p class="eyebrow">分析报告</p>
+              <h3>先把素材整理成可检查的中间报告</h3>
+              <p class="state-copy">这一步会把身份、判断、表达、工作方式、时间线、外部反馈和缺口先整理出来。</p>
+            </div>
 
             <div class="form-grid">
               <label class="form-field">
@@ -2076,6 +2090,27 @@ watch(
               <label class="form-field">
                 <span>蒸馏深度</span>
                 <input :value="selfModeLabels[createMode]" class="field-input" type="text" readonly />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>公开资料 / 知识源</span>
+                <textarea
+                  v-model="formState.self_public_sources_text"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="GitHub / 博客 / 作品集 / 公众号 / 视频号 / B站 / 其他可查资料"
+                ></textarea>
+              </label>
+              <label class="form-field">
+                <span>他人评价 / 外部反馈</span>
+                <textarea
+                  v-model="formState.self_external_feedback_text"
+                  class="field-input wizard-textarea"
+                  rows="4"
+                  placeholder="别人怎么评价你的判断、表达、推进方式或边界感"
+                ></textarea>
               </label>
             </div>
 
@@ -2186,15 +2221,25 @@ watch(
 
             <div class="summary-panel summary-panel--compact">
               <p class="eyebrow">追问补洞</p>
-              <h3>把 8 到 12 个关键问题补全</h3>
-              <p class="state-copy">例如：哪类问题你会坚定、哪些问题你会保留余地、什么场景你会更直接。</p>
+              <h3>把分析报告里缺的关键问题补全</h3>
+              <p class="state-copy">例如：哪类问题你会坚定、哪些问题会保留余地、什么场景会更直接、哪些边界绝不碰。</p>
               <textarea
-                v-model="formState.self_deep_dive_answers_text"
+                v-model="formState.self_interview_answers_text"
                 class="field-input wizard-textarea"
                 rows="10"
                 placeholder="按顺序补充回答：\n1. 哪类问题你会特别坚定？\n2. 哪类问题你会保留余地？\n3. 你做过最典型的一次错误判断是什么？\n4. 哪些原则是你后来才形成的？\n5. 你会如何权衡长期和短期？\n6. 你最讨厌哪种建议方式？\n7. 什么场景下你会故意说得更直接？\n8. 什么场景下你会更克制？"
               ></textarea>
             </div>
+
+            <label class="form-field">
+              <span>可选追问（补充）</span>
+              <textarea
+                v-model="formState.self_interview_custom_questions_text"
+                class="field-input wizard-textarea"
+                rows="4"
+                placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
+              ></textarea>
+            </label>
           </div>
 
           <div v-else-if="createType === 'source_persona'" class="wizard-form">

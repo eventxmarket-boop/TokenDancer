@@ -29,6 +29,9 @@ from app.schemas.self_unified import (
     SelfUnifiedTextBlock,
     SelfUnifiedValidationSample,
     SelfUnifiedVoice,
+    SelfProfileAnalysisReport,
+    SelfProfileInterviewItem,
+    SelfProfileInterviewPack,
 )
 
 __all__ = [
@@ -55,6 +58,9 @@ __all__ = [
     "SelfUnifiedTextBlock",
     "SelfUnifiedValidationSample",
     "SelfUnifiedVoice",
+    "SelfProfileAnalysisReport",
+    "SelfProfileInterviewItem",
+    "SelfProfileInterviewPack",
     "SelfPersonaUnifiedDraft",
     "SelfPersonaUnifiedLayer",
 ]

@@ -25,6 +25,7 @@ from app.schemas.reunion_persona import (
     ReunionPersonaSafetyGuardrails,
 )
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
+from app.schemas.self_unified import SelfProfileAnalysisReport, SelfProfileInterviewPack
 
 
 class CreateWizardUploadedImageDocument(BaseModel):
@@ -149,6 +150,8 @@ class CreateWizardDraft(BaseModel):
     raw_materials: dict[str, Any] | None = None
     guided_memory_answers: FamilyCompanionGuidedMemoryAnswers | None = None
     reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers | None = None
+    profile_analysis_report: SelfProfileAnalysisReport | None = None
+    profile_interview: SelfProfileInterviewPack | None = None
     analysis_focus: str = ""
     understanding_weight: float = 0.0
     maintenance_weight: float = 0.0

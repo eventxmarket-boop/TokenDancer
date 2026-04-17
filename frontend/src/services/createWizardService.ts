@@ -450,10 +450,41 @@ export type SelfUnifiedValidationSample = {
   notes: string
 }
 
+export type SelfProfileAnalysisReport = {
+  analysis_focus: string
+  identity_summary: Record<string, string>
+  core_beliefs: string[]
+  expression_style: string[]
+  work_style: string[]
+  timeline: string[]
+  external_feedback: string[]
+  missing_dimensions: string[]
+  source_snapshot: string[]
+  report_summary: string
+}
+
+export type SelfProfileInterviewItem = {
+  question: string
+  dimension: string
+  reason: string
+  answer: string
+  follow_up_needed: boolean
+}
+
+export type SelfProfileInterviewPack = {
+  question_count: number
+  answered_count: number
+  unanswered_count: number
+  questions: SelfProfileInterviewItem[]
+  answer_notes: string[]
+}
+
 export type SelfPersonaUnifiedDraft = {
   create_mode: string
   input_modes: string[]
   materials_summary?: string
+  profile_analysis_report?: SelfProfileAnalysisReport
+  profile_interview?: SelfProfileInterviewPack
   self_identity?: SelfUnifiedIdentity
   self_decision_rules?: SelfUnifiedDecisionRules
   self_voice?: SelfUnifiedVoice
@@ -529,6 +560,8 @@ export type CreateWizardDraft = {
   reunion_guided_memory_answers?: ReunionPersonaGuidedMemoryAnswers | null
   emotion_rules?: FamilyCompanionEmotionRules | Record<string, unknown> | null
   self_persona_unified?: SelfPersonaUnifiedDraft | null
+  profile_analysis_report?: SelfProfileAnalysisReport | Record<string, unknown> | null
+  profile_interview?: SelfProfileInterviewPack | Record<string, unknown> | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
   reunion_persona_profile?: ReunionPersonaProfile | null
