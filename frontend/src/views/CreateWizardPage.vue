@@ -10,8 +10,6 @@ import {
   submitCreateDraft,
   normalizeCreateWizardInputMode,
   type CreateWizardRawMaterials,
-  type UploadedImageDocument,
-  type TextMaterialDocument,
 } from '@/services/createWizardService'
 import {
   requestSelfFillAssistant,
@@ -423,6 +421,79 @@ const selfModeNextStepCopy: Record<SelfCreateMode, string> = {
   deep: '当前已经是最完整路径',
 }
 
+type FlowPage = {
+  key: string
+  title: string
+  description: string
+  summary: string
+}
+
+const sourceFlowPages: FlowPage[] = [
+  { key: 'source_target_name', title: '目标名称', description: '先写这条资料流要做成什么。', summary: '先把目标人格的名字写出来。' },
+  { key: 'source_material_type', title: '材料类型', description: '先标出材料是什么。', summary: '把 PDF、聊天记录、音视频等来源写清楚。' },
+  { key: 'source_material_description', title: '材料说明', description: '先说这批材料在讲什么。', summary: '用一段话说明材料总览。' },
+  { key: 'source_focus_points', title: '提炼重点', description: '先写希望系统提炼什么。', summary: '把最想抽出的重点写清楚。' },
+  { key: 'source_excluded_content', title: '排除内容', description: '先写不想被抽出的内容。', summary: '把不希望被抽出的内容写清楚。' },
+  { key: 'source_materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'source_review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
+]
+
+const relationshipFlowPages: FlowPage[] = [
+  { key: 'relationship_type', title: '关系类型', description: '先定这个人是什么关系。', summary: '先写同事、导师、父母或伴侣。' },
+  { key: 'persona_name', title: '对方称呼', description: '先写你怎么称呼对方。', summary: '把对方的名字或称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写对方平时怎么说话。', summary: '把典型说话方式写清楚。' },
+  { key: 'decision_logic', title: '判断逻辑', description: '先写对方常怎么判断。', summary: '把常见判断逻辑写出来。' },
+  { key: 'purpose', title: '用途目标', description: '先写这个人格帮你做什么。', summary: '把这个人格的用途写明白。' },
+  { key: 'boundaries', title: '边界规则', description: '先写不能越过哪些边界。', summary: '把边界和禁区写清楚。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
+]
+
+const intimateFlowPages: FlowPage[] = [
+  { key: 'relationship_type', title: '关系类型', description: '先定这段亲密关系的类型。', summary: '先写关系经营、消息模拟或过去关系。' },
+  { key: 'persona_name', title: '对方称呼', description: '先写你怎么称呼对方。', summary: '把对方名字或称呼写出来。' },
+  { key: 'relationship_stage', title: '关系阶段', description: '先写你们现在处在什么阶段。', summary: '把暧昧期、关系中或磨合中写清楚。' },
+  { key: 'speech_style', title: '说话风格', description: '先写对方平时怎么说话。', summary: '把典型说话方式写清楚。' },
+  { key: 'response_temperature', title: '回复温度', description: '先写你希望它用什么温度回应。', summary: '写出安慰、推进还是克制。' },
+  { key: 'catchphrases', title: '口头禅', description: '先写对方常说的话。', summary: '把常见口头禅整理出来。' },
+  { key: 'conversation_samples', title: '对话样本', description: '先放一段最像的聊天。', summary: '把最像的对话样本写出来。' },
+  { key: 'interaction_rules', title: '互动规则', description: '先写你们常见的互动方式。', summary: '把互动规则写清楚。' },
+  { key: 'relationship_goals', title: '关系目标', description: '先写你想达成什么关系效果。', summary: '把关系目标写明白。' },
+  { key: 'key_memories', title: '关键记忆', description: '先写最重要的记忆点。', summary: '把关键记忆补进去。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'boundaries', title: '边界规则', description: '先写不能越过哪些边界。', summary: '把边界和禁区写清楚。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
+]
+
+const familyFlowPages: FlowPage[] = [
+  { key: 'persona_name', title: '称呼', description: '先写你怎么称呼这位家人。', summary: '把对方称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写这位家人平时怎么说话。', summary: '把说话风格写清楚。' },
+  { key: 'core_care', title: '照顾方式', description: '先写对方常见的安慰和关心方式。', summary: '把安慰和关心的方式写出来。' },
+  { key: 'shared_events', title: '共同经历', description: '先写你们一起经历过什么。', summary: '把重要共同经历写清楚。' },
+  { key: 'important_advice', title: '常见提醒', description: '先写反复提过的话。', summary: '把常见提醒写出来。' },
+  { key: 'emotional_triggers', title: '在意点', description: '先写对方最在意你什么。', summary: '把他最在意的点写清楚。' },
+  { key: 'guided_most_common_topics', title: '常聊话题', description: '先写你们最常聊什么。', summary: '把最常聊的话题写清楚。' },
+  { key: 'guided_comfort_style', title: '安慰方式', description: '先写对方最常怎么安慰你。', summary: '把对方安慰你的方式写出来。' },
+  { key: 'guided_most_characteristic_event', title: '典型小事', description: '先写最像他 / 她的一件小事。', summary: '把最典型的一件小事写出来。' },
+  { key: 'guided_repeated_phrases', title: '反复说过的话', description: '先写有哪些话被反复提到。', summary: '把重复出现的话写出来。' },
+  { key: 'guided_most_common_reminders', title: '常见提醒', description: '先写最常提醒你的是什么。', summary: '把最常提醒你的内容写清楚。' },
+  { key: 'guided_care_habits', title: '典型关心方式', description: '先写对方最典型的关心方式。', summary: '把典型关心方式写出来。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
+]
+
+const reunionFlowPages: FlowPage[] = [
+  { key: 'persona_name', title: '称呼', description: '先写你怎么称呼这位重逢对象。', summary: '把对方称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写这位对象平时怎么说话。', summary: '把说话风格写清楚。' },
+  { key: 'remembrance_style', title: '回忆方式', description: '先写它应该怎样慢慢回忆。', summary: '把回忆方式写清楚。' },
+  { key: 'chat_history_summary', title: '聊天摘要', description: '先写最关键的聊天内容。', summary: '把聊天摘要写出来。' },
+  { key: 'memory_notes', title: '记忆片段', description: '先写日记、信件或口述。', summary: '把记忆片段整理出来。' },
+  { key: 'retrieval_rules', title: '检索规则', description: '先写回忆的优先顺序。', summary: '把先看什么写清楚。' },
+  { key: 'safety_rules', title: '安全规则', description: '先写不能碰的边界。', summary: '把安全护栏写清楚。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
+]
+
 type SelfFillPageKey =
   | 'materials'
   | 'analysis'
@@ -616,6 +687,67 @@ function nextSelfFillPage() {
 
 function prevSelfFillPage() {
   goSelfFillPage(selfFillPageIndex.value - 1)
+}
+
+const sourceFillPageIndex = ref(0)
+const relationshipFillPageIndex = ref(0)
+const intimateFillPageIndex = ref(0)
+const familyFillPageIndex = ref(0)
+const reunionFillPageIndex = ref(0)
+
+const sourceFillCurrentPage = computed(() => sourceFlowPages[sourceFillPageIndex.value] || sourceFlowPages[0])
+const relationshipFillCurrentPage = computed(
+  () => relationshipFlowPages[relationshipFillPageIndex.value] || relationshipFlowPages[0],
+)
+const intimateFillCurrentPage = computed(() => intimateFlowPages[intimateFillPageIndex.value] || intimateFlowPages[0])
+const familyFillCurrentPage = computed(() => familyFlowPages[familyFillPageIndex.value] || familyFlowPages[0])
+const reunionFillCurrentPage = computed(() => reunionFlowPages[reunionFillPageIndex.value] || reunionFlowPages[0])
+
+function resetNonSelfFillPageIndex(type: CreateType) {
+  sourceFillPageIndex.value = 0
+  relationshipFillPageIndex.value = 0
+  intimateFillPageIndex.value = 0
+  familyFillPageIndex.value = 0
+  reunionFillPageIndex.value = 0
+
+  if (type === 'source_persona') {
+    sourceFillPageIndex.value = 0
+  } else if (type === 'relationship_persona') {
+    relationshipFillPageIndex.value = 0
+  } else if (type === 'intimate_companion') {
+    intimateFillPageIndex.value = 0
+  } else if (type === 'family_companion') {
+    familyFillPageIndex.value = 0
+  } else if (type === 'reunion_persona') {
+    reunionFillPageIndex.value = 0
+  }
+}
+
+function goSourceFillPage(nextIndex: number) {
+  sourceFillPageIndex.value = Math.min(Math.max(nextIndex, 0), sourceFlowPages.length - 1)
+}
+
+function goRelationshipFillPage(nextIndex: number) {
+  relationshipFillPageIndex.value = Math.min(Math.max(nextIndex, 0), relationshipFlowPages.length - 1)
+}
+
+function goIntimateFillPage(nextIndex: number) {
+  intimateFillPageIndex.value = Math.min(Math.max(nextIndex, 0), intimateFlowPages.length - 1)
+}
+
+function goFamilyFillPage(nextIndex: number) {
+  familyFillPageIndex.value = Math.min(Math.max(nextIndex, 0), familyFlowPages.length - 1)
+}
+
+function goFamilyFillPageByKey(key: string) {
+  const index = familyFlowPages.findIndex((item) => item.key === key)
+  if (index >= 0) {
+    goFamilyFillPage(index)
+  }
+}
+
+function goReunionFillPage(nextIndex: number) {
+  reunionFillPageIndex.value = Math.min(Math.max(nextIndex, 0), reunionFlowPages.length - 1)
 }
 
 const selfInterviewQuestionOptions: SelfInterviewQuestionOption[] = [
@@ -1106,43 +1238,6 @@ const relationshipMaterialState = ref<CreateWizardRawMaterials>(createEmptyMater
 
 const familyMaterialFileName = ref('')
 const reunionMaterialFileName = ref('')
-
-const familyUploadedTextDocuments = computed({
-  get: () => familyMaterialState.value.uploaded_text_documents,
-  set: (value: TextMaterialDocument[]) => {
-    familyMaterialState.value.uploaded_text_documents = value
-  },
-})
-const familyUploadedImageDocuments = computed({
-  get: () => familyMaterialState.value.uploaded_image_documents,
-  set: (value: UploadedImageDocument[]) => {
-    familyMaterialState.value.uploaded_image_documents = value
-  },
-})
-const familyChatHistoryText = computed({
-  get: () => familyMaterialState.value.chat_history_text,
-  set: (value: string) => {
-    familyMaterialState.value.chat_history_text = value
-  },
-})
-const familyMemoryNotesText = computed({
-  get: () => familyMaterialState.value.memory_notes_text,
-  set: (value: string) => {
-    familyMaterialState.value.memory_notes_text = value
-  },
-})
-const familyTextMaterialsText = computed({
-  get: () => familyMaterialState.value.text_materials_text,
-  set: (value: string) => {
-    familyMaterialState.value.text_materials_text = value
-  },
-})
-const reunionUploadedTextDocuments = computed({
-  get: () => reunionMaterialState.value.uploaded_text_documents,
-  set: (value: TextMaterialDocument[]) => {
-    reunionMaterialState.value.uploaded_text_documents = value
-  },
-})
 
 const currentTypeLabel = computed(() => {
   if (createType.value === 'self_unified') {
@@ -1753,6 +1848,9 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
     formState.reply_material_notes = '把聊天记录、文件、图片或 OCR 材料补充进来。'
     formState.relation_boundaries = '不替你做最终决定，不夸大未确认的信息。'
   }
+
+  resetNonSelfFillPageIndex(type)
+  selfFillPageIndex.value = 0
 }
 
 function buildEntryDefaults() {
@@ -3164,182 +3262,376 @@ watch(
             </div>
           </div>
 
-          <div v-else-if="createType === 'source_persona'" class="wizard-form">
-            <div class="form-grid">
-              <label class="form-field">
-                <span>目标人格名称</span>
-                <input v-model="formState.target_name" class="field-input" type="text" placeholder="例如：工作助手视角" />
-              </label>
-              <label class="form-field">
-                <span>材料类型</span>
-                <input v-model="formState.material_type" class="field-input" type="text" placeholder="PDF / 聊天记录 / 音视频" />
-              </label>
-            </div>
+          <div v-else-if="createType === 'source_persona'" class="self-fill-layout">
+            <section class="self-fill-page">
+              <div class="section-head self-fill-page__head">
+                <div>
+                  <p class="eyebrow">资料创建</p>
+                  <h3>{{ sourceFillCurrentPage.title }}</h3>
+                </div>
+                <p class="section-note">
+                  第 {{ sourceFillPageIndex + 1 }} 页 / {{ sourceFlowPages.length }} 页 · 一次只填一项
+                </p>
+              </div>
 
-            <label class="form-field">
-              <span>材料说明</span>
-              <textarea v-model="formState.material_description" class="field-input wizard-textarea" rows="4"></textarea>
-            </label>
+              <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                <p class="eyebrow">当前页</p>
+                <h3>{{ sourceFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ sourceFillCurrentPage.summary }}</p>
+              </div>
 
-            <div class="form-grid">
-              <label class="form-field">
-                <span>希望提炼的重点</span>
-                <textarea v-model="formState.focus_points" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>不希望被抽出的内容</span>
-                <textarea v-model="formState.excluded_content" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
+              <div class="self-fill-page__toolbar">
+                <button class="ghost-button ghost-button--small" type="button" :disabled="sourceFillPageIndex === 0" @click="goSourceFillPage(sourceFillPageIndex - 1)">
+                  上一步
+                </button>
+                <button class="ghost-button ghost-button--small" type="button" :disabled="sourceFillPageIndex === sourceFlowPages.length - 1" @click="goSourceFillPage(sourceFillPageIndex + 1)">
+                  下一步
+                </button>
+              </div>
 
-            <MaterialInputPanel
-              v-model="sourceMaterialState"
-              path-type="source"
-              :supports-guided-prompts="false"
-            />
+              <div class="self-fill-page__content">
+                <label v-if="sourceFillCurrentPage.key === 'source_target_name'" class="form-field">
+                  <span>目标人格名称</span>
+                  <input v-model="formState.target_name" class="field-input" type="text" placeholder="例如：工作助手视角" />
+                </label>
+
+                <label v-else-if="sourceFillCurrentPage.key === 'source_material_type'" class="form-field">
+                  <span>材料类型</span>
+                  <input v-model="formState.material_type" class="field-input" type="text" placeholder="PDF / 聊天记录 / 音视频" />
+                </label>
+
+                <label v-else-if="sourceFillCurrentPage.key === 'source_material_description'" class="form-field">
+                  <span>材料说明</span>
+                  <textarea v-model="formState.material_description" class="field-input wizard-textarea" rows="6"></textarea>
+                </label>
+
+                <label v-else-if="sourceFillCurrentPage.key === 'source_focus_points'" class="form-field">
+                  <span>希望提炼的重点</span>
+                  <textarea v-model="formState.focus_points" class="field-input wizard-textarea" rows="6"></textarea>
+                </label>
+
+                <label v-else-if="sourceFillCurrentPage.key === 'source_excluded_content'" class="form-field">
+                  <span>不希望被抽出的内容</span>
+                  <textarea v-model="formState.excluded_content" class="field-input wizard-textarea" rows="6"></textarea>
+                </label>
+
+                <div v-else-if="sourceFillCurrentPage.key === 'source_materials'" class="self-fill-more">
+                  <summary>材料输入（可选）</summary>
+                  <MaterialInputPanel
+                    v-model="sourceMaterialState"
+                    path-type="source"
+                    :supports-guided-prompts="false"
+                  />
+                </div>
+
+                <div v-else-if="sourceFillCurrentPage.key === 'source_review'" class="self-fill-review-grid">
+                  <article class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">目标名称</p>
+                        <h4>{{ formState.target_name || '未填写' }}</h4>
+                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="goSourceFillPage(0)">编辑</button>
+                    </div>
+                  </article>
+                  <article class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">材料类型</p>
+                        <h4>{{ formState.material_type || '未填写' }}</h4>
+                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="goSourceFillPage(1)">编辑</button>
+                    </div>
+                  </article>
+                  <article class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">材料说明</p>
+                        <h4>{{ formState.material_description || '未填写' }}</h4>
+                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="goSourceFillPage(2)">编辑</button>
+                    </div>
+                  </article>
+                  <article class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">提炼重点</p>
+                        <h4>{{ formState.focus_points || '未填写' }}</h4>
+                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="goSourceFillPage(3)">编辑</button>
+                    </div>
+                  </article>
+                  <article class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">排除内容</p>
+                        <h4>{{ formState.excluded_content || '未填写' }}</h4>
+                      </div>
+                      <button type="button" class="ghost-button ghost-button--small" @click="goSourceFillPage(4)">编辑</button>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div v-else-if="createType === 'family_companion' || createType === 'reunion_persona'" class="wizard-review wizard-review--family">
-            <div class="summary-panel">
-              <p class="eyebrow">{{ createType === 'reunion_persona' ? '重逢人格层' : '人物层' }}</p>
-              <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
-              <ul class="summary-panel__list">
-                <li><span>关系类型</span><strong>{{ getRelationshipLabel(inputMode) }}</strong></li>
-                <li><span>说话风格</span><strong>{{ formState.speech_style || '未填写' }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '回忆方式' : '口头禅' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.remembrance_style || '未填写') : (formState.catchphrases || '未填写') }}</strong></li>
-              </ul>
-            </div>
+          <div v-else-if="createType === 'family_companion' || createType === 'reunion_persona'" class="self-fill-layout">
+            <section class="self-fill-page">
+              <div class="section-head self-fill-page__head">
+                <div>
+                  <p class="eyebrow">{{ createType === 'reunion_persona' ? '重逢人格' : '家人陪伴' }}</p>
+                  <h3>{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).title }}</h3>
+                </div>
+                <p class="section-note">
+                  第 {{ (createType === 'reunion_persona' ? reunionFillPageIndex : familyFillPageIndex) + 1 }} 页 / {{ createType === 'reunion_persona' ? reunionFlowPages.length : familyFlowPages.length }} 页 · 一次只填一项
+                </p>
+              </div>
 
-            <div class="summary-panel">
-              <p class="eyebrow">记忆层</p>
-              <h3>{{ createType === 'reunion_persona' ? '重逢记忆' : '共同记忆' }}</h3>
-              <ul class="summary-panel__list">
-                <li><span>{{ createType === 'reunion_persona' ? '聊天摘要' : '关键经历' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.chat_history_summary || '未填写') : (formState.shared_events || '未填写') }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '检索策略' : '常见安慰' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.priority_rules || '未填写') : (formState.comfort_style || '未填写') }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '安全护栏' : '重要建议' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.safety_boundaries || '未填写') : (formState.important_advice || '未填写') }}</strong></li>
-              </ul>
-            </div>
+              <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                <p class="eyebrow">当前页</p>
+                <h3>{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).description }}</h3>
+                <p class="state-copy">{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).summary }}</p>
+              </div>
 
-            <div class="summary-panel">
-              <p class="eyebrow">材料输入层</p>
-              <h3>{{ createType === 'reunion_persona' ? '重逢材料' : '家人材料' }}</h3>
-              <ul class="summary-panel__list">
-                <li><span>聊天记录</span><strong>{{ createType === 'reunion_persona' ? (formState.chat_history_summary || '未填写') : (familyChatHistoryText || '未填写') }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '日记 / 信件' : '记忆片段' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.diary_notes || formState.letter_notes || '未填写') : (familyMemoryNotesText || '未填写') }}</strong></li>
-                <li><span>{{ createType === 'reunion_persona' ? '口述回忆' : '文本材料' }}</span><strong>{{ createType === 'reunion_persona' ? (formState.voice_notes || '未填写') : (familyTextMaterialsText || '未填写') }}</strong></li>
-                <li><span>上传文件</span><strong>{{ createType === 'reunion_persona' ? (reunionUploadedTextDocuments.length ? reunionUploadedTextDocuments.map((item) => item.filename).join(' / ') : (reunionMaterialFileName || '未上传')) : (familyUploadedTextDocuments.length ? familyUploadedTextDocuments.map((item) => item.filename).join(' / ') : (familyMaterialFileName || '未上传')) }}</strong></li>
-                <li><span>照片 / 相册</span><strong>{{ createType === 'reunion_persona' ? (formState.photo_notes || '未填写') : (familyUploadedImageDocuments.length ? `${familyUploadedImageDocuments.length} 张：${familyUploadedImageDocuments.map((item) => item.filename).join(' / ')}` : '未上传') }}</strong></li>
-              </ul>
-            </div>
+              <div class="self-fill-page__toolbar">
+                <button
+                  class="ghost-button ghost-button--small"
+                  type="button"
+                  :disabled="createType === 'reunion_persona' ? reunionFillPageIndex === 0 : familyFillPageIndex === 0"
+                  @click="createType === 'reunion_persona' ? goReunionFillPage(reunionFillPageIndex - 1) : goFamilyFillPage(familyFillPageIndex - 1)"
+                >
+                  上一步
+                </button>
+                <button
+                  class="ghost-button ghost-button--small"
+                  type="button"
+                  :disabled="createType === 'reunion_persona' ? reunionFillPageIndex === reunionFlowPages.length - 1 : familyFillPageIndex === familyFlowPages.length - 1"
+                  @click="createType === 'reunion_persona' ? goReunionFillPage(reunionFillPageIndex + 1) : goFamilyFillPage(familyFillPageIndex + 1)"
+                >
+                  下一步
+                </button>
+              </div>
+
+              <div class="self-fill-page__content">
+                <template v-if="createType === 'family_companion'">
+                  <label v-if="familyFillCurrentPage.key === 'persona_name'" class="form-field">
+                    <span>你怎么称呼这位家人</span>
+                    <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 父母 / 其他家人" />
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'speech_style'" class="form-field">
+                    <span>说话风格</span>
+                    <input v-model="formState.speech_style" class="field-input" type="text" placeholder="温和、直接、唠叨一点..." />
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'core_care'" class="form-field">
+                    <span>照顾方式</span>
+                    <textarea v-model="formState.comfort_style" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'shared_events'" class="form-field">
+                    <span>关键共同经历</span>
+                    <textarea v-model="formState.shared_events" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'important_advice'" class="form-field">
+                    <span>反复提过的话</span>
+                    <textarea v-model="formState.important_advice" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'emotional_triggers'" class="form-field">
+                    <span>最在意的点</span>
+                    <textarea v-model="formState.emotional_triggers" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <div v-else-if="familyFillCurrentPage.key === 'materials'" class="self-fill-more">
+                    <MaterialInputPanel v-model="familyMaterialState" path-type="family" :subtype="inputMode" :supports-guided-prompts="true" />
+                  </div>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_common_topics'" class="form-field">
+                    <span>你们最常聊什么</span>
+                    <textarea v-model="formState.guided_most_common_topics" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_comfort_style'" class="form-field">
+                    <span>他 / 她最常怎么安慰你</span>
+                    <textarea v-model="formState.guided_comfort_style" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_characteristic_event'" class="form-field">
+                    <span>最像他 / 她的一件小事是什么</span>
+                    <textarea v-model="formState.guided_most_characteristic_event" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_repeated_phrases'" class="form-field">
+                    <span>有哪些反复说过的话</span>
+                    <textarea v-model="formState.guided_repeated_phrases" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_common_reminders'" class="form-field">
+                    <span>最常提醒你的是什么</span>
+                    <textarea v-model="formState.guided_most_common_reminders" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_care_habits'" class="form-field">
+                    <span>他 / 她最典型的关心方式</span>
+                    <textarea v-model="formState.guided_care_habits" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <div v-else-if="familyFillCurrentPage.key === 'review'" class="self-fill-review-grid">
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">称呼</p><h4>{{ formState.persona_name || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('persona_name')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">说话风格</p><h4>{{ formState.speech_style || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('speech_style')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">照顾方式</p><h4>{{ formState.comfort_style || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('core_care')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">共同经历</p><h4>{{ formState.shared_events || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('shared_events')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">反复提醒</p><h4>{{ formState.important_advice || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('important_advice')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">在意点</p><h4>{{ formState.emotional_triggers || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('emotional_triggers')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">常聊话题</p><h4>{{ formState.guided_most_common_topics || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_most_common_topics')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">安慰方式</p><h4>{{ formState.guided_comfort_style || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_comfort_style')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">典型小事</p><h4>{{ formState.guided_most_characteristic_event || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_most_characteristic_event')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">重复说过的话</p><h4>{{ formState.guided_repeated_phrases || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_repeated_phrases')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">常见提醒</p><h4>{{ formState.guided_most_common_reminders || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_most_common_reminders')">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">关心方式</p><h4>{{ formState.guided_care_habits || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goFamilyFillPageByKey('guided_care_habits')">编辑</button></div></article>
+                  </div>
+                </template>
+                <template v-else>
+                  <label v-if="reunionFillCurrentPage.key === 'persona_name'" class="form-field">
+                    <span>你怎么称呼这位重逢对象</span>
+                    <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：前任 / 老朋友 / 旧同事" />
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'speech_style'" class="form-field">
+                    <span>说话风格</span>
+                    <input v-model="formState.speech_style" class="field-input" type="text" placeholder="克制、温和、保留记忆感。" />
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'remembrance_style'" class="form-field">
+                    <span>回忆方式</span>
+                    <textarea v-model="formState.remembrance_style" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'chat_history_summary'" class="form-field">
+                    <span>聊天摘要</span>
+                    <textarea v-model="formState.chat_history_summary" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'memory_notes'" class="form-field">
+                    <span>日记 / 信件 / 口述</span>
+                    <textarea v-model="formState.diary_notes" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'retrieval_rules'" class="form-field">
+                    <span>检索规则</span>
+                    <textarea v-model="formState.priority_rules" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="reunionFillCurrentPage.key === 'safety_rules'" class="form-field">
+                    <span>安全规则</span>
+                    <textarea v-model="formState.safety_boundaries" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <div v-else-if="reunionFillCurrentPage.key === 'materials'" class="self-fill-more">
+                    <MaterialInputPanel v-model="reunionMaterialState" path-type="reunion" :supports-guided-prompts="false" />
+                  </div>
+                  <div v-else-if="reunionFillCurrentPage.key === 'review'" class="self-fill-review-grid">
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">称呼</p><h4>{{ formState.persona_name || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(0)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">说话风格</p><h4>{{ formState.speech_style || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(1)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">回忆方式</p><h4>{{ formState.remembrance_style || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(2)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">聊天摘要</p><h4>{{ formState.chat_history_summary || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(3)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">日记 / 信件</p><h4>{{ formState.diary_notes || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(4)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">检索规则</p><h4>{{ formState.priority_rules || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(5)">编辑</button></div></article>
+                    <article class="self-fill-review-card"><div class="self-fill-review-card__head"><div><p class="self-fill-review-card__label">安全规则</p><h4>{{ formState.safety_boundaries || '未填写' }}</h4></div><button type="button" class="ghost-button ghost-button--small" @click="goReunionFillPage(6)">编辑</button></div></article>
+                  </div>
+                </template>
+              </div>
+            </section>
           </div>
 
-          <div v-else-if="createType === 'intimate_companion'" class="wizard-form">
-            <div class="form-grid">
-              <label class="form-field">
-                <span>关系类型</span>
-                <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="关系经营 / 消息模拟 / 过去关系 / 自我镜像" />
-              </label>
-              <label class="form-field">
-                <span>对方名称 / 称呼</span>
-                <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：小林 / 阿泽 / 你喜欢的人" />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>关系阶段</span>
-                <input v-model="formState.relationship_stage" class="field-input" type="text" placeholder="例如：暧昧期 / 关系中 / 磨合中" />
-              </label>
-              <label class="form-field">
-                <span>说话风格</span>
-                <textarea v-model="formState.speech_style" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>回复温度</span>
-                <textarea v-model="formState.response_temperature" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>常见口头禅</span>
-                <textarea v-model="formState.catchphrases" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>对话样本</span>
-                <textarea v-model="formState.conversation_samples" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>互动规则</span>
-                <textarea v-model="formState.interaction_rules" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>关系目标</span>
-                <textarea v-model="formState.relationship_goals" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>关键记忆</span>
-                <textarea v-model="formState.key_memories" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <MaterialInputPanel
-              v-model="intimateMaterialState"
-              path-type="intimate"
-              :supports-guided-prompts="false"
-            />
-
-            <label class="form-field">
-              <span>边界或禁忌话题</span>
-              <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
-            </label>
+          <div v-else-if="createType === 'intimate_companion'" class="self-fill-layout">
+            <section class="self-fill-page">
+              <div class="section-head self-fill-page__head">
+                <div>
+                  <p class="eyebrow">亲密关系</p>
+                  <h3>{{ intimateFillCurrentPage.title }}</h3>
+                </div>
+                <p class="section-note">第 {{ intimateFillPageIndex + 1 }} 页 / {{ intimateFlowPages.length }} 页 · 一次只填一项</p>
+              </div>
+              <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                <p class="eyebrow">当前页</p>
+                <h3>{{ intimateFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ intimateFillCurrentPage.summary }}</p>
+              </div>
+              <div class="self-fill-page__toolbar">
+                <button class="ghost-button ghost-button--small" type="button" :disabled="intimateFillPageIndex === 0" @click="goIntimateFillPage(intimateFillPageIndex - 1)">上一步</button>
+                <button class="ghost-button ghost-button--small" type="button" :disabled="intimateFillPageIndex === intimateFlowPages.length - 1" @click="goIntimateFillPage(intimateFillPageIndex + 1)">下一步</button>
+              </div>
+              <div class="self-fill-page__content">
+                <label v-if="intimateFillCurrentPage.key === 'relationship_type'" class="form-field"><span>关系类型</span><input v-model="formState.relationship_type" class="field-input" type="text" placeholder="关系经营 / 消息模拟 / 过去关系 / 自我镜像" /></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'persona_name'" class="form-field"><span>对方名称 / 称呼</span><input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：小林 / 阿泽 / 你喜欢的人" /></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'relationship_stage'" class="form-field"><span>关系阶段</span><input v-model="formState.relationship_stage" class="field-input" type="text" placeholder="例如：暧昧期 / 关系中 / 磨合中" /></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'speech_style'" class="form-field"><span>说话风格</span><textarea v-model="formState.speech_style" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'response_temperature'" class="form-field"><span>回复温度</span><textarea v-model="formState.response_temperature" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'catchphrases'" class="form-field"><span>常见口头禅</span><textarea v-model="formState.catchphrases" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'conversation_samples'" class="form-field"><span>对话样本</span><textarea v-model="formState.conversation_samples" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'interaction_rules'" class="form-field"><span>互动规则</span><textarea v-model="formState.interaction_rules" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'relationship_goals'" class="form-field"><span>关系目标</span><textarea v-model="formState.relationship_goals" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="intimateFillCurrentPage.key === 'key_memories'" class="form-field"><span>关键记忆</span><textarea v-model="formState.key_memories" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <div v-else-if="intimateFillCurrentPage.key === 'materials'" class="self-fill-more">
+                  <MaterialInputPanel v-model="intimateMaterialState" path-type="intimate" :supports-guided-prompts="false" />
+                </div>
+                <label v-else-if="intimateFillCurrentPage.key === 'boundaries'" class="form-field"><span>边界或禁忌话题</span><textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <div v-else-if="intimateFillCurrentPage.key === 'review'" class="self-fill-review-grid">
+                  <article v-for="item in [
+                    { label: '关系类型', value: formState.relationship_type },
+                    { label: '称呼', value: formState.persona_name },
+                    { label: '关系阶段', value: formState.relationship_stage },
+                    { label: '说话风格', value: formState.speech_style },
+                    { label: '回复温度', value: formState.response_temperature },
+                    { label: '口头禅', value: formState.catchphrases },
+                    { label: '对话样本', value: formState.conversation_samples },
+                    { label: '互动规则', value: formState.interaction_rules },
+                    { label: '关系目标', value: formState.relationship_goals },
+                    { label: '关键记忆', value: formState.key_memories },
+                    { label: '边界规则', value: formState.relation_boundaries },
+                  ]" :key="item.label" class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">{{ item.label }}</p>
+                        <h4>{{ item.value || '未填写' }}</h4>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div v-else-if="createType === 'relationship_persona'" class="wizard-form">
-            <div class="form-grid">
-              <label class="form-field">
-                <span>关系类型</span>
-                <input v-model="formState.relationship_type" class="field-input" type="text" placeholder="同事 / 导师 / 父母 / 伴侣" />
-              </label>
-              <label class="form-field">
-                <span>对方名称 / 称呼</span>
-                <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：李老师" />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>对方典型说话方式</span>
-                <textarea v-model="formState.speech_style" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>对方常见判断逻辑</span>
-                <textarea v-model="formState.decision_logic" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label class="form-field">
-                <span>你希望这个人格帮你做什么</span>
-                <textarea v-model="formState.purpose" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-              <label class="form-field">
-                <span>你不希望它越过哪些边界</span>
-                <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
-              </label>
-            </div>
-
-            <MaterialInputPanel
-              v-model="relationshipMaterialState"
-              path-type="relationship"
-              :supports-guided-prompts="false"
-            />
+          <div v-else-if="createType === 'relationship_persona'" class="self-fill-layout">
+            <section class="self-fill-page">
+              <div class="section-head self-fill-page__head">
+                <div>
+                  <p class="eyebrow">职场关系</p>
+                  <h3>{{ relationshipFillCurrentPage.title }}</h3>
+                </div>
+                <p class="section-note">第 {{ relationshipFillPageIndex + 1 }} 页 / {{ relationshipFlowPages.length }} 页 · 一次只填一项</p>
+              </div>
+              <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                <p class="eyebrow">当前页</p>
+                <h3>{{ relationshipFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ relationshipFillCurrentPage.summary }}</p>
+              </div>
+              <div class="self-fill-page__toolbar">
+                <button class="ghost-button ghost-button--small" type="button" :disabled="relationshipFillPageIndex === 0" @click="goRelationshipFillPage(relationshipFillPageIndex - 1)">上一步</button>
+                <button class="ghost-button ghost-button--small" type="button" :disabled="relationshipFillPageIndex === relationshipFlowPages.length - 1" @click="goRelationshipFillPage(relationshipFillPageIndex + 1)">下一步</button>
+              </div>
+              <div class="self-fill-page__content">
+                <label v-if="relationshipFillCurrentPage.key === 'relationship_type'" class="form-field"><span>关系类型</span><input v-model="formState.relationship_type" class="field-input" type="text" placeholder="同事 / 导师 / 父母 / 伴侣" /></label>
+                <label v-else-if="relationshipFillCurrentPage.key === 'persona_name'" class="form-field"><span>对方名称 / 称呼</span><input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：李老师" /></label>
+                <label v-else-if="relationshipFillCurrentPage.key === 'speech_style'" class="form-field"><span>对方典型说话方式</span><textarea v-model="formState.speech_style" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="relationshipFillCurrentPage.key === 'decision_logic'" class="form-field"><span>对方常见判断逻辑</span><textarea v-model="formState.decision_logic" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="relationshipFillCurrentPage.key === 'purpose'" class="form-field"><span>你希望这个人格帮你做什么</span><textarea v-model="formState.purpose" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <label v-else-if="relationshipFillCurrentPage.key === 'boundaries'" class="form-field"><span>你不希望它越过哪些边界</span><textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="6"></textarea></label>
+                <div v-else-if="relationshipFillCurrentPage.key === 'materials'" class="self-fill-more">
+                  <MaterialInputPanel v-model="relationshipMaterialState" path-type="relationship" :supports-guided-prompts="false" />
+                </div>
+                <div v-else-if="relationshipFillCurrentPage.key === 'review'" class="self-fill-review-grid">
+                  <article v-for="item in [
+                    { label: '关系类型', value: formState.relationship_type },
+                    { label: '称呼', value: formState.persona_name },
+                    { label: '说话方式', value: formState.speech_style },
+                    { label: '判断逻辑', value: formState.decision_logic },
+                    { label: '用途目标', value: formState.purpose },
+                    { label: '边界规则', value: formState.relation_boundaries },
+                  ]" :key="item.label" class="self-fill-review-card">
+                    <div class="self-fill-review-card__head">
+                      <div>
+                        <p class="self-fill-review-card__label">{{ item.label }}</p>
+                        <h4>{{ item.value || '未填写' }}</h4>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </section>
           </div>
         </article>
 

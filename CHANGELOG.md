@@ -1,3 +1,10 @@
+## V1.4.66 - 2026-04-17
+
+- Synchronized the fill UI across self-main, source creation, workplace relations, intimate relations, family companionship, and reunion flows.
+- Reworked the create wizard into a one-page-one-item flow for every creation board, with previous/next navigation and a final review page.
+- Kept the fill experience H5-friendly by removing leftover side-tab style patterns and aligning the card surfaces to the self-main visual system.
+- Preserved the existing skill and field logic while changing only the fill-page interaction pattern.
+
 ## V1.4.63 - 2026-04-17
 
 - Simplified the self-unified fill page for H5 and mobile use.
