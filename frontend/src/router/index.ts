@@ -8,6 +8,8 @@ import CreateResultPage from '@/views/CreateResultPage.vue'
 import ReplyAssistantLandingPage from '@/views/ReplyAssistantLandingPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
 import HowToDoPage from '@/views/HowToDoPage.vue'
+import HowToDoDetailPage from '@/views/HowToDoDetailPage.vue'
+import HowToDoSongAddPage from '@/views/HowToDoSongAddPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -76,6 +78,60 @@ const router = createRouter({
       name: 'how-to-do',
       component: HowToDoPage,
       meta: { title: '我该怎么做' },
+    },
+    {
+      path: '/how-to-do/select-gua',
+      name: 'how-to-do-select-gua',
+      component: HowToDoPage,
+      meta: { title: '起卦' },
+    },
+    {
+      path: '/how-to-do/reference',
+      name: 'how-to-do-reference',
+      component: HowToDoPage,
+      meta: { title: '参考' },
+    },
+    {
+      path: '/how-to-do/all-gua',
+      name: 'how-to-do-all-gua',
+      component: HowToDoPage,
+      meta: { title: '六十四卦' },
+    },
+    {
+      path: '/how-to-do/calendar',
+      name: 'how-to-do-calendar',
+      component: HowToDoPage,
+      meta: { title: '日历' },
+    },
+    {
+      path: '/how-to-do/clock',
+      name: 'how-to-do-clock',
+      component: HowToDoPage,
+      meta: { title: '时钟' },
+    },
+    {
+      path: '/how-to-do/records',
+      name: 'how-to-do-records',
+      component: HowToDoPage,
+      meta: { title: '记录' },
+    },
+    {
+      path: '/how-to-do/songs',
+      name: 'how-to-do-songs',
+      component: HowToDoPage,
+      meta: { title: '歌诀' },
+    },
+    {
+      path: '/how-to-do/detail',
+      name: 'how-to-do-detail',
+      component: HowToDoDetailPage,
+      meta: { title: '卦详情' },
+    },
+    {
+      path: '/how-to-do/songs/add',
+      name: 'how-to-do-songs-add',
+      component: HowToDoSongAddPage,
+      meta: { title: '添加歌诀' },
     },
     {
       path: '/character/:id',

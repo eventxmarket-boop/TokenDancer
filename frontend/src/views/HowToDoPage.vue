@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { requestHowToDo, type HowToDoCastMode, type HowToDoCatalogCard, type HowToDoResponse, type HowToDoSection } from '@/services/howToDoService'
 
 type SectionOption = {
@@ -25,6 +26,7 @@ type LocalRecord = {
 
 const sectionOptions: SectionOption[] = [
   { key: 'cast', label: '起卦', hint: '汉字、数字、硬币、太极丸四种方式。' },
+  { key: 'reference', label: '参考', hint: '方向、生克、旺衰与类象。' },
   { key: 'catalog', label: '卦库', hint: '直接看六十四卦。' },
   { key: 'calendar', label: '日历', hint: '看日期与时间参考。' },
   { key: 'clock', label: '时钟', hint: '看当前时刻。' },
@@ -38,6 +40,30 @@ const castModeOptions: CastModeOption[] = [
   { key: 'coin', label: '硬币起卦', hint: '按常见掷币方式起卦。' },
   { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起卦。' },
 ]
+
+const route = useRoute()
+const router = useRouter()
+
+const sectionPathMap: Record<string, HowToDoSection> = {
+  '/how-to-do': 'cast',
+  '/how-to-do/select-gua': 'cast',
+  '/how-to-do/reference': 'reference',
+  '/how-to-do/all-gua': 'catalog',
+  '/how-to-do/calendar': 'calendar',
+  '/how-to-do/clock': 'clock',
+  '/how-to-do/records': 'records',
+  '/how-to-do/songs': 'songs',
+}
+
+const sectionRouteMap: Record<HowToDoSection, string> = {
+  cast: '/how-to-do/select-gua',
+  reference: '/how-to-do/reference',
+  catalog: '/how-to-do/all-gua',
+  calendar: '/how-to-do/calendar',
+  clock: '/how-to-do/clock',
+  records: '/how-to-do/records',
+  songs: '/how-to-do/songs',
+}
 
 const activeSection = ref<HowToDoSection>('cast')
 const activeCastMode = ref<HowToDoCastMode>('coin')
@@ -66,6 +92,13 @@ const recordCount = computed(() => records.value.length)
 function applySection(section: HowToDoSection) {
   activeSection.value = section
   errorMessage.value = ''
+  const target = sectionRouteMap[section]
+  if (route.path !== target) {
+    router.replace(target)
+  }
+  if (section === 'reference' && result.value?.section !== 'reference') {
+    void generate('reference')
+  }
   if (section === 'records') {
     loadRecords()
   }
@@ -133,6 +166,7 @@ function openRecord(record: LocalRecord) {
   question.value = record.response.question || record.title
   castSeed.value = String(Date.now())
   result.value = record.response
+  window.localStorage.setItem('liuyao-last-result', JSON.stringify(record.response))
 }
 
 async function generate(section: HowToDoSection = activeSection.value) {
@@ -159,6 +193,7 @@ async function generate(section: HowToDoSection = activeSection.value) {
     }
     if (section === 'cast') {
       saveCurrentRecord()
+      window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
       castSeed.value = String(Date.now())
     }
   } catch (error) {
@@ -177,7 +212,22 @@ function useClockSeed() {
   activeCastMode.value = 'coin'
   castSeed.value = String(Date.now())
   question.value = `我现在这个时刻该怎么做？`
+  router.replace(sectionRouteMap.cast)
 }
+
+watch(
+  () => route.path,
+  (path) => {
+    const nextSection = sectionPathMap[path] || 'cast'
+    if (nextSection !== activeSection.value) {
+      activeSection.value = nextSection
+      if (nextSection === 'records') {
+        loadRecords()
+      }
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   loadRecords()
@@ -291,6 +341,28 @@ onBeforeUnmount(() => {
           </div>
         </template>
 
+        <template v-else-if="activeSection === 'reference'">
+          <p class="how-to-do-note">
+            参考页放的是方向、生克、旺衰和基础类象，只做辅助参考。
+          </p>
+          <div class="how-to-do-card-grid">
+            <div v-for="card in result?.cards || [
+              { label: '方向', value: '先看局势走向，再看进退节奏。' },
+              { label: '生克', value: '先看谁生谁、谁克谁，再看谁更主动。' },
+              { label: '旺衰', value: '看当前力量强弱，不只看单一符号。' },
+              { label: '类象', value: '用基础类象辅助理解，不替代整体判断。' },
+            ]" :key="card.label" class="how-to-do-result-card">
+              <span>{{ card.label }}</span>
+              <strong>{{ card.value }}</strong>
+            </div>
+          </div>
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="primary-btn" type="button" :disabled="loading" @click="generate('reference')">
+              刷新参考
+            </button>
+          </div>
+        </template>
+
         <template v-else-if="activeSection === 'catalog'">
           <div class="how-to-do-actions how-to-do-actions--left">
             <button class="primary-btn" type="button" :disabled="loading" @click="generate('catalog')">
@@ -369,6 +441,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="how-to-do-actions">
+            <RouterLink class="secondary-btn" to="/how-to-do/songs/add">添加歌诀</RouterLink>
             <button class="secondary-btn" type="button" :disabled="loading" @click="generate('songs')">刷新口诀</button>
           </div>
         </template>
@@ -419,6 +492,12 @@ onBeforeUnmount(() => {
           <p>{{ catalogSelected.meaning }}</p>
         </div>
 
+        <div v-if="result.raw_result?.mutual_hexagram" class="how-to-do-detail-box">
+          <p class="eyebrow">互卦</p>
+          <strong>{{ (result.raw_result.mutual_hexagram as Record<string, any>).name }}卦</strong>
+          <p>{{ (result.raw_result.mutual_hexagram as Record<string, any>).meaning }}</p>
+        </div>
+
         <div class="how-to-do-interpretation">
           <p class="eyebrow">AI 解读</p>
           <p>{{ result.ai_interpretation }}</p>
@@ -426,6 +505,10 @@ onBeforeUnmount(() => {
 
         <div class="how-to-do-suggestions">
           <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
+        </div>
+
+        <div class="how-to-do-actions how-to-do-actions--left">
+          <RouterLink class="secondary-btn" to="/how-to-do/detail">查看详情</RouterLink>
         </div>
       </article>
 

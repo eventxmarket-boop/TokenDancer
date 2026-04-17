@@ -1,3 +1,10 @@
+## V1.4.86 - 2026-04-18
+
+- Expanded `我该怎么做` toward a more one-to-one liu-yao mapping with dedicated `select-gua`, `reference`, `all-gua`, `calendar`, `clock`, `records`, `songs`, `detail`, and `songs/add` entry points.
+- Added a `参考` surface for direction, shengke, wangshuai, and basic imagery so the module matches the source app's auxiliary guidance more closely.
+- Added mutual-hexagram output to the cast flow and introduced dedicated detail and song-add pages so the module can be split apart later with less ambiguity.
+- Kept the module isolated behind `/persona-api/how-to-do` and the `/how-to-do/*` frontend routes for easy removal.
+
 ## V1.4.85 - 2026-04-18
 
 - Re-embedded the `我该怎么做` module as a standalone six-yao toolset again, using the `likeSo/liu-yao` library as the new source reference.

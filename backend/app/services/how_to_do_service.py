@@ -14,6 +14,7 @@ from app.services.text_sanitizer import strip_think_blocks
 
 SECTION_LABELS = {
     "cast": "六爻起卦",
+    "reference": "参考",
     "catalog": "卦库",
     "calendar": "日历",
     "clock": "时钟",
@@ -186,6 +187,25 @@ def _hexagram_meaning(name: str) -> str:
     return HEXAGRAM_MEANINGS.get(name, "顺势而行，先观察再动作")
 
 
+def _build_mutual_hexagram(lines: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if len(lines) < 5:
+        return None
+    upper_bits = "".join("1" if item["yin_yang"] == "阳" else "0" for item in lines[2:5])
+    lower_bits = "".join("1" if item["yin_yang"] == "阳" else "0" for item in lines[1:4])
+    if len(upper_bits) != 3 or len(lower_bits) != 3:
+        return None
+    upper = TRIGRAMS[_trigram_index([{"yin_yang": "阳" if ch == "1" else "阴"} for ch in upper_bits])]
+    lower = TRIGRAMS[_trigram_index([{"yin_yang": "阳" if ch == "1" else "阴"} for ch in lower_bits])]
+    hexagram_number, name = _hexagram_lookup(upper_bits + lower_bits)
+    return {
+        "hexagram_number": hexagram_number,
+        "name": name,
+        "meaning": _hexagram_meaning(name),
+        "upper_trigram": upper["name"],
+        "lower_trigram": lower["name"],
+    }
+
+
 def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_text: str = "") -> list[dict[str, Any]]:
     rng = _make_rng(seed, mode, cast_mode, question, source_text)
     lines: list[dict[str, Any]] = []
@@ -226,6 +246,7 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
     upper = TRIGRAMS[_trigram_index(lines[:3])]
     lower = TRIGRAMS[_trigram_index(lines[3:])]
     changing_lines = [item["position"] for item in lines if item["is_changing"]]
+    mutual_hexagram = _build_mutual_hexagram(lines)
     transformed_hexagram = None
     if changing_lines:
         transformed_lines = [
@@ -265,6 +286,7 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
         {"label": "起卦方式", "value": CAST_MODE_LABELS.get(cast_mode, "硬币起卦")},
         {"label": "本卦", "value": f"{name}卦"},
         {"label": "上下卦", "value": f"{upper['name']} / {lower['name']}"},
+        {"label": "互卦", "value": f"{mutual_hexagram['name']}卦" if mutual_hexagram else "无"},
         {"label": "动爻", "value": "、".join(f"{item}爻" for item in changing_lines) if changing_lines else "无"},
         {"label": "变卦", "value": f"{transformed_hexagram['name']}卦" if transformed_hexagram else "无"},
     ]
@@ -287,6 +309,7 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
             "hexagram_meaning": _hexagram_meaning(name),
             "upper_trigram": upper["name"],
             "lower_trigram": lower["name"],
+            "mutual_hexagram": mutual_hexagram,
             "binary": binary,
             "changing_lines": changing_lines,
             "lines": lines,
@@ -307,6 +330,24 @@ def _build_catalog_result() -> dict[str, Any]:
         "cards": cards[:12],
         "suggestions": ["可直接在卦库中搜索卦名。", "需要查看完整内容时，继续向下浏览。"],
         "raw_result": {"catalog": ALL_GUA_CATALOG},
+    }
+
+
+def _build_reference_result() -> dict[str, Any]:
+    cards = [
+        {"label": "方向", "value": "先看局势走向，再看进退节奏。"},
+        {"label": "生克", "value": "先看谁生谁、谁克谁，再看谁更主动。"},
+        {"label": "旺衰", "value": "看当前力量强弱，不只看单一符号。"},
+        {"label": "类象", "value": "用基础类象辅助理解，不替代整体判断。"},
+        {"label": "提示", "value": "参考页是底层辅助，最终还是回到本卦与动爻。"},
+    ]
+    return {
+        "method_label": "参考",
+        "question": "",
+        "summary": "方向、生克、旺衰与类象辅助，放在这里先做参考。",
+        "cards": cards,
+        "suggestions": ["如果要进一步判断，回到起卦页看本卦、互卦和变卦。"],
+        "raw_result": {"reference": cards},
     }
 
 
@@ -413,6 +454,8 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
 
     if section == "catalog":
         base_result = _build_catalog_result()
+    elif section == "reference":
+        base_result = _build_reference_result()
     elif section == "calendar":
         base_result = _build_calendar_result()
     elif section == "clock":

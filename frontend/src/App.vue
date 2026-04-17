@@ -53,7 +53,7 @@ const isReplyMenuActive = computed(
   () => route.path === '/reply-assistant' || route.path === '/reply-assistant/workbench',
 )
 
-const isHowToDoMenuActive = computed(() => route.path === '/how-to-do')
+const isHowToDoMenuActive = computed(() => route.path.startsWith('/how-to-do'))
 
 const isSeedMenuActive = computed(
   () => route.path.startsWith('/create') || route.path === '/',

@@ -22,6 +22,16 @@ class HowToDoTests(unittest.TestCase):
         self.assertEqual(len({item["number"] for item in body["catalog"]}), 64)
         self.assertEqual(len(ALL_GUA_CATALOG), 64)
 
+    def test_how_to_do_reference_returns_reference_cards(self):
+        with TestClient(app) as client:
+            response = client.post("/persona-api/how-to-do", json={"section": "reference", "use_ai": False})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["section"], "reference")
+        self.assertTrue(body["cards"])
+        self.assertEqual(body["cards"][0]["label"], "方向")
+
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
             "section": "cast",
