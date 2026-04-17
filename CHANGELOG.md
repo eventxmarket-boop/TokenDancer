@@ -1,3 +1,8 @@
+## V1.4.98 - 2026-04-18
+
+- Reworked the liu-yao board UI into a single aligned sheet so 六神、主卦、变卦、世应、`o/x` render as one whole instead of per-line cards.
+- Kept the existing cast logic intact while changing only the board presentation.
+
 ## V1.4.97 - 2026-04-18
 
 - Removed the `数字起卦` cast mode from `我该怎么做` so the board now only exposes the remaining cast paths.

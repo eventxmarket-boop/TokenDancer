@@ -248,58 +248,41 @@ async function cast() {
         <div v-if="showResultBoard" class="liuyao-result-board">
           <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
           <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
-          <div class="liuyao-result-board__titles">
-            <p class="liuyao-result-board__title">{{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span></p>
-          </div>
-
           <div class="liuyao-result-frame">
-            <div class="liuyao-result-boards__item">
-              <div class="liuyao-line-board">
-                <div
-                  v-for="line in castLineDetails"
-                  :key="line.position"
-                  class="liuyao-line-board__row"
-                  :class="{ 'is-changing': line.is_changing }"
-                >
-                  <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
-                  <div class="liuyao-line-board__content">
-                    <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
-                    <div v-if="line.hidden_spirit" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
-                    <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
-                    <div class="liuyao-line-board__tags">
-                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
-                      <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
-                      <span>{{ line.nayin }}</span>
-                    </div>
-                  </div>
-                </div>
+            <div class="liuyao-result-grid">
+              <div class="liuyao-result-grid__header">六神</div>
+              <div class="liuyao-result-grid__header">
+                {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
               </div>
-            </div>
-
-            <div v-if="castResult?.transformed_hexagram" class="liuyao-result-boards__item">
-              <p class="liuyao-result-board__title liuyao-result-board__title--right">
+              <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__header liuyao-result-grid__header--right">
                 {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
-              </p>
-              <div class="liuyao-line-board">
-                <div
-                  v-for="line in transformedLineDetails"
-                  :key="`transformed-${line.position}`"
-                  class="liuyao-line-board__row"
-                  :class="{ 'is-changing': line.is_changing }"
-                >
-                  <div class="liuyao-line-board__spirit">{{ line.six_spirit }}</div>
-                  <div class="liuyao-line-board__content">
-                    <div class="liuyao-line-board__relation">{{ line.relation }}{{ line.stem_branch }}</div>
-                    <div v-if="line.hidden_spirit" class="liuyao-line-board__hidden">↑伏：{{ line.hidden_spirit }}</div>
-                    <div class="liuyao-line-board__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</div>
-                    <div class="liuyao-line-board__tags">
-                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
-                      <span v-if="line.shi_ying">{{ line.shi_ying }}</span>
-                      <span>{{ line.nayin }}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
+
+              <template v-for="(line, index) in castLineDetails" :key="line.position">
+                <div class="liuyao-result-grid__spirit">{{ line.six_spirit }}</div>
+
+                <div class="liuyao-result-grid__cell">
+                  <div class="liuyao-result-grid__relation">{{ line.relation }}{{ line.stem_branch }}</div>
+                  <div class="liuyao-result-grid__line">
+                    <span v-if="line.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ line.hidden_spirit }}</span>
+                    <span class="liuyao-result-grid__bars">{{ line.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
+                    <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
+                    <span v-if="line.shi_ying" class="liuyao-result-grid__marker">{{ line.shi_ying }}</span>
+                  </div>
+                  <div class="liuyao-result-grid__nayin">{{ line.nayin }}</div>
+                </div>
+
+                <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__cell liuyao-result-grid__cell--right">
+                  <div class="liuyao-result-grid__relation">{{ transformedLineDetails[index]?.relation }}{{ transformedLineDetails[index]?.stem_branch }}</div>
+                  <div class="liuyao-result-grid__line">
+                    <span v-if="transformedLineDetails[index]?.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ transformedLineDetails[index]?.hidden_spirit }}</span>
+                    <span class="liuyao-result-grid__bars">{{ transformedLineDetails[index]?.is_changing ? '▅ ▅' : '▅▅▅' }}</span>
+                    <span v-if="transformedLineDetails[index]?.change_mark" class="is-change-mark">{{ transformedLineDetails[index]?.change_mark }}</span>
+                    <span v-if="transformedLineDetails[index]?.shi_ying" class="liuyao-result-grid__marker">{{ transformedLineDetails[index]?.shi_ying }}</span>
+                  </div>
+                  <div class="liuyao-result-grid__nayin">{{ transformedLineDetails[index]?.nayin }}</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -442,97 +425,89 @@ async function cast() {
   font-size: 0.9rem;
 }
 
-.liuyao-result-board__titles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 1rem;
-  align-items: baseline;
-}
-
-.liuyao-result-board__title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.liuyao-result-board__title--right {
-  text-align: right;
-}
-
 .liuyao-result-frame {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-  padding: 1rem;
+  padding: 1rem 0;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 20px;
   background: color-mix(in srgb, var(--card-bg) 96%, transparent);
+  overflow-x: auto;
 }
 
-.liuyao-result-boards__item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.25rem 0 0;
-}
-
-.liuyao-line-board {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.liuyao-line-board__row {
+.liuyao-result-grid {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: 56px minmax(260px, 1fr) minmax(260px, 1fr);
+  row-gap: 0.55rem;
+  column-gap: 0.8rem;
   align-items: start;
-  padding: 0.7rem 0.8rem;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  min-width: 760px;
+  padding: 0 1rem;
 }
 
-.liuyao-line-board__row.is-changing {
-  border-color: rgba(59, 130, 246, 0.28);
-}
-
-.liuyao-line-board__spirit {
+.liuyao-result-grid__header {
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.5;
+  padding-bottom: 0.3rem;
 }
 
-.liuyao-line-board__content {
+.liuyao-result-grid__header--right {
+  text-align: left;
+}
+
+.liuyao-result-grid__spirit {
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.7;
+  padding-top: 0.08rem;
+}
+
+.liuyao-result-grid__cell {
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
+  gap: 0.08rem;
+  min-width: 0;
 }
 
-.liuyao-line-board__relation {
+.liuyao-result-grid__cell--right {
+  text-align: left;
+}
+
+.liuyao-result-grid__relation {
   font-size: 0.95rem;
   color: var(--text-primary);
+  line-height: 1.45;
 }
 
-.liuyao-line-board__hidden {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
+.liuyao-result-grid__line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-height: 1.5rem;
 }
 
-.liuyao-line-board__bars {
+.liuyao-result-grid__bars {
   font-size: 1rem;
   letter-spacing: 0.08em;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
-.liuyao-line-board__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.6rem;
+.liuyao-result-grid__hidden {
   font-size: 0.84rem;
   color: var(--text-secondary);
+}
+
+.liuyao-result-grid__marker {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.liuyao-result-grid__nayin {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .is-change-mark {
@@ -550,7 +525,7 @@ async function cast() {
   }
 
   .liuyao-result-frame {
-    grid-template-columns: 1fr;
+    padding: 0.85rem 0;
   }
 }
 </style>
