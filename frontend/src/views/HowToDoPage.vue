@@ -86,7 +86,9 @@ const castQuestionText = computed(() => result.value?.question?.trim() || questi
 const castModeText = computed(() => {
   const mode = castResult.value?.cast_mode || activeCastMode.value
   if (mode === 'manual') return '手动输入'
-  return '硬币 / 太极丸起卦'
+  if (mode === 'taiji') return '太极丸起卦'
+  if (mode === 'character') return '汉字起卦'
+  return '硬币起卦'
 })
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const castTimeText = computed(() => castResult.value?.day_label || '—')

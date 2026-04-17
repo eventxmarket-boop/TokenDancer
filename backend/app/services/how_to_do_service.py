@@ -81,6 +81,47 @@ DAY_STEM_SPIRIT_START = {
     "癸": "玄武",
 }
 
+GUIREN_BY_DAY_STEM = {
+    "甲": ("丑", "未"),
+    "戊": ("丑", "未"),
+    "庚": ("丑", "未"),
+    "乙": ("子", "申"),
+    "己": ("子", "申"),
+    "丙": ("亥", "酉"),
+    "丁": ("亥", "酉"),
+    "壬": ("卯", "巳"),
+    "癸": ("卯", "巳"),
+    "辛": ("寅", "午"),
+}
+
+YIMA_BY_DAY_BRANCH = {
+    "申": "寅",
+    "子": "寅",
+    "辰": "寅",
+    "寅": "申",
+    "午": "申",
+    "戌": "申",
+    "亥": "巳",
+    "卯": "巳",
+    "未": "巳",
+    "巳": "亥",
+    "酉": "亥",
+    "丑": "亥",
+}
+
+YANGREN_BY_DAY_STEM = {
+    "甲": "卯",
+    "乙": "寅",
+    "丙": "午",
+    "丁": "巳",
+    "戊": "午",
+    "己": "巳",
+    "庚": "酉",
+    "辛": "申",
+    "壬": "子",
+    "癸": "亥",
+}
+
 TRIGRAMS = [
     {"name": "乾", "symbol": "☰", "meaning": "天"},
     {"name": "兑", "symbol": "☱", "meaning": "泽"},
@@ -425,6 +466,23 @@ def _true_random_line_value() -> int:
     return random.SystemRandom().choice([6, 7, 8, 9])
 
 
+def _parse_cast_datetime(value: str) -> datetime:
+    normalized = _normalize_text(value)
+    tz = ZoneInfo("Asia/Shanghai")
+    if not normalized:
+        return datetime.now(tz)
+    for fmt in ("%Y/%m/%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(normalized, fmt).replace(tzinfo=tz)
+        except ValueError:
+            continue
+    try:
+        parsed = datetime.fromisoformat(normalized)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=tz)
+    except ValueError:
+        return datetime.now(tz)
+
+
 def _sexagenary_name(index: int) -> str:
     return f"{STEMS[index % 10]}{BRANCHES[index % 12]}"
 
@@ -636,6 +694,22 @@ def _hidden_spirits_for(hexagram_name: str, line_infos: list[dict[str, Any]]) ->
     return hidden_map
 
 
+def _shensha_for(dt: datetime, line_details: list[dict[str, Any]], shi_position: int) -> dict[str, str]:
+    day_gz = _day_ganzhi(dt)
+    day_stem = day_gz[0]
+    day_branch = day_gz[1]
+    guiren_a, guiren_b = GUIREN_BY_DAY_STEM.get(day_stem, ("—", "—"))
+    guashen = "—"
+    if 1 <= shi_position <= len(line_details):
+        guashen = line_details[shi_position - 1]["stem_branch"][-1]
+    return {
+        "卦身": guashen,
+        "贵人": f"{guiren_a}、{guiren_b}",
+        "驿马": YIMA_BY_DAY_BRANCH.get(day_branch, "—"),
+        "羊刃": YANGREN_BY_DAY_STEM.get(day_stem, "—"),
+    }
+
+
 def _build_line_detail(
     position: int,
     line: dict[str, Any],
@@ -739,6 +813,7 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
 
 def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: str, source_text: str = "", manual_lines: list[int] | None = None) -> dict[str, Any]:
     seed_value = cast_seed or datetime.now().isoformat(timespec="seconds")
+    cast_dt = _parse_cast_datetime(seed_value)
     lines = _build_lines(seed_value, "cast", cast_mode, question, source_text, manual_lines=manual_lines)
     binary = _binary_from_lines(lines)
     hexagram_number, name = _hexagram_lookup(binary)
@@ -748,7 +823,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
     mutual_hexagram = _build_mutual_hexagram(lines)
     hexagram_spec = HEXAGRAM_SPECS.get(name, {"palace": "未知宫", "tag": ""})
     shi_position, ying_position = _shi_ying_positions(name)
-    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    now = cast_dt
     day_ganzhi = _day_ganzhi(now)
     day_stem = day_ganzhi[0]
     six_spirits = _six_spirits_for_day(day_stem)
@@ -822,12 +897,6 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         {"label": "问念", "value": question or "未填写"},
         {"label": "分类", "value": category or "未分类"},
     ]
-    shen_sha = {
-        "卦身": BRANCHES[_stable_seed(seed_value, question, "gua-shen") % len(BRANCHES)],
-        "贵人": f"{BRANCHES[_stable_seed(seed_value, question, 'gui-ren-1') % len(BRANCHES)]}、{BRANCHES[_stable_seed(seed_value, question, 'gui-ren-2') % len(BRANCHES)]}",
-        "驿马": BRANCHES[_stable_seed(seed_value, question, "yi-ma") % len(BRANCHES)],
-        "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
-    }
     line_details = [
         _build_line_detail(
             position,
@@ -840,6 +909,7 @@ def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: 
         )
         for position, item in enumerate(lines, start=1)
     ]
+    shen_sha = _shensha_for(now, line_details, shi_position)
     day_label = now.strftime("%Y年%m月%d日%H:%M:%S %A")
     day_label = day_label.replace("Monday", "周一").replace("Tuesday", "周二").replace("Wednesday", "周三").replace("Thursday", "周四").replace("Friday", "周五").replace("Saturday", "周六").replace("Sunday", "周日")
     panel_title = f"{lower['meaning']}{upper['meaning']}{name}"

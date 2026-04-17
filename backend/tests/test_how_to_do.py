@@ -40,6 +40,18 @@ class HowToDoTests(unittest.TestCase):
             expected = ("阴" if line["yin_yang"] == "阳" else "阳") if line["value"] in {6, 9} else line["yin_yang"]
             self.assertEqual(transformed[index]["yin_yang"], expected)
 
+    def test_cast_time_uses_input_seed_time(self):
+        result = _build_cast_result(
+            question="测试",
+            category="朋友关系",
+            cast_mode="manual",
+            cast_seed="2026/04/18 07:20:56",
+            manual_lines=[7, 7, 8, 8, 7, 8],
+        )
+
+        self.assertIn("2026年04月18日07:20:56", result["raw_result"]["day_label"])
+        self.assertIn("壬辰时", result["raw_result"]["ganzhi_line"])
+
     def test_how_to_do_catalog_contains_all_sixty_four_hexagrams(self):
         with TestClient(app) as client:
             response = client.post("/persona-api/how-to-do", json={"section": "catalog", "use_ai": False})

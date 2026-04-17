@@ -1,3 +1,9 @@
+## V1.4.103 - 2026-04-18
+
+- Bound liu-yao cast results to the user-entered cast time so the displayed time,干支, and 旬空 now follow the selected起卦时间 instead of the server clock.
+- Replaced the merged cast-mode label with exact mode text such as `硬币起卦` and `太极丸起卦`.
+- Switched shensha output to rule-based generation from the cast time and day stem/branch instead of seed-derived mock values.
+
 ## V1.4.102 - 2026-04-18
 
 - Replaced the fake liu-yao line-detail generation with palace-based 纳甲/六亲 calculation so visible relations and stem-branches no longer repeat in a fixed mock order.
