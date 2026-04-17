@@ -6,6 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from main import app
+from app.services.llm_gateway import LLMGatewayError
 
 
 class ReplyAssistantTests(unittest.TestCase):
@@ -56,6 +57,27 @@ class ReplyAssistantTests(unittest.TestCase):
         self.assertNotIn("reply_candidates", body)
         self.assertNotIn("predicted_replies", body)
         self.assertNotIn("material_summary", body)
+
+    def test_reply_assistant_runtime_surfaces_llm_gateway_errors(self):
+        payload = {
+            "message": "今晚能把方案发我吗？",
+            "target_person_type": "boss",
+            "scene_type": "follow_up",
+            "current_context": "前面已经提过一次了。",
+            "target_goal": "更职业",
+            "relationship_status": "工作沟通中",
+            "conversation_context": "对方还没回。",
+        }
+
+        with patch(
+            "app.services.reply_assistant_service.generate_reply",
+            side_effect=LLMGatewayError("当前模型服务不可用：未配置启用的大模型 API Key"),
+        ):
+            with TestClient(app) as client:
+                response = client.post("/persona-api/reply-assistant", json=payload)
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("reply_assistant 未能调用模型", response.json()["detail"])
 
 
 if __name__ == "__main__":

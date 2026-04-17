@@ -842,8 +842,8 @@ async def generate_reply_assistant_runtime(
                 ],
                 db=db,
             )
-        except LLMGatewayError:
-            return fallback
+        except LLMGatewayError as exc:
+            raise LLMGatewayError(f"reply_assistant 未能调用模型: {exc}") from exc
 
         parsed = _extract_json_object(str(reply.get("content", ""))) or {}
         response = _normalize_public_reply_response(parsed, fallback)
