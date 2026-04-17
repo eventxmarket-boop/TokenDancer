@@ -131,10 +131,10 @@ watch(favoriteScopeKey, () => {
       </div>
 
       <div class="hero-actions">
-        <RouterLink class="primary-btn" to="/create">创建</RouterLink>
-        <RouterLink class="secondary-btn" to="/favorites">收藏</RouterLink>
+        <RouterLink class="primary-btn" to="/create">去创建</RouterLink>
+        <RouterLink class="secondary-btn" to="/favorites">打开收藏</RouterLink>
         <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">
-          {{ featuredExpanded ? '收起' : '推荐' }}
+          {{ featuredExpanded ? '收起' : '精选推荐' }}
         </button>
       </div>
     </div>
@@ -143,8 +143,8 @@ watch(favoriteScopeKey, () => {
   <section class="section-card">
     <div class="section-head">
       <div>
-        <p class="eyebrow">Seed</p>
-        <h3>列表</h3>
+        <p class="eyebrow">Seed 列表</p>
+        <h3>人格卡片总列表</h3>
       </div>
     </div>
 
@@ -152,26 +152,27 @@ watch(favoriteScopeKey, () => {
       <div ref="listSectionRef" class="seed-main">
         <div v-if="loading" class="state-panel">
           <p class="eyebrow">加载中</p>
-          <h3>读取中…</h3>
+          <h3>正在读取 Seed 人格…</h3>
         </div>
 
         <div v-else-if="error" class="state-panel">
           <p class="eyebrow">加载失败</p>
-          <h3>暂时不可用</h3>
+          <h3>Seed 人格暂时不可用</h3>
           <p class="state-copy">{{ error }}</p>
           <button class="primary-btn" type="button" @click="loadSeeds">重试</button>
         </div>
 
         <div v-else-if="!seedPersonas.length" class="empty-panel">
           <div class="empty-panel__icon">♪</div>
-          <h3>暂无 Seed。</h3>
-          <p class="empty-panel__copy">先补充种子目录。</p>
+          <h3>还没有可展示的 Seed 人格。</h3>
+          <p class="empty-panel__copy">请先补充 backend/personas 下的种子人格目录。</p>
         </div>
 
         <div v-else ref="groupSectionRef" class="group-stack group-stack--dense">
           <article v-for="group in groups" :key="group.group" class="seed-group">
             <div class="seed-group__head">
               <div>
+                <p class="eyebrow">分组</p>
                 <h3>{{ formatLabel(group.group) }}</h3>
               </div>
             </div>
@@ -211,8 +212,8 @@ watch(favoriteScopeKey, () => {
     <article v-if="featuredExpanded" ref="featuredSectionRef" class="summary-panel summary-panel--featured summary-panel--featured-inline">
       <div class="seed-featured__head">
         <div>
-          <p class="eyebrow">推荐</p>
-          <h3>精选</h3>
+          <p class="eyebrow">精选推荐</p>
+          <h3>推荐人格</h3>
         </div>
         <button class="secondary-btn" type="button" @click="toggleFeaturedPreview">收起</button>
       </div>

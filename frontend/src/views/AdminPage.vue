@@ -152,6 +152,7 @@ onMounted(() => {
         <div>
           <p class="eyebrow">后台设置</p>
           <h3>大模型配置</h3>
+          <p class="section-note">这里先做一套最小可用配置，改完立刻影响聊天链路。</p>
         </div>
         <div class="hero-actions">
           <RouterLink class="secondary-btn" to="/me">返回我的</RouterLink>
@@ -161,7 +162,7 @@ onMounted(() => {
 
       <div v-if="loading" class="state-panel">
         <p class="eyebrow">加载中</p>
-        <h3>读取中…</h3>
+        <h3>正在读取当前模型配置…</h3>
       </div>
 
       <div v-else class="admin-grid">
@@ -176,7 +177,7 @@ onMounted(() => {
             <p><strong>状态：</strong>{{ effectiveConfig.is_default ? '默认' : '非默认' }} / {{ effectiveConfig.is_enabled ? '启用' : '停用' }}</p>
           </div>
           <div v-else class="state-copy">
-            暂无配置。
+            当前还没有保存任何模型配置，先填一套就能开始聊天。
           </div>
         </section>
 
@@ -242,14 +243,15 @@ onMounted(() => {
     <article class="section-card">
       <div class="section-head">
         <div>
-          <p class="eyebrow">配置</p>
-          <h3>列表</h3>
+          <p class="eyebrow">配置列表</p>
+          <h3>已保存的模型卡片</h3>
         </div>
+        <p class="section-note">默认配置会被聊天接口优先读取。</p>
       </div>
 
       <div v-if="!items.length && !loading" class="state-panel">
-        <p class="eyebrow">暂无</p>
-        <h3>没有配置。</h3>
+        <p class="eyebrow">暂无记录</p>
+        <h3>现在还没有可选配置。</h3>
       </div>
 
       <div v-else class="config-list">

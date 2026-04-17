@@ -27,31 +27,31 @@ const mainPathSections: MainPathSection[] = [
   {
     key: 'self',
     title: '自我主线',
-    description: '从自己开始。',
+    description: '从你的素材池、分析报告、判断规则和知识源出发。',
     groupKeys: ['self'],
   },
   {
     key: 'source',
     title: '从资料创建',
-    description: '从资料开始。',
+    description: '从聊天记录、文档或其他资料中整理出一个人格雏形。',
     groupKeys: ['source', 'digital_twin', 'protection'],
   },
   {
     key: 'work',
     title: '职场关系',
-    description: '从关系开始。',
+    description: '把同事、老板、导师或老师的风格整理出来。',
     groupKeys: ['relationship_workplace', 'relationship_academia'],
   },
   {
     key: 'intimate',
     title: '关系经营',
-    description: '继续经营。',
+    description: '看清关系、调整表达、改善相处、继续经营。',
     groupKeys: ['relationship_intimate'],
   },
   {
     key: 'family',
     title: '家人陪伴',
-    description: '家人。',
+    description: '统一入口，进入后再选妈妈、父母或其他家人。',
     groupKeys: ['relationship_family'],
   },
 ]
@@ -377,25 +377,27 @@ onMounted(() => {
     <div class="hero-copy">
       <p class="eyebrow">Create</p>
       <h1>创造一个人格</h1>
+      <p class="hero-text">从自己、资料，或某种关系开始，创建一个人格。</p>
     </div>
   </section>
 
   <section class="section-card create-accordion-shell">
     <div class="section-head">
       <div>
-        <p class="eyebrow">创建</p>
-        <h3>选一条。</h3>
+        <p class="eyebrow">创建路径</p>
+        <h3>先选一条主路径，再展开里面的内容。</h3>
       </div>
+      <p class="section-note">点击任意卡片，开始创建。</p>
     </div>
 
     <div v-if="loading" class="state-panel">
       <p class="eyebrow">加载中</p>
-      <h3>读取中…</h3>
+      <h3>正在读取创建路径…</h3>
     </div>
 
     <div v-else-if="error" class="state-panel">
       <p class="eyebrow">加载失败</p>
-      <h3>页面不可用</h3>
+      <h3>Create 页面暂时不可用</h3>
       <p class="state-copy">{{ error }}</p>
       <button class="primary-btn" type="button" @click="loadCatalog">重试</button>
     </div>
@@ -409,7 +411,9 @@ onMounted(() => {
       >
         <button class="create-accordion__trigger" type="button" @click="toggleSection(section.key)">
           <div>
+            <p class="eyebrow">主路径</p>
             <h3>{{ section.title }}</h3>
+            <p class="section-note">{{ section.description }}</p>
           </div>
           <span class="status-pill">{{ section.itemCount }} 个入口</span>
         </button>
@@ -422,10 +426,13 @@ onMounted(() => {
             <div v-for="group in section.groups" :key="group.group" class="create-subgroup">
               <div v-if="section.key !== 'self'" class="create-subgroup__head">
                 <div>
+                  <p class="eyebrow">{{ group.label }}</p>
                   <h4>{{ group.label }}</h4>
                 </div>
                 <span class="status-pill">{{ group.items.length }} 个入口</span>
               </div>
+
+              <p v-if="section.key !== 'self'" class="section-note">{{ group.description }}</p>
 
               <div class="create-card-grid">
                 <article v-if="section.key === 'self'" class="create-card create-card--compact create-card--single">
@@ -434,6 +441,8 @@ onMounted(() => {
                       <h4>开始创建</h4>
                     </div>
                   </div>
+
+                  <p class="create-card__copy">从做事方式、表达习惯、思考路径和生活痕迹中，创建一个更完整的自己。</p>
 
                   <div class="tag-row">
                     <span v-for="mode in getSectionPrimaryItem(section)?.input_modes || []" :key="mode" class="tag-chip">

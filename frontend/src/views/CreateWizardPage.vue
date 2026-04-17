@@ -164,25 +164,25 @@ const typeCards = [
   {
     type: 'self_unified' as const,
     title: '自我主线',
-    description: '从自己开始。',
+    description: '先把做事方式、回复方式、思考路径和生活痕迹整理出来。',
     hint: '从自己开始',
   },
   {
     type: 'source_persona' as const,
     title: '从资料创建',
-    description: '从资料开始。',
+    description: '把聊天记录、文档、音频或视频里的风格整理成一版结果。',
     hint: '从资料开始',
   },
   {
     type: 'relationship_persona' as const,
     title: '关系人格',
-    description: '从关系开始。',
+    description: '从同事、导师、父母或伴侣这类关系开始创建。',
     hint: '从关系开始',
   },
   {
     type: 'intimate_companion' as const,
     title: '关系经营',
-    description: '继续经营。',
+    description: '先看清关系，再调整表达、改善相处、继续经营。',
     hint: '从关系经营开始',
   },
 ]
@@ -382,17 +382,17 @@ const selfModeCards = [
   {
     mode: 'light' as const,
     title: '轻量模式',
-    description: '先试。',
+    description: '先试试看，少量材料就能跑出一版骨架。',
   },
   {
     mode: 'standard' as const,
     title: '标准模式',
-    description: '继续补。',
+    description: '在轻量基础上继续补缺口，形成更稳的主线。',
   },
   {
     mode: 'deep' as const,
     title: '深度模式',
-    description: '拉满。',
+    description: '在标准基础上再补一轮摘要与验证，拉满深度。',
   },
 ]
 
@@ -410,15 +410,15 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
 }
 
 const selfModeJourneyCopy: Record<SelfCreateMode, string> = {
-  light: '轻量',
-  standard: '标准',
-  deep: '深度',
+  light: '先试轻量，确认骨架后再补到标准。',
+  standard: '在轻量基础上补缺口。',
+  deep: '在标准基础上再补摘要与验证。',
 }
 
 const selfModeNextStepCopy: Record<SelfCreateMode, string> = {
-  light: '补标准',
-  standard: '补深度',
-  deep: '完成',
+  light: '下一步建议：继续补到标准',
+  standard: '下一步建议：补到深度',
+  deep: '当前已经是最完整路径',
 }
 
 type FlowPage = {
@@ -429,69 +429,69 @@ type FlowPage = {
 }
 
 const sourceFlowPages: FlowPage[] = [
-  { key: 'source_target_name', title: '目标名称', description: '', summary: '' },
-  { key: 'source_material_type', title: '材料类型', description: '', summary: '' },
-  { key: 'source_material_description', title: '材料说明', description: '', summary: '' },
-  { key: 'source_focus_points', title: '提炼重点', description: '', summary: '' },
-  { key: 'source_excluded_content', title: '排除内容', description: '', summary: '' },
-  { key: 'source_materials', title: '材料输入', description: '', summary: '' },
-  { key: 'source_review', title: '汇总', description: '', summary: '' },
+  { key: 'source_target_name', title: '目标名称', description: '先写这条资料流要做成什么。', summary: '先把目标人格的名字写出来。' },
+  { key: 'source_material_type', title: '材料类型', description: '先标出材料是什么。', summary: '把 PDF、聊天记录、音视频等来源写清楚。' },
+  { key: 'source_material_description', title: '材料说明', description: '先说这批材料在讲什么。', summary: '用一段话说明材料总览。' },
+  { key: 'source_focus_points', title: '提炼重点', description: '先写希望系统提炼什么。', summary: '把最想抽出的重点写清楚。' },
+  { key: 'source_excluded_content', title: '排除内容', description: '先写不想被抽出的内容。', summary: '把不希望被抽出的内容写清楚。' },
+  { key: 'source_materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'source_review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
 ]
 
 const relationshipFlowPages: FlowPage[] = [
-  { key: 'relationship_type', title: '关系类型', description: '', summary: '' },
-  { key: 'persona_name', title: '对方称呼', description: '', summary: '' },
-  { key: 'speech_style', title: '说话风格', description: '', summary: '' },
-  { key: 'decision_logic', title: '判断逻辑', description: '', summary: '' },
-  { key: 'purpose', title: '用途目标', description: '', summary: '' },
-  { key: 'boundaries', title: '边界规则', description: '', summary: '' },
-  { key: 'materials', title: '材料输入', description: '', summary: '' },
-  { key: 'review', title: '汇总', description: '', summary: '' },
+  { key: 'relationship_type', title: '关系类型', description: '先定这个人是什么关系。', summary: '先写同事、导师、父母或伴侣。' },
+  { key: 'persona_name', title: '对方称呼', description: '先写你怎么称呼对方。', summary: '把对方的名字或称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写对方平时怎么说话。', summary: '把典型说话方式写清楚。' },
+  { key: 'decision_logic', title: '判断逻辑', description: '先写对方常怎么判断。', summary: '把常见判断逻辑写出来。' },
+  { key: 'purpose', title: '用途目标', description: '先写这个人格帮你做什么。', summary: '把这个人格的用途写明白。' },
+  { key: 'boundaries', title: '边界规则', description: '先写不能越过哪些边界。', summary: '把边界和禁区写清楚。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
 ]
 
 const intimateFlowPages: FlowPage[] = [
-  { key: 'relationship_type', title: '关系类型', description: '', summary: '' },
-  { key: 'persona_name', title: '对方称呼', description: '', summary: '' },
-  { key: 'relationship_stage', title: '关系阶段', description: '', summary: '' },
-  { key: 'speech_style', title: '说话风格', description: '', summary: '' },
-  { key: 'response_temperature', title: '回复温度', description: '', summary: '' },
-  { key: 'catchphrases', title: '口头禅', description: '', summary: '' },
-  { key: 'conversation_samples', title: '对话样本', description: '', summary: '' },
-  { key: 'interaction_rules', title: '互动规则', description: '', summary: '' },
-  { key: 'relationship_goals', title: '关系目标', description: '', summary: '' },
-  { key: 'key_memories', title: '关键记忆', description: '', summary: '' },
-  { key: 'materials', title: '材料输入', description: '', summary: '' },
-  { key: 'boundaries', title: '边界规则', description: '', summary: '' },
-  { key: 'review', title: '汇总', description: '', summary: '' },
+  { key: 'relationship_type', title: '关系类型', description: '先定这段亲密关系的类型。', summary: '先写关系经营、消息模拟或过去关系。' },
+  { key: 'persona_name', title: '对方称呼', description: '先写你怎么称呼对方。', summary: '把对方名字或称呼写出来。' },
+  { key: 'relationship_stage', title: '关系阶段', description: '先写你们现在处在什么阶段。', summary: '把暧昧期、关系中或磨合中写清楚。' },
+  { key: 'speech_style', title: '说话风格', description: '先写对方平时怎么说话。', summary: '把典型说话方式写清楚。' },
+  { key: 'response_temperature', title: '回复温度', description: '先写你希望它用什么温度回应。', summary: '写出安慰、推进还是克制。' },
+  { key: 'catchphrases', title: '口头禅', description: '先写对方常说的话。', summary: '把常见口头禅整理出来。' },
+  { key: 'conversation_samples', title: '对话样本', description: '先放一段最像的聊天。', summary: '把最像的对话样本写出来。' },
+  { key: 'interaction_rules', title: '互动规则', description: '先写你们常见的互动方式。', summary: '把互动规则写清楚。' },
+  { key: 'relationship_goals', title: '关系目标', description: '先写你想达成什么关系效果。', summary: '把关系目标写明白。' },
+  { key: 'key_memories', title: '关键记忆', description: '先写最重要的记忆点。', summary: '把关键记忆补进去。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'boundaries', title: '边界规则', description: '先写不能越过哪些边界。', summary: '把边界和禁区写清楚。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
 ]
 
 const familyFlowPages: FlowPage[] = [
-  { key: 'persona_name', title: '称呼', description: '', summary: '' },
-  { key: 'speech_style', title: '说话风格', description: '', summary: '' },
-  { key: 'core_care', title: '照顾方式', description: '', summary: '' },
-  { key: 'shared_events', title: '共同经历', description: '', summary: '' },
-  { key: 'important_advice', title: '常见提醒', description: '', summary: '' },
-  { key: 'emotional_triggers', title: '在意点', description: '', summary: '' },
-  { key: 'guided_most_common_topics', title: '常聊话题', description: '', summary: '' },
-  { key: 'guided_comfort_style', title: '安慰方式', description: '', summary: '' },
-  { key: 'guided_most_characteristic_event', title: '典型小事', description: '', summary: '' },
-  { key: 'guided_repeated_phrases', title: '反复说过的话', description: '', summary: '' },
-  { key: 'guided_most_common_reminders', title: '常见提醒', description: '', summary: '' },
-  { key: 'guided_care_habits', title: '典型关心方式', description: '', summary: '' },
-  { key: 'materials', title: '材料输入', description: '', summary: '' },
-  { key: 'review', title: '汇总', description: '', summary: '' },
+  { key: 'persona_name', title: '称呼', description: '先写你怎么称呼这位家人。', summary: '把对方称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写这位家人平时怎么说话。', summary: '把说话风格写清楚。' },
+  { key: 'core_care', title: '照顾方式', description: '先写对方常见的安慰和关心方式。', summary: '把安慰和关心的方式写出来。' },
+  { key: 'shared_events', title: '共同经历', description: '先写你们一起经历过什么。', summary: '把重要共同经历写清楚。' },
+  { key: 'important_advice', title: '常见提醒', description: '先写反复提过的话。', summary: '把常见提醒写出来。' },
+  { key: 'emotional_triggers', title: '在意点', description: '先写对方最在意你什么。', summary: '把他最在意的点写清楚。' },
+  { key: 'guided_most_common_topics', title: '常聊话题', description: '先写你们最常聊什么。', summary: '把最常聊的话题写清楚。' },
+  { key: 'guided_comfort_style', title: '安慰方式', description: '先写对方最常怎么安慰你。', summary: '把对方安慰你的方式写出来。' },
+  { key: 'guided_most_characteristic_event', title: '典型小事', description: '先写最像他 / 她的一件小事。', summary: '把最典型的一件小事写出来。' },
+  { key: 'guided_repeated_phrases', title: '反复说过的话', description: '先写有哪些话被反复提到。', summary: '把重复出现的话写出来。' },
+  { key: 'guided_most_common_reminders', title: '常见提醒', description: '先写最常提醒你的是什么。', summary: '把最常提醒你的内容写清楚。' },
+  { key: 'guided_care_habits', title: '典型关心方式', description: '先写对方最典型的关心方式。', summary: '把典型关心方式写出来。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
 ]
 
 const reunionFlowPages: FlowPage[] = [
-  { key: 'persona_name', title: '称呼', description: '', summary: '' },
-  { key: 'speech_style', title: '说话风格', description: '', summary: '' },
-  { key: 'remembrance_style', title: '回忆方式', description: '', summary: '' },
-  { key: 'chat_history_summary', title: '聊天摘要', description: '', summary: '' },
-  { key: 'memory_notes', title: '记忆片段', description: '', summary: '' },
-  { key: 'retrieval_rules', title: '检索规则', description: '', summary: '' },
-  { key: 'safety_rules', title: '安全规则', description: '', summary: '' },
-  { key: 'materials', title: '材料输入', description: '', summary: '' },
-  { key: 'review', title: '汇总', description: '', summary: '' },
+  { key: 'persona_name', title: '称呼', description: '先写你怎么称呼这位重逢对象。', summary: '把对方称呼写出来。' },
+  { key: 'speech_style', title: '说话风格', description: '先写这位对象平时怎么说话。', summary: '把说话风格写清楚。' },
+  { key: 'remembrance_style', title: '回忆方式', description: '先写它应该怎样慢慢回忆。', summary: '把回忆方式写清楚。' },
+  { key: 'chat_history_summary', title: '聊天摘要', description: '先写最关键的聊天内容。', summary: '把聊天摘要写出来。' },
+  { key: 'memory_notes', title: '记忆片段', description: '先写日记、信件或口述。', summary: '把记忆片段整理出来。' },
+  { key: 'retrieval_rules', title: '检索规则', description: '先写回忆的优先顺序。', summary: '把先看什么写清楚。' },
+  { key: 'safety_rules', title: '安全规则', description: '先写不能碰的边界。', summary: '把安全护栏写清楚。' },
+  { key: 'materials', title: '材料输入', description: '把原始材料补进去。', summary: '上传文件、图片或 OCR 材料。' },
+  { key: 'review', title: '汇总摘要', description: '看一眼总览，再回头改。', summary: '先检查再继续生成。' },
 ]
 
 type SelfFillPageKey =
@@ -518,68 +518,68 @@ const selfFillPageCards: SelfFillPageCard[] = [
   {
     key: 'analysis',
     title: '准备与分析',
-    description: '',
-    summary: '',
+    description: '先看准备什么，再开始填写。',
+    summary: '先把素材范围、填写项数量和当前档位看清楚。',
   },
   {
     key: 'materials',
     title: '材料层',
-    description: '',
-    summary: '',
+    description: '先放最像你的素材。',
+    summary: '把真实聊天、长文、决策记录或项目复盘先放进来。',
   },
   {
     key: 'signals',
     title: '公开资料 / 外部反馈',
-    description: '',
-    summary: '',
+    description: '补可查资料和别人评价。',
+    summary: '这一步用来区分稳定人格和动态事实。',
   },
   {
     key: 'material_details',
     title: '材料说明',
-    description: '',
-    summary: '',
+    description: '写材料总览。',
+    summary: '先说明你最能代表自己的材料是什么。',
   },
   {
     key: 'identity',
     title: '自我身份层',
-    description: '',
-    summary: '',
+    description: '写你是谁。',
+    summary: '把长期目标、价值锚点、底线和角色定位写清楚。',
   },
   {
     key: 'decision',
     title: '自我判断层',
-    description: '',
-    summary: '',
+    description: '写你怎么判断。',
+    summary: '把风险偏好、决策原则、取舍方式和止损规则写清楚。',
   },
   {
     key: 'knowledge',
     title: '自我知识源层',
-    description: '',
-    summary: '',
+    description: '写你现在知道什么。',
+    summary: '把静态材料、最近动态和可查证来源分开写。',
   },
   {
     key: 'boundary',
     title: '边界规则 / 验证样本',
-    description: '',
-    summary: '',
+    description: '写不能越线的地方。',
+    summary: '把不编造、不装懂和验证样本写清楚。',
   },
   {
     key: 'interview',
     title: '追问补洞',
-    description: '',
-    summary: '',
+    description: '用少量问题补缺口。',
+    summary: '先从下拉问题补洞，再修正分析报告。',
   },
   {
     key: 'custom',
     title: '可选追问',
-    description: '',
-    summary: '',
+    description: '补你自己的问题。',
+    summary: '把你最想追问的 1 到 3 个问题写进去。',
   },
   {
     key: 'review',
     title: '汇总摘要',
-    description: '',
-    summary: '',
+    description: '全部填完后看总览。',
+    summary: '把前面填过的内容收成一页摘要。',
   },
 ]
 
@@ -588,6 +588,13 @@ const selfFillCurrentPage = computed(() => selfFillPageCards[selfFillPageIndex.v
 const selfFillInfoPageCards = computed(() => selfFillPageCards.filter((item) => item.key !== 'analysis' && item.key !== 'review'))
 const selfFillInfoPageCount = computed(() => selfFillInfoPageCards.value.length)
 const selfFillPageCount = computed(() => selfFillPageCards.length)
+const selfFillCurrentPageIsHelper = computed(() =>
+  selfFillCurrentPage.value.key === 'analysis' || selfFillCurrentPage.value.key === 'review'
+)
+const selfFillCurrentInfoPageIndex = computed(() => {
+  const index = selfFillInfoPageCards.value.findIndex((item) => item.key === selfFillCurrentPage.value.key)
+  return index >= 0 ? index + 1 : 0
+})
 const selfFillReviewRows = computed(() => [
   { key: 'name', label: '名称', value: formState.name || '未填写', pageKey: 'materials' as SelfFillPageKey },
   { key: 'mode', label: '蒸馏深度', value: selfModeLabels[createMode.value], pageKey: 'materials' as SelfFillPageKey },
@@ -2471,6 +2478,7 @@ watch(
 <template>
   <section class="page-hero page-hero--single wizard-hero">
     <div class="hero-copy">
+      <p class="eyebrow">创建向导</p>
       <h1>开始创建</h1>
     </div>
   </section>
@@ -2495,8 +2503,18 @@ watch(
         <article v-if="step === 1" class="wizard-stage">
           <div class="section-head">
             <div>
+              <p class="eyebrow">第 1 步</p>
               <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择家人类型') : '选择创建类型' }}</h3>
             </div>
+            <p class="section-note">
+              {{
+                isSelfUnified
+                  ? selfModeJourneyCopy[createMode]
+                  : isFamilyCompanion
+                    ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。')
+                    : '先确认你要从哪里开始创建。'
+              }}
+            </p>
           </div>
 
           <div v-if="isSelfUnified" class="wizard-card-grid wizard-card-grid--three">
@@ -2514,6 +2532,7 @@ watch(
           </div>
 
           <div v-if="isSelfUnified" class="summary-panel summary-panel--compact self-mode-path-panel">
+            <p class="eyebrow">升级路径</p>
             <h3>{{ selfModeJourneyCopy[createMode] }}</h3>
             <p class="state-copy">{{ selfModeNextStepCopy[createMode] }}</p>
           </div>
@@ -2551,8 +2570,12 @@ watch(
         <article v-else-if="step === 2" class="wizard-stage">
           <div class="section-head">
             <div>
+              <p class="eyebrow">第 2 步</p>
               <h3>{{ isSelfUnified ? '选择输入方式' : isFamilyCompanion ? (isReunionPersona ? '填写重逢资料' : '选择家人类型') : '选择创建方式' }}</h3>
             </div>
+            <p class="section-note">
+              {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? (isReunionPersona ? '把记忆层和安全边界先写清楚。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。') : '不同类型会显示不同的方式选择。' }}
+            </p>
           </div>
 
           <template v-if="isSelfUnified">
@@ -2576,12 +2599,17 @@ watch(
               <section class="self-fill-page">
                 <div class="section-head self-fill-page__head">
                   <div>
+                    <p class="eyebrow">家人陪伴</p>
                     <h3>{{ familyFillCurrentPage.title }}</h3>
                   </div>
+                  <p class="section-note">
+                    第 {{ familyFillPageIndex + 1 }} 页 / {{ familyFlowPages.length }} 页 · 一次只填一项
+                  </p>
                 </div>
 
                 <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                  <h3>{{ familyFillCurrentPage.title }}</h3>
+                  <h3>{{ familyFillCurrentPage.summary }}</h3>
+                  <p class="state-copy">这一页只填一个信息点，可以随时前后翻页。</p>
                 </div>
 
                 <div class="self-fill-page__toolbar">
@@ -2697,6 +2725,7 @@ watch(
                           编辑
                         </button>
                       </div>
+                      <p class="self-fill-review-card__meta">点击可回到对应页继续修改。</p>
                     </article>
                   </div>
                 </div>
@@ -2722,13 +2751,17 @@ watch(
         <article v-else-if="step === 3" class="wizard-stage">
           <div class="section-head">
             <div>
+              <p class="eyebrow">第 3 步</p>
               <h3>{{ isFamilyCompanion ? (isReunionPersona ? '确认重逢人格与记忆层' : '确认人物层与记忆层') : '填写信息' }}</h3>
             </div>
+            <p class="section-note">{{ isFamilyCompanion ? (isReunionPersona ? '先看一眼记忆与护栏，再继续生成。' : '先看一眼，再继续生成。') : '先把关键变量写清楚，后面才更容易继续完善。' }}</p>
           </div>
 
           <div v-if="createType === 'self_unified'" class="wizard-form wizard-form--self-fill">
             <div class="summary-panel summary-panel--compact self-fill-intro">
+              <p class="eyebrow">自我主线</p>
               <h3>按页填，一次只做一项</h3>
+              <p class="state-copy">你可以随时上一步、下一步，或者回到汇总页修改。</p>
               <ul class="summary-panel__list">
                 <li><span>填写项</span><strong>{{ selfFillInfoPageCount }} 项</strong></li>
                 <li><span>页面总数</span><strong>{{ selfFillPageCount }} 页</strong></li>
@@ -2740,12 +2773,16 @@ watch(
               <section class="self-fill-page">
                 <div class="section-head self-fill-page__head">
                   <div>
+                    <p class="eyebrow">{{ selfFillCurrentPage.key === 'review' ? '汇总页' : selfFillCurrentPageIsHelper ? '准备页' : `第 ${selfFillCurrentInfoPageIndex} 项` }}</p>
                     <h3>{{ selfFillCurrentPage.title }}</h3>
                   </div>
                 </div>
 
                 <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                  <h3>{{ selfFillCurrentPage.title }}</h3>
+                  <h3>{{ selfFillCurrentPage.summary }}</h3>
+                  <p class="state-copy">
+                    {{ selfFillCurrentPageIsHelper ? '先看结构，再继续往下填。' : '这一页只填一个信息点。' }}
+                  </p>
                 </div>
 
                 <div class="self-fill-page__toolbar">
@@ -2762,7 +2799,13 @@ watch(
 
                 <div v-if="selfFillCurrentPage.key === 'analysis'" class="self-fill-page__content">
                   <div class="self-fill-assistant-panel self-fill-assistant-panel--inline">
-                    <h3>填写助手</h3>
+                    <div class="self-fill-assistant-panel__head">
+                      <div>
+                        <p class="eyebrow">填写助手</p>
+                        <h3>帮你看当前页</h3>
+                      </div>
+                    </div>
+                    <p class="state-copy">问这页怎么填即可。</p>
                     <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">打开助手</button>
                   </div>
                 </div>
@@ -2782,18 +2825,18 @@ watch(
                       v-model="formState.self_public_sources_text"
                       class="field-input wizard-textarea"
                       rows="5"
-                      placeholder="GitHub / 博客 / 作品集 / 其他可查资料"
+                      placeholder="GitHub / 博客 / 作品集 / 公众号 / 视频号 / B站 / 其他可查资料"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>外部反馈</summary>
+                    <summary>补充外部反馈</summary>
                     <label class="form-field">
                       <span>他人评价 / 外部反馈</span>
                       <textarea
                         v-model="formState.self_external_feedback_text"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="别人怎么评价你"
+                        placeholder="别人怎么评价你的判断、表达、推进方式或边界感"
                       ></textarea>
                     </label>
                   </details>
@@ -2806,18 +2849,18 @@ watch(
                       v-model="formState.work_system_summary"
                       class="field-input wizard-textarea"
                       rows="6"
-                      placeholder="写材料总览"
+                      placeholder="先写最能代表你的材料是什么"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>材料类型</summary>
+                    <summary>补充材料类型</summary>
                     <label class="form-field">
                       <span>材料类型</span>
                       <textarea
                         v-model="formState.work_system_points"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="聊天 / 长文 / 决策 / 复盘"
+                        placeholder="每行一条：真实聊天 / 长文表达 / 决策记录 / 项目复盘"
                       ></textarea>
                     </label>
                   </details>
@@ -2830,18 +2873,18 @@ watch(
                       v-model="formState.reply_persona_summary"
                       class="field-input wizard-textarea"
                       rows="6"
-                      placeholder="你是谁"
+                      placeholder="你是谁、站在什么位置说话"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>身份要点</summary>
+                    <summary>补充身份要点</summary>
                     <label class="form-field">
                       <span>自我身份要点</span>
                       <textarea
                         v-model="formState.reply_persona_points"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="目标 / 价值 / 底线 / 标签"
+                        placeholder="每行一条：长期目标 / 价值锚点 / 底线 / 经验标签"
                       ></textarea>
                     </label>
                   </details>
@@ -2854,18 +2897,18 @@ watch(
                       v-model="formState.thinking_dna_summary"
                       class="field-input wizard-textarea"
                       rows="6"
-                      placeholder="你怎么判断"
+                      placeholder="你做判断时最看重什么"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>判断要点</summary>
+                    <summary>补充判断要点</summary>
                     <label class="form-field">
                       <span>自我判断要点</span>
                       <textarea
                         v-model="formState.thinking_dna_points"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="风险 / 原则 / 取舍 / 止损"
+                        placeholder="每行一条：风险偏好 / 决策原则 / 取舍方式 / 止损规则"
                       ></textarea>
                     </label>
                   </details>
@@ -2878,18 +2921,18 @@ watch(
                       v-model="formState.memory_evidence_summary"
                       class="field-input wizard-textarea"
                       rows="6"
-                      placeholder="静态材料 / 动态来源 / 可查来源"
+                      placeholder="静态材料、最近动态、指定网站 / 项目 / 文档"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>知识源要点</summary>
+                    <summary>补充知识源要点</summary>
                     <label class="form-field">
                       <span>知识源要点</span>
                       <textarea
                         v-model="formState.memory_evidence_points"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="静态 / 动态 / 可查"
+                        placeholder="每行一条：静态材料 / 动态来源 / 可查证信息源"
                       ></textarea>
                     </label>
                   </details>
@@ -2902,29 +2945,33 @@ watch(
                       v-model="formState.reflection_rules_summary"
                       class="field-input wizard-textarea"
                       rows="6"
-                      placeholder="边界 / 验证"
+                      placeholder="不编造经历、不假装熟悉、不把动态事实说死"
                     ></textarea>
                   </label>
                   <details class="self-fill-more">
-                    <summary>验证样本</summary>
+                    <summary>补充验证样本</summary>
                     <label class="form-field">
                       <span>验证样本</span>
                       <textarea
                         v-model="formState.self_validation_samples_text"
                         class="field-input wizard-textarea"
                         rows="4"
-                        placeholder="offer / 转向 / MVP"
+                        placeholder="每行一条：要不要接 offer / 要不要转方向 / 要不要先做 MVP"
                       ></textarea>
                     </label>
                   </details>
                 </div>
 
                 <div v-else-if="selfFillCurrentPage.key === 'interview'" class="self-fill-page__content">
-                  <h3>追问补洞</h3>
+                  <div class="summary-panel summary-panel--compact">
+                    <p class="eyebrow">追问补洞</p>
+                    <h3>把分析报告里缺的关键问题补全</h3>
+                    <p class="state-copy">先从下拉框选一个问题，回答后点“添加”。</p>
+                  </div>
 
                   <div class="self-interview-builder">
                     <label class="form-field self-interview-builder__select">
-                      <span>问题</span>
+                      <span>选择问题</span>
                       <select
                         v-model="selfInterviewSelectedOptionKey"
                         class="field-input"
@@ -2937,7 +2984,8 @@ watch(
                     </label>
 
                     <div class="self-interview-builder__status">
-                      <strong>{{ selfInterviewEntries.length }} / {{ selfInterviewQuestionOptions.length }}</strong>
+                      <strong>已添加 {{ selfInterviewEntries.length }} / {{ selfInterviewQuestionOptions.length }} 项</strong>
+                      <span>同一个问题会自动覆盖旧答案，方便你持续修正。</span>
                     </div>
 
                     <div v-if="selfInterviewEntries.length" class="self-interview-builder__list">
@@ -2955,24 +3003,28 @@ watch(
                         <p class="self-interview-builder__item-answer">{{ entry.answer }}</p>
                       </article>
                     </div>
-                    <p v-else class="state-copy state-copy--muted">等待添加</p>
+                    <p v-else class="state-copy state-copy--muted">先从下拉框选一个问题，再回答。</p>
                   </div>
                 </div>
 
                 <div v-else-if="selfFillCurrentPage.key === 'custom'" class="self-fill-page__content">
                   <label class="form-field">
-                    <span>可选追问</span>
+                    <span>可选追问（补充）</span>
                     <textarea
                       v-model="formState.self_interview_custom_questions_text"
                       class="field-input wizard-textarea"
                       rows="7"
-                      placeholder="写你想追问的问题"
+                      placeholder="如果你想让系统继续补问，可以把你最想追问的 1 到 3 个问题写在这里。"
                     ></textarea>
                   </label>
                 </div>
 
                 <div v-else-if="selfFillCurrentPage.key === 'review'" class="self-fill-page__content">
-                  <h3>汇总</h3>
+                  <div class="summary-panel summary-panel--compact">
+                    <p class="eyebrow">汇总摘要</p>
+                    <h3>全部填完后，再看一眼整体</h3>
+                    <p class="state-copy">你可以回到任意一页修改。</p>
+                  </div>
                   <div class="self-fill-review-grid">
                     <article v-for="item in selfFillReviewRows" :key="item.key" class="self-fill-review-card">
                       <div class="self-fill-review-card__head">
@@ -2984,6 +3036,7 @@ watch(
                           编辑
                         </button>
                       </div>
+                      <p class="self-fill-review-card__meta">点击可回到对应页继续修改。</p>
                     </article>
                   </div>
                 </div>
@@ -2994,7 +3047,8 @@ watch(
               <div class="self-fill-assistant-modal__panel">
                 <div class="self-fill-assistant-modal__head">
                   <div>
-                    <h3>助手</h3>
+                    <p class="eyebrow">填写助手</p>
+                    <h3>当前页怎么填</h3>
                   </div>
                   <button type="button" class="ghost-button ghost-button--small" @click="closeSelfFillAssistantDialog">关闭</button>
                 </div>
@@ -3006,7 +3060,7 @@ watch(
                     class="self-fill-assistant-chat__message"
                     :class="`self-fill-assistant-chat__message--${message.role}`"
                   >
-                    <span class="self-fill-assistant-chat__role">{{ message.role === 'user' ? '我' : '助手' }}</span>
+                    <span class="self-fill-assistant-chat__role">{{ message.role === 'user' ? '我' : '填写助手' }}</span>
                     <p>{{ message.content }}</p>
                   </article>
                 </div>
@@ -3019,7 +3073,7 @@ watch(
                     v-model="selfFillAssistantInput"
                     class="field-input wizard-textarea"
                     rows="4"
-                    placeholder="这页怎么填"
+                    placeholder="例如：这个字段怎么填？轻量和标准有什么区别？"
                     @keydown.enter.exact.prevent="sendSelfFillAssistantMessage()"
                   ></textarea>
                 </label>
@@ -3037,7 +3091,11 @@ watch(
               <div class="self-interview-modal__panel">
                 <div class="self-interview-modal__head">
                   <div>
-                    <h3>追问</h3>
+                    <p class="eyebrow">追问补洞</p>
+                    <h3>补全这个关键问题</h3>
+                    <p class="section-note section-note--subtle">
+                      {{ selfInterviewDialogDimension }} · {{ selfInterviewDialogReason }}
+                    </p>
                   </div>
                   <button type="button" class="ghost-button ghost-button--small" @click="closeSelfInterviewDialog">关闭</button>
                 </div>
@@ -3077,12 +3135,18 @@ watch(
             <section class="self-fill-page">
               <div class="section-head self-fill-page__head">
                 <div>
+                  <p class="eyebrow">资料创建</p>
                   <h3>{{ sourceFillCurrentPage.title }}</h3>
                 </div>
+                <p class="section-note">
+                  第 {{ sourceFillPageIndex + 1 }} 页 / {{ sourceFlowPages.length }} 页 · 一次只填一项
+                </p>
               </div>
 
               <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                <h3>{{ sourceFillCurrentPage.title }}</h3>
+                <p class="eyebrow">当前页</p>
+                <h3>{{ sourceFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ sourceFillCurrentPage.summary }}</p>
               </div>
 
               <div class="self-fill-page__toolbar">
@@ -3121,6 +3185,7 @@ watch(
                 </label>
 
                 <div v-else-if="sourceFillCurrentPage.key === 'source_materials'" class="self-fill-more">
+                  <summary>材料输入（可选）</summary>
                   <MaterialInputPanel
                     v-model="sourceMaterialState"
                     path-type="source"
@@ -3183,12 +3248,18 @@ watch(
             <section class="self-fill-page">
               <div class="section-head self-fill-page__head">
                 <div>
+                  <p class="eyebrow">{{ createType === 'reunion_persona' ? '重逢人格' : '家人陪伴' }}</p>
                   <h3>{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).title }}</h3>
                 </div>
+                <p class="section-note">
+                  第 {{ (createType === 'reunion_persona' ? reunionFillPageIndex : familyFillPageIndex) + 1 }} 页 / {{ createType === 'reunion_persona' ? reunionFlowPages.length : familyFlowPages.length }} 页 · 一次只填一项
+                </p>
               </div>
 
               <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                <h3>{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).title }}</h3>
+                <p class="eyebrow">当前页</p>
+                <h3>{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).description }}</h3>
+                <p class="state-copy">{{ (createType === 'reunion_persona' ? reunionFillCurrentPage : familyFillCurrentPage).summary }}</p>
               </div>
 
               <div class="self-fill-page__toolbar">
@@ -3328,11 +3399,15 @@ watch(
             <section class="self-fill-page">
               <div class="section-head self-fill-page__head">
                 <div>
+                  <p class="eyebrow">亲密关系</p>
                   <h3>{{ intimateFillCurrentPage.title }}</h3>
                 </div>
+                <p class="section-note">第 {{ intimateFillPageIndex + 1 }} 页 / {{ intimateFlowPages.length }} 页 · 一次只填一项</p>
               </div>
               <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                <h3>{{ intimateFillCurrentPage.title }}</h3>
+                <p class="eyebrow">当前页</p>
+                <h3>{{ intimateFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ intimateFillCurrentPage.summary }}</p>
               </div>
               <div class="self-fill-page__toolbar">
                 <button class="ghost-button ghost-button--small" type="button" :disabled="intimateFillPageIndex === 0" @click="goIntimateFillPage(intimateFillPageIndex - 1)">上一步</button>
@@ -3383,11 +3458,15 @@ watch(
             <section class="self-fill-page">
               <div class="section-head self-fill-page__head">
                 <div>
+                  <p class="eyebrow">职场关系</p>
                   <h3>{{ relationshipFillCurrentPage.title }}</h3>
                 </div>
+                <p class="section-note">第 {{ relationshipFillPageIndex + 1 }} 页 / {{ relationshipFlowPages.length }} 页 · 一次只填一项</p>
               </div>
               <div class="summary-panel summary-panel--compact self-fill-page__summary">
-                <h3>{{ relationshipFillCurrentPage.title }}</h3>
+                <p class="eyebrow">当前页</p>
+                <h3>{{ relationshipFillCurrentPage.description }}</h3>
+                <p class="state-copy">{{ relationshipFillCurrentPage.summary }}</p>
               </div>
               <div class="self-fill-page__toolbar">
                 <button class="ghost-button ghost-button--small" type="button" :disabled="relationshipFillPageIndex === 0" @click="goRelationshipFillPage(relationshipFillPageIndex - 1)">上一步</button>
@@ -3428,12 +3507,15 @@ watch(
         <article v-else class="wizard-stage">
           <div class="section-head">
             <div>
+              <p class="eyebrow">第 4 步</p>
               <h3>{{ isSelfUnified ? '生成结果' : isFamilyCompanion ? '生成结果' : '确认并生成结果' }}</h3>
             </div>
+            <p class="section-note">{{ isSelfUnified ? '先看结果，再保存。' : isFamilyCompanion ? '先看结果，再保存。' : '先看结果，再生成。' }}</p>
           </div>
 
           <div class="wizard-review">
             <div class="summary-panel">
+              <p class="eyebrow">确认信息</p>
               <h3>{{ currentTypeLabel }}</h3>
               <ul class="summary-panel__list">
                 <li><span>输入方式</span><strong>{{ selectedInputLabel }}</strong></li>
@@ -3443,6 +3525,7 @@ watch(
             </div>
 
             <div class="summary-panel">
+              <p class="eyebrow">表单内容</p>
               <template v-if="createType === 'self_unified'">
                 <h3>{{ formState.name || '未填写名称' }}</h3>
                 <ul class="summary-panel__list">
@@ -3455,23 +3538,25 @@ watch(
               </template>
               <template v-else-if="createType === 'source_persona'">
                 <h3>{{ formState.target_name || '未填写目标名称' }}</h3>
-                <p class="state-copy">{{ formState.material_description || '未填写' }}</p>
+                <p class="state-copy">{{ formState.material_description || '还没有描述材料。' }}</p>
               </template>
               <template v-else-if="createType === 'family_companion'">
                 <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
-                <p class="state-copy">{{ formState.comfort_style || '未填写' }}</p>
+                <p class="state-copy">{{ formState.comfort_style || '还没有填写安慰方式。' }}</p>
               </template>
               <template v-else-if="createType === 'reunion_persona'">
                 <h3>{{ formState.persona_name || '未填写称呼' }}</h3>
-                <p class="state-copy">{{ formState.remembrance_style || '未填写' }}</p>
+                <p class="state-copy">{{ formState.remembrance_style || '还没有填写回忆方式。' }}</p>
               </template>
               <template v-else-if="createType === 'intimate_companion'">
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>
-                <p class="state-copy">{{ formState.relationship_stage || '未填写' }}</p>
+                <p class="state-copy">{{ formState.relationship_stage || '还没有填写关系阶段。' }}</p>
               </template>
               <template v-else-if="createType === 'reply_assistant'">
                 <h3>{{ formState.target_person_name || '未填写对方称呼' }}</h3>
-                <p class="state-copy">{{ formState.reply_goal || '未填写' }}</p>
+                <p class="state-copy">
+                  {{ formState.reply_goal || '还没有说明你想达到的目标。' }}
+                </p>
                 <ul class="summary-panel__list">
                   <li><span>人物类型</span><strong>{{ replyAssistantTargetTypeOptions.find(([value]) => value === formState.target_person_type)?.[1] || formState.target_person_type }}</strong></li>
                   <li><span>关系状态</span><strong>{{ formState.relationship_status || '未填写' }}</strong></li>
@@ -3480,13 +3565,14 @@ watch(
               </template>
               <template v-else>
                 <h3>{{ formState.persona_name || '未填写对象名称' }}</h3>
-                <p class="state-copy">{{ formState.purpose || '未填写' }}</p>
+                <p class="state-copy">{{ formState.purpose || '还没有说明用途。' }}</p>
               </template>
             </div>
           </div>
         </article>
 
         <div v-if="error" class="state-panel">
+          <p class="eyebrow">生成失败</p>
           <h3>结果生成暂时失败</h3>
           <p class="state-copy">{{ error }}</p>
         </div>

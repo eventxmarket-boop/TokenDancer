@@ -128,6 +128,7 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
     <div class="hero-copy">
       <p class="eyebrow">回复助手</p>
       <h1>我该怎么回</h1>
+      <p class="hero-text">直接贴消息，系统只给你能直接发的结果，不展示内部分析过程。</p>
     </div>
     <div class="hero-actions">
       <RouterLink class="secondary-btn" to="/reply-assistant">回入口页</RouterLink>
@@ -140,8 +141,10 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
         <article class="wizard-stage">
           <div class="section-head">
             <div>
+              <p class="eyebrow">输入区</p>
               <h3>对方发来的内容</h3>
             </div>
+            <p class="section-note">贴一句话就能用，也可以把整段聊天一起放进来。</p>
           </div>
 
           <label class="form-field">
@@ -150,7 +153,7 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
               v-model="form.message"
               class="field-input reply-assistant-textarea"
               rows="6"
-              placeholder="贴原话"
+              placeholder="把对方发来的原话贴在这里，支持多行聊天内容"
             ></textarea>
           </label>
 
@@ -160,7 +163,7 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
               v-model="form.current_context"
               class="field-input reply-assistant-textarea"
               rows="4"
-              placeholder="补上下文"
+              placeholder="比如：前面在聊什么、你们最近什么状态、这句话前后发生了什么"
             ></textarea>
           </label>
 
@@ -184,12 +187,12 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
           </div>
 
           <label class="form-field">
-              <span>你的目标</span>
+            <span>你的目标</span>
             <textarea
               v-model="form.target_goal"
               class="field-input reply-assistant-textarea"
               rows="4"
-              placeholder="想要什么"
+              placeholder="例如：更自然、更正式、更有边界、更推进、更克制"
             ></textarea>
           </label>
 
@@ -200,15 +203,15 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
           </div>
 
           <details class="advanced-panel">
-            <summary>材料</summary>
+            <summary>高级补充材料（可选）</summary>
             <div class="advanced-panel__body">
               <label class="form-field">
-                <span>补充聊天</span>
+                <span>多轮聊天 / 额外上下文</span>
                 <textarea
                   v-model="form.conversation_context"
                   class="field-input reply-assistant-textarea"
                   rows="4"
-                  placeholder="前后聊天"
+                  placeholder="把前后聊天一起贴进来，系统会一起看"
                 ></textarea>
               </label>
 
@@ -221,8 +224,8 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
           </details>
 
           <div v-if="error" class="state-panel">
-            <p class="eyebrow">失败</p>
-            <h3>生成失败</h3>
+            <p class="eyebrow">生成失败</p>
+            <h3>回复建议暂时生成失败</h3>
             <p class="state-copy">{{ error }}</p>
           </div>
         </article>
@@ -230,14 +233,14 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 
       <div class="reply-assistant-column reply-assistant-column--output">
         <article class="summary-panel">
-          <p class="eyebrow">判断</p>
-          <h3>{{ result?.judgment || '先输入内容。' }}</h3>
+          <p class="eyebrow">一句判断</p>
+          <h3>{{ result?.judgment || '先输入内容，再生成一句判断。' }}</h3>
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">推荐</p>
+          <p class="eyebrow">主推荐回复</p>
           <div class="reply-main">
-            <p class="state-copy">{{ result?.recommended_reply || '这里显示可发送回复。' }}</p>
+            <p class="state-copy">{{ result?.recommended_reply || '这里会显示一条能直接复制发送的回复。' }}</p>
           </div>
           <div class="rewrite-actions">
             <button
@@ -254,13 +257,13 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">风险</p>
-          <p class="state-copy">{{ result?.risk_note || '这里显示风险。' }}</p>
+          <p class="eyebrow">一句风险提示</p>
+          <p class="state-copy">{{ result?.risk_note || '这里会提示一个需要注意的点。' }}</p>
         </article>
 
         <article class="summary-panel">
-          <p class="eyebrow">后果</p>
-          <p class="state-copy">{{ result?.likely_consequence || '这里显示走向。' }}</p>
+          <p class="eyebrow">一句可能后果</p>
+          <p class="state-copy">{{ result?.likely_consequence || '这里会提示这样回复大概会带来的走向。' }}</p>
         </article>
       </div>
     </div>

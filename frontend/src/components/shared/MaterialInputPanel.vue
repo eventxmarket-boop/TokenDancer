@@ -322,8 +322,12 @@ const ocrStatusLabel = computed(() => {
   <section class="material-input-panel">
     <div class="section-head">
       <div>
+        <p class="eyebrow">材料输入层</p>
         <h3>{{ pathLabel }}</h3>
       </div>
+      <p class="section-note">
+        文件、图片和截图都可以先放进来。图片会保留为材料资产，并在提交时交给后端 OCR 处理。
+      </p>
     </div>
 
     <div class="material-input-grid">
@@ -333,7 +337,7 @@ const ocrStatusLabel = computed(() => {
           v-model="localValue.chat_history_text"
           class="field-input wizard-textarea"
           rows="5"
-          placeholder="贴聊天记录"
+          placeholder="粘贴聊天记录、对话片段或材料摘要"
         ></textarea>
       </label>
 
@@ -343,17 +347,17 @@ const ocrStatusLabel = computed(() => {
           v-model="localValue.memory_notes_text"
           class="field-input wizard-textarea"
           rows="5"
-          placeholder="贴记忆片段"
+          placeholder="把反复出现的记忆、提醒、关心方式整理进来"
         ></textarea>
       </label>
 
       <label class="form-field">
-        <span>文本材料</span>
+        <span>文本材料补充</span>
         <textarea
           v-model="localValue.text_materials_text"
           class="field-input wizard-textarea"
           rows="5"
-          placeholder="贴文本材料"
+          placeholder="可粘贴家书、日记、便条、文字说明"
         ></textarea>
       </label>
 
@@ -373,6 +377,7 @@ const ocrStatusLabel = computed(() => {
           multiple
           @change="handleImageDocumentChange"
         />
+        <small class="field-hint">可从相册选择、图片选择或拍照，图片会先作为材料资产保存，再由后端 OCR 提取文字。</small>
         <small class="field-hint">{{ imageUploadedLabel }}</small>
       </label>
 
@@ -382,7 +387,7 @@ const ocrStatusLabel = computed(() => {
           v-model="localValue.image_notes_text"
           class="field-input wizard-textarea"
           rows="4"
-          placeholder="补图片说明"
+          placeholder="如果 OCR 不完整，可以补一句这张图想表达什么"
         ></textarea>
       </label>
 
@@ -392,18 +397,21 @@ const ocrStatusLabel = computed(() => {
           v-model="localValue.voice_notes_text"
           class="field-input wizard-textarea"
           rows="4"
-          placeholder="补语音说明"
+          placeholder="如果有语音材料，可以先用文字补充"
         ></textarea>
       </label>
     </div>
 
     <div v-if="hasGuidedPromptHint" class="summary-panel summary-panel--compact material-input-panel__prompt">
-      <h3>可继续补</h3>
+      <p class="eyebrow">补充回忆</p>
+      <h3>没有完整材料也没关系</h3>
+      <p class="state-copy">你可以继续补一句最常聊什么、怎么安慰你、最像他/她的一件小事。</p>
     </div>
 
     <div class="material-input-panel__lists">
       <div v-if="localValue.uploaded_text_documents.length" class="summary-panel summary-panel--compact">
-        <h3>文本文件</h3>
+        <p class="eyebrow">已上传文本文件</p>
+        <h3>文本内容会进入蒸馏池</h3>
         <ul class="summary-panel__list">
           <li v-for="(item, index) in localValue.uploaded_text_documents" :key="`${item.filename}-${index}`">
             <span>
@@ -420,8 +428,9 @@ const ocrStatusLabel = computed(() => {
       </div>
 
       <div v-if="localValue.uploaded_image_documents.length" class="summary-panel summary-panel--compact">
-        <h3>图片</h3>
-        <p class="state-copy">{{ ocrStatusLabel }}</p>
+        <p class="eyebrow">已上传图片</p>
+        <h3>图片会先保留为材料资产</h3>
+        <p class="state-copy">当前 OCR 状态：{{ ocrStatusLabel }}</p>
         <ul class="summary-panel__list">
           <li v-for="(item, index) in localValue.uploaded_image_documents" :key="`${item.filename}-${index}`">
             <span>

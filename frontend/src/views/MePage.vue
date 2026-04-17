@@ -53,6 +53,7 @@ function handleLogout() {
       <div v-if="!isLoggedIn" class="my-page__head my-page__head--compact">
         <p class="eyebrow">个人中心</p>
         <h1>{{ username }}</h1>
+        <p class="hero-text">登录后可以同步 Seed、收藏和最近会话。</p>
 
         <div class="hero-actions hero-actions--center">
           <button class="primary-btn" type="button" @click="goLogin">登录</button>
@@ -64,6 +65,7 @@ function handleLogout() {
         <div class="my-page__head">
           <p class="eyebrow">个人中心</p>
           <h1>{{ username }}</h1>
+          <p class="hero-text">查看你创建过的人格、收藏和最近会话。</p>
         </div>
 
         <div class="my-entry-grid">
