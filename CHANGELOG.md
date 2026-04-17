@@ -1,3 +1,9 @@
+## V1.4.63 - 2026-04-17
+
+- Simplified the self-unified fill page for H5 and mobile use.
+- Removed the side rail and compressed the page into a single-column flow that shows the current page content directly.
+- Removed the helper-style explanatory copy so the fill assistant stays focused on the current page input itself.
+
 ## V1.4.62 - 2026-04-17
 
 - Restored the fill assistant to the model-backed runtime so it can actually read the current page, question type, and form context.

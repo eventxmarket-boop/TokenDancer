@@ -523,38 +523,12 @@ const selfFillCurrentPage = computed(() => selfFillPageCards[selfFillPageIndex.v
 const selfFillInfoPageCards = computed(() => selfFillPageCards.filter((item) => item.key !== 'analysis' && item.key !== 'review'))
 const selfFillInfoPageCount = computed(() => selfFillInfoPageCards.value.length)
 const selfFillPageCount = computed(() => selfFillPageCards.length)
-const selfFillPageNavItems = computed(() =>
-  selfFillPageCards.map((item, index) => ({
-    ...item,
-    index,
-    active: index === selfFillPageIndex.value,
-    completed: index < selfFillPageIndex.value,
-    isReview: item.key === 'review',
-  }))
-)
 const selfFillCurrentPageIsHelper = computed(() =>
   selfFillCurrentPage.value.key === 'analysis' || selfFillCurrentPage.value.key === 'review'
 )
 const selfFillCurrentInfoPageIndex = computed(() => {
   const index = selfFillInfoPageCards.value.findIndex((item) => item.key === selfFillCurrentPage.value.key)
   return index >= 0 ? index + 1 : 0
-})
-const selfFillPrepHints = computed(() => {
-  const hints = [
-    `这条主线一共 ${selfFillInfoPageCount.value} 个填写项，外加 1 个准备页和 1 个汇总页。`,
-    '先准备真实聊天、长文表达、项目复盘或决策记录。',
-    '有公开资料、外部反馈或可查来源也可以一起放在旁边。',
-  ]
-
-  if (createMode.value === 'light') {
-    hints.unshift('轻量模式先拿 1 到 2 个最像你的材料试跑。')
-  } else if (createMode.value === 'standard') {
-    hints.unshift('标准模式先补主线，再逐页补缺口。')
-  } else {
-    hints.unshift('深度模式把材料、追问、知识源和边界一起补完整。')
-  }
-
-  return hints
 })
 const selfFillReviewRows = computed(() => [
   { key: 'name', label: '名称', value: formState.name || '未填写', pageKey: 'materials' as SelfFillPageKey },
@@ -905,25 +879,6 @@ function addSelfInterviewEntry() {
   closeSelfInterviewDialog()
 }
 
-const selfFillAssistantQuickPrompts = [
-  {
-    label: '这个字段怎么填',
-    prompt: '这个字段怎么填？请结合当前页面解释它的作用、填写重点和没有材料时怎么写。',
-  },
-  {
-    label: '轻量/标准/深度',
-    prompt: '轻量、标准、深度这三个档位到底有什么区别？',
-  },
-  {
-    label: '分析报告作用',
-    prompt: '分析报告这一块是做什么的？',
-  },
-  {
-    label: '追问补洞',
-    prompt: '追问补洞这一块为什么要做？',
-  },
-] as const
-
 const selfFillPageAssistantGuides: Record<string, { title: string; purpose: string; fill: string; noMaterial: string }> = {
   analysis: {
     title: '准备与分析',
@@ -1020,14 +975,14 @@ function buildSelfFillAssistantReply(messageText: string) {
   ]
 
   if (isMeaningQuestion || isHowQuestion) {
-    lines.push(`怎么填：${guide.fill}`)
+    lines.push(guide.fill)
   }
   if (isNoMaterialQuestion || (!isMeaningQuestion && !isHowQuestion && question.length < 10)) {
-    lines.push(`没材料怎么办：${guide.noMaterial}`)
+    lines.push(guide.noMaterial)
   }
 
   if (!isMeaningQuestion && !isHowQuestion && !isNoMaterialQuestion && !isModeQuestion) {
-    lines.push(`这页先按这个顺序写：${guide.fill}`)
+    lines.push(guide.fill)
   }
 
   return lines.join('\n')
@@ -1036,7 +991,7 @@ function buildSelfFillAssistantReply(messageText: string) {
 function createSelfFillAssistantGreeting(): SelfFillAssistantMessage {
   return {
     role: 'assistant',
-    content: `我是填写助手，只解释当前页怎么填。当前是${selfModeLabels[createMode.value]}，你可以直接问字段作用、怎么填、没材料怎么办。`,
+    content: `我是填写助手。当前是${selfModeLabels[createMode.value]}，你直接问这页怎么写就行。`,
   }
 }
 
@@ -1121,11 +1076,6 @@ async function sendSelfFillAssistantMessage(messageText = selfFillAssistantInput
   } finally {
     selfFillAssistantLoading.value = false
   }
-}
-
-function sendSelfFillAssistantPrompt(prompt: string) {
-  selfFillAssistantInput.value = prompt
-  void sendSelfFillAssistantMessage(prompt)
 }
 
 function createEmptyMaterialState(): CreateWizardRawMaterials {
@@ -2850,42 +2800,21 @@ watch(
             <div class="summary-panel summary-panel--compact self-fill-intro">
               <p class="eyebrow">自我主线</p>
               <h3>按页填，一次只做一项</h3>
-              <p class="state-copy">你可以随时上一步、下一步，或者直接点右侧页签跳回去改。</p>
-              <p class="state-copy state-copy--muted">{{ selfModeJourneyCopy[createMode] }}</p>
+              <p class="state-copy">你可以随时上一步、下一步，或者回到汇总页修改。</p>
               <ul class="summary-panel__list">
                 <li><span>填写项</span><strong>{{ selfFillInfoPageCount }} 项</strong></li>
                 <li><span>页面总数</span><strong>{{ selfFillPageCount }} 页</strong></li>
                 <li><span>当前档位</span><strong>{{ selfModeLabels[createMode] }}</strong></li>
               </ul>
-              <ul class="self-fill-prep-list">
-                <li v-for="hint in selfFillPrepHints" :key="hint">{{ hint }}</li>
-              </ul>
             </div>
 
             <div class="self-fill-layout">
-              <aside class="self-fill-rail">
-                <button
-                  v-for="page in selfFillPageNavItems"
-                  :key="page.key"
-                  type="button"
-                  class="self-fill-rail__button"
-                  :class="{ active: page.active, completed: page.completed, helper: page.isReview || page.key === 'analysis' }"
-                  @click="goSelfFillPage(page.index)"
-                >
-                  <span class="self-fill-rail__index">{{ page.isReview ? '汇总' : page.index + 1 }}</span>
-                  <span class="self-fill-rail__body">
-                    <strong>{{ page.title }}</strong>
-                  </span>
-                </button>
-              </aside>
-
               <section class="self-fill-page">
                 <div class="section-head self-fill-page__head">
                   <div>
                     <p class="eyebrow">{{ selfFillCurrentPage.key === 'review' ? '汇总页' : selfFillCurrentPageIsHelper ? '准备页' : `第 ${selfFillCurrentInfoPageIndex} 项` }}</p>
                     <h3>{{ selfFillCurrentPage.title }}</h3>
                   </div>
-                  <p class="section-note">{{ selfFillCurrentPage.description }}</p>
                 </div>
 
                 <div class="summary-panel summary-panel--compact self-fill-page__summary">
@@ -2893,7 +2822,6 @@ watch(
                   <p class="state-copy">
                     {{ selfFillCurrentPageIsHelper ? '先看结构，再继续往下填。' : '这一页只填一个信息点。' }}
                   </p>
-                  <p v-if="selfFillCurrentPageIsHelper || selfFillCurrentPage.key === 'review'" class="state-copy state-copy--muted">可以随时回到任一页继续修改。</p>
                 </div>
 
                 <div class="self-fill-page__toolbar">
@@ -2901,7 +2829,7 @@ watch(
                     上一步
                   </button>
                   <button class="ghost-button ghost-button--small" type="button" @click="openSelfFillAssistantDialog()">
-                    打开填写助手
+                    填写助手
                   </button>
                   <button class="primary-btn primary-btn--small" type="button" @click="nextSelfFillPage">
                     {{ selfFillCurrentPage.key === 'review' ? '去总汇总' : '下一步' }}
@@ -2909,33 +2837,15 @@ watch(
                 </div>
 
                 <div v-if="selfFillCurrentPage.key === 'analysis'" class="self-fill-page__content">
-                  <div class="summary-panel summary-panel--compact">
-                    <p class="eyebrow">准备资料</p>
-                    <h3>先把素材放旁边，再逐页填写</h3>
-                    <p class="state-copy">建议先准备真实聊天、长文表达、项目复盘、决策记录和公开资料。</p>
-                  </div>
                   <div class="self-fill-assistant-panel self-fill-assistant-panel--inline">
                     <div class="self-fill-assistant-panel__head">
                       <div>
                         <p class="eyebrow">填写助手</p>
-                        <h3>只解释怎么填，不回答别的</h3>
+                        <h3>帮你看当前页</h3>
                       </div>
-                      <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">
-                        打开填写助手
-                      </button>
                     </div>
-                    <p class="state-copy">它只解释当前页的 skill 逻辑、字段含义和补洞顺序。</p>
-                    <div class="self-fill-assistant-panel__chips">
-                      <button
-                        v-for="item in selfFillAssistantQuickPrompts"
-                        :key="item.label"
-                        type="button"
-                        class="ghost-button ghost-button--small"
-                        @click="openSelfFillAssistantDialog(item.prompt)"
-                      >
-                        {{ item.label }}
-                      </button>
-                    </div>
+                    <p class="state-copy">问这页怎么填即可。</p>
+                    <button type="button" class="ghost-button ghost-button--small" @click="openSelfFillAssistantDialog()">打开助手</button>
                   </div>
                 </div>
 
@@ -3095,7 +3005,7 @@ watch(
                   <div class="summary-panel summary-panel--compact">
                     <p class="eyebrow">追问补洞</p>
                     <h3>把分析报告里缺的关键问题补全</h3>
-                    <p class="state-copy">先从下拉框选一个问题，系统会自动弹出对话框。回答后点“添加”，会同步进分析报告的缺口补全里。</p>
+                    <p class="state-copy">先从下拉框选一个问题，回答后点“添加”。</p>
                   </div>
 
                   <div class="self-interview-builder">
@@ -3132,7 +3042,7 @@ watch(
                         <p class="self-interview-builder__item-answer">{{ entry.answer }}</p>
                       </article>
                     </div>
-                    <p v-else class="state-copy state-copy--muted">还没有添加问题，先从下拉框选一个吧。</p>
+                    <p v-else class="state-copy state-copy--muted">先从下拉框选一个问题，再回答。</p>
                   </div>
                 </div>
 
@@ -3152,7 +3062,7 @@ watch(
                   <div class="summary-panel summary-panel--compact">
                     <p class="eyebrow">汇总摘要</p>
                     <h3>全部填完后，再看一眼整体</h3>
-                    <p class="state-copy">你可以直接回到任意一页修改，这里只是帮你把所有内容收拢成一张总览。</p>
+                    <p class="state-copy">你可以回到任意一页修改。</p>
                   </div>
                   <div class="self-fill-review-grid">
                     <article v-for="item in selfFillReviewRows" :key="item.key" class="self-fill-review-card">
@@ -3177,10 +3087,7 @@ watch(
                 <div class="self-fill-assistant-modal__head">
                   <div>
                     <p class="eyebrow">填写助手</p>
-                    <h3>只解释当前页面的填写方法</h3>
-                    <p class="section-note section-note--subtle">
-                      当前档位：{{ selfModeLabels[createMode] }} · 只回答 skill 解释和字段填写
-                    </p>
+                    <h3>当前页怎么填</h3>
                   </div>
                   <button type="button" class="ghost-button ghost-button--small" @click="closeSelfFillAssistantDialog">关闭</button>
                 </div>
@@ -3198,18 +3105,6 @@ watch(
                 </div>
 
                 <p v-if="selfFillAssistantError" class="state-copy state-copy--error">{{ selfFillAssistantError }}</p>
-
-                <div class="self-fill-assistant-panel__chips self-fill-assistant-panel__chips--modal">
-                  <button
-                    v-for="item in selfFillAssistantQuickPrompts"
-                    :key="`modal-${item.label}`"
-                    type="button"
-                    class="ghost-button ghost-button--small"
-                    @click="sendSelfFillAssistantPrompt(item.prompt)"
-                  >
-                    {{ item.label }}
-                  </button>
-                </div>
 
                 <label class="form-field">
                   <span>输入问题</span>
@@ -3698,91 +3593,11 @@ watch(
   gap: 0.8rem;
 }
 
-.self-fill-prep-list {
-  margin: 0.2rem 0 0;
-  padding-left: 1.1rem;
-  display: grid;
-  gap: 0.35rem;
-  color: var(--muted);
-}
-
 .self-fill-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
-}
-
-.self-fill-rail {
-  display: grid;
-  gap: 0.6rem;
-  position: sticky;
-  top: 1rem;
-}
-
-.self-fill-rail__button {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.7rem;
-  align-items: start;
-  width: 100%;
-  text-align: left;
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 159, 138, 0.12);
-  background: rgba(255, 255, 255, 0.72);
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-}
-
-.self-fill-rail__button:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 159, 138, 0.32);
-  box-shadow: 0 16px 32px rgba(255, 159, 138, 0.08);
-}
-
-.self-fill-rail__button.active {
-  border-color: rgba(255, 159, 138, 0.55);
-  background: rgba(255, 247, 244, 0.96);
-}
-
-.self-fill-rail__button.completed {
-  border-color: rgba(120, 194, 173, 0.22);
-}
-
-.self-fill-rail__button.helper {
-  background: rgba(245, 248, 255, 0.9);
-}
-
-.self-fill-rail__index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.4rem;
-  min-height: 2.4rem;
-  border-radius: 999px;
-  background: rgba(255, 159, 138, 0.12);
-  color: var(--accent);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.self-fill-rail__body {
-  display: grid;
-  gap: 0.18rem;
-}
-
-.self-fill-rail__body strong {
-  font-size: 0.95rem;
-}
-
-.self-fill-rail__body small {
-  color: var(--muted);
-  line-height: 1.45;
 }
 
 .self-fill-page {
@@ -4122,11 +3937,6 @@ watch(
   .self-fill-assistant-chat__message {
     max-width: 100%;
   }
-
-  .self-fill-prep-list {
-    display: none;
-  }
-
   .self-fill-intro {
     gap: 0.55rem;
   }
@@ -4139,20 +3949,8 @@ watch(
     gap: 0.3rem;
   }
 
-  .self-fill-page__summary .state-copy--muted {
-    display: none;
-  }
-
   .self-fill-page__toolbar {
     gap: 0.45rem;
-  }
-
-  .self-fill-rail__button {
-    padding: 0.78rem 0.9rem;
-  }
-
-  .self-fill-rail__body small {
-    display: none;
   }
 
   .self-interview-modal {
@@ -4180,18 +3978,9 @@ watch(
   .self-fill-layout {
     grid-template-columns: 1fr;
   }
-
-  .self-fill-rail {
-    position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 780px) {
-  .self-fill-rail {
-    grid-template-columns: 1fr;
-  }
-
   .self-fill-review-card__head,
   .self-fill-assistant-panel__head,
   .self-fill-page__head {

@@ -35,7 +35,7 @@ class SelfFillAssistantTests(unittest.TestCase):
         self.assertTrue(mock_generate_reply.await_count)
         system_prompt = mock_generate_reply.await_args.args[0][0]["content"]
         self.assertIn("只回答填写相关问题", system_prompt)
-        self.assertIn("字段含义", system_prompt)
+        self.assertIn("怎么写", system_prompt)
 
     def test_self_fill_assistant_empty_model_output_falls_back_to_refusal(self):
         payload = {
