@@ -2,10 +2,9 @@
 import { computed, ref } from 'vue'
 import { requestHowToDo, type HowToDoResponse } from '@/services/howToDoService'
 
-const castModes: Array<{ key: 'manual' | 'coin' | 'number' | 'taiji'; label: string; hint: string }> = [
+const castModes: Array<{ key: 'manual' | 'coin' | 'taiji'; label: string; hint: string }> = [
   { key: 'coin', label: '随机摇卦', hint: '平心静气后摇卦。' },
   { key: 'manual', label: '手动输入', hint: '按 6 次依次录入。' },
-  { key: 'number', label: '数字起卦', hint: '数字、编号或号码。' },
   { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起局。' },
 ]
 
@@ -44,11 +43,10 @@ const questionCategories = [
   '其他',
 ]
 
-const activeCastMode = ref<'manual' | 'coin' | 'number' | 'taiji'>('coin')
+const activeCastMode = ref<'manual' | 'coin' | 'taiji'>('coin')
 const question = ref('')
 const category = ref('')
 const castSeed = ref('')
-const castText = ref('')
 const manualLines = ref<number[]>([0, 0, 0, 0, 0, 0])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -88,7 +86,6 @@ const castQuestionText = computed(() => result.value?.question?.trim() || questi
 const castModeText = computed(() => {
   const mode = castResult.value?.cast_mode || activeCastMode.value
   if (mode === 'manual') return '手动输入'
-  if (mode === 'number') return '数字起卦'
   return '硬币 / 太极丸起卦'
 })
 const castCategoryText = computed(() => category.value.trim() || '未分类')
@@ -109,7 +106,6 @@ function resetCast() {
   question.value = ''
   category.value = ''
   castSeed.value = formatCastSeed()
-  castText.value = ''
   manualLines.value = [0, 0, 0, 0, 0, 0]
   result.value = null
   showResultBoard.value = true
@@ -134,7 +130,6 @@ async function cast() {
       category: category.value.trim(),
       cast_seed: castSeed.value,
       manual_lines: activeCastMode.value === 'manual' ? manualLines.value.map((item) => Number(item)) : [],
-      number_text: activeCastMode.value === 'number' ? castText.value.trim() : '',
       use_ai: true,
     })
     result.value = response
@@ -207,16 +202,6 @@ async function cast() {
         </select>
       </label>
     </div>
-
-    <label v-if="activeCastMode === 'number'" class="field-label">
-      数字
-      <textarea
-        v-model="castText"
-        class="text-area"
-        rows="3"
-        placeholder="输入数字、编号或数字串。"
-      ></textarea>
-    </label>
 
     <p class="how-to-do-note">
       使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。

@@ -1,7 +1,7 @@
 const API_PREFIX = '/persona-api'
 
 export type HowToDoSection = 'cast' | 'sundial' | 'catalog' | 'songs' | 'detail'
-export type HowToDoCastMode = 'manual' | 'character' | 'number' | 'coin' | 'taiji'
+export type HowToDoCastMode = 'manual' | 'character' | 'coin' | 'taiji'
 
 export type HowToDoRequestPayload = {
   section: HowToDoSection
@@ -11,7 +11,6 @@ export type HowToDoRequestPayload = {
   cast_seed?: string
   manual_lines?: number[]
   character_text?: string
-  number_text?: string
   use_ai?: boolean
   selected_hexagram?: string
 }

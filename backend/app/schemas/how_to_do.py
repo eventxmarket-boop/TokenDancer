@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 HowToDoSection = Literal["cast", "sundial", "catalog", "songs", "detail"]
-HowToDoCastMode = Literal["manual", "character", "number", "coin", "taiji"]
+HowToDoCastMode = Literal["manual", "character", "coin", "taiji"]
 
 
 class HowToDoRequest(BaseModel):
@@ -17,7 +17,6 @@ class HowToDoRequest(BaseModel):
     cast_seed: str = ""
     manual_lines: list[int] = Field(default_factory=list)
     character_text: str = ""
-    number_text: str = ""
     use_ai: bool = True
     selected_hexagram: str = ""
 

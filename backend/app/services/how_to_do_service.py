@@ -24,7 +24,6 @@ SECTION_LABELS = {
 CAST_MODE_LABELS = {
     "manual": "手动输入",
     "character": "汉字起卦",
-    "number": "数字起卦",
     "coin": "硬币起卦",
     "taiji": "太极丸起卦",
 }
@@ -559,10 +558,6 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
         elif cast_mode == "character":
             base = sum(ord(ch) for ch in source_text or question or seed) + position * 17
             value = [6, 7, 8, 9][base % 4]
-        elif cast_mode == "number":
-            digits = [int(ch) for ch in f"{source_text}{question}{seed}" if ch.isdigit()]
-            base = sum(digits) + position * 11 if digits else _stable_seed("number", source_text, question, seed, position)
-            value = [6, 7, 8, 9][base % 4]
         elif cast_mode == "taiji":
             base = _stable_seed("taiji", seed, question, position, source_text)
             value = [6, 7, 8, 9][base % 4]
@@ -877,7 +872,6 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     cast_seed = _normalize_text(request.get("cast_seed"))
     manual_lines = request.get("manual_lines") or []
     character_text = _normalize_text(request.get("character_text"))
-    number_text = _normalize_text(request.get("number_text"))
     use_ai = bool(request.get("use_ai", True))
 
     if section == "catalog":
@@ -887,10 +881,10 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     elif section == "songs":
         base_result = _build_songs_result()
     elif section == "cast":
-        source_text = character_text or number_text or question
+        source_text = character_text or question
         base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=source_text, manual_lines=manual_lines)
     elif section == "detail":
-        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=character_text or number_text or question, manual_lines=manual_lines)
+        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=character_text or question, manual_lines=manual_lines)
     else:
         raise ValueError(f"不支持的模块: {section}")
 

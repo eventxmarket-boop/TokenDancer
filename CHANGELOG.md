@@ -1,3 +1,8 @@
+## V1.4.97 - 2026-04-18
+
+- Removed the `数字起卦` cast mode from `我该怎么做` so the board now only exposes the remaining cast paths.
+- Kept the six-yao board, main/transformed hexagrams, and the existing time-based layout intact.
+
 ## V1.4.96 - 2026-04-18
 
 - Added proper `世/应` markers to the liu-yao board based on hexagram tag mapping.
