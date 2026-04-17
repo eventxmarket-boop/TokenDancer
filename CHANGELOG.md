@@ -1,3 +1,9 @@
+## V1.4.81 - 2026-04-18
+
+- Aligned reply-corpus admin fields with the reply assistant's object and scene selectors so corpus feeding uses the same vocabulary as the frontend.
+- Added text-file import for reply corpora so admin can append local `.txt`, `.md`, `.csv`, or `.log` materials directly into the corpus box.
+- Clarified corpus sorting as display priority and kept enabled corpora scoped into the reply assistant runtime only when their object and scene match.
+
 ## V1.4.80 - 2026-04-18
 
 - Added a dedicated admin opening for `我该怎么回` reply corpora so users can feed targeted examples like high-EQ replies and workplace refusals.

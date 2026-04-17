@@ -812,7 +812,13 @@ async def generate_reply_assistant_runtime(
     turns_summary = _summarize_recent_turns(conversation_turns)
     if turns_summary:
         conversation_context = "\n".join(part for part in (conversation_context, turns_summary) if part).strip()
-    reference_corpus = _format_reply_corpus_context(build_reply_corpus_context(db))
+    reference_corpus = _format_reply_corpus_context(
+        build_reply_corpus_context(
+            db,
+            target_person_type=target_person_type,
+            scene_type=scene_type,
+        )
+    )
 
     analysis_result = _build_reply_assistant_analysis(
         target_person_type=target_person_type,

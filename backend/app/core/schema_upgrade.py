@@ -36,6 +36,10 @@ SCHEMA_UPGRADES: dict[str, dict[str, str]] = {
     "created_personas": {
         "user_id": "INTEGER NULL",
     },
+    "reply_assistant_corpora": {
+        "target_person_type": "VARCHAR(32) DEFAULT 'any'",
+        "scene_type": "VARCHAR(32) DEFAULT 'any'",
+    },
 }
 
 

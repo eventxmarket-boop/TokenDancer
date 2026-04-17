@@ -561,11 +561,16 @@ async def chat_with_persona(
     elif is_reunion_persona:
         aux_context = build_reunion_persona_context(persona, history, normalized_message)
     elif is_reply_assistant:
+        reply_profile = persona.get("reply_assistant_profile") or {}
         aux_context = build_reply_assistant_context(
             persona,
             history,
             normalized_message,
-            reference_corpus=build_reply_corpus_context(db),
+            reference_corpus=build_reply_corpus_context(
+                db,
+                target_person_type=str(reply_profile.get("target_person_type") or ""),
+                scene_type=str(reply_profile.get("scene_type") or ""),
+            ),
         )
     elif is_intimate_companion:
         intimate_mode = str(persona_meta.get("input_mode") or "").strip()

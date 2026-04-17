@@ -29,6 +29,33 @@ const corpusError = ref('')
 const corpusNotice = ref('')
 const corpusItems = ref<ReplyCorpus[]>([])
 const corpusEditingId = ref<number | null>(null)
+const corpusFileInputRef = ref<HTMLInputElement | null>(null)
+
+const targetPersonOptions: Array<[string, string]> = [
+  ['any', '通用'],
+  ['crush', '暧昧对象'],
+  ['partner', '伴侣'],
+  ['ex', '前任'],
+  ['colleague', '同事'],
+  ['boss', '上司 / 领导'],
+  ['client', '客户 / 对接方'],
+  ['public_sector', '体制内 / 公务沟通'],
+  ['mentor', '导师 / 前辈'],
+  ['friend', '朋友'],
+  ['family', '家人'],
+]
+
+const sceneOptions: Array<[string, string]> = [
+  ['any', '通用'],
+  ['daily', '日常聊天'],
+  ['conflict', '冷战 / 冲突'],
+  ['push_forward', '推进关系'],
+  ['work_report', '工作汇报'],
+  ['follow_up', '跟进未回复'],
+  ['formal_notice', '正式通知'],
+  ['rejection', '拒绝 / 婉拒'],
+  ['repair', '解释误会 / 修复'],
+]
 
 const emptyForm = (): LlmConfigPayload => ({
   provider: 'openai_compatible',
@@ -45,7 +72,9 @@ const form = reactive<LlmConfigPayload>(emptyForm())
 const emptyCorpusForm = (): ReplyCorpusPayload => ({
   id: null,
   title: '',
-  corpus_type: '高情商回复',
+  target_person_type: 'any',
+  scene_type: 'any',
+  corpus_type: '通用',
   content: '',
   sort_order: 0,
   is_enabled: true,
@@ -103,6 +132,8 @@ const applyToCorpusForm = (corpus: ReplyCorpus | null) => {
     ? {
         id: corpus.id,
         title: corpus.title || '',
+        target_person_type: corpus.target_person_type || 'any',
+        scene_type: corpus.scene_type || 'any',
         corpus_type: corpus.corpus_type || '高情商回复',
         content: corpus.content || '',
         sort_order: corpus.sort_order ?? 0,
@@ -152,6 +183,53 @@ const resetCorpusForm = () => {
 const editCorpus = (corpus: ReplyCorpus) => {
   corpusNotice.value = ''
   applyToCorpusForm(corpus)
+}
+
+const targetPersonLabel = (value: string) =>
+  targetPersonOptions.find(([key]) => key === value)?.[1] || value || '通用'
+
+const sceneLabel = (value: string) => sceneOptions.find(([key]) => key === value)?.[1] || value || '通用'
+
+const corpusScopeLabel = computed(() => {
+  const target = targetPersonLabel(corpusForm.target_person_type)
+  const scene = sceneLabel(corpusForm.scene_type)
+  if (corpusForm.target_person_type === 'any' && corpusForm.scene_type === 'any') {
+    return '通用'
+  }
+  return `${target} · ${scene}`
+})
+
+const triggerCorpusFilePicker = () => {
+  corpusFileInputRef.value?.click()
+}
+
+const handleCorpusFileUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement | null
+  const files = input?.files
+  if (!files || !files.length) {
+    return
+  }
+
+  const textChunks: string[] = []
+  for (const file of Array.from(files)) {
+    const extension = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!['txt', 'md', 'csv', 'log'].includes(extension) && !file.type.startsWith('text/')) {
+      continue
+    }
+    const text = (await file.text()).trim()
+    if (text) {
+      textChunks.push(`【${file.name}】\n${text}`)
+    }
+  }
+
+  if (textChunks.length) {
+    corpusForm.content = corpusForm.content ? `${corpusForm.content}\n\n${textChunks.join('\n\n')}` : textChunks.join('\n\n')
+    corpusNotice.value = '文件内容已导入到语料框'
+  }
+
+  if (input) {
+    input.value = ''
+  }
 }
 
 const submitForm = async () => {
@@ -221,7 +299,9 @@ const submitCorpusForm = async () => {
     ...corpusForm,
     id: corpusEditingId.value,
     title: corpusForm.title.trim(),
-    corpus_type: corpusForm.corpus_type.trim() || '高情商回复',
+    target_person_type: corpusForm.target_person_type,
+    scene_type: corpusForm.scene_type,
+    corpus_type: corpusScopeLabel.value,
     content: corpusForm.content.trim(),
     sort_order: Number(corpusForm.sort_order || 0),
   }
@@ -424,7 +504,7 @@ onMounted(() => {
         <div>
           <p class="eyebrow">我该怎么回</p>
           <h3>语料开口</h3>
-          <p class="section-note">把高情商回复、职场婉拒、安抚接话这类样例放进来，启用后会进入回复助手。</p>
+          <p class="section-note">按对象和场景喂语料，启用后会进入回复助手。</p>
         </div>
         <div class="hero-actions">
           <button class="ghost-btn" type="button" @click="resetCorpusForm">新建语料</button>
@@ -442,24 +522,33 @@ onMounted(() => {
           <form class="admin-form" @submit.prevent="submitCorpusForm">
             <div class="form-grid">
               <label class="form-field">
-                <span>标题</span>
-                <input v-model="corpusForm.title" class="field-input" type="text" placeholder="例如：高情商回复" />
-              </label>
-              <label class="form-field">
-                <span>类型</span>
-                <select v-model="corpusForm.corpus_type" class="field-input">
-                  <option value="高情商回复">高情商回复</option>
-                  <option value="职场婉拒">职场婉拒</option>
-                  <option value="安抚接话">安抚接话</option>
-                  <option value="边界表达">边界表达</option>
-                  <option value="推进关系">推进关系</option>
-                  <option value="其他">其他</option>
+                <span>对象</span>
+                <select v-model="corpusForm.target_person_type" class="field-input">
+                  <option v-for="[value, label] in targetPersonOptions" :key="value" :value="value">
+                    {{ label }}
+                  </option>
                 </select>
               </label>
               <label class="form-field">
-                <span>排序</span>
-                <input v-model.number="corpusForm.sort_order" class="field-input" type="number" step="1" />
+                <span>场景</span>
+                <select v-model="corpusForm.scene_type" class="field-input">
+                  <option v-for="[value, label] in sceneOptions" :key="value" :value="value">
+                    {{ label }}
+                  </option>
+                </select>
               </label>
+              <label class="form-field">
+                <span>标题</span>
+                <input v-model="corpusForm.title" class="field-input" type="text" :placeholder="corpusScopeLabel" />
+              </label>
+              <label class="form-field">
+                <span>排序</span>
+                <input v-model.number="corpusForm.sort_order" class="field-input" type="number" step="1" placeholder="越大越靠前" />
+              </label>
+            </div>
+
+            <div class="state-copy" style="margin-top: 8px;">
+              当前类型：{{ corpusScopeLabel }}。排序数字越大，展示越靠前。
             </div>
 
             <label class="form-field" style="margin-top: 12px;">
@@ -471,6 +560,18 @@ onMounted(() => {
                 placeholder="建议直接粘贴回复样例，比如：场景 / 原话 / 参考回复。"
               />
             </label>
+
+            <input
+              ref="corpusFileInputRef"
+              type="file"
+              accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+              style="display: none;"
+              @change="handleCorpusFileUpload"
+            />
+
+            <div class="form-actions" style="justify-content: flex-start; margin-top: 10px;">
+              <button class="secondary-btn" type="button" @click="triggerCorpusFilePicker">上传文件</button>
+            </div>
 
             <div class="toggle-row">
               <label class="field-check">
@@ -504,14 +605,16 @@ onMounted(() => {
                   <span class="status-pill" :class="{ active: corpus.is_enabled }">
                     {{ corpus.is_enabled ? '启用' : '停用' }}
                   </span>
-                  <span class="status-pill active">
-                    {{ corpus.corpus_type }}
-                  </span>
+                  <span class="status-pill active">{{ targetPersonLabel(corpus.target_person_type) }}</span>
+                  <span class="status-pill active">{{ sceneLabel(corpus.scene_type) }}</span>
                 </div>
               </div>
 
               <p class="state-copy">
                 {{ corpus.content.slice(0, 120) }}{{ corpus.content.length > 120 ? '…' : '' }}
+              </p>
+              <p class="state-copy">
+                排序 {{ corpus.sort_order }} · 类型 {{ corpus.corpus_type }}
               </p>
 
               <div class="form-actions">

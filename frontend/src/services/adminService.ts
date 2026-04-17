@@ -24,6 +24,8 @@ export type LlmConfigDashboard = {
 export type ReplyCorpus = {
   id: number
   title: string
+  target_person_type: string
+  scene_type: string
   corpus_type: string
   content: string
   sort_order: number
@@ -51,6 +53,8 @@ export type LlmConfigPayload = {
 export type ReplyCorpusPayload = {
   id?: number | null
   title: string
+  target_person_type: string
+  scene_type: string
   corpus_type: string
   content: string
   sort_order: number
