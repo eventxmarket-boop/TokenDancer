@@ -242,6 +242,111 @@ svg {
 .desktop-nav {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.nav-group {
+  position: relative;
+}
+
+.nav-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 10px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid transparent;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.nav-group--active .nav-dropdown__trigger,
+.nav-group:hover .nav-dropdown__trigger,
+.nav-group:focus-within .nav-dropdown__trigger,
+.nav-link.router-link-active,
+.mobile-nav__item.router-link-active {
+  color: var(--text);
+  border-color: rgba(234, 127, 102, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 176px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 20px;
+  background: rgba(255, 250, 247, 0.98);
+  border: 1px solid rgba(184, 143, 118, 0.18);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+  z-index: 20;
+}
+
+.nav-group:hover .nav-dropdown,
+.nav-group:focus-within .nav-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.nav-dropdown__item {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nav-dropdown__item.router-link-active,
+.nav-dropdown__item:hover,
+.nav-dropdown__item:focus-visible {
+  color: var(--text);
+  background: rgba(255, 224, 217, 0.9);
+}
+
+.nav-link,
+.mobile-nav__item {
+  min-height: var(--control-height);
+  padding: 10px 10px;
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.nav-link.router-link-active,
+.mobile-nav__item.router-link-active {
+  color: var(--text);
+  border-bottom-color: currentColor;
+}
+
+.nav-link:hover,
+.mobile-nav__item:hover {
+  color: var(--text);
 }
 
 .theme-toggle {
@@ -257,7 +362,9 @@ svg {
 }
 
 html[data-theme='night'] .theme-toggle {
-  background: rgba(35, 28, 43, 0.86);
+  background: rgba(35, 28, 43, 0.9);
+  color: #f7f1ea;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .auth-page {
@@ -311,25 +418,6 @@ html[data-theme='night'] .theme-toggle {
   font-size: clamp(1.9rem, 4vw, 2.8rem);
 }
 
-.nav-link,
-.mobile-nav__item {
-  min-height: var(--control-height);
-  padding: 10px 10px;
-  border-radius: 0;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid transparent;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.nav-link.router-link-active,
-.mobile-nav__item.router-link-active {
-  color: var(--text);
-  border-bottom-color: currentColor;
-}
-
 .page-shell {
   display: grid;
   gap: var(--page-gap);
@@ -368,10 +456,15 @@ html[data-theme='night'] .theme-toggle {
 
 .home-sticker-stack {
   position: relative;
-  width: min(520px, 100%);
-  height: 360px;
+  width: min(500px, 100%);
+  height: 340px;
   display: grid;
   place-items: center;
+  margin-inline: auto;
+}
+
+.home-sticker-stack--compact {
+  width: min(460px, 100%);
 }
 
 .home-sticker-link {
@@ -428,12 +521,12 @@ html[data-theme='night'] .theme-toggle {
 }
 
 .home-sticker--create {
-  transform: translateX(-84px) rotate(-8deg);
+  transform: translateX(-56px) rotate(-7deg);
   z-index: 2;
 }
 
 .home-sticker--seed {
-  transform: translateX(76px) translateY(16px) rotate(8deg);
+  transform: translateX(56px) translateY(12px) rotate(7deg);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 244, 240, 0.95));
 }
 
@@ -463,6 +556,50 @@ html[data-theme='night'] .home-sticker {
 
 html[data-theme='night'] .home-sticker--seed {
   background: linear-gradient(180deg, rgba(37, 29, 48, 0.96), rgba(27, 21, 35, 0.96));
+}
+
+html[data-theme='night'] .home-sticker__tag,
+html[data-theme='night'] .my-entry-card__tag,
+html[data-theme='night'] .feature-card__label,
+html[data-theme='night'] .persona-category,
+html[data-theme='night'] .spotlight-card__label {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f1ea;
+}
+
+html[data-theme='night'] .nav-dropdown__trigger,
+html[data-theme='night'] .nav-link,
+html[data-theme='night'] .mobile-nav__item {
+  color: #f3e9e2;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme='night'] .nav-group--active .nav-dropdown__trigger,
+html[data-theme='night'] .nav-group:hover .nav-dropdown__trigger,
+html[data-theme='night'] .nav-group:focus-within .nav-dropdown__trigger,
+html[data-theme='night'] .nav-link.router-link-active,
+html[data-theme='night'] .mobile-nav__item.router-link-active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme='night'] .nav-dropdown {
+  background: rgba(24, 19, 31, 0.98);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='night'] .nav-dropdown__item {
+  background: rgba(255, 255, 255, 0.04);
+  color: #eadfd9;
+}
+
+html[data-theme='night'] .nav-dropdown__item.router-link-active,
+html[data-theme='night'] .nav-dropdown__item:hover,
+html[data-theme='night'] .nav-dropdown__item:focus-visible {
+  background: rgba(255, 182, 160, 0.16);
+  color: #ffffff;
 }
 
 .home-actions {

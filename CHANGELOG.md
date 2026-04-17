@@ -513,6 +513,12 @@
 - Expanded the family companion and intimate companion creation flows with explicit profile and memory layers.
 - Started merging the four self-related Create entries into a later unified main line.
 
+## V1.4.64
+- Reworked the top navigation into hover dropdowns for `我该怎么回` and `Seed`
+- Added a placeholder `我该怎么做` page for the future flow
+- Removed the reply-assistant sticker from the homepage and centered the remaining creation/seed tiles
+- Tightened night-mode label and menu contrast so nav options stay readable
+
 ## V1.1.1 - 2026-04-15
 
 - Unified the repository around the single `frontend/` directory.

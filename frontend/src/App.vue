@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
-const navItems = [
+const route = useRoute()
+
+const mobileNavItems = [
   { to: '/', label: '首页' },
   { to: '/reply-assistant', label: '我该怎么回' },
   { to: '/seed', label: 'Seed' },
   { to: '/favorites', label: '收藏' },
-  { to: '/create', label: '创建' },
   { to: '/me', label: '个人' },
 ]
 
@@ -26,6 +28,14 @@ function applyTheme(mode: 'day' | 'night') {
 function toggleTheme() {
   theme.value = theme.value === 'night' ? 'day' : 'night'
 }
+
+const isReplyMenuActive = computed(
+  () => route.path === '/reply-assistant' || route.path === '/how-to-do',
+)
+
+const isSeedMenuActive = computed(
+  () => route.path === '/seed' || route.path.startsWith('/create'),
+)
 
 onMounted(() => {
   const stored = window.localStorage.getItem(themeKey)
@@ -61,9 +71,26 @@ watch(
 
       <div class="topbar__actions">
         <nav class="desktop-nav" aria-label="主导航">
-          <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="nav-link">
-            {{ item.label }}
-          </RouterLink>
+          <RouterLink to="/" class="nav-link">首页</RouterLink>
+
+          <div class="nav-group" :class="{ 'nav-group--active': isReplyMenuActive }">
+            <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">我该怎么回</RouterLink>
+            <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
+              <RouterLink to="/reply-assistant" class="nav-dropdown__item">我该怎么回</RouterLink>
+              <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>
+            </div>
+          </div>
+
+          <div class="nav-group" :class="{ 'nav-group--active': isSeedMenuActive }">
+            <RouterLink to="/seed" class="nav-dropdown__trigger">Seed</RouterLink>
+            <div class="nav-dropdown" aria-label="Seed 下拉菜单">
+              <RouterLink to="/create" class="nav-dropdown__item">创建</RouterLink>
+              <RouterLink to="/seed" class="nav-dropdown__item">Seed</RouterLink>
+            </div>
+          </div>
+
+          <RouterLink to="/favorites" class="nav-link">收藏</RouterLink>
+          <RouterLink to="/me" class="nav-link">个人</RouterLink>
         </nav>
         <button class="theme-toggle" type="button" @click="toggleTheme">
           {{ themeLabel }}模式
@@ -76,7 +103,7 @@ watch(
     </main>
 
     <nav class="mobile-nav" aria-label="底部导航">
-      <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" class="mobile-nav__item">
+      <RouterLink v-for="item in mobileNavItems" :key="item.to" :to="item.to" class="mobile-nav__item">
         {{ item.label }}
       </RouterLink>
     </nav>

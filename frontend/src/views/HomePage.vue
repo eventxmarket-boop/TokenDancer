@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const selectedSticker = ref<'create' | 'seed' | 'reply'>('create')
+const selectedSticker = ref<'create' | 'seed'>('create')
 
-function activateSticker(sticker: 'create' | 'seed' | 'reply') {
+function activateSticker(sticker: 'create' | 'seed') {
   selectedSticker.value = sticker
 }
 </script>
@@ -15,25 +15,7 @@ function activateSticker(sticker: 'create' | 'seed' | 'reply') {
         <p class="hero-text">从自己开始，或者先从一个对话开始。</p>
       </div>
 
-      <div class="home-sticker-stack">
-        <RouterLink
-          class="home-sticker-link"
-          to="/reply-assistant"
-          aria-label="我该怎么回"
-          @mouseenter="activateSticker('reply')"
-          @focus="activateSticker('reply')"
-          @click="activateSticker('reply')"
-        >
-          <article
-            class="home-sticker home-sticker--reply"
-            :class="{ 'home-sticker--active': selectedSticker === 'reply', 'home-sticker--inactive': selectedSticker !== 'reply' }"
-          >
-            <span class="home-sticker__tag">Reply</span>
-            <h2>我该怎么回</h2>
-            <p>直接输入一句话，系统帮你理解、拟回复、预判下一句。</p>
-          </article>
-        </RouterLink>
-
+      <div class="home-sticker-stack home-sticker-stack--compact">
         <RouterLink
           class="home-sticker-link"
           to="/create"
@@ -72,7 +54,6 @@ function activateSticker(sticker: 'create' | 'seed' | 'reply') {
       </div>
 
       <div class="home-actions">
-        <RouterLink class="primary-btn" to="/reply-assistant">我该怎么回</RouterLink>
         <RouterLink class="primary-btn" to="/create">创建 Seed</RouterLink>
         <RouterLink class="secondary-btn" to="/seed">选择 Seed</RouterLink>
       </div>

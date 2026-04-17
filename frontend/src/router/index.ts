@@ -6,6 +6,7 @@ import CreatePersonaPage from '@/views/CreatePersonaPage.vue'
 import CreateWizardPage from '@/views/CreateWizardPage.vue'
 import CreateResultPage from '@/views/CreateResultPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
+import HowToDoPage from '@/views/HowToDoPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -62,6 +63,12 @@ const router = createRouter({
       name: 'reply-assistant',
       component: ReplyAssistantPage,
       meta: { title: '我该怎么回' },
+    },
+    {
+      path: '/how-to-do',
+      name: 'how-to-do',
+      component: HowToDoPage,
+      meta: { title: '我该怎么做' },
     },
     {
       path: '/character/:id',
