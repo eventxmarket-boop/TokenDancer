@@ -1,3 +1,9 @@
+## V1.4.77 - 2026-04-18
+
+- Moved the reply page `+`, advanced toggle, file, and image buttons onto one compact row above the send button.
+- Reduced the reply page typography to a more restrained chat-style scale.
+- Switched the mobile bottom navigation to a four-column flat layout so the labels stay in one row.
+
 ## V1.4.76 - 2026-04-18
 
 - Moved the reply page attachment row to sit above the send button for a tighter composer layout.

@@ -819,11 +819,6 @@ if (activeHistoryId.value) {
     </div>
 
     <div class="reply-composer">
-      <div class="reply-composer__chips">
-        <button class="reply-chip" type="button" @click="contextOpen = !contextOpen">+</button>
-        <button class="reply-chip" type="button" @click="advancedOpen = !advancedOpen">高级</button>
-      </div>
-
       <div class="reply-composer__row">
         <label class="reply-select">
           <span>对方</span>
@@ -856,6 +851,8 @@ if (activeHistoryId.value) {
 
       <div class="reply-composer__attachments-row">
         <div class="reply-composer__attachment-actions">
+          <button class="reply-chip" type="button" @click="contextOpen = !contextOpen">+</button>
+          <button class="reply-chip" type="button" @click="advancedOpen = !advancedOpen">高级</button>
           <button class="reply-chip" type="button" @click="triggerTextUpload">📄 文件</button>
           <button class="reply-chip" type="button" @click="triggerImageUpload">🖼 图片</button>
         </div>
@@ -985,6 +982,7 @@ if (activeHistoryId.value) {
   gap: 1rem;
   padding-bottom: 1.2rem;
   padding-top: 3rem;
+  font-size: 0.96rem;
 }
 
 .reply-history-toggle {
@@ -1169,7 +1167,7 @@ if (activeHistoryId.value) {
 
 .reply-answer-card__label {
   margin: 0 0 0.45rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
 }
@@ -1177,7 +1175,7 @@ if (activeHistoryId.value) {
 .reply-answer-card h3,
 .reply-answer-card p {
   margin: 0;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
 .reply-composer {
@@ -1193,7 +1191,6 @@ if (activeHistoryId.value) {
   backdrop-filter: blur(18px);
 }
 
-.reply-composer__chips,
 .reply-composer__row,
 .reply-composer__attachments-row,
 .reply-composer__footer {
@@ -1235,13 +1232,14 @@ if (activeHistoryId.value) {
 
 .reply-select span,
 .reply-input span {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
 }
 
 .field-input--compact {
   min-height: 42px;
+  font-size: 0.92rem;
 }
 
 .reply-input {
@@ -1252,6 +1250,8 @@ if (activeHistoryId.value) {
 .reply-input__textarea {
   min-height: 112px;
   resize: vertical;
+  font-size: 0.96rem;
+  line-height: 1.65;
 }
 
 .reply-composer__footer {
@@ -1279,6 +1279,7 @@ if (activeHistoryId.value) {
 
 .reply-drawer__textarea {
   min-height: 76px;
+  font-size: 0.94rem;
 }
 
 .reply-drawer--advanced .reply-drawer__grid {
@@ -1348,10 +1349,19 @@ if (activeHistoryId.value) {
 
   .reply-shell {
     padding-bottom: 0.8rem;
+    font-size: 0.94rem;
   }
 
   .reply-composer {
     position: static;
+  }
+
+  .reply-composer__attachments-row {
+    align-items: flex-start;
+  }
+
+  .reply-composer__attachment-actions {
+    gap: 0.45rem;
   }
 }
 </style>
