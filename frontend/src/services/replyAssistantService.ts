@@ -13,6 +13,7 @@ export type ReplyAssistantRequestPayload = {
   tone_hint?: string
   relationship_status?: string
   conversation_context?: string
+  conversation_turns?: Array<{ role: 'user' | 'assistant'; content: string }>
   rewrite_mode?: string
   raw_materials?: UniversalCreateWizardRawMaterials | Record<string, unknown>
 }

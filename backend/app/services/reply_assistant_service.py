@@ -142,6 +142,35 @@ def _merge_unique_lines(*values: Any) -> list[str]:
     return merged
 
 
+def _normalize_conversation_turns(turns: Any) -> list[dict[str, str]]:
+    if not isinstance(turns, list):
+        return []
+    normalized: list[dict[str, str]] = []
+    for item in turns:
+        if not isinstance(item, dict):
+            continue
+        role = _normalize_text(item.get("role"))
+        if role not in {"user", "assistant"}:
+            continue
+        content = _normalize_text(item.get("content"))
+        if not content:
+            continue
+        normalized.append({"role": role, "content": content})
+    return normalized
+
+
+def _summarize_recent_turns(turns: Any, max_turns: int = 6) -> str:
+    normalized = _normalize_conversation_turns(turns)
+    if not normalized:
+        return ""
+    selected = normalized[-max_turns:]
+    lines = [f"{'用户' if item['role'] == 'user' else '助手'}：{item['content']}" for item in selected]
+    summary = "\n".join(lines).strip()
+    if len(summary) > 900:
+        summary = summary[:900].rstrip("，,。！？!?；; ") + "…"
+    return summary
+
+
 def _collect_text_pool(*values: Any) -> str:
     return " ".join(part for part in (_normalize_text(value) for value in values) if part)
 
@@ -767,8 +796,12 @@ async def generate_reply_assistant_runtime(
     tone_hint = _normalize_text(request.get("tone_hint"))
     relationship_status = _normalize_text(request.get("relationship_status"))
     conversation_context = _normalize_text(request.get("conversation_context"))
+    conversation_turns = request.get("conversation_turns")
     rewrite_mode = _normalize_text(request.get("rewrite_mode")) or "default"
     raw_materials = request.get("raw_materials") if isinstance(request.get("raw_materials"), dict) else {}
+    turns_summary = _summarize_recent_turns(conversation_turns)
+    if turns_summary:
+        conversation_context = "\n".join(part for part in (conversation_context, turns_summary) if part).strip()
 
     analysis_result = _build_reply_assistant_analysis(
         target_person_type=target_person_type,
@@ -819,6 +852,7 @@ async def generate_reply_assistant_runtime(
             "tone_hint": tone_hint,
             "relationship_status": relationship_status,
             "conversation_context": conversation_context,
+            "conversation_turns": _normalize_conversation_turns(conversation_turns),
             "rewrite_mode": rewrite_mode,
             "analysis_result": analysis_result,
             "output_protocol": {

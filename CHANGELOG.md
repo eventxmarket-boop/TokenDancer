@@ -1,3 +1,9 @@
+## V1.4.79 - 2026-04-18
+
+- Added hidden recent-turn payloads so reply generation can compress the latest chat context without changing the UI.
+- Locked the reply assistant's person and scene selectors once a chat starts, with a simple message telling users to start a new conversation instead of switching mid-thread.
+- Kept the replay and history behavior unchanged for users while improving backend continuity.
+
 ## V1.4.78 - 2026-04-18
 
 - Strengthened reply assistant context by sending recent turns into each generation request.

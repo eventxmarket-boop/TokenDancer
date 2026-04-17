@@ -14,6 +14,7 @@ class ReplyAssistantRequest(BaseModel):
     target_goal: str = ""
     relationship_status: str = ""
     conversation_context: str = ""
+    conversation_turns: list[dict[str, str]] = Field(default_factory=list)
     rewrite_mode: str = "default"
     tone_hint: str = ""
     raw_materials: dict[str, Any] = Field(default_factory=dict)

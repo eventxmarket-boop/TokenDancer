@@ -186,8 +186,6 @@ const historyItems = computed(() =>
 )
 
 const conversationLocked = computed(() => turns.value.some((turn) => turn.role === 'user'))
-const lockedTargetLabel = computed(() => targetPersonOptions.find(([value]) => value === form.target_person_type)?.[1] || '')
-const lockedSceneLabel = computed(() => sceneOptions.find(([value]) => value === form.scene_type)?.[1] || '')
 
 function createEmptyHistoryForm() {
   return {
@@ -723,6 +721,13 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
       current_context: buildThreadContext(),
       target_goal: form.target_goal,
       conversation_context: buildConversationContext(),
+      conversation_turns: turns.value
+        .filter((turn) => turn.role === 'user' || turn.role === 'assistant')
+        .slice(-10)
+        .map((turn) => ({
+          role: turn.role,
+          content: turn.content,
+        })),
       rewrite_mode: rewriteMode,
       raw_materials: rawMaterials.value,
     })
@@ -879,7 +884,7 @@ if (activeHistoryId.value) {
       </div>
 
       <p v-if="conversationLocked" class="reply-lock-tip">
-        当前对话已锁定为「{{ lockedTargetLabel }} / {{ lockedSceneLabel }}」。中途切换会让回答偏差，建议新开一个对话。
+        当前对话已开始，不能切换对象或场景。要换的话，建议新开一个对话。
       </p>
 
       <label class="reply-input">
