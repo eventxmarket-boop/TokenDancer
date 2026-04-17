@@ -93,11 +93,6 @@ const castModeText = computed(() => {
 })
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const castTimeText = computed(() => castResult.value?.day_label || '—')
-const transformedHexagramText = computed(() => {
-  const transformed = castResult.value?.transformed_hexagram as Record<string, any> | undefined
-  if (!transformed) return ''
-  return `${transformed.name}（${transformed.upper_trigram}·${transformed.lower_trigram}）`
-})
 const castShenshaText = computed(() => {
   const shensha = (castResult.value?.shensha || {}) as Record<string, string>
   return [
@@ -270,7 +265,6 @@ async function cast() {
           <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
           <div class="liuyao-result-board__titles">
             <p class="liuyao-result-board__title">{{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span></p>
-            <p v-if="transformedHexagramText" class="liuyao-result-board__title">{{ transformedHexagramText }}</p>
           </div>
 
           <div class="liuyao-result-frame">
@@ -297,7 +291,7 @@ async function cast() {
             </div>
 
             <div v-if="castResult?.transformed_hexagram" class="liuyao-result-boards__item">
-              <p class="liuyao-result-board__title">
+              <p class="liuyao-result-board__title liuyao-result-board__title--right">
                 {{ castResult.transformed_hexagram.name }}（{{ castResult.transformed_hexagram.upper_trigram }}·{{ castResult.transformed_hexagram.lower_trigram }}）
               </p>
               <div class="liuyao-line-board">
@@ -473,6 +467,10 @@ async function cast() {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.liuyao-result-board__title--right {
+  text-align: right;
 }
 
 .liuyao-result-frame {

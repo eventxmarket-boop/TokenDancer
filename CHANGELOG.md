@@ -1,8 +1,7 @@
-## V1.4.94 - 2026-04-18
+## V1.4.95 - 2026-04-18
 
-- Replaced the category datalist with a usable select and expanded the category list to cover more liu-yao cases.
-- Restored manual input as a six-step dropdown flow and kept the main / transformed hexagrams aligned in one frame.
-- Normalized the cast seed to a readable time string instead of a raw timestamp.
+- Removed the duplicate transformed-hexagram title from the top header and kept only the right-aligned title within the transformed board.
+- Preserved the main and transformed hexagrams in one aligned frame while keeping the board source-like.
 
 ## V1.4.90 - 2026-04-18
 
