@@ -1,3 +1,9 @@
+## V1.4.67 - 2026-04-17
+
+- Converted the family-companion fill flow to the same one-page-one-item pattern used by the self-mainline flow.
+- Kept the family companion board on a step-by-step page flow with previous/next navigation and a final review card set.
+- Preserved the existing skill mapping and field model while changing only the interaction pattern.
+
 ## V1.4.66 - 2026-04-17
 
 - Synchronized the fill UI across self-main, source creation, workplace relations, intimate relations, family companionship, and reunion flows.

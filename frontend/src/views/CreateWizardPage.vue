@@ -350,7 +350,7 @@ const schemaKeyBySourceRepo: Record<string, string> = {
   'anti-distill': 'protection_anti_distill',
 }
 
-const isFamilyCompanion = computed(() => createType.value === 'family_companion' || createType.value === 'reunion_persona')
+const isFamilyCompanion = computed(() => createType.value === 'family_companion')
 const isReunionPersona = computed(() => createType.value === 'reunion_persona')
 const isSelfUnified = computed(() => createType.value === 'self_unified')
 const isReplyAssistant = computed(() => createType.value === 'reply_assistant')
@@ -1643,19 +1643,6 @@ function getRelationshipLabel(mode: string) {
   )
 }
 
-function getFamilySubtypeNote(mode: string) {
-  if (mode === 'mother') {
-    return '妈妈更偏安慰和接住情绪，语气更熟悉。'
-  }
-  if (mode === 'parents') {
-    return '父母更偏家庭共同记忆和稳定建议。'
-  }
-  if (mode === 'other_family') {
-    return '其他家人走更通用的家庭陪伴。'
-  }
-  return '先选妈妈、父母或其他家人，再统一填写下面的内容。'
-}
-
 function getFamilySubtypePreset(mode: string) {
   if (mode === 'parents') {
     return {
@@ -2608,259 +2595,141 @@ watch(
           </template>
 
           <template v-else-if="isFamilyCompanion">
-            <div class="wizard-form">
-              <p class="section-note section-note--subtle">{{ getFamilySubtypeNote(inputMode) }}</p>
-              <p class="eyebrow">人格层</p>
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>你怎么称呼这位家人</span>
-                  <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 父母 / 其他家人" />
-                </label>
-                <label class="form-field">
-                  <span>说话风格</span>
-                  <input v-model="formState.speech_style" class="field-input" type="text" placeholder="温和、直接、唠叨一点..." />
-                </label>
-              </div>
-
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>常见口头禅</span>
-                  <textarea v-model="formState.catchphrases" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>难过时会怎么安慰</span>
-                  <textarea v-model="formState.comfort_style" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-              </div>
-
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>好消息时会怎么回应</span>
-                  <textarea v-model="formState.celebration_style" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>有哪些边界或禁忌话题</span>
-                  <textarea v-model="formState.relation_boundaries" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-              </div>
-
-              <p class="eyebrow">记忆层</p>
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>关键共同经历</span>
-                  <textarea v-model="formState.shared_events" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>最常提起的往事</span>
-                  <textarea v-model="formState.daily_habits" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-              </div>
-
-              <div class="form-grid">
-                <label class="form-field">
-                  <span>反复说过的话</span>
-                  <textarea v-model="formState.important_advice" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>她 / 他们最在意你的什么</span>
-                  <textarea v-model="formState.emotional_triggers" class="field-input wizard-textarea" rows="4"></textarea>
-                </label>
-              </div>
-
-              <MaterialInputPanel
-                v-model="familyMaterialState"
-                path-type="family"
-                :subtype="inputMode"
-                :supports-guided-prompts="true"
-              />
-
-              <p v-if="!isReunionPersona" class="eyebrow">补充回忆（可选）</p>
-              <p v-if="!isReunionPersona" class="section-note">
-                没有完整材料也没关系，可以先用几个关键问题补充这段家人关系。
-              </p>
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>你们最常聊什么</span>
-                  <textarea
-                    v-model="formState.guided_most_common_topics"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="比如：吃饭、工作、考试、回家"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>他 / 她最常怎么安慰你</span>
-                  <textarea
-                    v-model="formState.guided_comfort_style"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="比如：先别急、慢慢来、我在呢"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>最像他 / 她的一件小事是什么</span>
-                  <textarea
-                    v-model="formState.guided_most_characteristic_event"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="比如：每天都会提醒你吃饭"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>有哪些反复说过的话</span>
-                  <textarea
-                    v-model="formState.guided_repeated_phrases"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="把常说的话整理成几句"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div v-if="!isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>最常提醒你的是什么</span>
-                  <textarea
-                    v-model="formState.guided_most_common_reminders"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="比如：注意休息、先稳住、别太累"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span>他 / 她最典型的关心方式</span>
-                  <textarea
-                    v-model="formState.guided_care_habits"
-                    class="field-input wizard-textarea"
-                    rows="4"
-                    placeholder="比如：每天问候近况、记得你爱吃什么"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div v-if="isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>回忆方式</span>
-                  <textarea v-model="formState.remembrance_style" class="field-input wizard-textarea" rows="4" placeholder="先慢慢回忆，再一点点靠近"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>聊天记录摘要</span>
-                  <textarea v-model="formState.chat_history_summary" class="field-input wizard-textarea" rows="4" placeholder="把关键聊天记录、信件或日记先整理一下"></textarea>
-                </label>
-              </div>
-
-              <p v-if="isReunionPersona" class="eyebrow">回忆层</p>
-              <div v-if="isReunionPersona" class="form-grid">
-                <label class="form-field">
-                  <span>日记 / 信件</span>
-                  <textarea v-model="formState.diary_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴日记或信件摘录"></textarea>
-                </label>
-                <label class="form-field">
-                  <span>书信文本</span>
-                  <textarea v-model="formState.letter_notes" class="field-input wizard-textarea" rows="4" placeholder="可以直接粘贴信件摘录"></textarea>
-                </label>
-              </div>
-
-              <p v-if="isReunionPersona" class="eyebrow">材料输入层</p>
-              <MaterialInputPanel
-                v-if="isReunionPersona"
-                v-model="reunionMaterialState"
-                path-type="reunion"
-                :supports-guided-prompts="false"
-              />
-
-              <template v-if="isReunionPersona">
-                <p class="eyebrow">补充回忆（可选）</p>
-                <p class="section-note section-note--subtle">
-                  没有完整材料也没关系，可以先用几个安静的问题补充这段重逢记忆。
-                </p>
-                <div class="form-grid">
-                  <label class="form-field">
-                    <span>你最容易在什么场景想起 ta</span>
-                    <textarea
-                      v-model="formState.reunion_guided_recall_scenes"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：路过旧街道、看到某张照片、听到某首歌"
-                    ></textarea>
-                  </label>
-                  <label class="form-field">
-                    <span>ta 最常怎么称呼你</span>
-                    <textarea
-                      v-model="formState.reunion_guided_how_they_addressed_you"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：名字的昵称、熟悉的称呼"
-                    ></textarea>
-                  </label>
+            <div class="self-fill-layout">
+              <section class="self-fill-page">
+                <div class="section-head self-fill-page__head">
+                  <div>
+                    <p class="eyebrow">家人陪伴</p>
+                    <h3>{{ familyFillCurrentPage.title }}</h3>
+                  </div>
+                  <p class="section-note">
+                    第 {{ familyFillPageIndex + 1 }} 页 / {{ familyFlowPages.length }} 页 · 一次只填一项
+                  </p>
                 </div>
 
-                <div class="form-grid">
-                  <label class="form-field">
-                    <span>ta 反复说过的话</span>
-                    <textarea
-                      v-model="formState.reunion_guided_repeated_phrases"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="把常见的话整理出来"
-                    ></textarea>
-                  </label>
-                  <label class="form-field">
-                    <span>哪件小事最像 ta</span>
-                    <textarea
-                      v-model="formState.reunion_guided_most_characteristic_moment"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：某个动作、习惯或回应方式"
-                    ></textarea>
-                  </label>
+                <div class="summary-panel summary-panel--compact self-fill-page__summary">
+                  <h3>{{ familyFillCurrentPage.summary }}</h3>
+                  <p class="state-copy">这一页只填一个信息点，可以随时前后翻页。</p>
                 </div>
 
-                <div class="form-grid">
-                  <label class="form-field">
-                    <span>ta 给你最深的印象是什么</span>
-                    <textarea
-                      v-model="formState.reunion_guided_deepest_impression"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：安静、细心、克制、温柔"
-                    ></textarea>
-                  </label>
-                  <label class="form-field">
-                    <span>ta 最常表达关心的方式</span>
-                    <textarea
-                      v-model="formState.reunion_guided_care_style"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：提醒你吃饭、问你近况、陪你走一段"
-                    ></textarea>
-                  </label>
+                <div class="self-fill-page__toolbar">
+                  <button class="ghost-button ghost-button--small" type="button" :disabled="familyFillPageIndex === 0" @click="goFamilyFillPage(familyFillPageIndex - 1)">
+                    上一步
+                  </button>
+                  <button class="ghost-button ghost-button--small" type="button" :disabled="familyFillPageIndex === familyFlowPages.length - 1" @click="goFamilyFillPage(familyFillPageIndex + 1)">
+                    下一步
+                  </button>
                 </div>
 
-                <div class="form-grid">
-                  <label class="form-field">
-                    <span>哪些提醒最像 ta</span>
-                    <textarea
-                      v-model="formState.reunion_guided_typical_reminders"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：注意休息、慢慢来、先稳住"
-                    ></textarea>
+                <div class="self-fill-page__content">
+                  <label v-if="familyFillCurrentPage.key === 'persona_name'" class="form-field">
+                    <span>你怎么称呼这位家人</span>
+                    <input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：妈妈 / 父母 / 其他家人" />
                   </label>
-                  <label class="form-field">
-                    <span>你最想保留的共同记忆</span>
-                    <textarea
-                      v-model="formState.reunion_guided_most_important_shared_memory"
-                      class="field-input wizard-textarea"
-                      rows="4"
-                      placeholder="例如：一起走过的一段路、某次见面"
-                    ></textarea>
+                  <label v-else-if="familyFillCurrentPage.key === 'speech_style'" class="form-field">
+                    <span>说话风格</span>
+                    <input v-model="formState.speech_style" class="field-input" type="text" placeholder="温和、直接、唠叨一点..." />
                   </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'core_care'" class="form-field">
+                    <span>照顾方式</span>
+                    <textarea v-model="formState.comfort_style" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'shared_events'" class="form-field">
+                    <span>关键共同经历</span>
+                    <textarea v-model="formState.shared_events" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'important_advice'" class="form-field">
+                    <span>反复提过的话</span>
+                    <textarea v-model="formState.important_advice" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'emotional_triggers'" class="form-field">
+                    <span>最在意的点</span>
+                    <textarea v-model="formState.emotional_triggers" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_common_topics'" class="form-field">
+                    <span>你们最常聊什么</span>
+                    <textarea v-model="formState.guided_most_common_topics" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_comfort_style'" class="form-field">
+                    <span>他 / 她最常怎么安慰你</span>
+                    <textarea v-model="formState.guided_comfort_style" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_characteristic_event'" class="form-field">
+                    <span>最像他 / 她的一件小事是什么</span>
+                    <textarea v-model="formState.guided_most_characteristic_event" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_repeated_phrases'" class="form-field">
+                    <span>有哪些反复说过的话</span>
+                    <textarea v-model="formState.guided_repeated_phrases" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_most_common_reminders'" class="form-field">
+                    <span>最常提醒你的是什么</span>
+                    <textarea v-model="formState.guided_most_common_reminders" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <label v-else-if="familyFillCurrentPage.key === 'guided_care_habits'" class="form-field">
+                    <span>他 / 她最典型的关心方式</span>
+                    <textarea v-model="formState.guided_care_habits" class="field-input wizard-textarea" rows="6"></textarea>
+                  </label>
+                  <div v-else-if="familyFillCurrentPage.key === 'materials'" class="self-fill-more">
+                    <MaterialInputPanel v-model="familyMaterialState" path-type="family" :subtype="inputMode" :supports-guided-prompts="true" />
+                  </div>
+                  <div v-else-if="familyFillCurrentPage.key === 'review'" class="self-fill-review-grid">
+                    <article v-for="item in [
+                      { label: '称呼', value: formState.persona_name },
+                      { label: '说话风格', value: formState.speech_style },
+                      { label: '照顾方式', value: formState.comfort_style },
+                      { label: '共同经历', value: formState.shared_events },
+                      { label: '反复提醒', value: formState.important_advice },
+                      { label: '在意点', value: formState.emotional_triggers },
+                      { label: '常聊话题', value: formState.guided_most_common_topics },
+                      { label: '安慰方式', value: formState.guided_comfort_style },
+                      { label: '典型小事', value: formState.guided_most_characteristic_event },
+                      { label: '重复说过的话', value: formState.guided_repeated_phrases },
+                      { label: '常见提醒', value: formState.guided_most_common_reminders },
+                      { label: '关心方式', value: formState.guided_care_habits },
+                    ]" :key="item.label" class="self-fill-review-card">
+                      <div class="self-fill-review-card__head">
+                        <div>
+                          <p class="self-fill-review-card__label">{{ item.label }}</p>
+                          <h4>{{ item.value || '未填写' }}</h4>
+                        </div>
+                        <button
+                          type="button"
+                          class="ghost-button ghost-button--small"
+                          @click="goFamilyFillPageByKey(
+                            item.label === '称呼'
+                              ? 'persona_name'
+                              : item.label === '说话风格'
+                                ? 'speech_style'
+                                : item.label === '照顾方式'
+                                  ? 'core_care'
+                                  : item.label === '共同经历'
+                                    ? 'shared_events'
+                                    : item.label === '反复提醒'
+                                      ? 'important_advice'
+                                      : item.label === '在意点'
+                                        ? 'emotional_triggers'
+                                        : item.label === '常聊话题'
+                                          ? 'guided_most_common_topics'
+                                          : item.label === '安慰方式'
+                                            ? 'guided_comfort_style'
+                                            : item.label === '典型小事'
+                                              ? 'guided_most_characteristic_event'
+                                              : item.label === '重复说过的话'
+                                                ? 'guided_repeated_phrases'
+                                                : item.label === '常见提醒'
+                                                  ? 'guided_most_common_reminders'
+                                                  : 'guided_care_habits'
+                          )"
+                        >
+                          编辑
+                        </button>
+                      </div>
+                      <p class="self-fill-review-card__meta">点击可回到对应页继续修改。</p>
+                    </article>
+                  </div>
                 </div>
-              </template>
+              </section>
             </div>
           </template>
 
