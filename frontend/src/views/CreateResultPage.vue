@@ -107,7 +107,7 @@ const editableDraft = reactive<CreateWizardDraft>({
   emotion_rules: null,
   guided_memory_answers: null,
   self_persona_unified: {
-    create_mode: 'standard',
+    create_mode: 'light',
     input_modes: [],
     materials_summary: '',
     profile_analysis_report: {
@@ -923,6 +923,24 @@ const selfAnalysisReportLines = computed(() => {
   ]
 })
 
+const selfCreateModeLabels: Record<string, string> = {
+  light: '轻量模式',
+  standard: '标准模式',
+  deep: '深度模式',
+}
+
+const selfCreateModeJourneyCopy: Record<string, string> = {
+  light: '先试轻量，确认骨架后再补到标准。',
+  standard: '在轻量基础上补缺口，形成稳定主线。',
+  deep: '在标准基础上再补摘要与验证，拉满深度。',
+}
+
+const selfCreateModeNextStepCopy: Record<string, string> = {
+  light: '下一步建议：继续补到标准',
+  standard: '下一步建议：补到深度',
+  deep: '当前已经是最完整路径',
+}
+
 const selfInterviewLines = computed(() => {
   const unified = selfUnifiedDraft.value
   if (!unified) {
@@ -968,7 +986,7 @@ type SelfUnifiedLayerKey = 'work_system' | 'reply_persona' | 'thinking_dna' | 'm
 function ensureSelfUnifiedDraft() {
   if (!editableDraft.self_persona_unified) {
     editableDraft.self_persona_unified = {
-      create_mode: 'standard',
+      create_mode: 'light',
       input_modes: [],
       materials_summary: '',
       profile_analysis_report: {
@@ -1390,6 +1408,18 @@ onMounted(() => {
           <p class="eyebrow">五步蒸馏链</p>
           <h3>素材收集 → 分析报告 → 追问补洞 → 能力配置 → 生成</h3>
           <div class="family-grid">
+            <div class="family-grid__item">
+              <span>蒸馏档位</span>
+              <strong>{{ selfCreateModeLabels[editableDraft.meta.create_mode || 'standard'] || '标准模式' }}</strong>
+            </div>
+            <div class="family-grid__item">
+              <span>升级路径</span>
+              <strong>{{ selfCreateModeJourneyCopy[editableDraft.meta.create_mode || 'standard'] || '在轻量基础上补缺口，形成稳定主线。' }}</strong>
+            </div>
+            <div class="family-grid__item">
+              <span>下一步</span>
+              <strong>{{ selfCreateModeNextStepCopy[editableDraft.meta.create_mode || 'standard'] || '下一步建议：补到深度' }}</strong>
+            </div>
             <div v-for="line in selfAnalysisReportLines.slice(0, 4)" :key="line.label" class="family-grid__item">
               <span>{{ line.label }}</span>
               <strong>{{ line.value }}</strong>

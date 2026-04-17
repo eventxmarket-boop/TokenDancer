@@ -57,6 +57,13 @@ def _dedupe_questions(questions: list[tuple[str, str, str]]) -> list[tuple[str, 
     return result
 
 
+def _resolve_create_mode(form_data: dict[str, Any]) -> str:
+    mode = _normalize_text(form_data.get("create_mode")) or "standard"
+    if mode not in {"light", "standard", "deep"}:
+        return "standard"
+    return mode
+
+
 def _split_question_answer_line(value: str) -> tuple[str, str]:
     text = _normalize_text(value)
     if not text:
@@ -75,6 +82,7 @@ def build_self_profile_interview_pack(
     if not isinstance(form_data, dict):
         form_data = {}
     analysis_report = analysis_report if isinstance(analysis_report, dict) else {}
+    create_mode = _resolve_create_mode(form_data)
 
     missing_dimensions = list(analysis_report.get("missing_dimensions") or [])
     questions: list[tuple[str, str, str]] = []
@@ -130,8 +138,18 @@ def build_self_profile_interview_pack(
     for question in custom_questions:
         questions.append(("自定义补充", question, "用户自定义追问"))
 
+    if create_mode == "deep":
+        questions.extend(
+            [
+                ("分析摘要", "如果最后只能留一句关于你的总结，你希望那一句是什么？", "补分析摘要"),
+                ("深度验证", "你最希望系统再多验证你哪一个判断习惯？", "补深度验证"),
+                ("动态资料", "如果要继续补全最新变化，你最希望系统先查什么动态资料？", "补动态资料"),
+            ]
+        )
+
     deduped = _dedupe_questions(questions)
-    selected = deduped[:15]
+    max_questions = {"light": 10, "standard": 15, "deep": 18}.get(create_mode, 15)
+    selected = deduped[:max_questions]
 
     answer_text = (
         form_data.get("self_interview_answers_text")
@@ -189,6 +207,28 @@ def build_self_profile_interview_pack(
         )
 
     items = items[:15]
+    if create_mode == "deep" and len(items) < max_questions:
+        extra_questions = [
+            ("分析摘要", "如果最后只能留一句关于你的总结，你希望那一句是什么？", "补分析摘要"),
+            ("深度验证", "你最希望系统再多验证你哪一个判断习惯？", "补深度验证"),
+            ("动态资料", "如果要继续补全最新变化，你最希望系统先查什么动态资料？", "补动态资料"),
+        ]
+        for dimension, question, reason in extra_questions:
+            if len(items) >= max_questions:
+                break
+            if any(_normalize_text(item.get("question")) == _normalize_text(question) for item in items):
+                continue
+            items.append(
+                {
+                    "question": question,
+                    "dimension": dimension,
+                    "reason": reason,
+                    "answer": "",
+                    "follow_up_needed": True,
+                }
+            )
+
+    items = items[:max_questions]
     return {
         "question_count": len(items),
         "answered_count": answered_count,
@@ -199,4 +239,6 @@ def build_self_profile_interview_pack(
             or form_data.get("self_deep_dive_answers_text")
             or form_data.get("deep_dive_answers_text")
         ),
+        "create_mode": create_mode,
+        "depth_label": {"light": "轻量", "standard": "标准", "deep": "深度"}.get(create_mode, "标准"),
     }

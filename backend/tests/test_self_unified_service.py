@@ -75,3 +75,44 @@ class SelfUnifiedServiceTests(unittest.TestCase):
         self.assertIn("问题路由", context)
         self.assertIn("学习 / 技术 / 工具选择", context)
         self.assertIn("回答要求", context)
+
+    def test_create_mode_changes_interview_depth(self):
+        light = build_self_unified_draft(
+            {
+                "name": "我",
+                "create_mode": "light",
+                "work_system_summary": "先看目标。",
+                "reply_persona_summary": "先说结论。",
+                "thinking_dna_summary": "先看条件。",
+                "memory_evidence_summary": "先看材料。",
+                "reflection_rules_summary": "不编造经历。",
+            }
+        )
+        standard = build_self_unified_draft(
+            {
+                "name": "我",
+                "create_mode": "standard",
+                "work_system_summary": "先看目标。",
+                "reply_persona_summary": "先说结论。",
+                "thinking_dna_summary": "先看条件。",
+                "memory_evidence_summary": "先看材料。",
+                "reflection_rules_summary": "不编造经历。",
+            }
+        )
+        deep = build_self_unified_draft(
+            {
+                "name": "我",
+                "create_mode": "deep",
+                "work_system_summary": "先看目标。",
+                "reply_persona_summary": "先说结论。",
+                "thinking_dna_summary": "先看条件。",
+                "memory_evidence_summary": "先看材料。",
+                "reflection_rules_summary": "不编造经历。",
+            }
+        )
+
+        self.assertLessEqual(light["profile_interview"]["question_count"], standard["profile_interview"]["question_count"])
+        self.assertLessEqual(standard["profile_interview"]["question_count"], deep["profile_interview"]["question_count"])
+        self.assertEqual(light["profile_analysis_report"]["depth_label"], "轻量")
+        self.assertEqual(standard["profile_analysis_report"]["depth_label"], "标准")
+        self.assertEqual(deep["profile_analysis_report"]["depth_label"], "深度")

@@ -671,6 +671,8 @@ def build_self_unified_context(persona: dict[str, Any], history: list[dict[str, 
     if not isinstance(payload, dict):
         payload = {}
     route = route_self_question(user_message, persona)
+    create_mode = _normalize_text(payload.get("create_mode")) or "standard"
+    depth_label = {"light": "轻量", "standard": "标准", "deep": "深度"}.get(create_mode, "标准")
     analysis_report = payload.get("profile_analysis_report") or {}
     profile_interview = payload.get("profile_interview") or {}
     self_identity = payload.get("self_identity") or {}
@@ -686,6 +688,7 @@ def build_self_unified_context(persona: dict[str, Any], history: list[dict[str, 
     notes = route.get("notes") or []
 
     parts = [
+        f"蒸馏档位：{depth_label}",
         f"问题路由：{route.get('topic') or '关系 / 情绪 / 自我反思'}",
         f"权重倾向：{layer_summary}" if layer_summary else "",
         f"材料摘要：{materials_summary}" if materials_summary else "",
@@ -702,7 +705,11 @@ def build_self_unified_context(persona: dict[str, Any], history: list[dict[str, 
         parts.append("路由提示：")
         parts.extend(f"- {note}" for note in notes if note)
     parts.append(
-        "回答要求：先给判断，再给理由；动态事实先查知识源；不要编造经历；不确定时先说明缺口。"
+        {
+            "light": "回答要求：先给判断，再给理由；尽量短一点，先保留骨架，动态事实先查知识源；不要编造经历；不确定时先说明缺口。",
+            "standard": "回答要求：先给判断，再给理由；动态事实先查知识源；不要编造经历；不确定时先说明缺口。",
+            "deep": "回答要求：先给判断，再给理由；必要时补充摘要与验证；动态事实先查知识源；不要编造经历；不确定时先说明缺口。",
+        }.get(create_mode, "回答要求：先给判断，再给理由；动态事实先查知识源；不要编造经历；不确定时先说明缺口。")
     )
     return "\n".join(piece for piece in parts if piece).strip()
 
@@ -717,6 +724,8 @@ def format_self_unified_for_prompt(persona: dict[str, Any]) -> str:
         return ""
 
     parts: list[str] = []
+    create_mode = _normalize_text(payload.get("create_mode")) or "standard"
+    depth_label = {"light": "轻量", "standard": "标准", "deep": "深度"}.get(create_mode, "标准")
     profile_analysis_report = payload.get("profile_analysis_report") or {}
     profile_interview = payload.get("profile_interview") or {}
     identity = payload.get("self_identity") or {}
@@ -730,6 +739,7 @@ def format_self_unified_for_prompt(persona: dict[str, Any]) -> str:
         if text:
             parts.append(f"## {title}\n{text}")
 
+    _append_section("蒸馏档位", depth_label)
     _append_section("自我身份层", identity.get("self_positioning") or identity.get("role"))
     _append_section("自我判断层", decision_rules.get("risk_preference"))
     _append_section("自我表达层", voice.get("tone"))
@@ -754,6 +764,7 @@ def format_self_unified_layers(persona: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return {}
     return {
+        "create_mode": payload.get("create_mode") or "standard",
         "profile_analysis_report": payload.get("profile_analysis_report") or {},
         "profile_interview": payload.get("profile_interview") or {},
         "self_identity": payload.get("self_identity") or {},

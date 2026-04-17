@@ -1,5 +1,12 @@
 # Changelog
 
+## V1.4.56 - 2026-04-17
+
+- Turned the self-main depth selector into a real upgrade path from light to standard to deep.
+- Defaulted new self-main starts to light mode so first-time users can try a smaller input surface before upgrading.
+- Tuned the self analysis and follow-up interview runtime so light asks fewer questions, standard keeps the current flow, and deep adds another pass of summary and validation questions.
+- Surfaced the current depth path in both the self wizard and the result page while keeping the embedded self-unified skill mapping intact.
+
 ## V1.4.55 - 2026-04-17
 
 - Reworked the self-main follow-up section into a structured question picker with a modal answer dialog and add/remove entries.

@@ -49,7 +49,7 @@ const step = ref(1)
 const loading = ref(false)
 const error = ref('')
 const createType = ref<CreateType>('self_unified')
-const createMode = ref<SelfCreateMode>('standard')
+const createMode = ref<SelfCreateMode>('light')
 const selfInputModes = ref<string[]>(['manual_profile'])
 const inputMode = ref('')
 const selectedGroup = ref('')
@@ -68,7 +68,7 @@ function normalizeSelfUnifiedDisplayName(value: unknown) {
 
 const formState = reactive({
   name: '',
-  create_mode: 'standard',
+  create_mode: 'light',
   work_system_summary: '',
   work_system_points: '',
   reply_persona_summary: '',
@@ -380,17 +380,17 @@ const selfModeCards = [
   {
     mode: 'light' as const,
     title: '轻量模式',
-    description: '先用表单快速生成一版人格骨架。',
+    description: '先试试看，少量材料就能跑出一版骨架。',
   },
   {
     mode: 'standard' as const,
     title: '标准模式',
-    description: '表单加少量材料，生成更稳的一版结果。',
+    description: '在轻量基础上继续补缺口，形成更稳的主线。',
   },
   {
     mode: 'deep' as const,
     title: '深度模式',
-    description: '表单加材料再加反思层，做更完整的自己。',
+    description: '在标准基础上再补一轮摘要与验证，拉满深度。',
   },
 ]
 
@@ -405,6 +405,18 @@ const selfModeLabels: Record<SelfCreateMode, string> = {
   light: '轻量模式',
   standard: '标准模式',
   deep: '深度模式',
+}
+
+const selfModeJourneyCopy: Record<SelfCreateMode, string> = {
+  light: '先试轻量，确认骨架后再补到标准。',
+  standard: '在轻量基础上补缺口，形成稳定主线。',
+  deep: '在标准基础上再补摘要与验证，拉满深度。',
+}
+
+const selfModeNextStepCopy: Record<SelfCreateMode, string> = {
+  light: '下一步建议：继续补到标准',
+  standard: '下一步建议：补到深度',
+  deep: '当前已经是最完整路径',
 }
 
 const selfInterviewQuestionOptions: SelfInterviewQuestionOption[] = [
@@ -1228,6 +1240,7 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
 
   if (type === 'self_unified') {
     formState.name = displayName || '自我主线'
+    formState.create_mode = mode || 'light'
     formState.work_system_summary = '先放能证明你判断方式的素材。'
     formState.work_system_points = '真实聊天\n长文表达\n项目复盘\n决策记录'
     formState.reply_persona_summary = '把最稳定的自我定位写出来。'
@@ -1344,7 +1357,7 @@ function buildEntryDefaults() {
     createTypeValue === 'self_unified'
       ? getDefaultDisplayNameForType(createTypeValue)
       : rawDisplayName || getDefaultDisplayNameForType(createTypeValue)
-  const createModeValue = readQueryValue('create_mode') as SelfCreateMode || 'standard'
+  const createModeValue = (readQueryValue('create_mode') as SelfCreateMode) || 'light'
   const schemaKeyFromQuery = readQueryValue('schema_key')
   const inputModeFromQuery = readQueryValue('input_mode')
   const sourceRepo = readQueryValue('source_repo') || getDefaultSourceRepoForType(createTypeValue)
@@ -1580,7 +1593,7 @@ function loadStateSnapshot() {
       selfInputModes.value = ['manual_profile']
     }
     if (!createMode.value) {
-      createMode.value = 'standard'
+      createMode.value = 'light'
     }
   }
 
@@ -1651,7 +1664,7 @@ function initializeWizardState() {
 
   step.value = 1
   createType.value = 'self_unified'
-  createMode.value = 'standard'
+  createMode.value = 'light'
   inputMode.value = 'manual_profile'
   selfInputModes.value = ['manual_profile']
   selectedGroup.value = getDefaultGroupForType(createType.value)
@@ -1669,7 +1682,7 @@ function selectType(type: CreateType) {
   selectedSourceRepo.value = getDefaultSourceRepoForType(type)
   selectedName.value = getDefaultDisplayNameForType(type)
   if (type === 'self_unified') {
-    createMode.value = 'standard'
+    createMode.value = 'light'
     inputMode.value = 'manual_profile'
     selfInputModes.value = ['manual_profile']
   } else if (type === 'source_persona') {
@@ -1986,7 +1999,13 @@ watch(
               <h3>{{ isSelfUnified ? '选择深度' : isFamilyCompanion ? (isReunionPersona ? '选择材料' : '选择家人类型') : '选择创建类型' }}</h3>
             </div>
             <p class="section-note">
-              {{ isSelfUnified ? '先选轻量、标准或深度模式。' : isFamilyCompanion ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。') : '先确认你要从哪里开始创建。' }}
+              {{
+                isSelfUnified
+                  ? selfModeJourneyCopy[createMode]
+                  : isFamilyCompanion
+                    ? (isReunionPersona ? '先选聊天记录、文本材料或记忆片段。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。')
+                    : '先确认你要从哪里开始创建。'
+              }}
             </p>
           </div>
 
@@ -2002,6 +2021,12 @@ watch(
               <h4>{{ card.title }}</h4>
               <p>{{ card.description }}</p>
             </button>
+          </div>
+
+          <div v-if="isSelfUnified" class="summary-panel summary-panel--compact self-mode-path-panel">
+            <p class="eyebrow">升级路径</p>
+            <h3>{{ selfModeJourneyCopy[createMode] }}</h3>
+            <p class="state-copy">{{ selfModeNextStepCopy[createMode] }}</p>
           </div>
 
           <div v-else-if="isFamilyCompanion" class="wizard-card-grid wizard-card-grid--three">
@@ -2347,6 +2372,7 @@ watch(
               <p class="eyebrow">自我主线</p>
               <h3>素材收集 → 分析报告 → 追问补洞 → 能力配置 → 生成</h3>
               <p class="state-copy">先把资料池放进来，再生成分析报告和补洞问题，最后再收敛成正式自我主线。</p>
+              <p class="state-copy state-copy--muted">{{ selfModeJourneyCopy[createMode] }} {{ selfModeNextStepCopy[createMode] }}</p>
             </div>
 
             <MaterialInputPanel

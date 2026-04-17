@@ -29,6 +29,13 @@ def _merge_unique_lines(*values: Any) -> list[str]:
     return merged
 
 
+def _resolve_create_mode(form_data: dict[str, Any]) -> str:
+    mode = _normalize_text(form_data.get("create_mode")) or "standard"
+    if mode not in {"light", "standard", "deep"}:
+        return "standard"
+    return mode
+
+
 def _first_nonempty(*values: Any) -> str:
     for value in values:
         text = _normalize_text(value)
@@ -109,6 +116,7 @@ def build_self_profile_analysis_report(
         form_data = {}
     if not isinstance(raw_materials, dict):
         raw_materials = {}
+    create_mode = _resolve_create_mode(form_data)
 
     identity_summary = {
         "role": _first_nonempty(
@@ -226,16 +234,38 @@ def build_self_profile_analysis_report(
         "素材驱动 / 判断优先 / 可持续更新",
     )
 
+    if create_mode == "light":
+        analysis_focus = _first_nonempty(
+            analysis_focus,
+            "先试轻量，先把骨架跑起来",
+        )
+    elif create_mode == "deep":
+        analysis_focus = _first_nonempty(
+            analysis_focus,
+            "补全分析摘要、边界与验证样本",
+        )
+
     report_summary_bits = [
         _first_nonempty(identity_summary.get("role"), identity_summary.get("positioning")),
         core_beliefs[0] if core_beliefs else "",
         expression_style[0] if expression_style else "",
         f"缺口：{' / '.join(missing_dimensions[:4])}" if missing_dimensions else "",
     ]
+    if create_mode == "light":
+        report_summary_bits = report_summary_bits[:3]
+    elif create_mode == "deep":
+        report_summary_bits.extend(
+            [
+                f"来源：{' / '.join(source_snapshot[:4])}" if source_snapshot else "",
+                f"边界：{' / '.join(boundary_notes[:3])}" if boundary_notes else "",
+            ]
+        )
     report_summary = "；".join(bit for bit in report_summary_bits if bit)
 
     return {
         "analysis_focus": analysis_focus,
+        "create_mode": create_mode,
+        "depth_label": {"light": "轻量", "standard": "标准", "deep": "深度"}[create_mode],
         "identity_summary": identity_summary,
         "core_beliefs": core_beliefs,
         "expression_style": expression_style,
