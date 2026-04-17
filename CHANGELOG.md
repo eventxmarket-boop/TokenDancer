@@ -1,3 +1,9 @@
+## V1.4.82 - 2026-04-18
+
+- Added an embedded `我该怎么做` consultation page that maps the Zhouyi AI repo into a single, strip-friendly UI module.
+- Wired the page to the project's backend-configured LLM instead of a separate DeepSeek key flow, keeping the model source consistent with the rest of the app.
+- Embedded the core `周易64卦 / 六爻 / 八字` result flows with a compact AI interpretation layer and kept the feature isolated in its own route and service.
+
 ## V1.4.81 - 2026-04-18
 
 - Aligned reply-corpus admin fields with the reply assistant's object and scene selectors so corpus feeding uses the same vocabulary as the frontend.
