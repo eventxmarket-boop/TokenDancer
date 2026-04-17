@@ -39,6 +39,28 @@ type ThreadTurn = {
   mode?: RewriteMode | 'default'
 }
 
+type ReplyAssistantHistoryRecord = {
+  id: string
+  title: string
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+  turns: ThreadTurn[]
+  draft: string
+  form: {
+    message: string
+    target_person_type: ReplyAssistantTargetType
+    scene_type: ReplyAssistantSceneType
+    target_goal: string
+  }
+  contextFields: {
+    before_chat: string
+    recent_state: string
+    before_after: string
+  }
+  rawMaterials: UniversalCreateWizardRawMaterials
+}
+
 const targetPersonOptions: Array<[ReplyAssistantTargetType, string]> = [
   ['crush', '暧昧对象'],
   ['partner', '伴侣'],
@@ -128,6 +150,9 @@ const turns = ref<ThreadTurn[]>([
     content: '输入一句话，我直接给你可发的回复。',
   },
 ])
+const historyOpen = ref(false)
+const histories = ref<ReplyAssistantHistoryRecord[]>([])
+const activeHistoryId = ref('')
 const contextOpen = ref(false)
 const advancedOpen = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -147,6 +172,338 @@ const attachmentSummary = computed(() => {
   if (imageCount) parts.push(`${imageCount} 图片`)
   return parts.join(' · ')
 })
+
+const historyStorageKey = 'persona-reply-assistant-histories'
+const currentHistoryStorageKey = 'persona-reply-assistant-current-history'
+
+const historyItems = computed(() =>
+  [...histories.value].sort((left, right) => {
+    if (left.pinned !== right.pinned) {
+      return left.pinned ? -1 : 1
+    }
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  }),
+)
+
+function createEmptyHistoryForm() {
+  return {
+    message: '',
+    target_person_type: 'crush' as ReplyAssistantTargetType,
+    scene_type: 'daily' as ReplyAssistantSceneType,
+    target_goal: '更稳妥',
+  }
+}
+
+function createEmptyContextFields() {
+  return {
+    before_chat: '',
+    recent_state: '',
+    before_after: '',
+  }
+}
+
+function cloneRawMaterials(source: UniversalCreateWizardRawMaterials): UniversalCreateWizardRawMaterials {
+  return {
+    ...source,
+    uploaded_text_documents: source.uploaded_text_documents.map((item) => ({ ...item })),
+    uploaded_image_documents: source.uploaded_image_documents.map((item) => ({
+      filename: item.filename,
+      mime_type: item.mime_type,
+      size: item.size,
+      ocr_status: item.ocr_status,
+      ocr_text: item.ocr_text,
+    })),
+    ocr_extracted_texts: source.ocr_extracted_texts.map((item) => ({ ...item })),
+  }
+}
+
+function createEmptyHistoryRecord(): ReplyAssistantHistoryRecord {
+  const now = new Date().toISOString()
+  return {
+    id: createId('reply-history'),
+    title: '新对话',
+    pinned: false,
+    createdAt: now,
+    updatedAt: now,
+    turns: [
+      {
+        id: createId('turn'),
+        role: 'assistant',
+        content: '输入一句话，我直接给你可发的回复。',
+      },
+    ],
+    draft: '',
+    form: createEmptyHistoryForm(),
+    contextFields: createEmptyContextFields(),
+    rawMaterials: createEmptyMaterialState(),
+  }
+}
+
+function normalizeHistoryRecord(record: ReplyAssistantHistoryRecord): ReplyAssistantHistoryRecord {
+  return {
+    ...record,
+    title: normalizeText(record.title) || '未命名会话',
+    turns: Array.isArray(record.turns) && record.turns.length
+      ? record.turns.map((turn) => ({
+          id: normalizeText(turn.id) || createId('turn'),
+          role: turn.role === 'user' ? 'user' : 'assistant',
+          prompt: normalizeText(turn.prompt) || undefined,
+          result: turn.result || null,
+          content: normalizeText(turn.content),
+          mode: turn.mode,
+        }))
+      : createEmptyHistoryRecord().turns,
+    draft: normalizeText(record.draft),
+    form: {
+      message: normalizeText(record.form?.message),
+      target_person_type: record.form?.target_person_type || 'crush',
+      scene_type: record.form?.scene_type || 'daily',
+      target_goal: normalizeText(record.form?.target_goal) || '更稳妥',
+    },
+    contextFields: {
+      before_chat: normalizeText(record.contextFields?.before_chat),
+      recent_state: normalizeText(record.contextFields?.recent_state),
+      before_after: normalizeText(record.contextFields?.before_after),
+    },
+    rawMaterials: {
+      ...createEmptyMaterialState(),
+      ...record.rawMaterials,
+      uploaded_text_documents: Array.isArray(record.rawMaterials?.uploaded_text_documents)
+        ? record.rawMaterials.uploaded_text_documents.map((item) => ({
+            filename: normalizeText(item.filename),
+            content: normalizeText(item.content),
+          })).filter((item) => item.filename || item.content)
+        : [],
+      uploaded_image_documents: Array.isArray(record.rawMaterials?.uploaded_image_documents)
+        ? record.rawMaterials.uploaded_image_documents.map((item) => ({
+            filename: normalizeText(item.filename),
+            mime_type: normalizeText(item.mime_type) || 'image/*',
+            size: Number(item.size) || 0,
+            ocr_status: normalizeText(item.ocr_status) || '待识别',
+            ocr_text: normalizeText(item.ocr_text),
+          }))
+        : [],
+      ocr_extracted_texts: Array.isArray(record.rawMaterials?.ocr_extracted_texts)
+        ? record.rawMaterials.ocr_extracted_texts.map((item) => ({
+            filename: normalizeText(item.filename),
+            mime_type: normalizeText(item.mime_type) || 'image/*',
+            size: Number(item.size) || 0,
+            ocr_status: normalizeText(item.ocr_status) || '待识别',
+            ocr_text: normalizeText(item.ocr_text),
+          }))
+        : [],
+    },
+  }
+}
+
+function loadHistories() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    const raw = window.localStorage.getItem(historyStorageKey)
+    if (!raw) {
+      histories.value = []
+      return
+    }
+    const parsed = JSON.parse(raw) as ReplyAssistantHistoryRecord[]
+    histories.value = Array.isArray(parsed) ? parsed.map(normalizeHistoryRecord) : []
+  } catch {
+    histories.value = []
+  }
+}
+
+function saveHistories() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(historyStorageKey, JSON.stringify(histories.value.slice(0, 20)))
+}
+
+function saveCurrentHistoryId(value: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  if (value) {
+    window.localStorage.setItem(currentHistoryStorageKey, value)
+  } else {
+    window.localStorage.removeItem(currentHistoryStorageKey)
+  }
+}
+
+function loadCurrentHistoryId() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  return window.localStorage.getItem(currentHistoryStorageKey) || ''
+}
+
+function syncCurrentHistory(record: ReplyAssistantHistoryRecord) {
+  const index = histories.value.findIndex((item) => item.id === record.id)
+  if (index >= 0) {
+    histories.value.splice(index, 1, record)
+  } else {
+    histories.value.unshift(record)
+  }
+  saveHistories()
+  activeHistoryId.value = record.id
+  saveCurrentHistoryId(record.id)
+}
+
+function updateHistoryById(
+  id: string,
+  updater: (record: ReplyAssistantHistoryRecord) => ReplyAssistantHistoryRecord,
+) {
+  const index = histories.value.findIndex((item) => item.id === id)
+  if (index < 0) {
+    return null
+  }
+  const next = updater(normalizeHistoryRecord(histories.value[index]))
+  histories.value.splice(index, 1, next)
+  saveHistories()
+  return next
+}
+
+function snapshotCurrentHistory() {
+  const record = histories.value.find((item) => item.id === activeHistoryId.value) || createEmptyHistoryRecord()
+  return normalizeHistoryRecord({
+    ...record,
+    id: activeHistoryId.value || record.id,
+    title: record.title || '新对话',
+    updatedAt: new Date().toISOString(),
+    turns: turns.value.map((turn) => ({
+      id: turn.id,
+      role: turn.role,
+      prompt: turn.prompt,
+      result: turn.result || null,
+      content: turn.content,
+      mode: turn.mode,
+    })),
+    draft: form.message,
+    form: {
+      message: form.message,
+      target_person_type: form.target_person_type,
+      scene_type: form.scene_type,
+      target_goal: form.target_goal,
+    },
+    contextFields: {
+      before_chat: contextFields.before_chat,
+      recent_state: contextFields.recent_state,
+      before_after: contextFields.before_after,
+    },
+    rawMaterials: cloneRawMaterials(rawMaterials.value),
+  })
+}
+
+function persistConversation() {
+  const current = snapshotCurrentHistory()
+  syncCurrentHistory({
+    ...current,
+    title: normalizeText(current.title) || makeHistoryTitle(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+function makeHistoryTitle() {
+  const prompt = normalizeText(lastPrompt.value || form.message || turns.value.find((item) => item.role === 'user')?.content || '')
+  if (!prompt) {
+    return '新对话'
+  }
+  return prompt.length > 16 ? `${prompt.slice(0, 16)}…` : prompt
+}
+
+function startNewConversation() {
+  activeHistoryId.value = ''
+  saveCurrentHistoryId('')
+  historyOpen.value = false
+  result.value = null
+  error.value = ''
+  loading.value = false
+  form.message = ''
+  form.target_person_type = 'crush'
+  form.scene_type = 'daily'
+  form.target_goal = '更稳妥'
+  contextFields.before_chat = ''
+  contextFields.recent_state = ''
+  contextFields.before_after = ''
+  rawMaterials.value = createEmptyMaterialState()
+  turns.value = [
+    {
+      id: createId('turn'),
+      role: 'assistant',
+      content: '输入一句话，我直接给你可发的回复。',
+    },
+  ]
+}
+
+function openHistory(record: ReplyAssistantHistoryRecord) {
+  activeHistoryId.value = record.id
+  saveCurrentHistoryId(record.id)
+  form.message = record.form.message
+  form.target_person_type = record.form.target_person_type
+  form.scene_type = record.form.scene_type
+  form.target_goal = record.form.target_goal
+  contextFields.before_chat = record.contextFields.before_chat
+  contextFields.recent_state = record.contextFields.recent_state
+  contextFields.before_after = record.contextFields.before_after
+  rawMaterials.value = cloneRawMaterials(record.rawMaterials)
+  turns.value = record.turns.length
+    ? record.turns.map((turn) => ({
+        id: turn.id,
+        role: turn.role,
+        prompt: turn.prompt,
+        result: turn.result || null,
+        content: turn.content,
+        mode: turn.mode,
+      }))
+    : [
+        {
+          id: createId('turn'),
+          role: 'assistant',
+          content: '输入一句话，我直接给你可发的回复。',
+        },
+      ]
+  historyOpen.value = false
+}
+
+function togglePin(record: ReplyAssistantHistoryRecord) {
+  updateHistoryById(record.id, (current) => ({
+    ...current,
+    pinned: !current.pinned,
+    updatedAt: new Date().toISOString(),
+  }))
+}
+
+function renameHistory(record: ReplyAssistantHistoryRecord) {
+  const nextTitle = window.prompt('重命名对话', record.title)
+  if (nextTitle === null) {
+    return
+  }
+  const title = normalizeText(nextTitle) || record.title
+  const index = histories.value.findIndex((item) => item.id === record.id)
+  if (index < 0) {
+    return
+  }
+  histories.value.splice(index, 1, {
+    ...record,
+    title,
+    updatedAt: new Date().toISOString(),
+  })
+  saveHistories()
+}
+
+function deleteHistory(record: ReplyAssistantHistoryRecord) {
+  const confirmed = window.confirm('删除后无法找回，是否继续？')
+  if (!confirmed) {
+    return
+  }
+  histories.value = histories.value.filter((item) => item.id !== record.id)
+  if (activeHistoryId.value === record.id) {
+    startNewConversation()
+  }
+  saveHistories()
+}
 
 function buildCurrentContext() {
   return [contextFields.before_chat, contextFields.recent_state, contextFields.before_after].filter(Boolean).join('\n')
@@ -344,6 +701,8 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
     if (rewriteMode === 'default') {
       form.message = ''
     }
+    persistConversation()
+    result.value = nextResult
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '生成回复建议失败'
     result.value = null
@@ -351,10 +710,62 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
     loading.value = false
   }
 }
+
+loadHistories()
+activeHistoryId.value = loadCurrentHistoryId()
+if (activeHistoryId.value) {
+  const current = histories.value.find((item) => item.id === activeHistoryId.value)
+  if (current) {
+    openHistory(current)
+  }
+}
 </script>
 
 <template>
   <section class="section-card reply-shell">
+    <button class="reply-history-toggle" type="button" aria-label="查看历史对话" @click="historyOpen = !historyOpen">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <transition name="fade">
+      <aside v-if="historyOpen" class="reply-history-panel">
+        <div class="reply-history-panel__head">
+          <button class="ghost-button ghost-button--small" type="button" @click="startNewConversation">新对话</button>
+          <button class="ghost-button ghost-button--small" type="button" @click="historyOpen = false">关闭</button>
+        </div>
+        <div class="reply-history-list">
+          <article
+            v-for="item in historyItems"
+            :key="item.id"
+            class="reply-history-item"
+            :class="{ 'reply-history-item--active': item.id === activeHistoryId }"
+            @click="openHistory(item)"
+          >
+            <div class="reply-history-item__main">
+              <div class="reply-history-item__title-row">
+                <h4>{{ item.title }}</h4>
+                <span v-if="item.pinned" class="reply-history-item__pin">置顶</span>
+              </div>
+              <p>{{ item.updatedAt.slice(0, 19).replace('T', ' ') }}</p>
+            </div>
+            <div class="reply-history-item__actions">
+              <button type="button" class="ghost-button ghost-button--small" @click.stop="togglePin(item)">
+                {{ item.pinned ? '取消置顶' : '置顶' }}
+              </button>
+              <button type="button" class="ghost-button ghost-button--small" @click.stop="renameHistory(item)">
+                重命名
+              </button>
+              <button type="button" class="ghost-button ghost-button--small" @click.stop="deleteHistory(item)">
+                删除
+              </button>
+            </div>
+          </article>
+        </div>
+      </aside>
+    </transition>
+
     <div class="reply-thread">
       <article v-for="turn in turns" :key="turn.id" class="reply-turn" :class="`reply-turn--${turn.role}`">
         <div v-if="turn.role === 'assistant'" class="reply-turn__meta">
@@ -370,11 +781,11 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
         <template v-else>
           <div v-if="turn.result" class="reply-answer-grid">
             <article class="reply-answer-card">
-              <p class="reply-answer-card__label">一句判断</p>
+              <p class="reply-answer-card__label">基础判断</p>
               <h3>{{ turn.result.judgment || '先输入内容。' }}</h3>
             </article>
             <article class="reply-answer-card reply-answer-card--main">
-              <p class="reply-answer-card__label">主推荐回复</p>
+              <p class="reply-answer-card__label">推荐回复</p>
               <h3>{{ turn.result.recommended_reply || '这里显示可发送回复。' }}</h3>
               <div class="rewrite-actions">
                 <button
@@ -390,11 +801,11 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
               </div>
             </article>
             <article class="reply-answer-card">
-              <p class="reply-answer-card__label">一句风险提示</p>
+              <p class="reply-answer-card__label">小提示</p>
               <p>{{ turn.result.risk_note || '这里显示风险。' }}</p>
             </article>
             <article class="reply-answer-card">
-              <p class="reply-answer-card__label">一句可能后果</p>
+              <p class="reply-answer-card__label">回复推测</p>
               <p>{{ turn.result.likely_consequence || '这里显示走向。' }}</p>
             </article>
           </div>
@@ -564,9 +975,120 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 
 <style scoped>
 .reply-shell {
+  position: relative;
   display: grid;
   gap: 1rem;
   padding-bottom: 1.2rem;
+  padding-top: 3rem;
+}
+
+.reply-history-toggle {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  z-index: 6;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.23rem;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(127, 140, 172, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(32, 40, 60, 0.08);
+}
+
+.reply-history-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: var(--text);
+}
+
+.reply-history-panel {
+  position: absolute;
+  top: 3.8rem;
+  left: 0.9rem;
+  z-index: 5;
+  width: min(340px, calc(100vw - 1.8rem));
+  padding: 0.9rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 50px rgba(24, 32, 57, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.reply-history-panel__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.reply-history-list {
+  display: grid;
+  gap: 0.6rem;
+  max-height: min(58vh, 520px);
+  overflow: auto;
+}
+
+.reply-history-item {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.94);
+  text-align: left;
+}
+
+.reply-history-item--active {
+  border-color: rgba(96, 110, 220, 0.32);
+  background: rgba(242, 245, 255, 0.98);
+}
+
+.reply-history-item__main h4,
+.reply-history-item__main p {
+  margin: 0;
+}
+
+.reply-history-item__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.reply-history-item__main h4 {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.reply-history-item__main p {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.reply-history-item__pin {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  background: rgba(96, 110, 220, 0.12);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.reply-history-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .reply-thread {
@@ -791,6 +1313,14 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 }
 
 @media (max-width: 980px) {
+  .reply-shell {
+    padding-top: 3.6rem;
+  }
+
+  .reply-history-panel {
+    width: calc(100vw - 1.8rem);
+  }
+
   .reply-answer-grid,
   .reply-drawer__grid {
     grid-template-columns: 1fr;

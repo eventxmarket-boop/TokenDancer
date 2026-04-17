@@ -1,3 +1,9 @@
+## V1.4.75 - 2026-04-18
+
+- Renamed the four reply output labels to match the simplified chat flow.
+- Added a compact left-corner history drawer with pin, rename, and delete actions.
+- Kept reply history local to the page so past conversations can be reopened quickly.
+
 ## V1.4.74 - 2026-04-18
 
 - Removed the remaining top-facing labels from `我该怎么回` so the page opens straight into the conversation window.
