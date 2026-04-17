@@ -368,6 +368,10 @@ def _make_rng(*parts: Any) -> random.Random:
     return random.Random(_stable_seed(*parts))
 
 
+def _true_random_line_value() -> int:
+    return random.SystemRandom().choice([6, 7, 8, 9])
+
+
 def _sexagenary_name(index: int) -> str:
     return f"{STEMS[index % 10]}{BRANCHES[index % 12]}"
 
@@ -554,15 +558,14 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
             if position <= len(manual_lines) and manual_lines[position - 1] in {6, 7, 8, 9}:
                 value = manual_lines[position - 1]
             else:
-                value = rng.choice([6, 7, 8, 9])
+                value = _true_random_line_value()
         elif cast_mode == "character":
             base = sum(ord(ch) for ch in source_text or question or seed) + position * 17
             value = [6, 7, 8, 9][base % 4]
         elif cast_mode == "taiji":
-            base = _stable_seed("taiji", seed, question, position, source_text)
-            value = [6, 7, 8, 9][base % 4]
+            value = _true_random_line_value()
         else:
-            value = rng.choice([6, 7, 8, 9])
+            value = _true_random_line_value()
         is_yang = value in {7, 9}
         is_changing = value in {6, 9}
         lines.append(

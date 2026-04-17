@@ -1,3 +1,8 @@
+## V1.4.101 - 2026-04-18
+
+- Switched liu-yao random casting to true system randomness so repeated casts no longer reuse a seed-derived pseudo-random result.
+- Kept `cast_seed` only as the displayed cast time input while leaving manual input and the rest of the board logic unchanged.
+
 ## V1.4.100 - 2026-04-18
 
 - Adjusted each liu-yao row to horizontal layout so entries now read like `父母甲巳 ▅ ▅`.
