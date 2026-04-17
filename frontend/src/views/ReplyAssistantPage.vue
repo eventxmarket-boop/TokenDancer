@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import MaterialInputPanel from '@/components/shared/MaterialInputPanel.vue'
+import { computed, reactive, ref } from 'vue'
 import { requestReplyAssistant, type ReplyAssistantResponse } from '@/services/replyAssistantService'
-import type { UniversalCreateWizardRawMaterials } from '@/services/createWizardService'
+import type {
+  TextMaterialDocument,
+  UniversalCreateWizardRawMaterials,
+} from '@/services/createWizardService'
 
 type ReplyAssistantTargetType =
   | 'crush'
@@ -27,6 +29,15 @@ type ReplyAssistantSceneType =
   | 'repair'
 
 type RewriteMode = 'alt' | 'soft' | 'boundary' | 'formal' | 'short'
+
+type ThreadTurn = {
+  id: string
+  role: 'user' | 'assistant'
+  prompt?: string
+  result?: ReplyAssistantResponse | null
+  content: string
+  mode?: RewriteMode | 'default'
+}
 
 const targetPersonOptions: Array<[ReplyAssistantTargetType, string]> = [
   ['crush', '暧昧对象'],
@@ -84,36 +95,255 @@ function createEmptyMaterialState(): UniversalCreateWizardRawMaterials {
   }
 }
 
+function createId(prefix: string) {
+  const fallback = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}-${crypto.randomUUID()}`
+  }
+  return fallback
+}
+
 const form = reactive({
   message: '',
-  current_context: '',
   target_person_type: 'crush' as ReplyAssistantTargetType,
   scene_type: 'daily' as ReplyAssistantSceneType,
   target_goal: '更稳妥',
-  conversation_context: '',
+})
+
+const contextFields = reactive({
+  before_chat: '',
+  recent_state: '',
+  before_after: '',
 })
 
 const rawMaterials = ref<UniversalCreateWizardRawMaterials>(createEmptyMaterialState())
 const loading = ref(false)
 const error = ref('')
 const result = ref<ReplyAssistantResponse | null>(null)
+const lastPrompt = ref('')
+const turns = ref<ThreadTurn[]>([
+  {
+    id: createId('turn'),
+    role: 'assistant',
+    content: '输入一句话，我直接给你可发的回复。',
+  },
+])
+const contextOpen = ref(false)
+const advancedOpen = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const imageInputRef = ref<HTMLInputElement | null>(null)
+
+const targetPersonLabel = computed(
+  () => targetPersonOptions.find(([value]) => value === form.target_person_type)?.[1] || '',
+)
+const sceneLabel = computed(() => sceneOptions.find(([value]) => value === form.scene_type)?.[1] || '')
+
+const attachmentSummary = computed(() => {
+  const fileCount = rawMaterials.value.uploaded_text_documents.length
+  const imageCount = rawMaterials.value.uploaded_image_documents.length
+  if (!fileCount && !imageCount) return ''
+  const parts = []
+  if (fileCount) parts.push(`${fileCount} 文件`)
+  if (imageCount) parts.push(`${imageCount} 图片`)
+  return parts.join(' · ')
+})
+
+function buildCurrentContext() {
+  return [contextFields.before_chat, contextFields.recent_state, contextFields.before_after].filter(Boolean).join('\n')
+}
+
+function buildConversationContext() {
+  const advancedText = [rawMaterials.value.chat_history_text, rawMaterials.value.memory_notes_text, rawMaterials.value.text_materials_text]
+    .filter(Boolean)
+    .join('\n')
+  const extras = [rawMaterials.value.image_notes_text, rawMaterials.value.voice_notes_text, rawMaterials.value.recent_context_text]
+    .filter(Boolean)
+    .join('\n')
+  return [advancedText, extras].filter(Boolean).join('\n')
+}
+
+function buildThreadContext() {
+  return [
+    `对方：${targetPersonLabel.value}`,
+    `场景：${sceneLabel.value}`,
+    `目标：${form.target_goal.trim()}`,
+    buildCurrentContext(),
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function pushUserTurn(prompt: string) {
+  turns.value.push({
+    id: createId('user'),
+    role: 'user',
+    prompt,
+    content: prompt,
+  })
+}
+
+function pushAssistantTurn(prompt: string, response: ReplyAssistantResponse, mode: ThreadTurn['mode']) {
+  const parts = [
+    response.judgment,
+    response.recommended_reply,
+    response.risk_note,
+    response.likely_consequence,
+  ].filter(Boolean)
+  turns.value.push({
+    id: createId('assistant'),
+    role: 'assistant',
+    prompt,
+    result: response,
+    mode,
+    content: parts.join('\n'),
+  })
+}
+
+function normalizeText(value: unknown) {
+  return String(value || '').trim()
+}
+
+function isTextFile(file: File) {
+  if (file.type && (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/csv')) {
+    return true
+  }
+  return /\.(txt|md|csv)$/i.test(file.name)
+}
+
+function isImageFile(file: File) {
+  if (file.type && file.type.startsWith('image/')) {
+    return true
+  }
+  return /\.(jpg|jpeg|png|webp)$/i.test(file.name)
+}
+
+function guessImageMimeType(file: File) {
+  if (file.type && file.type.startsWith('image/')) {
+    return file.type
+  }
+  if (/\.jpe?g$/i.test(file.name)) {
+    return 'image/jpeg'
+  }
+  if (/\.png$/i.test(file.name)) {
+    return 'image/png'
+  }
+  if (/\.webp$/i.test(file.name)) {
+    return 'image/webp'
+  }
+  return 'image/*'
+}
+
+async function readFileAsText(file: File) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error(`读取文件失败：${file.name}`))
+    reader.readAsText(file)
+  })
+}
+
+async function readFileAsDataUrl(file: File) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error(`读取图片失败：${file.name}`))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleTextFiles(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const files = Array.from(target?.files || []).filter(isTextFile)
+  if (!files.length) {
+    if (target) target.value = ''
+    return
+  }
+
+  const documents = await Promise.all(
+    files.map(async (file) => {
+      const content = normalizeText(await readFileAsText(file))
+      return content ? { filename: file.name, content } : null
+    }),
+  )
+
+  const validDocuments = documents.filter(Boolean) as TextMaterialDocument[]
+  rawMaterials.value.uploaded_text_documents = [...rawMaterials.value.uploaded_text_documents, ...validDocuments]
+  const appended = validDocuments.map((item) => item.content).filter(Boolean).join('\n')
+  if (appended) {
+    rawMaterials.value.text_materials_text = [rawMaterials.value.text_materials_text, appended].filter(Boolean).join('\n')
+  }
+  if (target) target.value = ''
+}
+
+async function handleImageFiles(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  const files = Array.from(target?.files || []).filter(isImageFile)
+  if (!files.length) {
+    if (target) target.value = ''
+    return
+  }
+
+  const documents = await Promise.all(
+    files.map(async (file) => ({
+      filename: file.name,
+      mime_type: guessImageMimeType(file),
+      size: file.size,
+      data_url: await readFileAsDataUrl(file),
+      ocr_status: '待识别',
+      ocr_text: '',
+    })),
+  )
+
+  rawMaterials.value.uploaded_image_documents = [...rawMaterials.value.uploaded_image_documents, ...documents]
+  if (target) target.value = ''
+}
+
+function triggerTextUpload() {
+  fileInputRef.value?.click()
+}
+
+function triggerImageUpload() {
+  imageInputRef.value?.click()
+}
+
+function removeTextDocument(index: number) {
+  rawMaterials.value.uploaded_text_documents = rawMaterials.value.uploaded_text_documents.filter((_, itemIndex) => itemIndex !== index)
+}
+
+function removeImageDocument(index: number) {
+  rawMaterials.value.uploaded_image_documents = rawMaterials.value.uploaded_image_documents.filter((_, itemIndex) => itemIndex !== index)
+}
 
 async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
+  const prompt = rewriteMode === 'default' ? form.message.trim() : (lastPrompt.value || form.message.trim())
+  if (!prompt) {
+    return
+  }
+
   loading.value = true
   error.value = ''
 
   try {
-    result.value = await requestReplyAssistant({
-      message: form.message,
+    if (rewriteMode === 'default') {
+      pushUserTurn(prompt)
+      lastPrompt.value = prompt
+    }
+    const nextResult = await requestReplyAssistant({
+      message: prompt,
       target_person_type: form.target_person_type,
-      target_person_label: targetPersonOptions.find(([value]) => value === form.target_person_type)?.[1] || '',
+      target_person_label: targetPersonLabel.value,
       scene_type: form.scene_type,
-      current_context: form.current_context,
+      current_context: buildThreadContext(),
       target_goal: form.target_goal,
-      conversation_context: form.conversation_context,
+      conversation_context: buildConversationContext(),
       rewrite_mode: rewriteMode,
       raw_materials: rawMaterials.value,
     })
+    result.value = nextResult
+    pushAssistantTurn(prompt, nextResult, rewriteMode)
+    if (rewriteMode === 'default') {
+      form.message = ''
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '生成回复建议失败'
     result.value = null
@@ -126,214 +356,473 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 <template>
   <section class="page-hero page-hero--single reply-assistant-hero">
     <div class="hero-copy">
-      <p class="eyebrow">回复助手</p>
       <h1>我该怎么回</h1>
-      <p class="hero-text">直接贴消息，系统只给你能直接发的结果，不展示内部分析过程。</p>
     </div>
-    <div class="hero-actions">
-      <RouterLink class="secondary-btn" to="/reply-assistant">回入口页</RouterLink>
-    </div>
+    <RouterLink class="text-link" to="/reply-assistant">入口</RouterLink>
   </section>
 
-  <section class="section-card reply-assistant-workbench">
-    <div class="reply-assistant-layout">
-      <div class="reply-assistant-column">
-        <article class="wizard-stage">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">输入区</p>
-              <h3>对方发来的内容</h3>
-            </div>
-            <p class="section-note">贴一句话就能用，也可以把整段聊天一起放进来。</p>
+  <section class="section-card reply-shell">
+    <div class="reply-thread">
+      <article v-for="turn in turns" :key="turn.id" class="reply-turn" :class="`reply-turn--${turn.role}`">
+        <div class="reply-turn__meta">
+          <span class="reply-turn__tag">{{ turn.role === 'user' ? '我' : '助手' }}</span>
+          <span v-if="turn.mode && turn.role === 'assistant' && turn.mode !== 'default'" class="reply-turn__mode">
+            {{ rewriteButtons.find((item) => item.mode === turn.mode)?.label || '重写' }}
+          </span>
+        </div>
+
+        <template v-if="turn.role === 'user'">
+          <p class="reply-turn__text">{{ turn.content }}</p>
+        </template>
+
+        <template v-else>
+          <div v-if="turn.result" class="reply-answer-grid">
+            <article class="reply-answer-card">
+              <p class="reply-answer-card__label">一句判断</p>
+              <h3>{{ turn.result.judgment || '先输入内容。' }}</h3>
+            </article>
+            <article class="reply-answer-card reply-answer-card--main">
+              <p class="reply-answer-card__label">主推荐回复</p>
+              <h3>{{ turn.result.recommended_reply || '这里显示可发送回复。' }}</h3>
+              <div class="rewrite-actions">
+                <button
+                  v-for="item in rewriteButtons"
+                  :key="item.mode"
+                  class="chip-btn"
+                  type="button"
+                  :disabled="loading || !(form.message.trim() || lastPrompt)"
+                  @click="generateReply(item.mode)"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+            </article>
+            <article class="reply-answer-card">
+              <p class="reply-answer-card__label">一句风险提示</p>
+              <p>{{ turn.result.risk_note || '这里显示风险。' }}</p>
+            </article>
+            <article class="reply-answer-card">
+              <p class="reply-answer-card__label">一句可能后果</p>
+              <p>{{ turn.result.likely_consequence || '这里显示走向。' }}</p>
+            </article>
           </div>
+          <p v-else class="reply-turn__text">{{ turn.content }}</p>
+        </template>
+      </article>
 
-          <label class="form-field">
-            <span>对方原话 / 聊天内容</span>
-            <textarea
-              v-model="form.message"
-              class="field-input reply-assistant-textarea"
-              rows="6"
-              placeholder="把对方发来的原话贴在这里，支持多行聊天内容"
-            ></textarea>
-          </label>
+      <article v-if="loading" class="reply-turn reply-turn--assistant">
+        <div class="reply-turn__meta">
+          <span class="reply-turn__tag">助手</span>
+        </div>
+        <p class="reply-turn__text">生成中…</p>
+      </article>
+    </div>
 
-          <label class="form-field">
-            <span>补充上下文</span>
-            <textarea
-              v-model="form.current_context"
-              class="field-input reply-assistant-textarea"
-              rows="4"
-              placeholder="比如：前面在聊什么、你们最近什么状态、这句话前后发生了什么"
-            ></textarea>
-          </label>
-
-          <div class="form-grid">
-            <label class="form-field">
-              <span>对方是什么人</span>
-              <select v-model="form.target_person_type" class="field-input">
-                <option v-for="[value, label] in targetPersonOptions" :key="value" :value="value">
-                  {{ label }}
-                </option>
-              </select>
-            </label>
-            <label class="form-field">
-              <span>当前场景</span>
-              <select v-model="form.scene_type" class="field-input">
-                <option v-for="[value, label] in sceneOptions" :key="value" :value="value">
-                  {{ label }}
-                </option>
-              </select>
-            </label>
-          </div>
-
-          <label class="form-field">
-            <span>你的目标</span>
-            <textarea
-              v-model="form.target_goal"
-              class="field-input reply-assistant-textarea"
-              rows="4"
-              placeholder="例如：更自然、更正式、更有边界、更推进、更克制"
-            ></textarea>
-          </label>
-
-          <div class="hero-actions reply-assistant-actions">
-            <button class="primary-btn" type="button" :disabled="loading || !form.message.trim()" @click="generateReply()">
-              {{ loading ? '生成中…' : '生成回复建议' }}
-            </button>
-          </div>
-
-          <details class="advanced-panel">
-            <summary>高级补充材料（可选）</summary>
-            <div class="advanced-panel__body">
-              <label class="form-field">
-                <span>多轮聊天 / 额外上下文</span>
-                <textarea
-                  v-model="form.conversation_context"
-                  class="field-input reply-assistant-textarea"
-                  rows="4"
-                  placeholder="把前后聊天一起贴进来，系统会一起看"
-                ></textarea>
-              </label>
-
-              <MaterialInputPanel
-                v-model="rawMaterials"
-                path-type="relationship"
-                :supports-guided-prompts="false"
-              />
-            </div>
-          </details>
-
-          <div v-if="error" class="state-panel">
-            <p class="eyebrow">生成失败</p>
-            <h3>回复建议暂时生成失败</h3>
-            <p class="state-copy">{{ error }}</p>
-          </div>
-        </article>
+    <div class="reply-composer">
+      <div class="reply-composer__chips">
+        <button class="reply-chip" type="button" @click="contextOpen = !contextOpen">+</button>
+        <button class="reply-chip" type="button" @click="triggerTextUpload">📄</button>
+        <button class="reply-chip" type="button" @click="triggerImageUpload">🖼</button>
+        <button class="reply-chip" type="button" @click="advancedOpen = !advancedOpen">高级</button>
+        <span v-if="attachmentSummary" class="reply-chip reply-chip--ghost">{{ attachmentSummary }}</span>
       </div>
 
-      <div class="reply-assistant-column reply-assistant-column--output">
-        <article class="summary-panel">
-          <p class="eyebrow">一句判断</p>
-          <h3>{{ result?.judgment || '先输入内容，再生成一句判断。' }}</h3>
-        </article>
+      <div class="reply-composer__row">
+        <label class="reply-select">
+          <span>对方</span>
+          <select v-model="form.target_person_type" class="field-input field-input--compact">
+            <option v-for="[value, label] in targetPersonOptions" :key="value" :value="value">
+              {{ label }}
+            </option>
+          </select>
+        </label>
+        <label class="reply-select">
+          <span>场景</span>
+          <select v-model="form.scene_type" class="field-input field-input--compact">
+            <option v-for="[value, label] in sceneOptions" :key="value" :value="value">
+              {{ label }}
+            </option>
+          </select>
+        </label>
+      </div>
 
-        <article class="summary-panel">
-          <p class="eyebrow">主推荐回复</p>
-          <div class="reply-main">
-            <p class="state-copy">{{ result?.recommended_reply || '这里会显示一条能直接复制发送的回复。' }}</p>
+      <label class="reply-input">
+        <textarea
+          v-model="form.message"
+          class="field-input reply-input__textarea"
+          rows="4"
+          placeholder="把对方的话贴在这里，直接生成回复"
+          @keydown.meta.enter.exact.prevent="generateReply()"
+          @keydown.ctrl.enter.exact.prevent="generateReply()"
+        ></textarea>
+      </label>
+
+      <div class="reply-composer__footer">
+        <div class="reply-composer__attach">
+          <input ref="fileInputRef" class="reply-hidden-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" multiple @change="handleTextFiles" />
+          <input ref="imageInputRef" class="reply-hidden-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" capture="environment" multiple @change="handleImageFiles" />
+        </div>
+        <button class="primary-btn" type="button" :disabled="loading || !form.message.trim()" @click="generateReply()">
+          {{ loading ? '生成中…' : '发送' }}
+        </button>
+      </div>
+
+      <transition name="fade">
+        <div v-if="contextOpen" class="reply-drawer">
+          <div class="reply-drawer__grid">
+            <label class="form-field">
+              <span>前面在聊什么</span>
+              <textarea v-model="contextFields.before_chat" class="field-input reply-drawer__textarea" rows="3"></textarea>
+            </label>
+            <label class="form-field">
+              <span>最近什么状态</span>
+              <textarea v-model="contextFields.recent_state" class="field-input reply-drawer__textarea" rows="3"></textarea>
+            </label>
+            <label class="form-field">
+              <span>这句话前后发生了什么</span>
+              <textarea v-model="contextFields.before_after" class="field-input reply-drawer__textarea" rows="3"></textarea>
+            </label>
+            <label class="form-field reply-drawer__span-2">
+              <span>你的目标</span>
+              <textarea
+                v-model="form.target_goal"
+                class="field-input reply-drawer__textarea"
+                rows="3"
+                placeholder="更自然 / 更正式 / 更有边界 / 更推进 / 更克制"
+              ></textarea>
+            </label>
           </div>
-          <div class="rewrite-actions">
-            <button
-              v-for="item in rewriteButtons"
-              :key="item.mode"
-              class="chip-btn"
-              type="button"
-              :disabled="loading || !form.message.trim()"
-              @click="generateReply(item.mode)"
-            >
-              {{ item.label }}
-            </button>
+        </div>
+      </transition>
+
+      <transition name="fade">
+        <div v-if="advancedOpen" class="reply-drawer reply-drawer--advanced">
+          <div class="reply-drawer__grid">
+            <label class="form-field">
+              <span>多轮聊天 / 额外上下文</span>
+              <textarea
+                v-model="rawMaterials.recent_context_text"
+                class="field-input reply-drawer__textarea"
+                rows="4"
+                placeholder="把前后聊天一起贴进来"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>聊天记录粘贴</span>
+              <textarea
+                v-model="rawMaterials.chat_history_text"
+                class="field-input reply-drawer__textarea"
+                rows="4"
+                placeholder="粘贴聊天记录、对话片段或材料摘要"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>记忆笔记 / 回忆片段</span>
+              <textarea
+                v-model="rawMaterials.memory_notes_text"
+                class="field-input reply-drawer__textarea"
+                rows="4"
+                placeholder="把反复出现的记忆、提醒、关心方式整理进来"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>文本材料补充</span>
+              <textarea
+                v-model="rawMaterials.text_materials_text"
+                class="field-input reply-drawer__textarea"
+                rows="4"
+                placeholder="可粘贴家书、日记、便条、文字说明"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>图片说明</span>
+              <textarea
+                v-model="rawMaterials.image_notes_text"
+                class="field-input reply-drawer__textarea"
+                rows="3"
+                placeholder="如果 OCR 不完整，可以补一句这张图想表达什么"
+              ></textarea>
+            </label>
+            <label class="form-field">
+              <span>语音说明</span>
+              <textarea
+                v-model="rawMaterials.voice_notes_text"
+                class="field-input reply-drawer__textarea"
+                rows="3"
+                placeholder="如果有语音材料，可以先用文字补充"
+              ></textarea>
+            </label>
           </div>
-        </article>
+          <div v-if="rawMaterials.uploaded_text_documents.length || rawMaterials.uploaded_image_documents.length" class="reply-attachments">
+            <article v-for="(item, index) in rawMaterials.uploaded_text_documents" :key="`text-${item.filename}-${index}`" class="reply-attachment">
+              <span>📄 {{ item.filename }}</span>
+              <button type="button" class="ghost-button ghost-button--small" @click="removeTextDocument(index)">移除</button>
+            </article>
+            <article v-for="(item, index) in rawMaterials.uploaded_image_documents" :key="`image-${item.filename}-${index}`" class="reply-attachment">
+              <span>🖼 {{ item.filename }}</span>
+              <button type="button" class="ghost-button ghost-button--small" @click="removeImageDocument(index)">移除</button>
+            </article>
+          </div>
+        </div>
+      </transition>
 
-        <article class="summary-panel">
-          <p class="eyebrow">一句风险提示</p>
-          <p class="state-copy">{{ result?.risk_note || '这里会提示一个需要注意的点。' }}</p>
-        </article>
-
-        <article class="summary-panel">
-          <p class="eyebrow">一句可能后果</p>
-          <p class="state-copy">{{ result?.likely_consequence || '这里会提示这样回复大概会带来的走向。' }}</p>
-        </article>
+      <div v-if="error" class="reply-error">
+        <p>{{ error }}</p>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.reply-assistant-layout {
+.reply-assistant-hero {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reply-shell {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  padding-bottom: 1.2rem;
 }
 
-.reply-assistant-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.reply-thread {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 36vh;
 }
 
-.reply-assistant-workbench {
-  padding-bottom: 2rem;
-}
-
-.reply-assistant-textarea {
-  min-height: 110px;
-}
-
-.reply-assistant-actions {
-  margin-top: 0.25rem;
-}
-
-.advanced-panel {
+.reply-turn {
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.58);
+  border-radius: 24px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 12px 28px rgba(40, 45, 60, 0.05);
 }
 
-.advanced-panel summary {
-  cursor: pointer;
-  list-style: none;
+.reply-turn--user {
+  margin-left: auto;
+  max-width: min(720px, 92%);
+  background: rgba(243, 247, 255, 0.96);
+}
+
+.reply-turn--assistant {
+  max-width: min(920px, 100%);
+}
+
+.reply-turn__meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.reply-turn__tag,
+.reply-turn__mode {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: rgba(63, 81, 181, 0.08);
+  color: var(--text);
+}
+
+.reply-turn__mode {
+  background: rgba(86, 104, 180, 0.12);
+}
+
+.reply-turn__text {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin: 0;
+  color: var(--text);
+}
+
+.reply-answer-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reply-answer-card {
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(127, 140, 172, 0.16);
+}
+
+.reply-answer-card--main {
+  grid-column: span 2;
+}
+
+.reply-answer-card__label {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.reply-answer-card h3,
+.reply-answer-card p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.reply-composer {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 24px;
+  background: rgba(252, 253, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(24, 32, 57, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.reply-composer__chips,
+.reply-composer__row,
+.reply-composer__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.reply-chip {
+  border: 1px solid rgba(127, 140, 172, 0.18);
+  border-radius: 999px;
+  padding: 0.45rem 0.78rem;
+  background: #fff;
   font-weight: 700;
   color: var(--text);
 }
 
-.advanced-panel summary::-webkit-details-marker {
+.reply-chip--ghost {
+  background: rgba(244, 246, 250, 0.8);
+}
+
+.reply-select {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 160px;
+  flex: 1 1 160px;
+}
+
+.reply-select span,
+.reply-input span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.field-input--compact {
+  min-height: 42px;
+}
+
+.reply-input {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reply-input__textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.reply-composer__footer {
+  justify-content: space-between;
+}
+
+.reply-composer__attach {
   display: none;
 }
 
-.advanced-panel__body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
+.reply-drawer {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.85rem;
+  border-radius: 20px;
+  background: rgba(244, 246, 250, 0.94);
+  border: 1px solid rgba(127, 140, 172, 0.14);
 }
 
-.reply-main {
-  min-height: 72px;
+.reply-drawer__grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reply-drawer__textarea {
+  min-height: 76px;
+}
+
+.reply-drawer--advanced .reply-drawer__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reply-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.reply-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  background: #fff;
+}
+
+.reply-error {
+  padding: 0.6rem 0.8rem;
+  color: var(--danger, #b42318);
+}
+
+.reply-error p {
+  margin: 0;
 }
 
 .rewrite-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-top: 0.9rem;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 @media (max-width: 980px) {
-  .reply-assistant-layout {
+  .reply-answer-grid,
+  .reply-drawer__grid {
     grid-template-columns: 1fr;
+  }
+
+  .reply-answer-card--main {
+    grid-column: span 1;
+  }
+
+  .reply-shell {
+    padding-bottom: 0.8rem;
+  }
+
+  .reply-composer {
+    position: static;
   }
 }
 </style>

@@ -1,3 +1,9 @@
+## V1.4.73 - 2026-04-18
+
+- Reworked `我该怎么回` into a chat-window layout with a bottom composer, quick context expansion, file/image attach buttons, and an advanced drawer.
+- Kept the answer output in the same four-part structure while moving the interaction into a ChatGPT-like flow.
+- Added compact context controls for person type and scene so the page can stay focused on the conversation input.
+
 ## V1.4.72 - 2026-04-17
 
 - Reverted the last copy-trimming pass and restored the previous page text density.
