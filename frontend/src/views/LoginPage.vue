@@ -53,7 +53,6 @@ async function submit() {
       <div class="auth-card__head">
         <p class="eyebrow">登录</p>
         <h1>欢迎回来</h1>
-        <p class="hero-text">登录后可同步 Seed、收藏与最近会话。</p>
       </div>
 
       <form class="auth-form" @submit.prevent="submit">

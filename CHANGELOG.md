@@ -1,3 +1,9 @@
+## V1.4.71 - 2026-04-17
+
+- Trimmed repeated explanatory copy across the home, seed, create, reply, session, and account pages.
+- Reworked the create wizard and shared material panel into a shorter H5-friendly flow with fewer helper sentences and lighter page headers.
+- Kept the existing creation logic, skill routing, and reply flows intact while reducing visible text to the minimum needed for core use.
+
 ## V1.4.70 - 2026-04-17
 
 - Kept the original home page content intact while making the top-level `Seed` entry point back to `/`.

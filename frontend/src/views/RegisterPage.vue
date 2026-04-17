@@ -64,7 +64,6 @@ async function submit() {
       <div class="auth-card__head">
         <p class="eyebrow">注册</p>
         <h1>创建账号</h1>
-        <p class="hero-text">注册后会自动登录，并保留你的 Seed 与会话。</p>
       </div>
 
       <form class="auth-form" @submit.prevent="submit">

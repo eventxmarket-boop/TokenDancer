@@ -11,10 +11,6 @@ function activateSticker(sticker: 'reply' | 'how-to-do') {
 <template>
   <section class="home-landing">
     <div class="home-landing__body">
-      <div class="home-landing__copy">
-        <p class="hero-text">先从一句话开始，或者先想清楚要做什么。</p>
-      </div>
-
       <div class="home-sticker-stack home-sticker-stack--compact">
         <RouterLink
           class="home-sticker-link"
@@ -30,7 +26,7 @@ function activateSticker(sticker: 'reply' | 'how-to-do') {
           >
             <span class="home-sticker__tag">我该怎么回</span>
             <h2>我该怎么回</h2>
-            <p>直接输入一句话，给你能直接发的回复。</p>
+            <p>回消息。</p>
           </article>
         </RouterLink>
 
@@ -48,7 +44,7 @@ function activateSticker(sticker: 'reply' | 'how-to-do') {
           >
             <span class="home-sticker__tag">我该怎么做</span>
             <h2>我该怎么做</h2>
-            <p>先把要做的事拆清楚，再继续往下走。</p>
+            <p>做事情。</p>
           </article>
         </RouterLink>
       </div>
