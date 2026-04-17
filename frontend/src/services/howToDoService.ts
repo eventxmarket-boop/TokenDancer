@@ -1,12 +1,13 @@
 const API_PREFIX = '/persona-api'
 
-export type HowToDoSection = 'cast' | 'reference' | 'catalog' | 'calendar' | 'clock' | 'records' | 'songs'
+export type HowToDoSection = 'cast' | 'sundial' | 'catalog' | 'songs' | 'detail'
 export type HowToDoCastMode = 'character' | 'number' | 'coin' | 'taiji'
 
 export type HowToDoRequestPayload = {
   section: HowToDoSection
   cast_mode?: HowToDoCastMode
   question?: string
+  category?: string
   cast_seed?: string
   character_text?: string
   number_text?: string
@@ -24,6 +25,8 @@ export type HowToDoCatalogCard = {
   name: string
   meaning: string
   binary: string
+  palace: string
+  tag: string
 }
 
 export type HowToDoResponse = {

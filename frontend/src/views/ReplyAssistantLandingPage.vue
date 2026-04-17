@@ -48,7 +48,7 @@ function activateSticker(sticker: 'reply' | 'how-to-do') {
           >
             <span class="home-sticker__tag">我该怎么做</span>
             <h2>我该怎么做</h2>
-            <p>六爻排盘、卦库、日历、时钟、记录和歌诀都在这里。</p>
+            <p>排盘、日晷、歌诀和六十四卦都在这里。</p>
           </article>
         </RouterLink>
       </div>

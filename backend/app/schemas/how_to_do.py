@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-HowToDoSection = Literal["cast", "reference", "catalog", "calendar", "clock", "records", "songs"]
+HowToDoSection = Literal["cast", "sundial", "catalog", "songs", "detail"]
 HowToDoCastMode = Literal["character", "number", "coin", "taiji"]
 
 
@@ -13,6 +13,7 @@ class HowToDoRequest(BaseModel):
     section: HowToDoSection = "cast"
     cast_mode: HowToDoCastMode = "coin"
     question: str = ""
+    category: str = ""
     cast_seed: str = ""
     character_text: str = ""
     number_text: str = ""
@@ -30,6 +31,8 @@ class HowToDoCatalogCard(BaseModel):
     name: str = ""
     meaning: str = ""
     binary: str = ""
+    palace: str = ""
+    tag: str = ""
 
 
 class HowToDoResponse(BaseModel):

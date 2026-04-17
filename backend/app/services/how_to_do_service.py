@@ -13,13 +13,11 @@ from app.services.text_sanitizer import strip_think_blocks
 
 
 SECTION_LABELS = {
-    "cast": "六爻起卦",
-    "reference": "参考",
-    "catalog": "卦库",
-    "calendar": "日历",
-    "clock": "时钟",
-    "records": "记录",
+    "cast": "排盘",
+    "sundial": "日晷",
+    "catalog": "六十四卦",
     "songs": "歌诀",
+    "detail": "卦象详情",
 }
 
 CAST_MODE_LABELS = {
@@ -142,10 +140,134 @@ LINE_GUIDANCE = [
     "收尾与结果，别把话说满。",
 ]
 
-ALL_GUA_CATALOG = [
-    {"number": number, "name": name, "meaning": HEXAGRAM_MEANINGS.get(name, "顺势而行"), "binary": binary}
-    for binary, (number, name) in sorted(HEXAGRAM_MAP.items(), key=lambda item: item[1][0])
+SIX_SPIRITS = ["玄武", "白虎", "螣蛇", "勾陈", "朱雀", "青龙"]
+BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+RELATIONS = ["父母", "兄弟", "子孙", "妻财", "官鬼"]
+
+PALACE_GUA_CATALOG = [
+    (
+        "乾宫",
+        [
+            ("乾为天", "六冲", "乾"),
+            ("天风姤", "一世", "姤"),
+            ("天山遁", "二世", "遁"),
+            ("天地否", "三世", "否"),
+            ("风地观", "四世", "观"),
+            ("山地剥", "五世", "剥"),
+            ("火地晋", "游魂", "晋"),
+            ("火天大有", "归魂", "大有"),
+        ],
+    ),
+    (
+        "兑宫",
+        [
+            ("兑为泽", "六冲", "兑"),
+            ("泽水困", "一世", "困"),
+            ("泽地萃", "二世", "萃"),
+            ("泽山咸", "三世", "咸"),
+            ("水山蹇", "四世", "蹇"),
+            ("地山谦", "五世", "谦"),
+            ("雷山小过", "游魂", "小过"),
+            ("雷泽归妹", "归魂", "归妹"),
+        ],
+    ),
+    (
+        "离宫",
+        [
+            ("离为火", "六冲", "离"),
+            ("火山旅", "一世", "旅"),
+            ("火风鼎", "二世", "鼎"),
+            ("火水未济", "三世", "未济"),
+            ("山水蒙", "四世", "蒙"),
+            ("风水涣", "五世", "涣"),
+            ("天水讼", "游魂", "讼"),
+            ("天火同人", "归魂", "同人"),
+        ],
+    ),
+    (
+        "震宫",
+        [
+            ("震为雷", "六冲", "震"),
+            ("雷地豫", "一世", "豫"),
+            ("雷水解", "二世", "解"),
+            ("雷风恒", "三世", "恒"),
+            ("地风升", "四世", "升"),
+            ("水风井", "五世", "井"),
+            ("泽风大过", "游魂", "大过"),
+            ("泽雷随", "归魂", "随"),
+        ],
+    ),
+    (
+        "巽宫",
+        [
+            ("巽为风", "六冲", "巽"),
+            ("风天小畜", "一世", "小畜"),
+            ("风火家人", "二世", "家人"),
+            ("风雷益", "三世", "益"),
+            ("天雷无妄", "四世", "无妄"),
+            ("火雷噬嗑", "五世", "噬嗑"),
+            ("山雷颐", "游魂", "颐"),
+            ("山风蛊", "归魂", "蛊"),
+        ],
+    ),
+    (
+        "坎宫",
+        [
+            ("坎为水", "六冲", "坎"),
+            ("水泽节", "一世", "节"),
+            ("水雷屯", "二世", "屯"),
+            ("水火既济", "三世", "既济"),
+            ("泽火革", "四世", "革"),
+            ("雷火丰", "五世", "丰"),
+            ("地火明夷", "游魂", "明夷"),
+            ("地水师", "归魂", "师"),
+        ],
+    ),
+    (
+        "艮宫",
+        [
+            ("艮为山", "六冲", "艮"),
+            ("山火贲", "一世", "贲"),
+            ("山天大畜", "二世", "大畜"),
+            ("山泽损", "三世", "损"),
+            ("火泽睽", "四世", "睽"),
+            ("天泽履", "五世", "履"),
+            ("风泽中孚", "游魂", "中孚"),
+            ("风山渐", "归魂", "渐"),
+        ],
+    ),
+    (
+        "坤宫",
+        [
+            ("坤为地", "六冲", "坤"),
+            ("地雷复", "一世", "复"),
+            ("地泽临", "二世", "临"),
+            ("地天泰", "三世", "泰"),
+            ("雷天大壮", "四世", "大壮"),
+            ("泽天夬", "五世", "夬"),
+            ("水天需", "游魂", "需"),
+            ("水地比", "归魂", "比"),
+        ],
+    ),
 ]
+
+HEXAGRAM_NAME_TO_BINARY = {name: binary for binary, (_, name) in HEXAGRAM_MAP.items()}
+
+ALL_GUA_CATALOG = []
+for palace_index, (palace, guas) in enumerate(PALACE_GUA_CATALOG):
+    for order, (name, tag, meaning_key) in enumerate(guas, start=1):
+        number = palace_index * 8 + order
+        binary = HEXAGRAM_NAME_TO_BINARY.get(meaning_key, "")
+        ALL_GUA_CATALOG.append(
+            {
+                "number": number,
+                "name": name,
+                "meaning": HEXAGRAM_MEANINGS.get(meaning_key, "顺势而行"),
+                "binary": binary,
+                "palace": palace,
+                "tag": tag,
+            }
+        )
 
 
 def _normalize_text(value: Any) -> str:
@@ -167,6 +289,23 @@ def _make_rng(*parts: Any) -> random.Random:
 def _line_text(position: int, yin_yang: str, is_changing: bool) -> str:
     prefix = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"][position - 1]
     return f"{prefix}：{'阳' if yin_yang == '阳' else '阴'}{'（动）' if is_changing else ''}"
+
+
+def _build_line_detail(position: int, line: dict[str, Any], seed: str, question: str) -> dict[str, Any]:
+    rng = _make_rng(seed, question, position, line.get("yin_yang"))
+    return {
+        "position": position,
+        "position_name": line["position_name"],
+        "text": line["text"],
+        "guidance": line["guidance"],
+        "is_changing": line["is_changing"],
+        "six_spirit": SIX_SPIRITS[(position - 1) % len(SIX_SPIRITS)],
+        "relation": RELATIONS[(position - 1) % len(RELATIONS)],
+        "stem_branch": f"{rng.choice(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'])}{BRANCHES[(position - 1) % len(BRANCHES)]}",
+        "nayin": rng.choice(["海中金", "炉中火", "大林木", "路旁土", "剑锋金", "山头火", "涧下水", "城头土"]),
+        "hidden_spirit": f"伏神{BRANCHES[(position + 2) % len(BRANCHES)]}",
+        "shi_ying": "世" if position == 1 else "应" if position == 4 else "",
+    }
 
 
 def _binary_from_lines(lines: list[dict[str, Any]]) -> str:
@@ -239,8 +378,9 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
     return lines
 
 
-def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_text: str = "") -> dict[str, Any]:
-    lines = _build_lines(cast_seed or datetime.now().isoformat(timespec="seconds"), "cast", cast_mode, question, source_text)
+def _build_cast_result(question: str, category: str, cast_mode: str, cast_seed: str, source_text: str = "") -> dict[str, Any]:
+    seed_value = cast_seed or datetime.now().isoformat(timespec="seconds")
+    lines = _build_lines(seed_value, "cast", cast_mode, question, source_text)
     binary = _binary_from_lines(lines)
     hexagram_number, name = _hexagram_lookup(binary)
     upper = TRIGRAMS[_trigram_index(lines[:3])]
@@ -289,7 +429,16 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
         {"label": "互卦", "value": f"{mutual_hexagram['name']}卦" if mutual_hexagram else "无"},
         {"label": "动爻", "value": "、".join(f"{item}爻" for item in changing_lines) if changing_lines else "无"},
         {"label": "变卦", "value": f"{transformed_hexagram['name']}卦" if transformed_hexagram else "无"},
+        {"label": "问念", "value": question or "未填写"},
+        {"label": "分类", "value": category or "未分类"},
     ]
+    shen_sha = {
+        "卦身": BRANCHES[_stable_seed(seed_value, question, "gua-shen") % len(BRANCHES)],
+        "贵人": f"{BRANCHES[_stable_seed(seed_value, question, 'gui-ren-1') % len(BRANCHES)]}、{BRANCHES[_stable_seed(seed_value, question, 'gui-ren-2') % len(BRANCHES)]}",
+        "驿马": BRANCHES[_stable_seed(seed_value, question, "yi-ma") % len(BRANCHES)],
+        "羊刃": BRANCHES[_stable_seed(seed_value, question, "yang-ren") % len(BRANCHES)],
+    }
+    line_details = [_build_line_detail(position, item, seed_value, question) for position, item in enumerate(lines, start=1)]
     suggestions = [
         "先看动爻在哪一层，再判断该守还是该推。",
         "有变卦时，优先看变化方向，不要只盯本卦。",
@@ -297,7 +446,7 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
     ]
 
     return {
-        "method_label": "六爻排盘",
+        "method_label": "排盘",
         "question": question,
         "summary": summary,
         "cards": cards,
@@ -313,7 +462,11 @@ def _build_cast_result(question: str, cast_mode: str, cast_seed: str, source_tex
             "binary": binary,
             "changing_lines": changing_lines,
             "lines": lines,
+            "line_details": line_details,
             "transformed_hexagram": transformed_hexagram,
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "category": category or "未分类",
+            "shensha": shen_sha,
         },
     }
 
@@ -324,30 +477,34 @@ def _build_catalog_result() -> dict[str, Any]:
         for item in ALL_GUA_CATALOG
     ]
     return {
-        "method_label": "六十四卦库",
+        "method_label": "六十四卦",
         "question": "",
         "summary": "六十四卦库，点开任意一卦即可查看名称与卦意。",
-        "cards": cards[:12],
+        "cards": cards,
         "suggestions": ["可直接在卦库中搜索卦名。", "需要查看完整内容时，继续向下浏览。"],
         "raw_result": {"catalog": ALL_GUA_CATALOG},
     }
 
 
 def _build_reference_result() -> dict[str, Any]:
-    cards = [
-        {"label": "方向", "value": "先看局势走向，再看进退节奏。"},
-        {"label": "生克", "value": "先看谁生谁、谁克谁，再看谁更主动。"},
-        {"label": "旺衰", "value": "看当前力量强弱，不只看单一符号。"},
-        {"label": "类象", "value": "用基础类象辅助理解，不替代整体判断。"},
-        {"label": "提示", "value": "参考页是底层辅助，最终还是回到本卦与动爻。"},
-    ]
+    now = datetime.now()
     return {
-        "method_label": "参考",
+        "method_label": "日晷",
         "question": "",
-        "summary": "方向、生克、旺衰与类象辅助，放在这里先做参考。",
-        "cards": cards,
-        "suggestions": ["如果要进一步判断，回到起卦页看本卦、互卦和变卦。"],
-        "raw_result": {"reference": cards},
+        "summary": "当前时间、日期、节气与时辰参考，放在这里先看时势。",
+        "cards": [
+            {"label": "当前时间", "value": now.strftime("%Y-%m-%d %H:%M:%S")},
+            {"label": "中国时区", "value": "Asia/Shanghai"},
+            {"label": "节气参考", "value": "当前节气与下一节气可由前端展示。"},
+            {"label": "更新时间", "value": now.strftime("%Y-%m-%d %H:%M:%S")},
+            {"label": "提示", "value": "日晷页只看时势，不替代排盘。"},
+        ],
+        "suggestions": ["如果要进一步判断，回到排盘页看本卦、互卦和变卦。"],
+        "raw_result": {
+            "sundial": {"timestamp": now.isoformat(timespec="seconds")},
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "date_text": date.today().isoformat(),
+        },
     }
 
 
@@ -400,13 +557,55 @@ def _build_records_result() -> dict[str, Any]:
 
 
 def _build_songs_result() -> dict[str, Any]:
+    built_in_songs = [
+        {
+            "title": "浑天甲子歌",
+            "content": "干金甲子外壬午，坎水戊寅外戊申。震木庚子外庚午，艮土丙辰外丙戌。坤土乙未外癸丑，巽木辛丑外辛未。离火己卯外己酉，兑金丁巳外丁亥。",
+        },
+        {
+            "title": "天干与内脏关系对应",
+            "content": "甲肝乙胆丙小肠，丁心戊胃己脾乡。庚是大肠辛属肺，壬系膀胱癸肾藏。三焦亦是壬中寄，包络同归入癸方。",
+        },
+        {
+            "title": "天干与人体对应关系",
+            "content": "甲头乙项丙肩求，丁心戊肋己属腹。庚是脐轮辛为股，壬癸足足一身由。",
+        },
+        {
+            "title": "地支与内脏关系对应",
+            "content": "子属膀胱水道耳，丑为胞肚及脾乡。寅胆发脉并两手，卯本十指内肝方。辰土为皮肩胸肋，巳面齿咽下尻肛。午火精神司眼目，未土胃脘隔脊梁。申金大肠经络肺，酉中精血小肠藏。戌土命门腿足，亥水为头及肾囊。",
+        },
+        {
+            "title": "地支与人体关系对应",
+            "content": "午头巳未两肩均，左右二腕为辰申。卯酉双肋寅戌腿，丑亥属脚子为阴。",
+        },
+        {
+            "title": "八卦与人体对应关系",
+            "content": "干首坤腹坎耳俦，震足巽股艮手留。兑口离目分八卦，凡看病此中求。",
+        },
+        {
+            "title": "八记忆卦口诀",
+            "content": "干三连，坤六断。震仰盂，艮覆碗。兑上缺，巽下断。离中虚，坎中满。",
+        },
+        {
+            "title": "年上月初，五虎遁",
+            "content": "甲己之年丙作首，乙庚之岁戊为头。丙辛之岁寻庚上，丁壬壬寅顺水流。若问戊何处癸起，甲寅之上好追求。",
+        },
+        {
+            "title": "日起时，五鼠遁",
+            "content": "甲己还加甲，乙庚丙作初。丙辛从戊起，丁壬庚子居。癸起壬子，周而复始求。",
+        },
+        {
+            "title": "寻找世认宫歌",
+            "content": "天同二世天变五。地同四世地变初。本宫六世三世异。人同游魂人变归。一二三六外卦宫。四五游魂内卦变更。归魂内卦是本宫。",
+        },
+    ]
     return {
         "method_label": "歌诀",
         "question": "",
         "summary": "这里放六爻的速记和口诀，方便快速理解卦意。",
-        "cards": [{"label": "速记", "value": snippet} for snippet in GROUNDING_SNIPPETS[:4]],
+        "cards": [{"label": item["title"], "value": item["content"]} for item in built_in_songs],
         "suggestions": ["如果不需要这块，后续可以直接删除。"],
-        "raw_result": {"snippets": GROUNDING_SNIPPETS},
+        "raw_result": {"snippets": built_in_songs},
     }
 
 
@@ -447,6 +646,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     section = _normalize_text(request.get("section")) or "cast"
     cast_mode = _normalize_text(request.get("cast_mode")) or "coin"
     question = _normalize_text(request.get("question"))
+    category = _normalize_text(request.get("category"))
     cast_seed = _normalize_text(request.get("cast_seed"))
     character_text = _normalize_text(request.get("character_text"))
     number_text = _normalize_text(request.get("number_text"))
@@ -454,19 +654,15 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
 
     if section == "catalog":
         base_result = _build_catalog_result()
-    elif section == "reference":
+    elif section in {"reference", "calendar", "clock", "sundial"}:
         base_result = _build_reference_result()
-    elif section == "calendar":
-        base_result = _build_calendar_result()
-    elif section == "clock":
-        base_result = _build_clock_result()
-    elif section == "records":
-        base_result = _build_records_result()
     elif section == "songs":
         base_result = _build_songs_result()
     elif section == "cast":
         source_text = character_text or number_text or question
-        base_result = _build_cast_result(question, cast_mode, cast_seed, source_text=source_text)
+        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=source_text)
+    elif section == "detail":
+        base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=character_text or number_text or question)
     else:
         raise ValueError(f"不支持的模块: {section}")
 

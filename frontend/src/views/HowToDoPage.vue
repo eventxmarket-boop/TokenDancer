@@ -1,238 +1,293 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { requestHowToDo, type HowToDoCastMode, type HowToDoCatalogCard, type HowToDoResponse, type HowToDoSection } from '@/services/howToDoService'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { requestHowToDo, type HowToDoCatalogCard, type HowToDoResponse } from '@/services/howToDoService'
 
-type SectionOption = {
-  key: HowToDoSection
-  label: string
-  hint: string
+type MainTab = 'cast' | 'sundial' | 'songs' | 'catalog'
+type SongNote = { id: string; title: string; content: string }
+
+type PalaceCatalogGroup = {
+  palace: string
+  cards: HowToDoCatalogCard[]
 }
 
-type CastModeOption = {
-  key: HowToDoCastMode
-  label: string
-  hint: string
-}
-
-type LocalRecord = {
-  id: string
-  title: string
-  createdAt: string
-  summary: string
-  response: HowToDoResponse
-  pinned: boolean
-}
-
-const sectionOptions: SectionOption[] = [
-  { key: 'cast', label: '起卦', hint: '汉字、数字、硬币、太极丸四种方式。' },
-  { key: 'reference', label: '参考', hint: '方向、生克、旺衰与类象。' },
-  { key: 'catalog', label: '卦库', hint: '直接看六十四卦。' },
-  { key: 'calendar', label: '日历', hint: '看日期与时间参考。' },
-  { key: 'clock', label: '时钟', hint: '看当前时刻。' },
-  { key: 'records', label: '记录', hint: '看本地保存的起卦记录。' },
-  { key: 'songs', label: '歌诀', hint: '看六爻速记与口诀。' },
+const mainTabs: Array<{ key: MainTab; label: string; hint: string }> = [
+  { key: 'cast', label: '排盘', hint: '问念、分类、时间、起卦方式。' },
+  { key: 'sundial', label: '日晷', hint: '当前时间、农历、节气。' },
+  { key: 'songs', label: '歌诀', hint: '我添加的 / 内置。' },
+  { key: 'catalog', label: '六十四卦', hint: '按宫查看卦象。' },
 ]
 
-const castModeOptions: CastModeOption[] = [
-  { key: 'character', label: '汉字起卦', hint: '输入汉字或一句话。' },
-  { key: 'number', label: '数字起卦', hint: '输入一串数字。' },
-  { key: 'coin', label: '硬币起卦', hint: '按常见掷币方式起卦。' },
-  { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起卦。' },
+const castModes: Array<{ key: 'coin' | 'character' | 'number' | 'taiji'; label: string; hint: string }> = [
+  { key: 'coin', label: '随机摇卦', hint: '平心静气后摇卦。' },
+  { key: 'character', label: '手动输入', hint: '汉字、短句或文本。' },
+  { key: 'number', label: '数字起卦', hint: '数字、编号或号码。' },
+  { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起局。' },
 ]
 
-const route = useRoute()
-const router = useRouter()
+const questionCategories = [
+  '出行平安',
+  '能否出行',
+  '何时出行',
+  '工作推进',
+  '感情回应',
+  '求财求职',
+  '健康平安',
+  '其他',
+]
 
-const sectionPathMap: Record<string, HowToDoSection> = {
-  '/how-to-do': 'cast',
-  '/how-to-do/select-gua': 'cast',
-  '/how-to-do/reference': 'reference',
-  '/how-to-do/all-gua': 'catalog',
-  '/how-to-do/calendar': 'calendar',
-  '/how-to-do/clock': 'clock',
-  '/how-to-do/records': 'records',
-  '/how-to-do/songs': 'songs',
-}
+const builtInSongTitles = ['浑天甲子歌', '天干与内脏关系对应', '天干与人体对应关系', '地支与内脏关系对应', '地支与人体关系对应', '八卦与人体对应关系', '八记忆卦口诀', '年上月初，五虎遁', '日起时，五鼠遁', '寻找世认宫歌']
 
-const sectionRouteMap: Record<HowToDoSection, string> = {
-  cast: '/how-to-do/select-gua',
-  reference: '/how-to-do/reference',
-  catalog: '/how-to-do/all-gua',
-  calendar: '/how-to-do/calendar',
-  clock: '/how-to-do/clock',
-  records: '/how-to-do/records',
-  songs: '/how-to-do/songs',
-}
-
-const activeSection = ref<HowToDoSection>('cast')
-const activeCastMode = ref<HowToDoCastMode>('coin')
+const activeTab = ref<MainTab>('cast')
+const activeCastMode = ref<'coin' | 'character' | 'number' | 'taiji'>('coin')
 const question = ref('')
+const category = ref('')
 const castSeed = ref(String(Date.now()))
-const characterText = ref('')
-const numberText = ref('')
+const castText = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
+const songsResult = ref<HowToDoResponse | null>(null)
+const selectedCatalog = ref<HowToDoCatalogCard | null>(null)
+const catalogCards = ref<HowToDoCatalogCard[]>([])
 const catalogQuery = ref('')
-const catalogSelected = ref<HowToDoCatalogCard | null>(null)
-const records = ref<LocalRecord[]>([])
-const currentTime = ref(new Date())
+const songTab = ref<'mine' | 'builtin'>('mine')
+const songNotes = ref<SongNote[]>([])
+const songTitle = ref('')
+const songContent = ref('')
+const timeNow = ref(new Date())
+const showProcess = ref(false)
+const showHidden = ref(false)
+const useSymbols = ref(false)
+const showNaYin = ref(true)
+const weakenRelated = ref(false)
 let timer: number | undefined
 
-const catalogCards = computed(() => result.value?.catalog || [])
-const filteredCatalogCards = computed(() => {
-  const query = catalogQuery.value.trim()
-  if (!query) return catalogCards.value
-  return catalogCards.value.filter((item) => `${item.number}${item.name}${item.meaning}${item.binary}`.includes(query))
+const currentTimeText = computed(() => timeNow.value.toLocaleString('zh-CN'))
+const chineseCalendarText = computed(() => {
+  try {
+    return new Intl.DateTimeFormat('zh-Hans-CN-u-ca-chinese', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+      hour: 'numeric',
+      minute: 'numeric',
+    }).format(timeNow.value)
+  } catch {
+    return timeNow.value.toLocaleString('zh-CN')
+  }
 })
 
-const recordCount = computed(() => records.value.length)
-
-function applySection(section: HowToDoSection) {
-  activeSection.value = section
-  errorMessage.value = ''
-  const target = sectionRouteMap[section]
-  if (route.path !== target) {
-    router.replace(target)
+function solarTermInfo(date: Date) {
+  const terms = [
+    ['小寒', 1, 5], ['大寒', 1, 20],
+    ['立春', 2, 4], ['雨水', 2, 19],
+    ['惊蛰', 3, 6], ['春分', 3, 21],
+    ['清明', 4, 5], ['谷雨', 4, 20],
+    ['立夏', 5, 6], ['小满', 5, 21],
+    ['芒种', 6, 6], ['夏至', 6, 21],
+    ['小暑', 7, 7], ['大暑', 7, 23],
+    ['立秋', 8, 8], ['处暑', 8, 23],
+    ['白露', 9, 8], ['秋分', 9, 23],
+    ['寒露', 10, 8], ['霜降', 10, 23],
+    ['立冬', 11, 7], ['小雪', 11, 22],
+    ['大雪', 12, 7], ['冬至', 12, 22],
+  ] as const
+  const nowMonth = date.getMonth() + 1
+  const nowDay = date.getDate()
+  let currentIndex = 0
+  for (let index = 0; index < terms.length; index += 1) {
+    const [, month, day] = terms[index]
+    const next = terms[index + 1]
+    if (nowMonth > month || (nowMonth === month && nowDay >= day)) {
+      currentIndex = index
+    }
+    if (next && nowMonth < next[1] && nowMonth >= month) break
   }
-  if (section === 'reference' && result.value?.section !== 'reference') {
-    void generate('reference')
-  }
-  if (section === 'records') {
-    loadRecords()
-  }
-  if (section === 'clock') {
-    currentTime.value = new Date()
+  const current = terms[currentIndex]
+  const next = terms[(currentIndex + 1) % terms.length]
+  return {
+    current: current[0],
+    next: next[0],
   }
 }
 
-function loadRecords() {
+const solarTerms = computed(() => solarTermInfo(timeNow.value))
+
+const catalogGroups = computed<PalaceCatalogGroup[]>(() => {
+  const groups = new Map<string, HowToDoCatalogCard[]>()
+  for (const card of catalogCards.value) {
+    const current = groups.get(card.palace) || []
+    current.push(card)
+    groups.set(card.palace, current)
+  }
+  return Array.from(groups.entries()).map(([palace, cards]) => ({ palace, cards }))
+})
+
+const filteredCatalogGroups = computed(() => {
+  const query = catalogQuery.value.trim()
+  if (!query) return catalogGroups.value
+  return catalogGroups.value
+    .map((group) => ({
+      palace: group.palace,
+      cards: group.cards.filter((card) => `${card.number}${card.name}${card.tag}${card.meaning}`.includes(query)),
+    }))
+    .filter((group) => group.cards.length > 0)
+})
+
+const builtInSongs = computed(() => {
+  if (songsResult.value?.cards?.length) {
+    return songsResult.value.cards.map((item) => ({
+      title: item.label,
+      content: item.value,
+    }))
+  }
+  if (songsResult.value?.raw_result?.snippets && Array.isArray(songsResult.value.raw_result.snippets)) {
+    return songsResult.value.raw_result.snippets as Array<{ title: string; content: string }>
+  }
+  return builtInSongTitles.map((title) => ({ title, content: '' }))
+})
+
+function setActiveTab(tab: MainTab) {
+  activeTab.value = tab
+  errorMessage.value = ''
+  if (tab === 'catalog' && !catalogCards.value.length) {
+    void loadCatalog()
+  }
+  if (tab === 'songs' && !result.value) {
+    void loadSongs()
+  }
+}
+
+function loadNotes() {
   try {
-    const raw = window.localStorage.getItem('liuyao-records')
-    const parsed = raw ? (JSON.parse(raw) as LocalRecord[]) : []
-    records.value = Array.isArray(parsed) ? parsed : []
+    const raw = window.localStorage.getItem('liuyao-song-notes')
+    songNotes.value = raw ? (JSON.parse(raw) as SongNote[]) : []
   } catch {
-    records.value = []
+    songNotes.value = []
   }
 }
 
-function persistRecords(nextRecords: LocalRecord[]) {
-  records.value = nextRecords
-  window.localStorage.setItem('liuyao-records', JSON.stringify(nextRecords))
+function persistNotes(next: SongNote[]) {
+  songNotes.value = next
+  window.localStorage.setItem('liuyao-song-notes', JSON.stringify(next))
 }
 
-function saveCurrentRecord() {
-  if (!result.value || activeSection.value !== 'cast') return
-  const title = question.value.trim() || `${result.value.method_label}`
-  const next: LocalRecord[] = [
-    {
-      id: `${Date.now()}`,
-      title,
-      createdAt: new Date().toISOString(),
-      summary: result.value.summary,
-      response: result.value,
-      pinned: false,
-    },
-    ...records.value,
-  ]
-  persistRecords(next.slice(0, 30))
+function addSongNote() {
+  const title = songTitle.value.trim()
+  const content = songContent.value.trim()
+  if (!title || !content) return
+  persistNotes([{ id: String(Date.now()), title, content }, ...songNotes.value].slice(0, 50))
+  songTitle.value = ''
+  songContent.value = ''
 }
 
-function renameRecord(id: string) {
-  const item = records.value.find((record) => record.id === id)
-  if (!item) return
-  const nextTitle = window.prompt('重命名记录', item.title)?.trim()
-  if (!nextTitle) return
-  persistRecords(records.value.map((record) => (record.id === id ? { ...record, title: nextTitle } : record)))
-}
-
-function togglePinRecord(id: string) {
-  persistRecords(
-    [...records.value]
-      .map((record) => (record.id === id ? { ...record, pinned: !record.pinned } : record))
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.createdAt.localeCompare(a.createdAt)),
-  )
-}
-
-function deleteRecord(id: string) {
-  const ok = window.confirm('删除后无法找回，确定要删除这条记录吗？')
+function deleteSongNote(id: string) {
+  const ok = window.confirm('删除后无法找回，确定要删除吗？')
   if (!ok) return
-  persistRecords(records.value.filter((record) => record.id !== id))
+  persistNotes(songNotes.value.filter((item) => item.id !== id))
 }
 
-function openRecord(record: LocalRecord) {
-  activeSection.value = 'cast'
-  question.value = record.response.question || record.title
-  castSeed.value = String(Date.now())
-  result.value = record.response
-  window.localStorage.setItem('liuyao-last-result', JSON.stringify(record.response))
-}
-
-async function generate(section: HowToDoSection = activeSection.value) {
-  errorMessage.value = ''
+async function loadCatalog() {
   loading.value = true
+  errorMessage.value = ''
   try {
-    const payload =
-      section === 'cast'
-        ? {
-            section,
-            cast_mode: activeCastMode.value,
-            question: question.value.trim(),
-            cast_seed: castSeed.value,
-            character_text: characterText.value.trim(),
-            number_text: numberText.value.trim(),
-            use_ai: true,
-          }
-        : { section, use_ai: false }
-
-    const response = await requestHowToDo(payload)
-    result.value = response
-    if (section === 'catalog' && response.catalog.length > 0) {
-      catalogSelected.value = response.catalog[0]
-    }
-    if (section === 'cast') {
-      saveCurrentRecord()
-      window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
-      castSeed.value = String(Date.now())
-    }
+    const response = await requestHowToDo({ section: 'catalog', use_ai: false })
+    catalogCards.value = response.catalog
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '生成失败，请稍后重试'
+    errorMessage.value = error instanceof Error ? error.message : '卦库加载失败'
   } finally {
     loading.value = false
   }
 }
 
-function selectCatalogCard(card: HowToDoCatalogCard) {
-  catalogSelected.value = card
+async function loadSongs() {
+  try {
+    const response = await requestHowToDo({ section: 'songs', use_ai: false })
+    songsResult.value = response
+  } catch {
+    // ignore, local built-in content still works
+  }
 }
 
-function useClockSeed() {
-  activeSection.value = 'cast'
-  activeCastMode.value = 'coin'
+function resetCast() {
+  question.value = ''
+  category.value = ''
   castSeed.value = String(Date.now())
-  question.value = `我现在这个时刻该怎么做？`
-  router.replace(sectionRouteMap.cast)
+  castText.value = ''
+  result.value = null
+  selectedCatalog.value = null
+  showProcess.value = false
+  showHidden.value = false
+  useSymbols.value = false
+  showNaYin.value = true
+  weakenRelated.value = false
 }
 
-watch(
-  () => route.path,
-  (path) => {
-    const nextSection = sectionPathMap[path] || 'cast'
-    if (nextSection !== activeSection.value) {
-      activeSection.value = nextSection
-      if (nextSection === 'records') {
-        loadRecords()
-      }
-    }
-  },
-  { immediate: true },
-)
+function useCurrentTime() {
+  timeNow.value = new Date()
+  castSeed.value = String(Date.now())
+  category.value = category.value || questionCategories[0]
+}
+
+function getCurrentCastPrompt() {
+  return castText.value.trim() || question.value.trim() || category.value.trim()
+}
+
+async function cast() {
+  if (!getCurrentCastPrompt()) {
+    errorMessage.value = '请先输入问念或分类。'
+    return
+  }
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await requestHowToDo({
+      section: 'cast',
+      cast_mode: activeCastMode.value,
+      question: question.value.trim(),
+      category: category.value.trim(),
+      cast_seed: castSeed.value,
+      character_text: activeCastMode.value === 'character' ? castText.value.trim() : '',
+      number_text: activeCastMode.value === 'number' ? castText.value.trim() : '',
+      use_ai: true,
+    })
+    result.value = response
+    window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
+    castSeed.value = String(Date.now())
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '排盘失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+function sharePage() {
+  const url = window.location.href
+  if (navigator.share) {
+    void navigator.share({ title: document.title, url })
+    return
+  }
+  void navigator.clipboard.writeText(url)
+}
+
+function copyHexagram() {
+  const text = [result.value?.summary, result.value?.ai_interpretation].filter(Boolean).join('\n')
+  void navigator.clipboard.writeText(text || '暂无可复制内容')
+}
+
+function shareScreenshot() {
+  const text = result.value?.summary || '当前卦象'
+  void navigator.clipboard.writeText(text)
+}
 
 onMounted(() => {
-  loadRecords()
+  loadNotes()
+  void loadCatalog()
+  void loadSongs()
   timer = window.setInterval(() => {
-    currentTime.value = new Date()
+    timeNow.value = new Date()
   }, 1000)
 })
 
@@ -247,22 +302,22 @@ onBeforeUnmount(() => {
   <section class="page-hero page-hero--single how-to-do-hero">
     <div class="hero-copy">
       <p class="eyebrow">心源六爻</p>
-      <h1>我该怎么做</h1>
-      <p class="hero-text">汉字起卦、数字起卦、硬币起卦、太极丸起卦，和卦库、日历、时钟、记录放在同一个页面里。</p>
+      <h1>排盘</h1>
+      <p class="hero-text">问念或者分类，请至少输入一个。一卦一问，问念是一个卦象的重要组成部分！</p>
     </div>
   </section>
 
   <section class="how-to-do-page">
-    <div class="how-to-do-mode-row" role="tablist" aria-label="六爻模块">
+    <div class="how-to-do-mode-row" role="tablist" aria-label="六爻页面">
       <button
-        v-for="option in sectionOptions"
-        :key="option.key"
+        v-for="tab in mainTabs"
+        :key="tab.key"
         type="button"
         class="chip-btn"
-        :class="{ 'chip-btn--active': activeSection === option.key }"
-        @click="applySection(option.key)"
+        :class="{ 'chip-btn--active': activeTab === tab.key }"
+        @click="setActiveTab(tab.key)"
       >
-        {{ option.label }}
+        {{ tab.label }}
       </button>
     </div>
 
@@ -270,254 +325,381 @@ onBeforeUnmount(() => {
       <article class="summary-panel how-to-do-panel">
         <div class="how-to-do-panel__head">
           <div>
-            <p class="eyebrow">模块</p>
-            <h3>{{ sectionOptions.find((item) => item.key === activeSection)?.label }}</h3>
-            <p class="hero-text">{{ sectionOptions.find((item) => item.key === activeSection)?.hint }}</p>
+            <p class="eyebrow">当前页</p>
+            <h3>{{ mainTabs.find((item) => item.key === activeTab)?.label }}</h3>
+            <p class="hero-text">{{ mainTabs.find((item) => item.key === activeTab)?.hint }}</p>
           </div>
         </div>
 
-        <template v-if="activeSection === 'cast'">
+        <template v-if="activeTab === 'cast'">
           <div class="how-to-do-toggle-row">
             <button
-              v-for="option in castModeOptions"
-              :key="option.key"
+              v-for="mode in castModes"
+              :key="mode.key"
               type="button"
               class="chip-btn"
-              :class="{ 'chip-btn--active': activeCastMode === option.key }"
-              @click="activeCastMode = option.key"
+              :class="{ 'chip-btn--active': activeCastMode === mode.key }"
+              @click="activeCastMode = mode.key"
             >
-              {{ option.label }}
+              {{ mode.label }}
             </button>
           </div>
-
           <p class="how-to-do-note">
-            汉字起卦和数字起卦适合把内容直接喂进去。硬币起卦和太极丸起卦适合快速起局。
+            {{ castModes.find((item) => item.key === activeCastMode)?.hint }}
           </p>
 
-          <label class="field-label" for="how-to-do-question">问题</label>
-          <textarea
-            id="how-to-do-question"
-            v-model="question"
-            class="text-area"
-            rows="4"
-            placeholder="把事说清楚，越具体越好。"
-          ></textarea>
-
-          <label v-if="activeCastMode === 'character'" class="field-label">
-            汉字 / 文本
-            <textarea
-              v-model="characterText"
-              class="text-area"
-              rows="3"
-              placeholder="输入汉字、短句或一段话。"
-            ></textarea>
+          <label class="field-label">
+            问念
+            <textarea v-model="question" class="text-area" rows="4" placeholder="请输入您的问题"></textarea>
           </label>
 
-          <label v-if="activeCastMode === 'number'" class="field-label">
-            数字
-            <textarea
-              v-model="numberText"
-              class="text-area"
-              rows="3"
-              placeholder="输入数字、编号或数字串。"
-            ></textarea>
+          <label class="field-label">
+            分类
+            <input v-model="category" class="field-input" list="how-to-do-categories" placeholder="出行平安、能否出行、何时出行" />
+            <datalist id="how-to-do-categories">
+              <option v-for="item in questionCategories" :key="item" :value="item" />
+            </datalist>
           </label>
 
           <div class="how-to-do-field-grid">
             <label class="field-label">
-              起卦种子
+              起卦时间
               <input v-model="castSeed" type="text" class="field-input" />
             </label>
             <label class="field-label">
-              说明
-              <input :value="activeCastMode === 'coin' ? '硬币起卦' : activeCastMode === 'taiji' ? '太极丸起卦' : '文本起卦'" type="text" class="field-input" disabled />
+              当前时间
+              <input :value="currentTimeText" type="text" class="field-input" disabled />
             </label>
           </div>
 
-          <div class="how-to-do-actions">
-            <button class="primary-btn" type="button" :disabled="loading" @click="generate('cast')">
-              {{ loading ? '生成中...' : '起卦' }}
-            </button>
-          </div>
-        </template>
-
-        <template v-else-if="activeSection === 'reference'">
-          <p class="how-to-do-note">
-            参考页放的是方向、生克、旺衰和基础类象，只做辅助参考。
-          </p>
-          <div class="how-to-do-card-grid">
-            <div v-for="card in result?.cards || [
-              { label: '方向', value: '先看局势走向，再看进退节奏。' },
-              { label: '生克', value: '先看谁生谁、谁克谁，再看谁更主动。' },
-              { label: '旺衰', value: '看当前力量强弱，不只看单一符号。' },
-              { label: '类象', value: '用基础类象辅助理解，不替代整体判断。' },
-            ]" :key="card.label" class="how-to-do-result-card">
-              <span>{{ card.label }}</span>
-              <strong>{{ card.value }}</strong>
-            </div>
-          </div>
-          <div class="how-to-do-actions how-to-do-actions--left">
-            <button class="primary-btn" type="button" :disabled="loading" @click="generate('reference')">
-              刷新参考
-            </button>
-          </div>
-        </template>
-
-        <template v-else-if="activeSection === 'catalog'">
-          <div class="how-to-do-actions how-to-do-actions--left">
-            <button class="primary-btn" type="button" :disabled="loading" @click="generate('catalog')">
-              {{ loading ? '加载中...' : '加载卦库' }}
-            </button>
-          </div>
-          <label class="field-label">
-            搜索卦名
-            <input v-model="catalogQuery" type="text" class="field-input" placeholder="例如：乾、坤、泰、未济" />
+          <label v-if="activeCastMode === 'character' || activeCastMode === 'number'" class="field-label">
+            {{ activeCastMode === 'character' ? '汉字 / 文本' : '数字' }}
+            <textarea
+              v-model="castText"
+              class="text-area"
+              rows="3"
+              :placeholder="activeCastMode === 'character' ? '输入汉字、短句或一段话。' : '输入数字、编号或数字串。'"
+            ></textarea>
           </label>
-          <div class="liuyao-catalog-grid">
-            <button
-              v-for="card in filteredCatalogCards"
-              :key="`${card.number}-${card.name}`"
-              type="button"
-              class="liuyao-catalog-card"
-              :class="{ 'is-selected': catalogSelected?.number === card.number }"
-              @click="selectCatalogCard(card)"
-            >
-              <strong>{{ card.number }} {{ card.name }}</strong>
-              <span>{{ card.meaning }}</span>
+
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="secondary-btn" type="button" @click="showProcess = !showProcess">起图流程？</button>
+            <button class="secondary-btn" type="button" @click="resetCast">重置排盘信息</button>
+            <button class="primary-btn" type="button" :disabled="loading" @click="cast">
+              {{ loading ? '排盘中...' : '开始占卜' }}
             </button>
           </div>
+
+          <p v-if="showProcess" class="how-to-do-note">
+            使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。
+          </p>
         </template>
 
-        <template v-else-if="activeSection === 'calendar'">
-          <div class="how-to-do-note">
-            日历页主要是给起卦找时间参考。你也可以直接用当前日期起卦。
-          </div>
-          <div class="how-to-do-time-card">
-            <strong>{{ currentTime.toLocaleString() }}</strong>
-            <p>当前时间</p>
-          </div>
-          <div class="how-to-do-actions">
-            <button class="primary-btn" type="button" @click="useClockSeed">用当前时间起卦</button>
-            <button class="secondary-btn" type="button" :disabled="loading" @click="generate('calendar')">查看提示</button>
-          </div>
-        </template>
-
-        <template v-else-if="activeSection === 'clock'">
+        <template v-else-if="activeTab === 'sundial'">
           <div class="how-to-do-time-card how-to-do-time-card--accent">
-            <strong>{{ currentTime.toLocaleTimeString() }}</strong>
-            <p>{{ currentTime.toLocaleDateString() }}</p>
+            <strong>{{ currentTimeText }}</strong>
+            <p>{{ chineseCalendarText }}</p>
           </div>
-          <div class="how-to-do-actions">
-            <button class="primary-btn" type="button" @click="useClockSeed">直接用现在起卦</button>
-            <button class="secondary-btn" type="button" :disabled="loading" @click="generate('clock')">查看提示</button>
-          </div>
-        </template>
 
-        <template v-else-if="activeSection === 'records'">
-          <p class="how-to-do-note">记录保存在浏览器本地，方便回看最近几次起卦。</p>
-          <div class="how-to-do-record-count">共 {{ recordCount }} 条记录</div>
-          <div class="liuyao-record-list">
-            <article v-for="record in records" :key="record.id" class="liuyao-record-item" :class="{ 'is-pinned': record.pinned }">
-              <button class="liuyao-record-open" type="button" @click="openRecord(record)">
-                <strong>{{ record.title }}</strong>
-                <span>{{ record.summary }}</span>
-              </button>
-              <div class="liuyao-record-actions">
-                <button type="button" class="chip-btn" @click="togglePinRecord(record.id)">
-                  {{ record.pinned ? '取消置顶' : '置顶' }}
-                </button>
-                <button type="button" class="chip-btn" @click="renameRecord(record.id)">重命名</button>
-                <button type="button" class="chip-btn" @click="deleteRecord(record.id)">删除</button>
-              </div>
-            </article>
-          </div>
-        </template>
-
-        <template v-else-if="activeSection === 'songs'">
-          <p class="how-to-do-note">这里放速记、口诀和常见提醒，方便快速看卦时对照。</p>
-          <div class="how-to-do-songs-grid">
-            <div v-for="item in ['先看本卦，再看动爻。', '有变卦时，优先看后势。', '局势未明时，先稳住再说。', '六爻更适合看变化，不适合一口咬死。']" :key="item" class="how-to-do-song-card">
-              {{ item }}
+          <div class="how-to-do-card-grid">
+            <div class="how-to-do-result-card">
+              <span>当前节气</span>
+              <strong>{{ solarTerms.current }}</strong>
+            </div>
+            <div class="how-to-do-result-card">
+              <span>下一节气</span>
+              <strong>{{ solarTerms.next }}</strong>
             </div>
           </div>
-          <div class="how-to-do-actions">
-            <RouterLink class="secondary-btn" to="/how-to-do/songs/add">添加歌诀</RouterLink>
-            <button class="secondary-btn" type="button" :disabled="loading" @click="generate('songs')">刷新口诀</button>
+
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="primary-btn" type="button" @click="useCurrentTime">更新为当前时间</button>
+          </div>
+        </template>
+
+        <template v-else-if="activeTab === 'songs'">
+          <div class="how-to-do-note">歌诀分为我添加的和内置内容。</div>
+          <div class="how-to-do-mode-row">
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': songTab === 'mine' }"
+              @click="songTab = 'mine'"
+            >
+              我添加的
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': songTab === 'builtin' }"
+              @click="songTab = 'builtin'"
+            >
+              内置
+            </button>
+          </div>
+
+          <div v-if="songTab === 'mine'">
+            <p class="how-to-do-note">
+              暂无手动添加的歌诀，可点击右下角加号手动添加歌诀。
+            </p>
+            <label class="field-label">
+              标题
+              <input v-model="songTitle" type="text" class="field-input" placeholder="例如：先看动爻" />
+            </label>
+            <label class="field-label">
+              内容
+              <textarea v-model="songContent" class="text-area" rows="4" placeholder="写一句速记或口诀。"></textarea>
+            </label>
+            <div class="how-to-do-actions how-to-do-actions--left">
+              <button class="primary-btn" type="button" @click="addSongNote">保存</button>
+            </div>
+            <div class="liuyao-record-list">
+              <article v-for="item in songNotes" :key="item.id" class="liuyao-record-item">
+                <strong>{{ item.title }}</strong>
+                <p style="margin: .4rem 0 0; color: var(--text-secondary);">{{ item.content }}</p>
+                <div class="liuyao-record-actions">
+                  <button type="button" class="chip-btn" @click="deleteSongNote(item.id)">删除</button>
+                </div>
+              </article>
+              <div v-if="!songNotes.length" class="empty-panel empty-panel--compact">
+                <div class="empty-panel__icon">＋</div>
+                <div class="empty-panel__copy">
+                  <strong>暂无手动添加的歌诀。</strong>
+                  <p>你可以打开右下角加号，先加一条自己的口诀。</p>
+                </div>
+              </div>
+            </div>
+            <div class="how-to-do-actions how-to-do-actions--left">
+              <RouterLink class="secondary-btn" to="/how-to-do/songs/add">添加歌诀</RouterLink>
+            </div>
+          </div>
+
+          <div v-else class="how-to-do-songs-grid">
+            <div v-for="item in builtInSongs" :key="item.title" class="how-to-do-song-card">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.content }}</p>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="activeTab === 'catalog'">
+          <div class="how-to-do-note">六十四卦按宫分组，方便直接查找。</div>
+          <label class="field-label">
+            搜索
+            <input v-model="catalogQuery" class="field-input" placeholder="输入卦名、宫名或标签" />
+          </label>
+          <div class="liuyao-catalog-groups">
+            <section v-for="group in filteredCatalogGroups" :key="group.palace" class="liuyao-catalog-group">
+              <div class="liuyao-catalog-group__head">
+                <h4>{{ group.palace }}</h4>
+              </div>
+              <div class="liuyao-catalog-grid">
+                <button
+                  v-for="card in group.cards"
+                  :key="`${card.number}-${card.name}`"
+                  type="button"
+                  class="liuyao-catalog-card"
+                  :class="{ 'is-selected': selectedCatalog?.number === card.number }"
+                  @click="selectedCatalog = card"
+                >
+                  <strong>{{ card.name }}</strong>
+                  <span>{{ card.tag }}</span>
+                  <p>{{ card.meaning }}</p>
+                </button>
+              </div>
+            </section>
           </div>
         </template>
 
         <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
       </article>
 
-      <article v-if="result" class="summary-panel summary-panel--featured how-to-do-result">
-        <p class="eyebrow">{{ result.method_label }}</p>
-        <h3>{{ result.summary }}</h3>
+      <article class="summary-panel summary-panel--featured how-to-do-result">
+        <template v-if="activeTab === 'cast' && result">
+          <p class="eyebrow">卦象详情</p>
+          <h3>{{ result.summary }}</h3>
 
-        <div v-if="result.catalog.length" class="how-to-do-catalog-preview">
-          <p class="eyebrow">卦库</p>
-          <div class="how-to-do-catalog-mini-grid">
-            <div v-for="card in result.catalog.slice(0, 8)" :key="`${card.number}-${card.name}`" class="how-to-do-catalog-mini-card">
-              <strong>{{ card.number }} {{ card.name }}</strong>
-              <span>{{ card.meaning }}</span>
+          <div class="how-to-do-card-grid">
+            <div v-for="card in result.cards" :key="card.label" class="how-to-do-result-card">
+              <span>{{ card.label }}</span>
+              <strong>{{ card.value }}</strong>
             </div>
           </div>
-        </div>
 
-        <div class="how-to-do-card-grid">
-          <div v-for="card in result.cards" :key="card.label" class="how-to-do-result-card">
-            <span>{{ card.label }}</span>
-            <strong>{{ card.value }}</strong>
+          <div class="how-to-do-detail-box">
+            <p class="eyebrow">时间</p>
+            <p>{{ (result.raw_result.timestamp as string) || currentTimeText }}</p>
+            <p>{{ result.question }}</p>
           </div>
-        </div>
 
-        <div v-if="result.raw_result?.lines" class="how-to-do-line-summary">
-          <p class="eyebrow">爻位</p>
-          <div class="liuyao-line-summary-list">
-            <div
-              v-for="line in (result.raw_result.lines as Array<Record<string, any>>)"
-              :key="line.position"
-              class="liuyao-line-summary-item"
-              :class="{ 'is-changing': line.is_changing }"
+          <div class="how-to-do-detail-box">
+            <p class="eyebrow">神煞</p>
+            <p>卦身：{{ ((result.raw_result.shensha as Record<string, string>) || {}).卦身 || '—' }}</p>
+            <p>贵人：{{ ((result.raw_result.shensha as Record<string, string>) || {}).贵人 || '—' }}</p>
+            <p>驿马：{{ ((result.raw_result.shensha as Record<string, string>) || {}).驿马 || '—' }}</p>
+            <p>羊刃：{{ ((result.raw_result.shensha as Record<string, string>) || {}).羊刃 || '—' }}</p>
+          </div>
+
+          <div class="how-to-do-line-summary">
+            <p class="eyebrow">六爻</p>
+            <div class="liuyao-line-summary-list">
+              <div
+                v-for="line in (result.raw_result.line_details as Array<Record<string, any>>)"
+                :key="line.position"
+                class="liuyao-line-summary-item"
+                :class="{ 'is-changing': line.is_changing }"
+              >
+                <strong>{{ line.position_name }} {{ line.six_spirit }}</strong>
+                <span>{{ useSymbols ? (line.is_changing ? '▅ ▅' : '▅▅▅') : line.text }}</span>
+                <small>{{ weakenRelated ? line.stem_branch : showNaYin ? `${line.relation} · ${line.stem_branch} · ${line.nayin}` : `${line.relation} · ${line.stem_branch}` }}</small>
+                <small v-if="showHidden">{{ line.hidden_spirit }}</small>
+                <small>{{ line.shi_ying }}</small>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="result.raw_result.mutual_hexagram" class="how-to-do-detail-box">
+            <p class="eyebrow">互卦</p>
+            <strong>{{ (result.raw_result.mutual_hexagram as Record<string, any>).name }}卦</strong>
+            <p>{{ (result.raw_result.mutual_hexagram as Record<string, any>).meaning }}</p>
+          </div>
+
+          <div v-if="selectedCatalog" class="how-to-do-detail-box">
+            <p class="eyebrow">六十四卦</p>
+            <strong>{{ selectedCatalog.name }}</strong>
+            <p>{{ selectedCatalog.tag }} · {{ selectedCatalog.meaning }}</p>
+          </div>
+
+          <div class="how-to-do-interpretation">
+            <p class="eyebrow">卦辞爻辞</p>
+            <p>{{ result.ai_interpretation }}</p>
+          </div>
+
+          <div class="how-to-do-suggestions">
+            <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
+          </div>
+
+          <div class="how-to-do-toggle-row" style="margin-top: 1rem;">
+            <button class="chip-btn" :class="{ 'chip-btn--active': showHidden }" type="button" @click="showHidden = !showHidden">显示全部伏神</button>
+            <button class="chip-btn" :class="{ 'chip-btn--active': useSymbols }" type="button" @click="useSymbols = !useSymbols">使用符号代替阴阳爻符号</button>
+            <button class="chip-btn" :class="{ 'chip-btn--active': showNaYin }" type="button" @click="showNaYin = !showNaYin">显示纳音</button>
+            <button class="chip-btn" :class="{ 'chip-btn--active': weakenRelated }" type="button" @click="weakenRelated = !weakenRelated">弱化关联变爻</button>
+          </div>
+
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="secondary-btn" type="button" @click="sharePage">分享当页URL</button>
+            <button class="secondary-btn" type="button" @click="shareScreenshot">分享当页截图</button>
+            <button class="secondary-btn" type="button" @click="copyHexagram">复制卦象</button>
+          </div>
+        </template>
+
+        <template v-else-if="activeTab === 'sundial'">
+          <p class="eyebrow">日晷</p>
+          <h3>{{ currentTimeText }}</h3>
+          <div class="how-to-do-card-grid">
+            <div class="how-to-do-result-card">
+              <span>农历参考</span>
+              <strong>{{ chineseCalendarText }}</strong>
+            </div>
+            <div class="how-to-do-result-card">
+              <span>当前节气</span>
+              <strong>{{ solarTerms.current }}</strong>
+            </div>
+            <div class="how-to-do-result-card">
+              <span>下一节气</span>
+              <strong>{{ solarTerms.next }}</strong>
+            </div>
+            <div class="how-to-do-result-card">
+              <span>更新时间</span>
+              <strong>{{ currentTimeText }}</strong>
+            </div>
+          </div>
+          <div class="how-to-do-detail-box">
+            <p>当前是 {{ solarTerms.current }} 节气，下一节气是 {{ solarTerms.next }}。</p>
+          </div>
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="primary-btn" type="button" @click="useCurrentTime">更新为当前时间</button>
+          </div>
+        </template>
+
+        <template v-else-if="activeTab === 'songs'">
+          <p class="eyebrow">歌诀</p>
+          <h3>共 {{ songNotes.length + builtInSongs.length }} 条歌诀</h3>
+          <div class="how-to-do-mode-row">
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': songTab === 'mine' }"
+              @click="songTab = 'mine'"
             >
-              <strong>{{ line.position_name }}</strong>
-              <span>{{ line.text }}</span>
-              <small>{{ line.guidance }}</small>
+              我添加的
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              :class="{ 'chip-btn--active': songTab === 'builtin' }"
+              @click="songTab = 'builtin'"
+            >
+              内置
+            </button>
+          </div>
+
+          <div v-if="songTab === 'mine'" class="liuyao-record-list" style="margin-top: 1rem;">
+            <article v-for="item in songNotes" :key="item.id" class="liuyao-record-item">
+              <strong>{{ item.title }}</strong>
+              <p style="margin: .4rem 0 0; color: var(--text-secondary);">{{ item.content }}</p>
+              <div class="liuyao-record-actions">
+                <button type="button" class="chip-btn" @click="deleteSongNote(item.id)">删除</button>
+              </div>
+            </article>
+            <div v-if="!songNotes.length" class="empty-panel empty-panel--compact">
+              <div class="empty-panel__icon">◎</div>
+              <div class="empty-panel__copy">
+                <strong>暂无手动添加的歌诀。</strong>
+                <p>可点击右下角加号手动添加歌诀。</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div v-if="catalogSelected" class="how-to-do-detail-box">
-          <p class="eyebrow">选中卦</p>
-          <strong>{{ catalogSelected.number }} {{ catalogSelected.name }}</strong>
-          <p>{{ catalogSelected.meaning }}</p>
-        </div>
+          <div v-else class="how-to-do-songs-grid">
+            <div v-for="item in builtInSongs" :key="item.title" class="how-to-do-song-card">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.content }}</p>
+            </div>
+          </div>
 
-        <div v-if="result.raw_result?.mutual_hexagram" class="how-to-do-detail-box">
-          <p class="eyebrow">互卦</p>
-          <strong>{{ (result.raw_result.mutual_hexagram as Record<string, any>).name }}卦</strong>
-          <p>{{ (result.raw_result.mutual_hexagram as Record<string, any>).meaning }}</p>
-        </div>
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <RouterLink class="secondary-btn" to="/how-to-do/songs/add">＋</RouterLink>
+          </div>
+        </template>
 
-        <div class="how-to-do-interpretation">
-          <p class="eyebrow">AI 解读</p>
-          <p>{{ result.ai_interpretation }}</p>
-        </div>
+        <template v-else-if="activeTab === 'catalog'">
+          <p class="eyebrow">六十四卦</p>
+          <h3>卦库</h3>
+          <div class="how-to-do-card-grid">
+            <div class="how-to-do-result-card">
+              <span>卦库数量</span>
+              <strong>{{ catalogCards.length }} 卦</strong>
+            </div>
+            <div class="how-to-do-result-card">
+              <span>当前选中</span>
+              <strong>{{ selectedCatalog?.name || '未选择' }}</strong>
+            </div>
+          </div>
 
-        <div class="how-to-do-suggestions">
-          <span v-for="item in result.suggestions" :key="item" class="tag-chip">{{ item }}</span>
-        </div>
+          <div v-if="selectedCatalog" class="how-to-do-detail-box">
+            <p class="eyebrow">卦象详情</p>
+            <strong>{{ selectedCatalog.name }}</strong>
+            <p>{{ selectedCatalog.palace }} · {{ selectedCatalog.tag }}</p>
+            <p>{{ selectedCatalog.meaning }}</p>
+          </div>
 
-        <div class="how-to-do-actions how-to-do-actions--left">
-          <RouterLink class="secondary-btn" to="/how-to-do/detail">查看详情</RouterLink>
-        </div>
-      </article>
-
-      <article v-else class="empty-panel empty-panel--compact how-to-do-empty">
-        <div class="empty-panel__icon">◎</div>
-        <div class="empty-panel__copy">
-          <strong>先选一个模块，再开始。</strong>
-          <p>起卦、卦库、日历、时钟、记录、歌诀都放在这里。</p>
-        </div>
+          <div class="how-to-do-actions how-to-do-actions--left">
+            <button class="primary-btn" type="button" :disabled="loading" @click="loadCatalog">
+              {{ loading ? '加载中...' : '刷新卦库' }}
+            </button>
+          </div>
+        </template>
       </article>
     </div>
   </section>
@@ -533,7 +715,7 @@ onBeforeUnmount(() => {
 .how-to-do-mode-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .how-to-do-layout {
@@ -543,8 +725,7 @@ onBeforeUnmount(() => {
 }
 
 .how-to-do-panel,
-.how-to-do-result,
-.how-to-do-empty {
+.how-to-do-result {
   min-height: 100%;
 }
 
@@ -612,6 +793,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .how-to-do-actions--left {
@@ -624,36 +806,77 @@ onBeforeUnmount(() => {
   font-size: 0.92rem;
 }
 
-.how-to-do-catalog-preview {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.how-to-do-catalog-mini-grid {
+.how-to-do-card-grid,
+.how-to-do-songs-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+  margin-top: 1rem;
 }
 
-.how-to-do-catalog-mini-card {
+.how-to-do-result-card,
+.how-to-do-song-card,
+.liuyao-catalog-card,
+.liuyao-catalog-group,
+.how-to-do-time-card,
+.liuyao-record-item {
   border-radius: 16px;
-  padding: 0.8rem 0.9rem;
+  padding: 0.85rem 0.95rem;
   background: color-mix(in srgb, var(--card-bg) 94%, transparent);
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
-.how-to-do-catalog-mini-card strong {
+.how-to-do-result-card span {
   display: block;
-  font-size: 0.94rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
 }
 
-.how-to-do-catalog-mini-card span {
+.how-to-do-result-card strong {
   display: block;
-  margin-top: 0.3rem;
-  color: var(--text-secondary);
-  font-size: 0.84rem;
+  margin-top: 0.35rem;
+  font-size: 0.98rem;
+  color: var(--text-primary);
   line-height: 1.5;
+}
+
+.how-to-do-time-card {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.how-to-do-time-card--accent {
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.how-to-do-time-card strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.how-to-do-time-card p,
+.how-to-do-song-card p,
+.liuyao-catalog-card p,
+.how-to-do-detail-box p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.liuyao-catalog-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.liuyao-catalog-group__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.liuyao-catalog-group__head h4 {
+  margin: 0;
 }
 
 .liuyao-catalog-grid {
@@ -663,12 +886,8 @@ onBeforeUnmount(() => {
 }
 
 .liuyao-catalog-card {
-  border-radius: 16px;
-  padding: 0.8rem 0.9rem;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  color: var(--text-primary);
   text-align: left;
+  color: var(--text-primary);
 }
 
 .liuyao-catalog-card.is-selected {
@@ -687,49 +906,14 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.how-to-do-time-card {
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.how-to-do-time-card--accent {
-  border-color: rgba(59, 130, 246, 0.25);
-}
-
-.how-to-do-time-card strong {
-  display: block;
-  font-size: 1rem;
-}
-
-.how-to-do-time-card p {
-  margin: 0.35rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-}
-
-.how-to-do-record-count {
-  margin-bottom: 0.85rem;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
+.liuyao-catalog-card p {
+  font-size: 0.84rem;
 }
 
 .liuyao-record-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.liuyao-record-item {
-  border-radius: 16px;
-  padding: 0.85rem 0.9rem;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.liuyao-record-item.is-pinned {
-  border-color: rgba(59, 130, 246, 0.28);
 }
 
 .liuyao-record-open {
@@ -755,48 +939,6 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.7rem;
-}
-
-.how-to-do-songs-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.how-to-do-song-card {
-  border-radius: 16px;
-  padding: 0.85rem 0.95rem;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  line-height: 1.6;
-}
-
-.how-to-do-card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.how-to-do-result-card {
-  border-radius: 16px;
-  padding: 0.85rem 0.95rem;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.how-to-do-result-card span {
-  display: block;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-}
-
-.how-to-do-result-card strong {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.98rem;
-  color: var(--text-primary);
-  line-height: 1.5;
 }
 
 .how-to-do-line-summary {
@@ -840,53 +982,73 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.how-to-do-detail-box {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.how-to-do-detail-box p {
-  margin: 0.35rem 0 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
+.how-to-do-detail-box,
 .how-to-do-interpretation {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
-.how-to-do-interpretation p:last-child {
-  margin: 0.35rem 0 0;
-  line-height: 1.8;
-  color: var(--text-secondary);
+.how-to-do-detail-box strong {
+  display: block;
+  margin-top: 0.35rem;
 }
 
 .how-to-do-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin-top: 1rem;
 }
 
-@media (max-width: 920px) {
-  .how-to-do-layout {
-    grid-template-columns: 1fr;
-  }
+.liuyao-catalog-group {
+  padding-bottom: 0.95rem;
+}
 
-  .how-to-do-catalog-mini-grid,
-  .liuyao-catalog-grid,
-  .how-to-do-card-grid,
-  .liuyao-line-summary-list,
-  .how-to-do-songs-grid {
+.empty-panel {
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.empty-panel--compact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.empty-panel__icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--text-primary);
+}
+
+.empty-panel__copy strong {
+  display: block;
+}
+
+.empty-panel__copy p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .how-to-do-layout {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .how-to-do-field-grid {
+@media (max-width: 768px) {
+  .how-to-do-field-grid,
+  .how-to-do-card-grid,
+  .how-to-do-songs-grid,
+  .liuyao-catalog-grid,
+  .liuyao-line-summary-list {
     grid-template-columns: 1fr;
   }
 }

@@ -21,22 +21,24 @@ class HowToDoTests(unittest.TestCase):
         self.assertEqual(len(body["catalog"]), 64)
         self.assertEqual(len({item["number"] for item in body["catalog"]}), 64)
         self.assertEqual(len(ALL_GUA_CATALOG), 64)
+        self.assertTrue(all(item.get("palace") for item in body["catalog"]))
 
-    def test_how_to_do_reference_returns_reference_cards(self):
+    def test_how_to_do_sundial_returns_time_cards(self):
         with TestClient(app) as client:
-            response = client.post("/persona-api/how-to-do", json={"section": "reference", "use_ai": False})
+            response = client.post("/persona-api/how-to-do", json={"section": "sundial", "use_ai": False})
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["section"], "reference")
+        self.assertEqual(body["section"], "sundial")
         self.assertTrue(body["cards"])
-        self.assertEqual(body["cards"][0]["label"], "方向")
+        self.assertEqual(body["cards"][0]["label"], "当前时间")
 
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
             "section": "cast",
             "cast_mode": "coin",
             "question": "现在适合推进吗？",
+            "category": "工作推进",
             "cast_seed": "20260418",
             "use_ai": True,
         }
@@ -57,6 +59,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertEqual(result["model_used"], "mock-model")
         self.assertIn("本卦", result["summary"])
         self.assertTrue(result["ai_interpretation"])
+        self.assertIn("问念", {item["label"] for item in result["cards"]})
 
 
 if __name__ == "__main__":

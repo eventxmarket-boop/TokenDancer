@@ -1,3 +1,11 @@
+## V1.4.87 - 2026-04-18
+
+- Rebuilt `我该怎么做` into a fuller one-to-one liu-yao layout with 排盘, 日晷, 歌诀, and 六十四卦 sections.
+- Expanded the cast runtime with richer盘面 data, including 问念、分类、时间、神煞、互卦、动爻、变卦, and line-level details.
+- Upgraded the 六十四卦 catalog into palace-grouped cards with tags and full 64-hexagram coverage.
+- Restored the 歌诀 section with built-in long-form mnemonic content and a local add-note flow.
+- Kept the module isolated so future deletions can still be done by section without affecting the rest of the app.
+
 ## V1.4.86 - 2026-04-18
 
 - Expanded `我该怎么做` toward a more one-to-one liu-yao mapping with dedicated `select-gua`, `reference`, `all-gua`, `calendar`, `clock`, `records`, `songs`, `detail`, and `songs/add` entry points.

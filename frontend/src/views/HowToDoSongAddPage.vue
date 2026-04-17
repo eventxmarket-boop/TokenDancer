@@ -68,7 +68,7 @@ onMounted(loadNotes)
     </label>
     <div class="how-to-do-actions">
       <button class="primary-btn" type="button" @click="addNote">保存</button>
-      <button class="secondary-btn" type="button" @click="router.push('/how-to-do/songs')">返回歌诀</button>
+      <button class="secondary-btn" type="button" @click="router.push('/how-to-do')">返回歌诀</button>
     </div>
 
     <div class="liuyao-record-list" style="margin-top: 1rem;">
@@ -82,3 +82,59 @@ onMounted(loadNotes)
     </div>
   </section>
 </template>
+
+<style scoped>
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.85rem;
+}
+
+.field-input,
+.text-area {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+  color: var(--text-primary);
+  padding: 0.8rem 0.95rem;
+  font-size: 0.96rem;
+  outline: none;
+}
+
+.text-area {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.how-to-do-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.liuyao-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.liuyao-record-item {
+  border-radius: 16px;
+  padding: 0.85rem 0.9rem;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.liuyao-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+</style>
