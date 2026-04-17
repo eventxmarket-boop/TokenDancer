@@ -373,7 +373,6 @@ const ocrStatusLabel = computed(() => {
           class="field-input"
           type="file"
           accept="image/*,.jpg,.jpeg,.png,.webp"
-          capture="environment"
           multiple
           @change="handleImageDocumentChange"
         />

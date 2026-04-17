@@ -821,10 +821,7 @@ if (activeHistoryId.value) {
     <div class="reply-composer">
       <div class="reply-composer__chips">
         <button class="reply-chip" type="button" @click="contextOpen = !contextOpen">+</button>
-        <button class="reply-chip" type="button" @click="triggerTextUpload">📄</button>
-        <button class="reply-chip" type="button" @click="triggerImageUpload">🖼</button>
         <button class="reply-chip" type="button" @click="advancedOpen = !advancedOpen">高级</button>
-        <span v-if="attachmentSummary" class="reply-chip reply-chip--ghost">{{ attachmentSummary }}</span>
       </div>
 
       <div class="reply-composer__row">
@@ -857,10 +854,18 @@ if (activeHistoryId.value) {
         ></textarea>
       </label>
 
+      <div class="reply-composer__attachments-row">
+        <div class="reply-composer__attachment-actions">
+          <button class="reply-chip" type="button" @click="triggerTextUpload">📄 文件</button>
+          <button class="reply-chip" type="button" @click="triggerImageUpload">🖼 图片</button>
+        </div>
+        <span v-if="attachmentSummary" class="reply-chip reply-chip--ghost">{{ attachmentSummary }}</span>
+      </div>
+
       <div class="reply-composer__footer">
         <div class="reply-composer__attach">
           <input ref="fileInputRef" class="reply-hidden-input" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" multiple @change="handleTextFiles" />
-          <input ref="imageInputRef" class="reply-hidden-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" capture="environment" multiple @change="handleImageFiles" />
+          <input ref="imageInputRef" class="reply-hidden-input" type="file" accept="image/*,.jpg,.jpeg,.png,.webp" multiple @change="handleImageFiles" />
         </div>
         <button class="primary-btn" type="button" :disabled="loading || !form.message.trim()" @click="generateReply()">
           {{ loading ? '生成中…' : '发送' }}
@@ -1190,11 +1195,22 @@ if (activeHistoryId.value) {
 
 .reply-composer__chips,
 .reply-composer__row,
+.reply-composer__attachments-row,
 .reply-composer__footer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
   align-items: center;
+}
+
+.reply-composer__attachments-row {
+  justify-content: space-between;
+}
+
+.reply-composer__attachment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 .reply-chip {

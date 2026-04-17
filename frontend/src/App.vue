@@ -15,6 +15,27 @@ const themeKey = 'persona-theme-mode'
 const theme = ref<'day' | 'night'>('day')
 
 const themeLabel = computed(() => (theme.value === 'night' ? '日间' : '夜间'))
+const seedNavLabel = computed(() => {
+  if (route.path.startsWith('/create')) {
+    return '创建'
+  }
+  return 'Seed'
+})
+const seedNavTarget = computed(() => {
+  if (route.path.startsWith('/create')) {
+    return '/create'
+  }
+  if (route.path === '/seed') {
+    return '/seed'
+  }
+  return '/'
+})
+const replyNavLabel = computed(() => {
+  if (route.path === '/how-to-do') {
+    return '我该怎么做'
+  }
+  return '我该怎么回'
+})
 
 function applyTheme(mode: 'day' | 'night') {
   if (typeof document === 'undefined') {
@@ -71,7 +92,7 @@ watch(
       <div class="topbar__actions">
         <nav class="desktop-nav" aria-label="主导航">
           <div class="nav-group" :class="{ 'nav-group--active': isSeedMenuActive }">
-            <RouterLink to="/" class="nav-dropdown__trigger">Seed</RouterLink>
+            <RouterLink :to="seedNavTarget" class="nav-dropdown__trigger">{{ seedNavLabel }}</RouterLink>
             <div class="nav-dropdown" aria-label="Seed 下拉菜单">
               <RouterLink to="/create" class="nav-dropdown__item">创建</RouterLink>
               <RouterLink to="/" class="nav-dropdown__item">Seed</RouterLink>
@@ -79,7 +100,7 @@ watch(
           </div>
 
           <div class="nav-group" :class="{ 'nav-group--active': isReplyMenuActive }">
-            <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">我该怎么回</RouterLink>
+            <RouterLink :to="route.path === '/how-to-do' ? '/how-to-do' : '/reply-assistant'" class="nav-dropdown__trigger">{{ replyNavLabel }}</RouterLink>
             <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
               <RouterLink to="/reply-assistant/workbench" class="nav-dropdown__item">我该怎么回</RouterLink>
               <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>

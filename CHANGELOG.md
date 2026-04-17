@@ -1,3 +1,9 @@
+## V1.4.76 - 2026-04-18
+
+- Moved the reply page attachment row to sit above the send button for a tighter composer layout.
+- Removed mobile image capture forcing so image pickers can use the photo library as well as the camera.
+- Updated the top navigation labels to match the current page context across `Seed`, `创建`, `我该怎么回`, and `我该怎么做`.
+
 ## V1.4.75 - 2026-04-18
 
 - Renamed the four reply output labels to match the simplified chat flow.
