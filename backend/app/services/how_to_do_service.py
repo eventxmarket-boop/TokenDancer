@@ -620,6 +620,36 @@ ANSWER_SKELETONS = {
     },
 }
 
+GENERIC_TEMPLATE_MARKERS = [
+    "这卦先看",
+    "眼下不必先慌",
+    "先顺着局势判断进退",
+    "事情不是完全没有路",
+    "只是不必先慌",
+    "怎么应对：先按眼前最关键的一步处理",
+]
+
+QUESTION_TYPE_RELEVANCE_MARKERS = {
+    "出行动向": ["出行", "归来", "改期", "成行", "路上", "驿马", "启程"],
+    "普通求财": ["财", "钱", "到账", "兑现", "入袋", "应期", "回款"],
+    "做空交易": ["做空", "下跌", "反弹", "空单", "减仓", "止盈", "止损"],
+    "投资经营": ["投资", "经营", "投入", "回本", "现金流", "试单", "开店"],
+    "职业仕途": ["面试", "入职", "录用", "机会", "岗位", "文书", "消息"],
+    "工作事务": ["推进", "项目", "流程", "对齐", "卡点", "补材料", "进度"],
+    "学业考试": ["考试", "成绩", "分数", "高考", "上岸", "录取", "发挥", "复习"],
+    "关系情感": ["关系", "态度", "靠近", "复合", "表白", "回应", "边界"],
+    "家宅家庭": ["家里", "家庭", "长辈", "孩子", "沟通", "家宅", "关系"],
+    "居住去留": ["搬家", "续住", "住处", "看房", "换地方", "居住", "时机"],
+    "健康生育": ["恢复", "复查", "休养", "身体", "怀孕", "生产", "调养"],
+    "诉讼官非": ["施压", "落地", "证据", "官非", "风险", "升级", "纠纷"],
+    "失物方位": ["东", "西", "南", "北", "方向", "角落", "柜", "抽屉", "高处", "低处"],
+    "合作交易": ["合作", "签约", "催款", "回款", "兑现", "成不成", "环节"],
+    "催收纠纷": ["催收", "施压", "动作", "真假", "留痕", "防守", "升级"],
+}
+
+DIRECT_DECISION_MARKERS = ["更偏", "偏", "宜", "不宜", "能", "不能", "会", "不会", "先缓", "先别", "可", "不太"]
+LOCATION_ANSWER_MARKERS = ["东", "西", "南", "北", "东北", "东南", "西北", "西南", "正东", "正西", "正南", "正北", "柜", "抽屉", "床", "桌", "角落", "包里", "高处", "低处", "门口"]
+
 MAX_HOW_TO_DO_COMPLETION_RETRIES = 1
 
 LINE_GUIDANCE = [
@@ -1025,6 +1055,67 @@ def _build_answer_skeleton(question_type: str) -> dict[str, Any]:
     }
 
 
+def _extract_relevance_markers(question_type: str, question: str) -> list[str]:
+    markers = list(QUESTION_TYPE_RELEVANCE_MARKERS.get(question_type, []))
+    normalized_question = _normalize_text(question)
+    dynamic_pairs = [
+        ("高考", ["高考", "分数", "成绩"]),
+        ("考研", ["考研", "复试", "上岸"]),
+        ("考试", ["考试", "成绩", "发挥"]),
+        ("录取", ["录取", "上岸"]),
+        ("搬家", ["搬家", "续住", "住处"]),
+        ("续住", ["续住", "搬家", "住处"]),
+        ("找东西", ["方向", "位置", "角落"]),
+        ("失物", ["方向", "位置", "角落"]),
+        ("签约", ["签约", "条件", "落地"]),
+    ]
+    for needle, extras in dynamic_pairs:
+        if needle in normalized_question:
+            markers.extend(extras)
+    if re.search(r"\d+\s*分", normalized_question):
+        markers.extend(["分数", "成绩"])
+    return list(dict.fromkeys(marker for marker in markers if marker))
+
+
+def _looks_like_generic_template(answer: str) -> bool:
+    normalized = _normalize_text(answer)
+    hit_count = sum(1 for marker in GENERIC_TEMPLATE_MARKERS if marker in normalized)
+    return hit_count >= 2
+
+
+def _answer_needs_repair(
+    *,
+    question: str,
+    protocol: dict[str, Any],
+    answer: str,
+) -> tuple[bool, str]:
+    normalized_answer = _normalize_text(answer)
+    if not normalized_answer:
+        return True, "回答为空"
+
+    question_type = _normalize_text(protocol.get("question_type"))
+    meta = protocol.get("question_type_meta", {}) or {}
+    contract = protocol.get("answer_contract", {}) or {}
+    reasons: list[str] = []
+
+    if meta.get("coverage") == "high" and _looks_like_generic_template(normalized_answer):
+        reasons.append("回答落成了通用空壳模板")
+
+    relevance_markers = _extract_relevance_markers(question_type, question)
+    lacks_relevance = bool(meta.get("coverage") == "high" and relevance_markers and not any(marker in normalized_answer for marker in relevance_markers))
+    if lacks_relevance and (_looks_like_generic_template(normalized_answer) or len(normalized_answer) <= 120):
+        reasons.append("没有回应当前分类最核心的语义")
+
+    first_paragraph = re.split(r"\n{2,}|\n", normalized_answer, maxsplit=1)[0]
+    if contract.get("binary_decision") and not any(marker in first_paragraph for marker in DIRECT_DECISION_MARKERS):
+        reasons.append("二选一或是非题没有先给明确倾向")
+
+    if contract.get("direction_first") and not any(marker in first_paragraph for marker in LOCATION_ANSWER_MARKERS):
+        reasons.append("方位题没有先直接回答方向或环境")
+
+    return bool(reasons), "；".join(reasons)
+
+
 async def _continue_llm_completion(
     *,
     db: Session | None,
@@ -1052,6 +1143,68 @@ async def _continue_llm_completion(
         if not _should_continue_generation(appended, finish_reason):
             break
     return appended, model_used
+
+
+async def _repair_divination_answer(
+    *,
+    db: Session | None,
+    question: str,
+    protocol: dict[str, Any],
+    grounding: dict[str, Any],
+    rejected_answer: str,
+    repair_reason: str,
+    research_context: str = "",
+    conversation_history: list[dict[str, str]] | None = None,
+    is_followup: bool = False,
+) -> tuple[str, str]:
+    system_prompt = (
+        "你是 Tokendancer 的六爻解卦师。上一版回答因为跑题或过于空泛而被判定无效。"
+        "这一次必须严格围绕当前问题类型、当前卦盘和当前问念重答。"
+        "先按符号层、关系层、状态层看卦，再映射到用户问题。"
+        "不要再输出通用模板句，不要再说'先看主势'、'先顺着局势判断进退'这类空话。"
+        "如果是高覆盖分类，必须回应这一类问题最该看的卦位、术语和现实判断。"
+        "如果是二选一或是非题，第一句直接给明确倾向。"
+        "如果是失物或方位题，第一句直接给方向和环境线索。"
+        "语气要像稳定的专业解卦师，带少量术语，但不要像系统面板。"
+        "不要输出 markdown、编号清单、代码块。"
+    )
+    user_prompt = json.dumps(
+        {
+            "question": question,
+            "question_type": protocol.get("question_type"),
+            "repair_reason": repair_reason,
+            "rejected_answer": rejected_answer,
+            "grounding": grounding,
+            "protocol": protocol,
+            "research_context": research_context,
+            "conversation_history": conversation_history or [],
+            "mode": "followup" if is_followup else "first_reply",
+            "output_goal": "基于同一卦盘重写一版紧扣分类、紧扣问句、紧扣卦位的有效答案。",
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    reply = await generate_reply(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        db=db,
+    )
+    content = str(reply.get("content") or "").strip()
+    model_used = str(reply.get("model") or "")
+    finish_reason = str(reply.get("finish_reason") or "")
+    if _should_continue_generation(content, finish_reason):
+        content, continued_model = await _continue_llm_completion(
+            db=db,
+            base_messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            existing_content=content,
+        )
+        model_used = continued_model or model_used
+    return content.strip(), model_used
 
 
 def _build_direction_reference(grounding: dict[str, Any]) -> dict[str, Any]:
@@ -1185,7 +1338,19 @@ def _remove_trailing_question(text: str) -> str:
         return text.strip()
     last = paragraphs[-1]
     if "？" in last or last.endswith("?"):
-        paragraphs = paragraphs[:-1]
+        parts = re.split(r"(?<=[。！？!?])", last)
+        kept_parts: list[str] = []
+        for part in parts:
+            trimmed = part.strip()
+            if not trimmed:
+                continue
+            if "？" in trimmed or trimmed.endswith("?"):
+                break
+            kept_parts.append(trimmed)
+        if kept_parts:
+            paragraphs[-1] = "".join(kept_parts).strip()
+        else:
+            paragraphs = paragraphs[:-1]
     return "\n\n".join(paragraphs).strip()
 
 
@@ -2080,6 +2245,44 @@ async def _interpret_with_llm(
             existing_content=content,
         )
         model_used = continued_model or model_used
+    needs_repair, repair_reason = _answer_needs_repair(
+        question=question,
+        protocol=protocol,
+        answer=content,
+    )
+    if needs_repair:
+        repair_context = research_context
+        try:
+            repair_payload = await research_how_to_do_question(
+                question=question,
+                category=_normalize_text((base_result.get("raw_result") or {}).get("category")),
+                cast_context={"raw_result": base_result.get("raw_result", {})},
+                history=[],
+                forced_kind="adaptive_context",
+            )
+            repair_context = "\n\n".join(
+                part for part in [research_context, _format_how_to_do_research_context(repair_payload)] if part
+            ).strip()
+        except Exception:
+            repair_context = research_context
+        repaired_text, repaired_model = await _repair_divination_answer(
+            db=db,
+            question=question,
+            protocol=protocol,
+            grounding=grounding,
+            rejected_answer=content,
+            repair_reason=repair_reason,
+            research_context=repair_context,
+            is_followup=False,
+        )
+        repaired_needs_fix, _ = _answer_needs_repair(
+            question=question,
+            protocol=protocol,
+            answer=repaired_text,
+        )
+        if repaired_text and not repaired_needs_fix:
+            content = repaired_text
+            model_used = repaired_model or model_used
     if not should_append_question:
         content = _remove_trailing_question(content)
     return content.strip(), model_used
@@ -2165,6 +2368,45 @@ async def _chat_with_llm(
             existing_content=content,
         )
         model_used = continued_model or model_used
+    needs_repair, repair_reason = _answer_needs_repair(
+        question=user_message,
+        protocol=protocol,
+        answer=content,
+    )
+    if needs_repair:
+        repair_context = research_context
+        try:
+            repair_payload = await research_how_to_do_question(
+                question=user_message,
+                category=_normalize_text(cast_context.get("category")) if isinstance(cast_context, dict) else "",
+                cast_context=cast_context if isinstance(cast_context, dict) else {},
+                history=conversation_history if isinstance(conversation_history, list) else [],
+                forced_kind="adaptive_context",
+            )
+            repair_context = "\n\n".join(
+                part for part in [research_context, _format_how_to_do_research_context(repair_payload)] if part
+            ).strip()
+        except Exception:
+            repair_context = research_context
+        repaired_text, repaired_model = await _repair_divination_answer(
+            db=db,
+            question=user_message,
+            protocol=protocol,
+            grounding=grounding,
+            rejected_answer=content,
+            repair_reason=repair_reason,
+            research_context=repair_context,
+            conversation_history=trimmed_history,
+            is_followup=True,
+        )
+        repaired_needs_fix, _ = _answer_needs_repair(
+            question=user_message,
+            protocol=protocol,
+            answer=repaired_text,
+        )
+        if repaired_text and not repaired_needs_fix:
+            content = repaired_text
+            model_used = repaired_model or model_used
     if not should_append_question:
         content = _remove_trailing_question(content)
     return content.strip(), model_used

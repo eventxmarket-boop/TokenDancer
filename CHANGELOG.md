@@ -1,3 +1,9 @@
+## V1.4.122 - 2026-04-18
+
+- Synced `我该怎么做` frontend question guidance with the selected category bucket so the main textarea placeholder and helper copy now change by大类, making it clearer how to ask travel, study, money, relationship, family, health, and deal questions.
+- Added a relevance guard for `我该怎么做` answers so when a high-coverage category still produces a generic empty template, the runtime now rejects it, pulls an adaptive联网语境补充, and forces one stricter rewrite instead of returning an invalid answer.
+- Fixed follow-up cleanup so removing the trailing反问 no longer accidentally deletes the entire last paragraph of a continued answer.
+
 ## V1.4.121 - 2026-04-18
 
 - Fixed recurring `我该怎么做` answer truncation by preserving model `finish_reason`, detecting length-cut responses, and automatically requesting one continuation pass when the first reply stops mid-thought.

@@ -53,6 +53,44 @@ const questionCategoryGroups = [
   },
 ]
 
+const categoryGroupPrompts: Record<
+  string,
+  { placeholder: string; tip: string }
+> = {
+  travel: {
+    placeholder: '例如：这趟出行能不能成行；更适合哪天出发；对方什么时候回来',
+    tip: '适合直接问成不成、什么时候动、路上哪里有阻。',
+  },
+  career: {
+    placeholder: '例如：这次高考能不能上 500 分；这次面试能不能过；这个项目什么时候能推进',
+    tip: '适合直接问结果、卡点、时间窗口，问题越具体越容易断。',
+  },
+  money: {
+    placeholder: '例如：这笔钱能不能到账；现在适不适合买入；这家店能不能做起来',
+    tip: '适合直接问能不能成、多久兑现、风险点在哪。',
+  },
+  relationship: {
+    placeholder: '例如：他现在是什么态度；这段关系还有没有推进点；适不适合表白',
+    tip: '适合直接问态度、走向、推进还是收边界。',
+  },
+  family: {
+    placeholder: '例如：这次更适合搬家还是续住；家里这件事该不该先说；和长辈会不会缓和',
+    tip: '适合直接问宜守还是宜动、问题更偏关系还是现实环境。',
+  },
+  life: {
+    placeholder: '例如：这段时间身体是急还是缓；这个东西更偏在哪个方位；这件官非会不会升级',
+    tip: '适合直接问风险等级、方向位置、先防什么。',
+  },
+  trade: {
+    placeholder: '例如：这次合作能不能成；这份合同要不要签；这笔钱回不回得来',
+    tip: '适合直接问能不能落地、谁在拖、下一步该催还是该守。',
+  },
+  other: {
+    placeholder: '例如：把你最想知道的结果直接问出来，比如会不会成、什么时候动、该不该继续',
+    tip: '如果拿不准分类，至少把结果目标和时间范围说清楚。',
+  },
+}
+
 const activeCastMode = ref<CastModeKey>('coin')
 const question = ref('')
 const category = ref('')
@@ -112,6 +150,12 @@ const onlineDrawCount = computed(() => manualLines.value.filter((item) => !!item
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const selectedCategoryItems = computed(() => {
   return questionCategoryGroups.find((item) => item.key === categoryGroup.value)?.items ?? []
+})
+const activeQuestionPrompt = computed(() => {
+  return categoryGroupPrompts[categoryGroup.value] ?? {
+    placeholder: '例如：直接问你最想知道的结果、时间点或方向',
+    tip: '先选大类后，这里会同步显示这一类更适合怎么问。',
+  }
 })
 const castTimeText = computed(() => castResult.value?.day_label || '—')
 const castShenshaText = computed(() => {
@@ -323,8 +367,14 @@ async function sendChatFollowup() {
 
     <label class="field-label">
       问念
-      <textarea v-model="question" class="text-area" rows="4" placeholder="请输入您的问题"></textarea>
+      <textarea
+        v-model="question"
+        class="text-area"
+        rows="4"
+        :placeholder="activeQuestionPrompt.placeholder"
+      ></textarea>
     </label>
+    <p class="how-to-do-note">{{ activeQuestionPrompt.tip }}</p>
 
     <div class="how-to-do-field-grid how-to-do-field-grid--category">
       <label class="field-label">

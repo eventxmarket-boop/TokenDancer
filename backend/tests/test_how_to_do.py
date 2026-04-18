@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from main import app
 from app.services.how_to_do_service import (
     ALL_GUA_CATALOG,
+    _answer_needs_repair,
     _build_cast_result,
     _build_divination_grounding,
     _build_interpretation_protocol,
@@ -235,6 +236,85 @@ class HowToDoTests(unittest.TestCase):
             {"role": "assistant", "content": "第三条"},
         ]
         self.assertFalse(_should_append_followup_question("继续", conversation_history=history, cast_context={}))
+
+    def test_exam_generic_answer_is_flagged_for_repair(self):
+        base_result = _build_cast_result(
+            question="这次高考能不能如愿500分以上",
+            category="考试测验",
+            cast_mode="manual",
+            cast_seed="2026/04/18 12:14:00",
+            manual_lines=[7, 9, 8, 8, 8, 7],
+        )
+        protocol = _build_interpretation_protocol(
+            question="这次高考能不能如愿500分以上",
+            category="考试测验",
+            grounding=_build_divination_grounding(base_result),
+        )
+        invalid, reason = _answer_needs_repair(
+            question="这次高考能不能如愿500分以上",
+            protocol=protocol,
+            answer=(
+                "核心结论：这卦先看颐的主势，眼下不必先慌，先顺着局势判断进退。"
+                "卦象拆解：事情不是完全没有路，只是节奏要拿稳。"
+            ),
+        )
+        self.assertTrue(invalid)
+        self.assertIn("空壳模板", reason)
+
+    def test_how_to_do_cast_repairs_generic_exam_answer(self):
+        payload = {
+            "section": "cast",
+            "cast_mode": "coin",
+            "question": "这次高考能不能如愿500分以上",
+            "category": "考试测验",
+            "cast_seed": "2026/04/18 12:14:44",
+            "use_ai": True,
+        }
+
+        mocked_replies = [
+            {
+                "content": (
+                    "核心结论：这卦先看颐的主势，眼下不必先慌，先顺着局势判断进退。"
+                    "卦象拆解：事情不是完全没有路，只是节奏要拿稳。"
+                ),
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+                "finish_reason": "stop",
+            },
+            {
+                "content": (
+                    "核心结论：这次高考更偏有机会摸到500分，但不是轻松稳过，关键看临场发挥和最后这段提分。"
+                    "关键互动分析：这卦要重点看父母爻、子孙爻和世位，说明分数不是空来，要靠后段补强。"
+                    "时间推演：临考前这一段比发榜后更关键。实际意义：现在最该补的是最容易丢分的那一块。"
+                ),
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+                "finish_reason": "stop",
+            },
+        ]
+
+        with patch(
+            "app.services.how_to_do_service.generate_reply",
+            side_effect=mocked_replies,
+        ) as mocked_generate, patch(
+            "app.services.how_to_do_service.research_how_to_do_question",
+            return_value={
+                "needs_research": True,
+                "research_kind": "adaptive_context",
+                "adaptive_reason": "回答偏空，需要补考试语境。",
+                "facts_summary": ["高考类问题要把分数目标、发挥状态和最后提分空间区分开看。"],
+                "sources_hint": ["背景资料"],
+                "search_queries": ["高考 分数 语境"],
+                "evidence": [],
+            },
+        ):
+            result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
+
+        self.assertEqual(mocked_generate.call_count, 2)
+        self.assertIn("500分", result["ai_interpretation"])
+        self.assertIn("父母爻", result["ai_interpretation"])
 
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {

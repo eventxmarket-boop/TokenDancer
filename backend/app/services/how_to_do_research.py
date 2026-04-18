@@ -288,6 +288,7 @@ async def research_how_to_do_question(
     category: str = "",
     cast_context: dict[str, Any] | None = None,
     history: list[dict[str, Any]] | None = None,
+    forced_kind: HowToDoResearchKind | None = None,
 ) -> dict[str, Any]:
     normalized_question = _normalize_text(question)
     if not normalized_question:
@@ -301,7 +302,7 @@ async def research_how_to_do_question(
             "evidence": [],
         }
 
-    kind = _infer_research_kind(normalized_question, history)
+    kind = forced_kind or _infer_research_kind(normalized_question, history)
     queries = _build_queries(normalized_question, category, cast_context, history)
     provider_mode = os.getenv("HOW_TO_DO_RESEARCH_MODE", "baidu").strip().lower()
     if provider_mode not in {"stub", "baidu", "custom"}:
