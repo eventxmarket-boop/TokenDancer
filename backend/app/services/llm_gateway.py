@@ -21,6 +21,7 @@ class LLMReply:
     model: str
     usage: dict[str, int]
     latency_ms: int
+    finish_reason: str
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -28,6 +29,7 @@ class LLMReply:
             "model": self.model,
             "usage": self.usage,
             "latency_ms": self.latency_ms,
+            "finish_reason": self.finish_reason,
         }
 
 
@@ -53,6 +55,17 @@ def _extract_content(payload: dict[str, Any]) -> str:
             if isinstance(text, str):
                 return text.strip()
     raise LLMGatewayError("模型响应中缺少可解析的 content")
+
+
+def _extract_finish_reason(payload: dict[str, Any]) -> str:
+    choices = payload.get("choices")
+    if isinstance(choices, list) and choices:
+        first_choice = choices[0]
+        if isinstance(first_choice, dict):
+            reason = first_choice.get("finish_reason") or first_choice.get("stop_reason")
+            if isinstance(reason, str):
+                return reason.strip()
+    return ""
 
 
 async def generate_reply(
@@ -121,4 +134,5 @@ async def generate_reply(
         model=str(payload.get("model") or model),
         usage=usage,
         latency_ms=latency_ms,
+        finish_reason=_extract_finish_reason(payload),
     ).as_dict()

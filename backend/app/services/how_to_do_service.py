@@ -620,6 +620,8 @@ ANSWER_SKELETONS = {
     },
 }
 
+MAX_HOW_TO_DO_COMPLETION_RETRIES = 1
+
 LINE_GUIDANCE = [
     "起点和底盘，先看稳不稳。",
     "基础承接位，先看配合。",
@@ -1023,6 +1025,35 @@ def _build_answer_skeleton(question_type: str) -> dict[str, Any]:
     }
 
 
+async def _continue_llm_completion(
+    *,
+    db: Session | None,
+    base_messages: list[dict[str, str]],
+    existing_content: str,
+) -> tuple[str, str]:
+    appended = existing_content.strip()
+    model_used = ""
+    for _ in range(MAX_HOW_TO_DO_COMPLETION_RETRIES):
+        follow_messages = [
+            *base_messages,
+            {"role": "assistant", "content": appended},
+            {
+                "role": "user",
+                "content": "你刚才的回答被截断了。不要重复前文，只从刚才停住的那一句继续往下说，把剩下内容补完并自然收住。",
+            },
+        ]
+        reply = await generate_reply(follow_messages, db=db)
+        continued = str(reply.get("content") or "").strip()
+        if not continued:
+            break
+        model_used = str(reply.get("model") or model_used)
+        appended = f"{appended}\n\n{continued}".strip()
+        finish_reason = str(reply.get("finish_reason") or "")
+        if not _should_continue_generation(appended, finish_reason):
+            break
+    return appended, model_used
+
+
 def _build_direction_reference(grounding: dict[str, Any]) -> dict[str, Any]:
     hexagram = grounding.get("hexagram", {}) or {}
     transformed = hexagram.get("transformed_hexagram") or {}
@@ -1103,6 +1134,59 @@ def _compact_history_for_prompt(conversation_history: list[dict[str, Any]] | Non
             content = content[:180]
         compacted.append({"role": role, "content": content})
     return compacted
+
+
+def _assistant_reply_count(conversation_history: list[dict[str, Any]] | None) -> int:
+    return sum(
+        1
+        for item in (conversation_history or [])
+        if _normalize_text(item.get("role")) == "assistant" and _normalize_text(item.get("content"))
+    )
+
+
+def _should_append_followup_question(
+    question: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+    cast_context: dict[str, Any] | None = None,
+) -> bool:
+    reply_index = _assistant_reply_count(conversation_history) + 1
+    if reply_index >= 4:
+        return False
+    if reply_index > 3:
+        return False
+    seed_source = "||".join(
+        [
+            _normalize_text(question),
+            _normalize_text(((cast_context or {}).get("raw_result") or {}).get("hexagram_name")),
+            str(reply_index),
+        ]
+    )
+    rng = random.Random(_stable_seed(seed_source))
+    return rng.random() < 0.6
+
+
+def _should_continue_generation(content: str, finish_reason: str) -> bool:
+    normalized = _normalize_text(content)
+    if not normalized:
+        return False
+    if finish_reason.lower() in {"length", "max_tokens"}:
+        return True
+    if content.endswith(("，", "、", "：", "（", "(", "/", "-", "—")):
+        return True
+    tail = normalized[-12:]
+    if any(marker in tail for marker in ("月令", "日建", "再看", "时间推演", "关键互动分析", "实际意义", "风险提醒")) and not normalized.endswith(("。", "！", "？")):
+        return True
+    return False
+
+
+def _remove_trailing_question(text: str) -> str:
+    paragraphs = [item.strip() for item in re.split(r"\n{2,}", text) if item.strip()]
+    if not paragraphs:
+        return text.strip()
+    last = paragraphs[-1]
+    if "？" in last or last.endswith("?"):
+        paragraphs = paragraphs[:-1]
+    return "\n\n".join(paragraphs).strip()
 
 
 def _format_how_to_do_research_context(research: dict[str, Any] | None) -> str:
@@ -1941,6 +2025,7 @@ async def _interpret_with_llm(
     base_result: dict[str, Any],
     db: Session | None,
     research_context: str = "",
+    should_append_question: bool = True,
 ) -> tuple[str, str]:
     grounding = _build_divination_grounding(base_result)
     protocol = _build_interpretation_protocol(
@@ -1980,14 +2065,24 @@ async def _interpret_with_llm(
         ensure_ascii=False,
         indent=2,
     )
-    reply = await generate_reply(
-        [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        db=db,
-    )
-    return str(reply.get("content") or "").strip(), str(reply.get("model") or "")
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    reply = await generate_reply(messages, db=db)
+    content = str(reply.get("content") or "").strip()
+    model_used = str(reply.get("model") or "")
+    finish_reason = str(reply.get("finish_reason") or "")
+    if _should_continue_generation(content, finish_reason):
+        content, continued_model = await _continue_llm_completion(
+            db=db,
+            base_messages=messages,
+            existing_content=content,
+        )
+        model_used = continued_model or model_used
+    if not should_append_question:
+        content = _remove_trailing_question(content)
+    return content.strip(), model_used
 
 
 async def _chat_with_llm(
@@ -1996,6 +2091,7 @@ async def _chat_with_llm(
     conversation_history: list[dict[str, Any]],
     db: Session | None,
     research_context: str = "",
+    should_append_question: bool = True,
 ) -> tuple[str, str]:
     raw_context = cast_context.get("raw_result") if isinstance(cast_context, dict) else {}
     grounding = cast_context if "time_context" in cast_context and "hexagram" in cast_context else {
@@ -2054,14 +2150,24 @@ async def _chat_with_llm(
         ensure_ascii=False,
         indent=2,
     )
-    reply = await generate_reply(
-        [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        db=db,
-    )
-    return str(reply.get("content") or "").strip(), str(reply.get("model") or "")
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    reply = await generate_reply(messages, db=db)
+    content = str(reply.get("content") or "").strip()
+    model_used = str(reply.get("model") or "")
+    finish_reason = str(reply.get("finish_reason") or "")
+    if _should_continue_generation(content, finish_reason):
+        content, continued_model = await _continue_llm_completion(
+            db=db,
+            base_messages=messages,
+            existing_content=content,
+        )
+        model_used = continued_model or model_used
+    if not should_append_question:
+        content = _remove_trailing_question(content)
+    return content.strip(), model_used
 
 
 def _fallback_interpretation(base_result: dict[str, Any]) -> str:
@@ -2126,6 +2232,11 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         ).strip()
         ai_interpretation = fallback
         model_used = ""
+        should_append_question = _should_append_followup_question(
+            user_message,
+            conversation_history=conversation_history if isinstance(conversation_history, list) else [],
+            cast_context=cast_context if isinstance(cast_context, dict) else {},
+        )
         if use_ai and db is not None:
             try:
                 ai_text, model_used = await _chat_with_llm(
@@ -2134,6 +2245,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
                     conversation_history,
                     db,
                     research_context=research_context,
+                    should_append_question=should_append_question,
                 )
                 if ai_text:
                     ai_interpretation = _clean_divination_output(ai_text)
@@ -2181,12 +2293,18 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             research_payload = {}
             research_context = ""
     if use_ai and db is not None and section == "cast":
+        should_append_question = _should_append_followup_question(
+            question,
+            conversation_history=[],
+            cast_context={"raw_result": base_result.get("raw_result", {})},
+        )
         try:
             ai_text, model_used = await _interpret_with_llm(
                 question,
                 base_result,
                 db,
                 research_context=research_context,
+                should_append_question=should_append_question,
             )
             if ai_text:
                 ai_interpretation = _clean_divination_output(ai_text)

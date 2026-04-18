@@ -1,3 +1,8 @@
+## V1.4.121 - 2026-04-18
+
+- Fixed recurring `我该怎么做` answer truncation by preserving model `finish_reason`, detecting length-cut responses, and automatically requesting one continuation pass when the first reply stops mid-thought.
+- Changed the closing follow-up question behavior so only the first three divination replies may end with a延伸反问, using a 60% probability, and all replies from the fourth turn onward now end cleanly without反问.
+
 ## V1.4.120 - 2026-04-18
 
 - Reworked `我该怎么做` category selection into a two-level frontend flow so users now choose a broad bucket first and then a specific category, making the divination entry less crowded on mobile and desktop.

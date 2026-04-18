@@ -14,6 +14,7 @@ from app.services.how_to_do_service import (
     _build_interpretation_protocol,
     _compact_history_for_prompt,
     _line_value_from_back_count,
+    _should_append_followup_question,
     generate_how_to_do_runtime,
 )
 
@@ -227,6 +228,14 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("核心结论：更偏搬。", compacted[1]["content"])
         self.assertLessEqual(len(compacted[1]["content"]), 220)
 
+    def test_followup_question_stops_after_third_assistant_reply(self):
+        history = [
+            {"role": "assistant", "content": "第一条"},
+            {"role": "assistant", "content": "第二条"},
+            {"role": "assistant", "content": "第三条"},
+        ]
+        self.assertFalse(_should_append_followup_question("继续", conversation_history=history, cast_context={}))
+
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
             "section": "cast",
@@ -351,6 +360,42 @@ class HowToDoTests(unittest.TestCase):
         self.assertNotIn("**", result["ai_interpretation"])
         self.assertNotIn("#", result["ai_interpretation"])
         self.assertIn("核心结论：先稳住。", result["ai_interpretation"])
+
+    def test_how_to_do_cast_continues_when_model_is_truncated(self):
+        payload = {
+            "section": "cast",
+            "cast_mode": "coin",
+            "question": "这件事该怎么定",
+            "category": "工作推进",
+            "cast_seed": "20260418",
+            "use_ai": True,
+        }
+
+        mocked_replies = [
+            {
+                "content": "核心结论：先别急着定。关键互动分析：父母爻主流程，眼下卡在资料和节奏。时间推演：再看月令",
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+                "finish_reason": "length",
+            },
+            {
+                "content": "实际意义：先把材料补齐再推进，会更稳。风险提醒：现在仓促拍板，后面容易返工。你更想继续看推进时机，还是想看卡点到底压在哪一环？",
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+                "finish_reason": "stop",
+            },
+        ]
+
+        with patch(
+            "app.services.how_to_do_service.generate_reply",
+            side_effect=mocked_replies,
+        ):
+            result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
+
+        self.assertIn("实际意义：先把材料补齐再推进，会更稳。", result["ai_interpretation"])
+        self.assertIn("风险提醒：现在仓促拍板", result["ai_interpretation"])
 
 
 if __name__ == "__main__":
