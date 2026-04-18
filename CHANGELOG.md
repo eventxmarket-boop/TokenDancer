@@ -1,3 +1,7 @@
+## V1.4.125 - 2026-04-19
+
+- Retinted the new `SeedMind` header logo so its displayed palette now aligns with the site’s day-mode accent colors instead of keeping the original blue-purple artwork tones.
+
 ## V1.4.124 - 2026-04-18
 
 - Merged the top navigation into `Seed` + `Mind`, renamed the brand to `SeedMind`, and replaced the old text logo with the new uploaded mark while keeping the frontend subpath-safe under `/persona/`.

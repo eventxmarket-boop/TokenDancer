@@ -205,7 +205,9 @@ svg {
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  background: linear-gradient(145deg, #251447, #1f1340);
+  background:
+    radial-gradient(circle at 24% 22%, color-mix(in srgb, var(--accent) 52%, white), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 76%, white), var(--accent-deep));
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -214,6 +216,9 @@ svg {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: sepia(0.92) saturate(2.9) hue-rotate(312deg) brightness(1.14) contrast(0.96);
+  mix-blend-mode: multiply;
+  opacity: 0.92;
 }
 
 .brand-name {
