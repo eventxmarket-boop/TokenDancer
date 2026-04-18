@@ -58,6 +58,7 @@ const lineOptions = [
   { value: 8, label: '8 少阴' },
   { value: 9, label: '9 老阳' },
 ]
+const lineLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻']
 
 function formatCastSeed(now = new Date()) {
   const year = now.getFullYear()
@@ -85,7 +86,7 @@ const transformedLineDetails = computed(() => {
 const castQuestionText = computed(() => result.value?.question?.trim() || question.value.trim() || '搜索')
 const castModeText = computed(() => {
   const mode = castResult.value?.cast_mode || activeCastMode.value
-  if (mode === 'manual') return '手动输入'
+  if (mode === 'manual') return '硬币 / 太极丸起卦'
   if (mode === 'taiji') return '太极丸起卦'
   if (mode === 'character') return '汉字起卦'
   return '硬币起卦'
@@ -103,6 +104,24 @@ const castShenshaText = computed(() => {
 })
 const castPanelTitle = computed(() => castResult.value?.panel_title || '卦象')
 const castPanelSubtitle = computed(() => castResult.value?.panel_subtitle || '')
+const manualLineEntries = computed(() =>
+  [...manualLines.value]
+    .map((value, index) => {
+      const option = lineOptions.find((item) => item.value === value)
+      const yinYang = value === 7 || value === 9 ? '阳' : value === 6 || value === 8 ? '阴' : ''
+      const barText = yinYang === '阳' ? '▅▅▅' : yinYang === '阴' ? '▅ ▅' : '—'
+      const changeMark = value === 9 ? 'o' : value === 6 ? 'x' : ''
+      return {
+        key: `${index}-${value}`,
+        label: lineLabels[index],
+        value,
+        optionLabel: option?.label || '请选择',
+        barText,
+        changeMark,
+      }
+    })
+    .reverse()
+)
 
 function resetCast() {
   question.value = ''
@@ -195,17 +214,25 @@ async function cast() {
       </label>
     </div>
 
-    <div v-if="activeCastMode === 'manual'" class="manual-input-grid">
-      <label v-for="(label, index) in ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻']" :key="label" class="field-label">
-        {{ label }}
-        <select v-model="manualLines[index]" class="field-input">
-          <option :value="0" disabled>请选择</option>
-          <option v-for="option in lineOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-        </select>
+    <div v-if="activeCastMode === 'manual'" class="manual-input-stack">
+      <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
+        <span class="manual-input-item__label">{{ entry.label }}</span>
+        <div class="manual-input-item__row">
+          <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
+            <option :value="0" disabled>请选择</option>
+            <option v-for="option in lineOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+          <span class="manual-input-item__bars">{{ entry.barText }}</span>
+          <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+        </div>
       </label>
     </div>
 
-    <p class="how-to-do-note">
+    <p class="how-to-do-note" v-if="activeCastMode === 'manual'">
+      从下往上依次录入 6 次结果。最下面是初爻，最上面是上爻。
+    </p>
+
+    <p v-else class="how-to-do-note">
       使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。
     </p>
 
@@ -251,38 +278,38 @@ async function cast() {
           <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
           <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
           <div class="liuyao-result-frame">
-            <div class="liuyao-result-grid">
-              <div class="liuyao-result-grid__header">六神</div>
-              <div class="liuyao-result-grid__header">
-                {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
-              </div>
-              <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__header liuyao-result-grid__header--right">
-                {{ castResult.transformed_hexagram.panel_title || castResult.transformed_hexagram.name }}<span v-if="castResult.transformed_hexagram.panel_subtitle">（{{ castResult.transformed_hexagram.panel_subtitle }}）</span>
-              </div>
-
-              <template v-for="(line, index) in castLineDetails" :key="line.position">
-                <div class="liuyao-result-grid__spirit">{{ line.six_spirit }}</div>
-
-                <div class="liuyao-result-grid__cell">
-                  <div class="liuyao-result-grid__topline">
-                    <span class="liuyao-result-grid__relation">{{ line.relation }}{{ line.stem_branch }}</span>
-                    <span class="liuyao-result-grid__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
+            <div class="liuyao-result-columns">
+              <div class="liuyao-result-column">
+                <div class="liuyao-result-column__header">
+                  {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
+                </div>
+                <div v-for="line in castLineDetails" :key="`main-${line.position}`" class="liuyao-result-line">
+                  <div class="liuyao-result-line__top">
+                    <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
+                    <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
+                    <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
                     <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
-                    <span v-if="line.shi_ying" class="liuyao-result-grid__marker">{{ line.shi_ying }}</span>
+                    <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
                   </div>
-                  <div v-if="line.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                  <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
                 </div>
+              </div>
 
-                <div v-if="castResult?.transformed_hexagram" class="liuyao-result-grid__cell liuyao-result-grid__cell--right">
-                  <div class="liuyao-result-grid__topline">
-                    <span class="liuyao-result-grid__relation">{{ transformedLineDetails[index]?.relation }}{{ transformedLineDetails[index]?.stem_branch }}</span>
-                    <span class="liuyao-result-grid__bars">{{ transformedLineDetails[index]?.bar_text || (transformedLineDetails[index]?.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
-                    <span v-if="transformedLineDetails[index]?.change_mark" class="is-change-mark">{{ transformedLineDetails[index]?.change_mark }}</span>
-                    <span v-if="transformedLineDetails[index]?.shi_ying" class="liuyao-result-grid__marker">{{ transformedLineDetails[index]?.shi_ying }}</span>
-                  </div>
-                  <div v-if="transformedLineDetails[index]?.hidden_spirit" class="liuyao-result-grid__hidden">↑伏：{{ transformedLineDetails[index]?.hidden_spirit }}</div>
+              <div v-if="castResult?.transformed_hexagram" class="liuyao-result-column">
+                <div class="liuyao-result-column__header">
+                  {{ castResult.transformed_hexagram.panel_title || castResult.transformed_hexagram.name }}<span v-if="castResult.transformed_hexagram.panel_subtitle">（{{ castResult.transformed_hexagram.panel_subtitle }}）</span>
                 </div>
-              </template>
+                <div v-for="line in transformedLineDetails" :key="`transformed-${line.position}`" class="liuyao-result-line">
+                  <div class="liuyao-result-line__top">
+                    <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
+                    <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
+                    <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
+                    <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
+                    <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
+                  </div>
+                  <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -331,10 +358,36 @@ async function cast() {
   gap: 0.85rem;
 }
 
-.manual-input-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+.manual-input-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.manual-input-item {
+  margin-bottom: 0;
+}
+
+.manual-input-item__label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.manual-input-item__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.manual-input-item__row .field-input {
+  margin: 0;
+}
+
+.manual-input-item__bars {
+  min-width: 3rem;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
 }
 
 .how-to-do-toggle-row {
@@ -433,52 +486,34 @@ async function cast() {
   overflow-x: auto;
 }
 
-.liuyao-result-grid {
+.liuyao-result-columns {
   display: grid;
-  grid-template-columns: 56px minmax(260px, 1fr) minmax(260px, 1fr);
-  row-gap: 0.55rem;
-  column-gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
   align-items: start;
-  min-width: 760px;
   padding: 0 1rem;
 }
 
-.liuyao-result-grid__header {
+.liuyao-result-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.liuyao-result-column__header {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   padding-bottom: 0.3rem;
 }
 
-.liuyao-result-grid__header--right {
-  text-align: left;
-}
-
-.liuyao-result-grid__spirit {
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.7;
-  padding-top: 0.08rem;
-}
-
-.liuyao-result-grid__cell {
+.liuyao-result-line {
   display: flex;
   flex-direction: column;
   gap: 0.08rem;
-  min-width: 0;
 }
 
-.liuyao-result-grid__cell--right {
-  text-align: left;
-}
-
-.liuyao-result-grid__relation {
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  line-height: 1.45;
-}
-
-.liuyao-result-grid__topline {
+.liuyao-result-line__top {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -486,19 +521,31 @@ async function cast() {
   min-height: 1.5rem;
 }
 
-.liuyao-result-grid__bars {
+.liuyao-result-line__spirit {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.liuyao-result-line__relation {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.liuyao-result-line__bars {
   font-size: 1rem;
   letter-spacing: 0.08em;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.liuyao-result-grid__hidden {
+.liuyao-result-line__hidden {
   font-size: 0.84rem;
   color: var(--text-secondary);
+  padding-left: calc(2.8rem + 0.35rem);
 }
 
-.liuyao-result-grid__marker {
+.liuyao-result-line__marker {
   font-size: 0.9rem;
   color: var(--text-primary);
   font-weight: 700;
@@ -514,12 +561,17 @@ async function cast() {
     grid-template-columns: 1fr;
   }
 
-  .manual-input-grid {
-    grid-template-columns: 1fr;
+  .manual-input-item__row {
+    flex-wrap: wrap;
   }
 
   .liuyao-result-frame {
     padding: 0.85rem 0;
+  }
+
+  .liuyao-result-columns {
+    grid-template-columns: 1fr;
+    padding: 0 0.85rem;
   }
 }
 </style>

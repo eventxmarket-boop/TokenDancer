@@ -1,3 +1,9 @@
+## V1.4.105 - 2026-04-18
+
+- Added yao-line previews to manual liu-yao entry so each of the six manual selections now shows its bar shape and moving-line `o/x` marker while entering from bottom to top.
+- Reworked the liu-yao board from a horizontal row grid into stacked vertical hexagram columns, with `上爻` at the top and `初爻` at the bottom for both the main and transformed hexagrams.
+- Changed the manual-entry result label back to `硬币 / 太极丸起卦` to match the source flow it represents.
+
 ## V1.4.104 - 2026-04-18
 
 - Corrected the liu-yao board subtitle for `地雷复` so it now displays `坤·六合` instead of the wrong `坤·一世`.
