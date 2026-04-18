@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { requestHowToDo, type HowToDoChatMessage, type HowToDoResponse } from '@/services/howToDoService'
 import {
@@ -119,6 +119,7 @@ const menuOpen = ref(false)
 const modePickerOpen = ref(false)
 const categoryPickerOpen = ref(false)
 const timePickerOpen = ref(false)
+const howtodoScrollRef = ref<HTMLDivElement | null>(null)
 const lineOptions = [
   { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
   { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
@@ -149,6 +150,13 @@ function findCategoryGroupKey(value: string) {
 
 function refreshHistoryRecords() {
   historyRecords.value = listHowToDoHistoryRecords()
+}
+
+async function scrollHowToDoToBottom() {
+  await nextTick()
+  const el = howtodoScrollRef.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight
 }
 
 const castResult = computed(() => result.value?.raw_result as Record<string, any> | undefined)
@@ -367,6 +375,7 @@ function loadHistoryRecord(record: HowToDoHistoryRecord) {
         ? 'manual'
         : 'coin'
   menuOpen.value = false
+  void scrollHowToDoToBottom()
 }
 
 function toggleCurrentFavorite() {
@@ -438,6 +447,7 @@ async function cast() {
     activeHistoryId.value = createId('howtodo-history')
     syncActiveHistory()
     question.value = ''
+    void scrollHowToDoToBottom()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '排盘失败'
   } finally {
@@ -486,6 +496,7 @@ async function sendChatFollowup() {
     })
     syncActiveHistory()
     question.value = ''
+    void scrollHowToDoToBottom()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '追问失败'
   } finally {
@@ -497,12 +508,14 @@ onMounted(() => {
   refreshHistoryRecords()
   const historyId = String(route.query.history || '').trim()
   if (!historyId) {
+    void scrollHowToDoToBottom()
     return
   }
   const record = historyRecords.value.find((item) => item.id === historyId)
   if (record) {
     loadHistoryRecord(record)
   }
+  void scrollHowToDoToBottom()
 })
 </script>
 
@@ -613,145 +626,147 @@ onMounted(() => {
       </aside>
     </transition>
 
-    <div class="howtodo-assembly">
-      <div v-if="usesManualSelectInput" class="manual-input-stack">
-        <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
-          <span class="manual-input-item__label">{{ entry.label }}</span>
-          <div class="manual-input-item__row">
-            <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
-              <option :value="0" disabled>请选择</option>
-              <option v-for="option in lineOptions" :key="option.value" :value="option.value">
-                {{ option.label }} {{ option.barText }}（{{ option.detail }}）
-              </option>
-            </select>
-            <span class="manual-input-item__bars">{{ entry.barText }}</span>
-            <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
-          </div>
-        </label>
-      </div>
-
-      <div v-if="usesOnlineInput" class="manual-input-stack">
-        <div class="online-cast-toolbar">
-          <button
-            type="button"
-            class="secondary-btn online-cast-toolbar__button"
-            :disabled="onlineDrawCount >= 6"
-            @click="drawNextOnlineLine"
-          >
-            {{ onlineDrawCount >= 6 ? '起卦完成' : '开始起卦' }}
-          </button>
-          <span class="online-cast-toolbar__status">已起 {{ onlineDrawCount }}/6 爻</span>
-        </div>
-        <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
-          <div class="manual-input-item__header">
+    <div ref="howtodoScrollRef" class="howtodo-dialog-scroll">
+      <div class="howtodo-assembly">
+        <div v-if="usesManualSelectInput" class="manual-input-stack">
+          <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
             <span class="manual-input-item__label">{{ entry.label }}</span>
+            <div class="manual-input-item__row">
+              <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
+                <option :value="0" disabled>请选择</option>
+                <option v-for="option in lineOptions" :key="option.value" :value="option.value">
+                  {{ option.label }} {{ option.barText }}（{{ option.detail }}）
+                </option>
+              </select>
+              <span class="manual-input-item__bars">{{ entry.barText }}</span>
+              <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+            </div>
+          </label>
+        </div>
+
+        <div v-if="usesOnlineInput" class="manual-input-stack">
+          <div class="online-cast-toolbar">
+            <button
+              type="button"
+              class="secondary-btn online-cast-toolbar__button"
+              :disabled="onlineDrawCount >= 6"
+              @click="drawNextOnlineLine"
+            >
+              {{ onlineDrawCount >= 6 ? '起卦完成' : '开始起卦' }}
+            </button>
+            <span class="online-cast-toolbar__status">已起 {{ onlineDrawCount }}/6 爻</span>
           </div>
-          <div class="manual-input-item__row manual-input-item__row--result">
-            <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
-            <span class="manual-input-item__bars">{{ entry.barText }}</span>
-            <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
-          </div>
-        </label>
-        <p class="how-to-do-note">
-          请集中精力，默想所占之事，点击“开始起卦”后，可求得一爻，反复6次。
-        </p>
+          <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
+            <div class="manual-input-item__header">
+              <span class="manual-input-item__label">{{ entry.label }}</span>
+            </div>
+            <div class="manual-input-item__row manual-input-item__row--result">
+              <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
+              <span class="manual-input-item__bars">{{ entry.barText }}</span>
+              <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+            </div>
+          </label>
+          <p class="how-to-do-note">
+            请集中精力，默想所占之事，点击“开始起卦”后，可求得一爻，反复6次。
+          </p>
+        </div>
       </div>
-    </div>
 
-    <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
 
-    <template v-if="result">
-      <div class="liuyao-result-sheet">
-        <div class="liuyao-result-meta">
-          <div class="liuyao-result-meta__item">
-            <span>问念：</span>
-            <strong>{{ castQuestionText }}</strong>
+      <template v-if="result">
+        <div class="liuyao-result-sheet">
+          <div class="liuyao-result-meta">
+            <div class="liuyao-result-meta__item">
+              <span>问念：</span>
+              <strong>{{ castQuestionText }}</strong>
+            </div>
+            <div class="liuyao-result-meta__item">
+              <span>起卦方式：</span>
+              <strong>{{ castModeText }}</strong>
+            </div>
+            <div class="liuyao-result-meta__item">
+              <span>分类：</span>
+              <strong>{{ castCategoryText }}</strong>
+            </div>
+            <div class="liuyao-result-meta__item">
+              <span>时间：</span>
+              <strong>{{ castTimeText }}</strong>
+            </div>
+            <div class="liuyao-result-meta__item">
+              <span>神煞：</span>
+              <strong>{{ castShenshaText.join(' / ') }}</strong>
+            </div>
           </div>
-          <div class="liuyao-result-meta__item">
-            <span>起卦方式：</span>
-            <strong>{{ castModeText }}</strong>
-          </div>
-          <div class="liuyao-result-meta__item">
-            <span>分类：</span>
-            <strong>{{ castCategoryText }}</strong>
-          </div>
-          <div class="liuyao-result-meta__item">
-            <span>时间：</span>
-            <strong>{{ castTimeText }}</strong>
-          </div>
-          <div class="liuyao-result-meta__item">
-            <span>神煞：</span>
-            <strong>{{ castShenshaText.join(' / ') }}</strong>
-          </div>
-        </div>
 
-        <div class="liuyao-result-toolbar">
-          <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
-            {{ showResultBoard ? '收起' : '展开' }}
-          </button>
-          <button
-            type="button"
-            class="secondary-btn liuyao-expand-btn"
-            :disabled="!activeHistoryId"
-            @click="toggleCurrentFavorite"
-          >
-            {{ currentHistoryIsFavorite ? '取消收藏' : '收藏' }}
-          </button>
-        </div>
+          <div class="liuyao-result-toolbar">
+            <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
+              {{ showResultBoard ? '收起' : '展开' }}
+            </button>
+            <button
+              type="button"
+              class="secondary-btn liuyao-expand-btn"
+              :disabled="!activeHistoryId"
+              @click="toggleCurrentFavorite"
+            >
+              {{ currentHistoryIsFavorite ? '取消收藏' : '收藏' }}
+            </button>
+          </div>
 
-        <div v-if="showResultBoard" class="liuyao-result-board">
-          <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
-          <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
-          <div class="liuyao-result-frame">
-            <div class="liuyao-result-columns">
-              <div class="liuyao-result-column">
-                <div class="liuyao-result-column__header">
-                  {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
-                </div>
-                <div v-for="line in castLineDetails" :key="`main-${line.position}`" class="liuyao-result-line">
-                  <div class="liuyao-result-line__top">
-                    <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
-                    <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
-                    <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
-                    <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
-                    <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
+          <div v-if="showResultBoard" class="liuyao-result-board">
+            <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
+            <p class="liuyao-result-board__time">{{ castResult?.day_label || castTimeText }}</p>
+            <div class="liuyao-result-frame">
+              <div class="liuyao-result-columns">
+                <div class="liuyao-result-column">
+                  <div class="liuyao-result-column__header">
+                    {{ castPanelTitle }}<span v-if="castPanelSubtitle">（{{ castPanelSubtitle }}）</span>
                   </div>
-                  <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
-                </div>
-              </div>
-
-              <div v-if="castResult?.transformed_hexagram" class="liuyao-result-column">
-                <div class="liuyao-result-column__header">
-                  {{ castResult.transformed_hexagram.panel_title || castResult.transformed_hexagram.name }}<span v-if="castResult.transformed_hexagram.panel_subtitle">（{{ castResult.transformed_hexagram.panel_subtitle }}）</span>
-                </div>
-                <div v-for="line in transformedLineDetails" :key="`transformed-${line.position}`" class="liuyao-result-line">
-                  <div class="liuyao-result-line__top">
-                    <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
-                    <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
-                    <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
-                    <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
-                    <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
+                  <div v-for="line in castLineDetails" :key="`main-${line.position}`" class="liuyao-result-line">
+                    <div class="liuyao-result-line__top">
+                      <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
+                      <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
+                      <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
+                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
+                      <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
+                    </div>
+                    <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
                   </div>
-                  <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                </div>
+
+                <div v-if="castResult?.transformed_hexagram" class="liuyao-result-column">
+                  <div class="liuyao-result-column__header">
+                    {{ castResult.transformed_hexagram.panel_title || castResult.transformed_hexagram.name }}<span v-if="castResult.transformed_hexagram.panel_subtitle">（{{ castResult.transformed_hexagram.panel_subtitle }}）</span>
+                  </div>
+                  <div v-for="line in transformedLineDetails" :key="`transformed-${line.position}`" class="liuyao-result-line">
+                    <div class="liuyao-result-line__top">
+                      <span class="liuyao-result-line__spirit">{{ line.six_spirit }}</span>
+                      <span class="liuyao-result-line__relation">{{ line.relation }}{{ line.stem_branch }}</span>
+                      <span class="liuyao-result-line__bars">{{ line.bar_text || (line.yin_yang === '阳' ? '▅▅▅' : '▅ ▅') }}</span>
+                      <span v-if="line.change_mark" class="is-change-mark">{{ line.change_mark }}</span>
+                      <span v-if="line.shi_ying" class="liuyao-result-line__marker">{{ line.shi_ying }}</span>
+                    </div>
+                    <div v-if="line.hidden_spirit" class="liuyao-result-line__hidden">↑伏：{{ line.hidden_spirit }}</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </template>
+        <div class="howtodo-chat-list">
+          <div
+            v-for="turn in chatTurns"
+            :key="turn.id"
+            class="howtodo-chat-bubble"
+            :class="turn.role === 'user' ? 'howtodo-chat-bubble--user' : 'howtodo-chat-bubble--assistant'"
+          >
+            {{ turn.content }}
+          </div>
+        </div>
+      </template>
+    </div>
 
     <div class="howtodo-chat-sheet">
-      <div class="howtodo-chat-list">
-        <div
-          v-for="turn in chatTurns"
-          :key="turn.id"
-          class="howtodo-chat-bubble"
-          :class="turn.role === 'user' ? 'howtodo-chat-bubble--user' : 'howtodo-chat-bubble--assistant'"
-        >
-          {{ turn.content }}
-        </div>
-      </div>
       <div class="howtodo-chat-composer">
         <label class="reply-input">
           <span class="reply-input__label">{{ result ? '继续问这卦' : '问念' }}</span>
@@ -792,8 +807,12 @@ onMounted(() => {
 <style scoped>
 .reply-shell {
   position: relative;
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  height: min(920px, calc(100dvh - 156px));
+  min-height: 0;
+  overflow: hidden;
   padding-top: 3rem;
   padding-bottom: 1rem;
 }
@@ -1254,13 +1273,24 @@ onMounted(() => {
 .howtodo-chat-sheet {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.72rem;
   padding: 0.95rem;
   border: 1px solid rgba(127, 140, 172, 0.16);
   border-radius: 24px;
   background: rgba(252, 253, 255, 0.96);
   box-shadow: 0 18px 40px rgba(24, 32, 57, 0.08);
   backdrop-filter: blur(18px);
+}
+
+.howtodo-dialog-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
 }
 
 .howtodo-chat-sheet__controls {
@@ -1279,8 +1309,8 @@ onMounted(() => {
   max-width: min(92%, 760px);
   padding: 0.9rem 1rem;
   border-radius: 18px;
-  line-height: 1.7;
-  font-size: 0.95rem;
+  line-height: 1.65;
+  font-size: 0.93rem;
   white-space: pre-wrap;
 }
 
@@ -1305,6 +1335,8 @@ onMounted(() => {
 
 .howtodo-chat-composer__input {
   min-height: 92px;
+  font-size: 0.93rem;
+  line-height: 1.6;
 }
 
 .liuyao-result-meta {
@@ -1459,7 +1491,17 @@ onMounted(() => {
   }
 
   .reply-shell {
+    height: calc(100dvh - 124px);
     padding-top: 3.4rem;
+  }
+
+  .howtodo-chat-bubble {
+    font-size: 0.91rem;
+    line-height: 1.62;
+  }
+
+  .howtodo-chat-composer__input {
+    font-size: 0.91rem;
   }
 
   .howtodo-category-picker {

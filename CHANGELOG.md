@@ -1,3 +1,9 @@
+## V1.4.134 - 2026-04-19
+
+- Unified the reply-style chat pages into fixed-height H5-friendly shells so output and input now live inside an internal scroll area instead of making the whole page grow vertically.
+- Kept `我该怎么回` and `我该怎么做` anchored to the same dialogue-window pattern, with chat content scrolling inside the card and the composer staying pinned at the bottom.
+- Added auto-scroll-to-bottom behavior when reopening a saved conversation so chat history lands at the latest turn instead of the top of the thread.
+
 ## V1.4.133 - 2026-04-19
 
 - Moved the `我该怎么做` cast selectors to sit directly above the send button inside the persistent input composer, so `起卦方式 / 分类 / 时间` now feel pinned to the input box itself.

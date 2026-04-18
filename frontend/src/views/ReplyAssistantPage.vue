@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { requestReplyAssistant, type ReplyAssistantResponse } from '@/services/replyAssistantService'
 import type {
@@ -159,6 +159,7 @@ const histories = ref<ReplyAssistantHistoryRecord[]>([])
 const activeHistoryId = ref('')
 const contextOpen = ref(false)
 const advancedOpen = ref(false)
+const replyThreadRef = ref<HTMLDivElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 
@@ -202,6 +203,13 @@ function createEmptyContextFields() {
     recent_state: '',
     before_after: '',
   }
+}
+
+async function scrollReplyThreadToBottom() {
+  await nextTick()
+  const el = replyThreadRef.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight
 }
 
 function cloneRawMaterials(source: UniversalCreateWizardRawMaterials): UniversalCreateWizardRawMaterials {
@@ -437,6 +445,7 @@ function startNewConversation() {
       content: '输入一句话，我直接给你可发的回复。',
     },
   ]
+  void scrollReplyThreadToBottom()
 }
 
 function hydrateConversation(record: ReplyAssistantHistoryRecord) {
@@ -466,6 +475,7 @@ function hydrateConversation(record: ReplyAssistantHistoryRecord) {
           content: '输入一句话，我直接给你可发的回复。',
         },
       ]
+  void scrollReplyThreadToBottom()
 }
 
 function togglePin(record: ReplyAssistantHistoryRecord) {
@@ -737,6 +747,7 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
     }
     persistConversation()
     result.value = nextResult
+    void scrollReplyThreadToBottom()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '生成回复建议失败'
     result.value = null
@@ -759,6 +770,7 @@ onMounted(() => {
       hydrateConversation(current)
     }
   }
+  void scrollReplyThreadToBottom()
 })
 </script>
 
@@ -790,7 +802,7 @@ onMounted(() => {
       </aside>
     </transition>
 
-    <div class="reply-thread">
+    <div ref="replyThreadRef" class="reply-thread">
       <article v-for="turn in turns" :key="turn.id" class="reply-turn" :class="`reply-turn--${turn.role}`">
         <div v-if="turn.role === 'assistant'" class="reply-turn__meta">
           <span v-if="turn.mode && turn.mode !== 'default'" class="reply-turn__mode">
@@ -1016,11 +1028,15 @@ onMounted(() => {
 <style scoped>
 .reply-shell {
   position: relative;
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  height: min(920px, calc(100dvh - 156px));
+  min-height: 0;
+  overflow: hidden;
   padding-bottom: 1.2rem;
   padding-top: 3rem;
-  font-size: 0.96rem;
+  font-size: 0.93rem;
 }
 
 .reply-history-toggle {
@@ -1096,14 +1112,18 @@ onMounted(() => {
 
 .reply-thread {
   display: grid;
-  gap: 0.9rem;
-  min-height: 36vh;
+  gap: 0.8rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
 }
 
 .reply-turn {
   border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 1rem;
+  border-radius: 22px;
+  padding: 0.92rem 0.95rem;
   background: rgba(255, 255, 255, 0.64);
   box-shadow: 0 12px 28px rgba(40, 45, 60, 0.05);
 }
@@ -1143,20 +1163,20 @@ onMounted(() => {
 
 .reply-turn__text {
   white-space: pre-wrap;
-  line-height: 1.7;
+  line-height: 1.65;
   margin: 0;
   color: var(--text);
 }
 
 .reply-answer-grid {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .reply-answer-card {
-  border-radius: 18px;
-  padding: 0.9rem 1rem;
+  border-radius: 17px;
+  padding: 0.88rem 0.95rem;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(127, 140, 172, 0.16);
 }
@@ -1175,17 +1195,17 @@ onMounted(() => {
 .reply-answer-card h3,
 .reply-answer-card p {
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.58;
+  font-size: 0.95rem;
 }
 
 .reply-composer {
-  position: sticky;
-  bottom: 0;
   display: grid;
-  gap: 0.8rem;
-  padding: 0.95rem;
+  gap: 0.72rem;
+  flex: 0 0 auto;
+  padding: 0.9rem;
   border: 1px solid rgba(127, 140, 172, 0.16);
-  border-radius: 24px;
+  border-radius: 22px;
   background: rgba(252, 253, 255, 0.96);
   box-shadow: 0 18px 40px rgba(24, 32, 57, 0.08);
   backdrop-filter: blur(18px);
@@ -1226,7 +1246,7 @@ onMounted(() => {
 .reply-select {
   display: grid;
   gap: 0.35rem;
-  min-width: 160px;
+  min-width: 152px;
   flex: 1 1 160px;
 }
 
@@ -1259,10 +1279,10 @@ onMounted(() => {
 }
 
 .reply-input__textarea {
-  min-height: 112px;
+  min-height: 98px;
   resize: vertical;
-  font-size: 0.96rem;
-  line-height: 1.65;
+  font-size: 0.93rem;
+  line-height: 1.6;
 }
 
 .reply-composer__footer {
@@ -1342,6 +1362,7 @@ onMounted(() => {
 
 @media (max-width: 980px) {
   .reply-shell {
+    height: calc(100dvh - 124px);
     padding-top: 3.6rem;
   }
 
@@ -1359,8 +1380,8 @@ onMounted(() => {
   }
 
   .reply-shell {
-    padding-bottom: 0.8rem;
-    font-size: 0.94rem;
+    padding-bottom: 0.75rem;
+    font-size: 0.91rem;
   }
 
   .reply-composer {
