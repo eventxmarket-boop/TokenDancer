@@ -1,3 +1,8 @@
+## V1.4.133 - 2026-04-19
+
+- Moved the `我该怎么做` cast selectors to sit directly above the send button inside the persistent input composer, so `起卦方式 / 分类 / 时间` now feel pinned to the input box itself.
+- Kept the chat-card layout and the single continuing input intact while making the selector row part of the same bottom dialogue block instead of a separate control strip above the conversation.
+
 ## V1.4.132 - 2026-04-19
 
 - Kept the `我该怎么做` cast selectors pinned directly above the bottom input composer so `起卦方式 / 分类 / 时间` now stay attached to the chat box instead of floating as a separate block.

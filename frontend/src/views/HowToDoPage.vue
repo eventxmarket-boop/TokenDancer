@@ -742,20 +742,6 @@ onMounted(() => {
     </template>
 
     <div class="howtodo-chat-sheet">
-      <div class="howtodo-chat-sheet__controls">
-        <button type="button" class="reply-chip reply-chip--picker" @click="openModePicker">
-          <span class="reply-chip__label">起卦方式</span>
-          <strong>{{ selectedModeLabel }}</strong>
-        </button>
-        <button type="button" class="reply-chip reply-chip--picker" @click="openCategoryPicker">
-          <span class="reply-chip__label">分类</span>
-          <strong>{{ selectedCategoryLabel }}</strong>
-        </button>
-        <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
-          <span class="reply-chip__label">时间</span>
-          <strong>{{ castSeed }}</strong>
-        </button>
-      </div>
       <div class="howtodo-chat-list">
         <div
           v-for="turn in chatTurns"
@@ -776,6 +762,20 @@ onMounted(() => {
             :placeholder="result ? '继续问这卦怎么理解' : activeQuestionPrompt.placeholder"
           ></textarea>
         </label>
+        <div class="howtodo-chat-sheet__controls">
+          <button type="button" class="reply-chip reply-chip--picker" @click="openModePicker">
+            <span class="reply-chip__label">起卦方式</span>
+            <strong>{{ selectedModeLabel }}</strong>
+          </button>
+          <button type="button" class="reply-chip reply-chip--picker" @click="openCategoryPicker">
+            <span class="reply-chip__label">分类</span>
+            <strong>{{ selectedCategoryLabel }}</strong>
+          </button>
+          <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
+            <span class="reply-chip__label">时间</span>
+            <strong>{{ castSeed }}</strong>
+          </button>
+        </div>
         <button
           class="primary-btn"
           type="button"
