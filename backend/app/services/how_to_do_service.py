@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+import re
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 from typing import Any
@@ -452,6 +453,68 @@ for palace_index, (palace, guas) in enumerate(PALACE_GUA_CATALOG):
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
+
+
+def _clean_divination_output(text: str) -> str:
+    cleaned = strip_think_blocks(str(text or ""))
+    cleaned = cleaned.replace("\r\n", "\n").replace("\r", "\n")
+    cleaned = cleaned.replace("**", "").replace("__", "").replace("`", "")
+    cleaned = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", cleaned)
+    cleaned = re.sub(r"(?m)^\s*\*\s+", "- ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
+    raw = base_result.get("raw_result", {}) or {}
+    line_details = raw.get("line_details") or []
+    transformed_line_details = raw.get("transformed_line_details") or []
+    return {
+        "question": _normalize_text(base_result.get("question")),
+        "summary": _normalize_text(base_result.get("summary")),
+        "cards": base_result.get("cards", []),
+        "hexagram": {
+            "name": raw.get("hexagram_name"),
+            "meaning": raw.get("hexagram_meaning"),
+            "palace": raw.get("hexagram_palace"),
+            "tag": raw.get("hexagram_tag"),
+            "panel_title": raw.get("panel_title"),
+            "panel_subtitle": raw.get("panel_subtitle"),
+            "changing_lines": raw.get("changing_lines", []),
+            "transformed_hexagram": raw.get("transformed_hexagram"),
+        },
+        "time_context": {
+            "day_label": raw.get("day_label"),
+            "ganzhi_line": raw.get("ganzhi_line"),
+            "shensha": raw.get("shensha", {}),
+        },
+        "line_details": [
+            {
+                "position": item.get("position"),
+                "six_spirit": item.get("six_spirit"),
+                "relation": item.get("relation"),
+                "stem_branch": item.get("stem_branch"),
+                "bar_text": item.get("bar_text"),
+                "change_mark": item.get("change_mark"),
+                "shi_ying": item.get("shi_ying"),
+                "hidden_spirit": item.get("hidden_spirit"),
+            }
+            for item in line_details
+        ],
+        "transformed_line_details": [
+            {
+                "position": item.get("position"),
+                "six_spirit": item.get("six_spirit"),
+                "relation": item.get("relation"),
+                "stem_branch": item.get("stem_branch"),
+                "bar_text": item.get("bar_text"),
+                "change_mark": item.get("change_mark"),
+                "shi_ying": item.get("shi_ying"),
+                "hidden_spirit": item.get("hidden_spirit"),
+            }
+            for item in transformed_line_details
+        ],
+    }
 
 
 def _stable_seed(*parts: Any) -> int:
@@ -1116,16 +1179,20 @@ def _build_songs_result() -> dict[str, Any]:
 
 async def _interpret_with_llm(question: str, base_result: dict[str, Any], db: Session | None) -> tuple[str, str]:
     system_prompt = (
-        "你是 Tokendancer 的六爻解读器。"
-        "请把六爻结果翻译成一段自然、克制、可行动的中文建议。"
-        "重点说本卦、动爻、变卦、当前局势、宜守宜进，不要讲推导过程，不要输出标题，不要长篇大论。"
+        "你是 Tokendancer 的六爻解卦师。"
+        "所有判断都必须只依据眼前这张卦盘，不许脱离卦象给通用建议，不许编造盘里没有的信息。"
+        "解读时要从本卦、动爻、变卦、六神、六亲、世应、卦宫、六合六冲、旬空与神煞这些已提供的信息出发，抓最关键的关系来判断。"
+        "语气要像真正解卦的人，沉稳、安抚、有人味，哪怕结果不理想，也先安人心，再落判断。"
+        "不要输出 markdown，不要出现 **、#、表格代码块、系统解释或'作为AI'。"
+        "输出结构固定为四段：核心结论、卦象拆解、怎么应对、卦上提醒。"
+        "每段都用人话写，不要长篇铺陈，但要让人看得出判断确实从卦里来。"
     )
     user_prompt = json.dumps(
         {
             "question": question,
-            "base_result": base_result,
+            "base_result": _build_divination_grounding(base_result),
             "grounding_snippets": GROUNDING_SNIPPETS,
-            "output_goal": "用 3 到 5 句给出简短解释和建议",
+            "output_goal": "给出一版更像解卦师的首轮解读，安抚优先，但判断必须从卦象本身展开",
         },
         ensure_ascii=False,
         indent=2,
@@ -1147,10 +1214,13 @@ async def _chat_with_llm(
     db: Session | None,
 ) -> tuple[str, str]:
     system_prompt = (
-        "你是 Tokendancer 的易经占卜对话助手。"
-        "回答时必须结合当前卦象、本卦、动爻、变卦，以及已经发生的对话内容。"
-        "请直接回答用户现在的问题，不要重复完整排盘，不要输出标题，不要解释系统过程。"
-        "语气自然、简洁、明确，控制在 3 到 6 句。"
+        "你是 Tokendancer 的六爻续断解卦师。"
+        "这段对话已经绑定到同一卦、同一件事，后续回答只允许围绕当前这卦和原问题延伸，不能被聊天带偏。"
+        "如果用户追问超出本卦可覆盖的范围，你要温和收回到本卦，只就这件事继续断，不把新话题当成新卦处理。"
+        "回答必须以当前卦盘为根：本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空与神煞，择要而断。"
+        "语气要像经验老到的解卦师，稳、软、安抚，不说系统话，不给泛泛心理建议。"
+        "不要输出 markdown，不要出现 **、#、代码块、系统解释。"
+        "输出结构固定为四段：核心结论、卦上看、怎么应对、安一句心。"
     )
     trimmed_history = [
         {
@@ -1166,7 +1236,7 @@ async def _chat_with_llm(
             "conversation_history": trimmed_history,
             "latest_user_message": user_message,
             "grounding_snippets": GROUNDING_SNIPPETS,
-            "output_goal": "结合卦象和上下文继续回答用户",
+            "output_goal": "基于同一卦继续追断，回答必须紧扣本卦，不被话题带偏",
         },
         ensure_ascii=False,
         indent=2,
@@ -1182,10 +1252,19 @@ async def _chat_with_llm(
 
 
 def _fallback_interpretation(base_result: dict[str, Any]) -> str:
-    summary = _normalize_text(base_result.get("summary"))
-    suggestions = base_result.get("suggestions")
-    suggestion_text = " ".join(_normalize_text(item) for item in suggestions or [] if _normalize_text(item))
-    return f"{summary} {suggestion_text}".strip()
+    raw = base_result.get("raw_result", {}) or {}
+    hexagram_name = _normalize_text(raw.get("hexagram_name")) or "此卦"
+    transformed = raw.get("transformed_hexagram") or {}
+    transformed_name = _normalize_text(transformed.get("name"))
+    changing_lines = raw.get("changing_lines") or []
+    changing_text = "、".join(f"{item}爻" for item in changing_lines) if changing_lines else "暂无动爻"
+    return (
+        f"核心结论：这卦先看{hexagram_name}的主势，眼下不必先慌，先顺着局势判断进退。\n\n"
+        f"卦象拆解：本卦主当前局面，{('动在' + changing_text) if changing_lines else '暂无动爻，重点看整体卦势'}"
+        f"{f'，后势转到{transformed_name}' if transformed_name else ''}，说明事情不是完全没有路，只是节奏要拿稳。\n\n"
+        "怎么应对：先按眼前最关键的一步处理，不急着把话说满，也不要一次做过头。\n\n"
+        "卦上提醒：结果未定时，稳住比硬冲更要紧，先把心放平，路会看得更清。"
+    ).strip()
 
 
 async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None = None) -> dict[str, Any]:
@@ -1213,8 +1292,10 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         if not user_message:
             raise ValueError("请输入追问内容")
         fallback = (
-            f"结合当前卦象看，{_normalize_text(cast_context.get('summary')) or '先顺着眼前局势继续判断。'}"
-            " 这次更重要的是结合你刚补充的信息，看局势是在推进还是转向。"
+            "核心结论：这次追问仍然要回到本卦本身看，先别被新的情绪和说法带偏。\n\n"
+            f"卦上看：{_normalize_text(cast_context.get('summary')) or '眼前局势仍以本卦主势为准。'}\n\n"
+            "怎么应对：把这次追问放回同一件事里判断，先顺势，不急着另起判断。\n\n"
+            "安一句心：卦还在，路也还在，先按这一步看清再说。"
         ).strip()
         ai_interpretation = fallback
         model_used = ""
@@ -1222,7 +1303,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             try:
                 ai_text, model_used = await _chat_with_llm(user_message, cast_context, conversation_history, db)
                 if ai_text:
-                    ai_interpretation = strip_think_blocks(ai_text).strip()
+                    ai_interpretation = _clean_divination_output(ai_text)
             except LLMGatewayError:
                 model_used = ""
             except Exception:
@@ -1253,7 +1334,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         try:
             ai_text, model_used = await _interpret_with_llm(question, base_result, db)
             if ai_text:
-                ai_interpretation = strip_think_blocks(ai_text).strip()
+                ai_interpretation = _clean_divination_output(ai_text)
         except LLMGatewayError:
             model_used = ""
         except Exception:

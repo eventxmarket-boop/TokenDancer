@@ -1,3 +1,8 @@
+## V1.4.113 - 2026-04-18
+
+- Tightened `我该怎么做` divination answers so first replies and follow-up chat now use a more grounded 解卦师 tone, lean more toward安抚, and stay scoped to the current hexagram instead of drifting into generic advice.
+- Added output cleanup for `我该怎么做` so model replies no longer leak markdown markers like `**` or heading syntax into the UI.
+
 ## V1.4.112 - 2026-04-18
 
 - Added a continuing chat layer to `我该怎么做` so starting a divination now returns a direct model answer immediately and follow-up questions continue against the same hexagram context and chat history.

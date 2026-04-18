@@ -112,6 +112,9 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("本卦", result["summary"])
         self.assertTrue(result["ai_interpretation"])
         self.assertIn("问念", {item["label"] for item in result["cards"]})
+        sent_messages = mocked_generate.call_args.args[0]
+        self.assertIn("六爻解卦师", sent_messages[0]["content"])
+        self.assertIn("输出结构固定为四段", sent_messages[0]["content"])
 
     def test_how_to_do_chat_uses_llm_when_available(self):
         payload = {
@@ -143,6 +146,34 @@ class HowToDoTests(unittest.TestCase):
         self.assertTrue(mocked_generate.called)
         self.assertEqual(result["model_used"], "mock-model")
         self.assertIn("先把节奏稳住", result["ai_interpretation"])
+        sent_messages = mocked_generate.call_args.args[0]
+        self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
+        self.assertIn("安一句心", sent_messages[0]["content"])
+
+    def test_how_to_do_cast_removes_markdown_markers_from_llm_output(self):
+        payload = {
+            "section": "cast",
+            "cast_mode": "coin",
+            "question": "这件事还有没有机会？",
+            "category": "关系进展",
+            "cast_seed": "20260418",
+            "use_ai": True,
+        }
+
+        with patch(
+            "app.services.how_to_do_service.generate_reply",
+            return_value={
+                "content": "**核心结论：**先稳住。\n\n# 卦象拆解\n眼下先别急。",
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+            },
+        ):
+            result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
+
+        self.assertNotIn("**", result["ai_interpretation"])
+        self.assertNotIn("#", result["ai_interpretation"])
+        self.assertIn("核心结论：先稳住。", result["ai_interpretation"])
 
 
 if __name__ == "__main__":
