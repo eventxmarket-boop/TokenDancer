@@ -248,8 +248,8 @@ class HowToDoTests(unittest.TestCase):
 
     def test_scope_nudge_is_inserted_before_trailing_question(self):
         content = "核心结论：更偏能成。\n\n你更想继续看结果，还是想看时间？"
-        updated = _append_scope_nudge(content, "如果你觉得这里还偏宽，可以继续补细节。")
-        self.assertIn("如果你觉得这里还偏宽，可以继续补细节。", updated)
+        updated = _append_scope_nudge(content, "如果你想让我看得更细致一点，可以再补一句细节。")
+        self.assertIn("如果你想让我看得更细致一点，可以再补一句细节。", updated)
         self.assertTrue(updated.endswith("你更想继续看结果，还是想看时间？"))
 
     def test_exam_generic_answer_is_flagged_for_repair(self):

@@ -1,3 +1,8 @@
+## V1.4.127 - 2026-04-19
+
+- Moved the `我该怎么做` `历史 / 收藏` controls up beside the cast-mode chips so they now match the same rounded spec and stay visible in a cleaner, more consistent position.
+- Reworded the first-two-replies soft follow-up nudges for `我该怎么做` so they no longer use obvious AI phrasing like `偏宽 / 往下收`, and now sound more natural with wording closer to `细致 / 明确 / 准确 / 分析 / 判断`.
+
 ## V1.4.126 - 2026-04-19
 
 - Tuned the `SeedMind` header logo again so the outer background now sits much closer to the homepage day-mode background, while the inner mark is retinted further toward the warm pink accent palette.

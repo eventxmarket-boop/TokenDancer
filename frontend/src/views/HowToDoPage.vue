@@ -440,6 +440,23 @@ onMounted(() => {
       >
         {{ mode.label }}
       </button>
+      <button
+        type="button"
+        class="chip-btn"
+        :class="{ 'chip-btn--active': historyOpen }"
+        @click="historyOpen = !historyOpen"
+      >
+        历史
+      </button>
+      <button
+        type="button"
+        class="chip-btn"
+        :class="{ 'chip-btn--active': currentHistoryIsFavorite }"
+        :disabled="!activeHistoryId"
+        @click="toggleCurrentFavorite"
+      >
+        {{ currentHistoryIsFavorite ? '已收藏' : '收藏' }}
+      </button>
     </div>
     <p v-if="castModes.find((item) => item.key === activeCastMode)?.hint" class="how-to-do-note">
       {{ castModes.find((item) => item.key === activeCastMode)?.hint }}
@@ -538,6 +555,34 @@ onMounted(() => {
 
     <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
 
+    <div v-if="historyOpen" class="liuyao-history-panel">
+      <div class="liuyao-history-panel__head">
+        <h3>历史卦象</h3>
+        <span class="status-pill">{{ historyRecords.length }} 条</span>
+      </div>
+      <div v-if="historyRecords.length" class="liuyao-history-list">
+        <button
+          v-for="item in historyRecords"
+          :key="item.id"
+          type="button"
+          class="liuyao-history-item"
+          :class="{ 'liuyao-history-item--active': item.id === activeHistoryId }"
+          @click="loadHistoryRecord(item)"
+        >
+          <div class="liuyao-history-item__title">
+            <strong>{{ item.title || '未命名卦象' }}</strong>
+            <span v-if="item.favorite" class="status-pill">收藏</span>
+          </div>
+          <p>{{ item.category }} · {{ item.castMode }}</p>
+          <p>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</p>
+        </button>
+      </div>
+      <div v-else class="empty-panel empty-panel--compact liuyao-history-empty">
+        <h3>还没有历史卦象。</h3>
+        <p class="empty-panel__copy">起一卦后，这里会保留卦象和对话记录。</p>
+      </div>
+    </div>
+
     <template v-if="result">
       <div class="liuyao-result-sheet">
         <div class="liuyao-result-meta">
@@ -567,40 +612,6 @@ onMounted(() => {
           <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
             {{ showResultBoard ? '收起' : '展开' }}
           </button>
-          <button type="button" class="secondary-btn liuyao-expand-btn" @click="historyOpen = !historyOpen">
-            历史
-          </button>
-          <button type="button" class="secondary-btn liuyao-expand-btn" @click="toggleCurrentFavorite">
-            {{ currentHistoryIsFavorite ? '已收藏' : '收藏' }}
-          </button>
-        </div>
-
-        <div v-if="historyOpen" class="liuyao-history-panel">
-          <div class="liuyao-history-panel__head">
-            <h3>历史卦象</h3>
-            <span class="status-pill">{{ historyRecords.length }} 条</span>
-          </div>
-          <div v-if="historyRecords.length" class="liuyao-history-list">
-            <button
-              v-for="item in historyRecords"
-              :key="item.id"
-              type="button"
-              class="liuyao-history-item"
-              :class="{ 'liuyao-history-item--active': item.id === activeHistoryId }"
-              @click="loadHistoryRecord(item)"
-            >
-              <div class="liuyao-history-item__title">
-                <strong>{{ item.title || '未命名卦象' }}</strong>
-                <span v-if="item.favorite" class="status-pill">收藏</span>
-              </div>
-              <p>{{ item.category }} · {{ item.castMode }}</p>
-              <p>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</p>
-            </button>
-          </div>
-          <div v-else class="empty-panel empty-panel--compact liuyao-history-empty">
-            <h3>还没有历史卦象。</h3>
-            <p class="empty-panel__copy">起一卦后，这里会保留卦象和对话记录。</p>
-          </div>
         </div>
 
         <div v-if="showResultBoard" class="liuyao-result-board">
