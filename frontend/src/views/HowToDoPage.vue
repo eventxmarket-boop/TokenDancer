@@ -2,10 +2,13 @@
 import { computed, ref } from 'vue'
 import { requestHowToDo, type HowToDoResponse } from '@/services/howToDoService'
 
-const castModes: Array<{ key: 'manual' | 'coin' | 'taiji'; label: string; hint: string }> = [
+type CastModeKey = 'manual' | 'coin' | 'taiji' | 'online'
+
+const castModes: Array<{ key: CastModeKey; label: string; hint: string }> = [
   { key: 'coin', label: '随机摇卦', hint: '平心静气后摇卦。' },
   { key: 'manual', label: '手动输入', hint: '按 6 次依次录入。' },
   { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起局。' },
+  { key: 'online', label: '在线起卦', hint: '按 6 次依次录入。' },
 ]
 
 const questionCategories = [
@@ -43,7 +46,7 @@ const questionCategories = [
   '其他',
 ]
 
-const activeCastMode = ref<'manual' | 'coin' | 'taiji'>('coin')
+const activeCastMode = ref<CastModeKey>('coin')
 const question = ref('')
 const category = ref('')
 const castSeed = ref('')
@@ -91,6 +94,7 @@ const castModeText = computed(() => {
   if (mode === 'character') return '汉字起卦'
   return '硬币起卦'
 })
+const usesManualInput = computed(() => activeCastMode.value === 'manual' || activeCastMode.value === 'online')
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const castTimeText = computed(() => castResult.value?.day_label || '—')
 const castShenshaText = computed(() => {
@@ -132,24 +136,25 @@ function resetCast() {
 }
 
 async function cast() {
-  if (!question.value.trim() && !category.value.trim() && activeCastMode.value !== 'manual') {
+  if (!question.value.trim() && !category.value.trim() && !usesManualInput.value) {
     errorMessage.value = '请先输入问念或分类。'
     return
   }
-  if (activeCastMode.value === 'manual' && manualLines.value.some((item) => !item)) {
+  if (usesManualInput.value && manualLines.value.some((item) => !item)) {
     errorMessage.value = '请把 6 次手动输入补完整。'
     return
   }
   loading.value = true
   errorMessage.value = ''
   try {
+    const requestCastMode = activeCastMode.value === 'online' ? 'manual' : activeCastMode.value
     const response = await requestHowToDo({
       section: 'cast',
-      cast_mode: activeCastMode.value,
+      cast_mode: requestCastMode,
       question: question.value.trim(),
       category: category.value.trim(),
       cast_seed: castSeed.value,
-      manual_lines: activeCastMode.value === 'manual' ? manualLines.value.map((item) => Number(item)) : [],
+      manual_lines: usesManualInput.value ? manualLines.value.map((item) => Number(item)) : [],
       use_ai: true,
     })
     result.value = response
@@ -213,7 +218,7 @@ async function cast() {
       </label>
     </div>
 
-    <div v-if="activeCastMode === 'manual'" class="manual-input-stack">
+    <div v-if="usesManualInput" class="manual-input-stack">
       <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
         <span class="manual-input-item__label">{{ entry.label }}</span>
         <div class="manual-input-item__row">
@@ -229,7 +234,7 @@ async function cast() {
       </label>
     </div>
 
-    <p class="how-to-do-note" v-if="activeCastMode === 'manual'">
+    <p class="how-to-do-note" v-if="usesManualInput">
       从下往上依次录入 6 次结果。最下面是初爻，最上面是上爻。
     </p>
 

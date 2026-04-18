@@ -1,3 +1,7 @@
+## V1.4.107 - 2026-04-18
+
+- Added an `在线起卦` entry after `太极丸起卦`, reusing the existing manual-entry UI and manual cast flow without changing the underlying liu-yao runtime.
+
 ## V1.4.106 - 2026-04-18
 
 - Updated the manual liu-yao input dropdown to use source-style 少阴 / 少阳 / 老阴 / 老阳 labels with背字说明 and removed the raw 6/7/8/9 option text.
