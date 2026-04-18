@@ -1,3 +1,9 @@
+## V1.4.123 - 2026-04-18
+
+- Renamed the `健康事务` divination bucket to `健康和日常事务` in the frontend so the category better covers health, disputes, lost-item, and other everyday practical asks.
+- Added a first-two-replies soft guidance nudge for `我该怎么做`: within the first two assistant answers only, there is now a 50% chance to append a short variable sentence inviting the user to补更多细节 for a tighter follow-up reading.
+- Tightened the `我该怎么做` answer guard so high-coverage categories are no longer misclassified as invalid just for being concise, while still rejecting true empty-shell template answers.
+
 ## V1.4.122 - 2026-04-18
 
 - Synced `我该怎么做` frontend question guidance with the selected category bucket so the main textarea placeholder and helper copy now change by大类, making it clearer how to ask travel, study, money, relationship, family, health, and deal questions.

@@ -38,7 +38,7 @@ const questionCategoryGroups = [
   },
   {
     key: 'life',
-    label: '健康事务',
+    label: '健康和日常事务',
     items: ['健康疾病', '生产怀孕', '诉讼官非', '失物寻人'],
   },
   {

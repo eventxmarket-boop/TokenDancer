@@ -649,6 +649,12 @@ QUESTION_TYPE_RELEVANCE_MARKERS = {
 
 DIRECT_DECISION_MARKERS = ["更偏", "偏", "宜", "不宜", "能", "不能", "会", "不会", "先缓", "先别", "可", "不太"]
 LOCATION_ANSWER_MARKERS = ["东", "西", "南", "北", "东北", "东南", "西北", "西南", "正东", "正西", "正南", "正北", "柜", "抽屉", "床", "桌", "角落", "包里", "高处", "低处", "门口"]
+SCOPE_NUDGE_VARIANTS = [
+    "如果你觉得我这版还偏宽，可以把细节再补一句，我继续帮你往下收。",
+    "要是你想让我断得更细一点，可以继续补背景，我再顺着这卦往下看。",
+    "如果你觉得这里还不够具体，可以把关键细节接着告诉我，我再帮你细断一层。",
+    "要是你想把这件事看得更实一点，可以继续补两句细节，我再往下拆。",
+]
 
 MAX_HOW_TO_DO_COMPLETION_RETRIES = 1
 
@@ -1316,6 +1322,41 @@ def _should_append_followup_question(
     )
     rng = random.Random(_stable_seed(seed_source))
     return rng.random() < 0.6
+
+
+def _should_append_scope_nudge(
+    question: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+    cast_context: dict[str, Any] | None = None,
+) -> bool:
+    reply_index = _assistant_reply_count(conversation_history) + 1
+    if reply_index > 2:
+        return False
+    seed_source = "||".join(
+        [
+            _normalize_text(question),
+            _normalize_text(((cast_context or {}).get("raw_result") or {}).get("hexagram_name")),
+            str(reply_index),
+            "scope-nudge",
+        ]
+    )
+    rng = random.Random(_stable_seed(seed_source))
+    return rng.random() < 0.5
+
+
+def _append_scope_nudge(text: str, nudge: str) -> str:
+    normalized = text.strip()
+    if not normalized or not nudge.strip():
+        return normalized
+    paragraphs = [item.strip() for item in re.split(r"\n{2,}", normalized) if item.strip()]
+    if not paragraphs:
+        return nudge.strip()
+    last = paragraphs[-1]
+    if "？" in last or last.endswith("?"):
+        paragraphs.insert(len(paragraphs) - 1, nudge.strip())
+    else:
+        paragraphs.append(nudge.strip())
+    return "\n\n".join(paragraphs).strip()
 
 
 def _should_continue_generation(content: str, finish_reason: str) -> bool:
@@ -2191,6 +2232,7 @@ async def _interpret_with_llm(
     db: Session | None,
     research_context: str = "",
     should_append_question: bool = True,
+    should_append_scope_nudge: bool = False,
 ) -> tuple[str, str]:
     grounding = _build_divination_grounding(base_result)
     protocol = _build_interpretation_protocol(
@@ -2285,6 +2327,10 @@ async def _interpret_with_llm(
             model_used = repaired_model or model_used
     if not should_append_question:
         content = _remove_trailing_question(content)
+    if should_append_scope_nudge:
+        nudge_seed = _stable_seed(question, grounding.get("hexagram", {}).get("name"), "scope-nudge-variant")
+        nudge = SCOPE_NUDGE_VARIANTS[nudge_seed % len(SCOPE_NUDGE_VARIANTS)]
+        content = _append_scope_nudge(content, nudge)
     return content.strip(), model_used
 
 
@@ -2295,6 +2341,7 @@ async def _chat_with_llm(
     db: Session | None,
     research_context: str = "",
     should_append_question: bool = True,
+    should_append_scope_nudge: bool = False,
 ) -> tuple[str, str]:
     raw_context = cast_context.get("raw_result") if isinstance(cast_context, dict) else {}
     grounding = cast_context if "time_context" in cast_context and "hexagram" in cast_context else {
@@ -2409,6 +2456,10 @@ async def _chat_with_llm(
             model_used = repaired_model or model_used
     if not should_append_question:
         content = _remove_trailing_question(content)
+    if should_append_scope_nudge:
+        nudge_seed = _stable_seed(user_message, grounding.get("hexagram", {}).get("name"), "scope-nudge-variant")
+        nudge = SCOPE_NUDGE_VARIANTS[nudge_seed % len(SCOPE_NUDGE_VARIANTS)]
+        content = _append_scope_nudge(content, nudge)
     return content.strip(), model_used
 
 
@@ -2479,6 +2530,11 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             conversation_history=conversation_history if isinstance(conversation_history, list) else [],
             cast_context=cast_context if isinstance(cast_context, dict) else {},
         )
+        should_append_scope_nudge = _should_append_scope_nudge(
+            user_message,
+            conversation_history=conversation_history if isinstance(conversation_history, list) else [],
+            cast_context=cast_context if isinstance(cast_context, dict) else {},
+        )
         if use_ai and db is not None:
             try:
                 ai_text, model_used = await _chat_with_llm(
@@ -2488,6 +2544,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
                     db,
                     research_context=research_context,
                     should_append_question=should_append_question,
+                    should_append_scope_nudge=should_append_scope_nudge,
                 )
                 if ai_text:
                     ai_interpretation = _clean_divination_output(ai_text)
@@ -2540,6 +2597,11 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             conversation_history=[],
             cast_context={"raw_result": base_result.get("raw_result", {})},
         )
+        should_append_scope_nudge = _should_append_scope_nudge(
+            question,
+            conversation_history=[],
+            cast_context={"raw_result": base_result.get("raw_result", {})},
+        )
         try:
             ai_text, model_used = await _interpret_with_llm(
                 question,
@@ -2547,6 +2609,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
                 db,
                 research_context=research_context,
                 should_append_question=should_append_question,
+                should_append_scope_nudge=should_append_scope_nudge,
             )
             if ai_text:
                 ai_interpretation = _clean_divination_output(ai_text)

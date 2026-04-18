@@ -10,11 +10,13 @@ from main import app
 from app.services.how_to_do_service import (
     ALL_GUA_CATALOG,
     _answer_needs_repair,
+    _append_scope_nudge,
     _build_cast_result,
     _build_divination_grounding,
     _build_interpretation_protocol,
     _compact_history_for_prompt,
     _line_value_from_back_count,
+    _should_append_scope_nudge,
     _should_append_followup_question,
     generate_how_to_do_runtime,
 )
@@ -236,6 +238,19 @@ class HowToDoTests(unittest.TestCase):
             {"role": "assistant", "content": "第三条"},
         ]
         self.assertFalse(_should_append_followup_question("继续", conversation_history=history, cast_context={}))
+
+    def test_scope_nudge_stops_after_second_assistant_reply(self):
+        history = [
+            {"role": "assistant", "content": "第一条"},
+            {"role": "assistant", "content": "第二条"},
+        ]
+        self.assertFalse(_should_append_scope_nudge("继续", conversation_history=history, cast_context={}))
+
+    def test_scope_nudge_is_inserted_before_trailing_question(self):
+        content = "核心结论：更偏能成。\n\n你更想继续看结果，还是想看时间？"
+        updated = _append_scope_nudge(content, "如果你觉得这里还偏宽，可以继续补细节。")
+        self.assertIn("如果你觉得这里还偏宽，可以继续补细节。", updated)
+        self.assertTrue(updated.endswith("你更想继续看结果，还是想看时间？"))
 
     def test_exam_generic_answer_is_flagged_for_repair(self):
         base_result = _build_cast_result(
