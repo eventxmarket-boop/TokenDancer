@@ -15,6 +15,7 @@ from app.services.text_sanitizer import strip_think_blocks
 
 SECTION_LABELS = {
     "cast": "排盘",
+    "chat": "占卜对话",
     "sundial": "日晷",
     "catalog": "六十四卦",
     "songs": "歌诀",
@@ -1139,6 +1140,47 @@ async def _interpret_with_llm(question: str, base_result: dict[str, Any], db: Se
     return str(reply.get("content") or "").strip(), str(reply.get("model") or "")
 
 
+async def _chat_with_llm(
+    user_message: str,
+    cast_context: dict[str, Any],
+    conversation_history: list[dict[str, Any]],
+    db: Session | None,
+) -> tuple[str, str]:
+    system_prompt = (
+        "你是 Tokendancer 的易经占卜对话助手。"
+        "回答时必须结合当前卦象、本卦、动爻、变卦，以及已经发生的对话内容。"
+        "请直接回答用户现在的问题，不要重复完整排盘，不要输出标题，不要解释系统过程。"
+        "语气自然、简洁、明确，控制在 3 到 6 句。"
+    )
+    trimmed_history = [
+        {
+            "role": _normalize_text(item.get("role")) or "user",
+            "content": _normalize_text(item.get("content")),
+        }
+        for item in (conversation_history or [])[-8:]
+        if _normalize_text(item.get("content"))
+    ]
+    user_prompt = json.dumps(
+        {
+            "cast_context": cast_context,
+            "conversation_history": trimmed_history,
+            "latest_user_message": user_message,
+            "grounding_snippets": GROUNDING_SNIPPETS,
+            "output_goal": "结合卦象和上下文继续回答用户",
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    reply = await generate_reply(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        db=db,
+    )
+    return str(reply.get("content") or "").strip(), str(reply.get("model") or "")
+
+
 def _fallback_interpretation(base_result: dict[str, Any]) -> str:
     summary = _normalize_text(base_result.get("summary"))
     suggestions = base_result.get("suggestions")
@@ -1155,6 +1197,9 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
     manual_lines = request.get("manual_lines") or []
     character_text = _normalize_text(request.get("character_text"))
     use_ai = bool(request.get("use_ai", True))
+    user_message = _normalize_text(request.get("user_message"))
+    conversation_history = request.get("conversation_history") or []
+    cast_context = request.get("cast_context") or {}
 
     if section == "catalog":
         base_result = _build_catalog_result()
@@ -1162,6 +1207,38 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         base_result = _build_reference_result()
     elif section == "songs":
         base_result = _build_songs_result()
+    elif section == "chat":
+        if not cast_context:
+            raise ValueError("缺少卦象上下文")
+        if not user_message:
+            raise ValueError("请输入追问内容")
+        fallback = (
+            f"结合当前卦象看，{_normalize_text(cast_context.get('summary')) or '先顺着眼前局势继续判断。'}"
+            " 这次更重要的是结合你刚补充的信息，看局势是在推进还是转向。"
+        ).strip()
+        ai_interpretation = fallback
+        model_used = ""
+        if use_ai and db is not None:
+            try:
+                ai_text, model_used = await _chat_with_llm(user_message, cast_context, conversation_history, db)
+                if ai_text:
+                    ai_interpretation = strip_think_blocks(ai_text).strip()
+            except LLMGatewayError:
+                model_used = ""
+            except Exception:
+                model_used = ""
+        return {
+            "section": section,
+            "method_label": SECTION_LABELS["chat"],
+            "question": user_message,
+            "summary": "",
+            "cards": [],
+            "ai_interpretation": ai_interpretation,
+            "suggestions": [],
+            "raw_result": cast_context,
+            "catalog": [],
+            "model_used": model_used,
+        }
     elif section == "cast":
         source_text = character_text or question
         base_result = _build_cast_result(question, category, cast_mode, cast_seed, source_text=source_text, manual_lines=manual_lines)

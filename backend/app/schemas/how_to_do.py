@@ -5,8 +5,13 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-HowToDoSection = Literal["cast", "sundial", "catalog", "songs", "detail"]
+HowToDoSection = Literal["cast", "chat", "sundial", "catalog", "songs", "detail"]
 HowToDoCastMode = Literal["manual", "character", "coin"]
+
+
+class HowToDoChatMessage(BaseModel):
+    role: Literal["user", "assistant"] = "user"
+    content: str = ""
 
 
 class HowToDoRequest(BaseModel):
@@ -19,6 +24,9 @@ class HowToDoRequest(BaseModel):
     character_text: str = ""
     use_ai: bool = True
     selected_hexagram: str = ""
+    user_message: str = ""
+    conversation_history: list[HowToDoChatMessage] = Field(default_factory=list)
+    cast_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class HowToDoCard(BaseModel):

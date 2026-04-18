@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { requestHowToDo, type HowToDoResponse } from '@/services/howToDoService'
+import { requestHowToDo, type HowToDoChatMessage, type HowToDoResponse } from '@/services/howToDoService'
 
 type CastModeKey = 'manual' | 'coin' | 'online'
 
@@ -51,9 +51,12 @@ const category = ref('')
 const castSeed = ref('')
 const manualLines = ref<number[]>([0, 0, 0, 0, 0, 0])
 const loading = ref(false)
+const chatLoading = ref(false)
 const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
+const chatInput = ref('')
+const chatTurns = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
 const lineOptions = [
   { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
   { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
@@ -135,6 +138,8 @@ function resetCast() {
   manualLines.value = [0, 0, 0, 0, 0, 0]
   result.value = null
   showResultBoard.value = true
+  chatInput.value = ''
+  chatTurns.value = []
 }
 
 function randomLineOptionValue() {
@@ -194,6 +199,21 @@ async function cast() {
       ;(response.raw_result as Record<string, any>).cast_mode = 'online'
     }
     result.value = response
+    chatTurns.value = []
+    if (question.value.trim()) {
+      chatTurns.value.push({
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: question.value.trim(),
+      })
+    }
+    if (response.ai_interpretation.trim()) {
+      chatTurns.value.push({
+        id: `assistant-${Date.now() + 1}`,
+        role: 'assistant',
+        content: response.ai_interpretation.trim(),
+      })
+    }
     window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
     castSeed.value = formatCastSeed()
     showResultBoard.value = true
@@ -201,6 +221,53 @@ async function cast() {
     errorMessage.value = error instanceof Error ? error.message : '排盘失败'
   } finally {
     loading.value = false
+  }
+}
+
+function buildCastContext() {
+  return {
+    question: question.value.trim(),
+    category: category.value.trim(),
+    cast_mode: castResult.value?.cast_mode || activeCastMode.value,
+    summary: result.value?.summary || '',
+    raw_result: result.value?.raw_result || {},
+  }
+}
+
+async function sendChatFollowup() {
+  const content = chatInput.value.trim()
+  if (!content || !result.value) return
+  const userTurn = {
+    id: `user-${Date.now()}`,
+    role: 'user' as const,
+    content,
+  }
+  chatTurns.value.push(userTurn)
+  chatInput.value = ''
+  chatLoading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await requestHowToDo({
+      section: 'chat',
+      user_message: content,
+      use_ai: true,
+      cast_context: buildCastContext(),
+      conversation_history: chatTurns.value.map(
+        (item): HowToDoChatMessage => ({
+          role: item.role,
+          content: item.content,
+        }),
+      ),
+    })
+    chatTurns.value.push({
+      id: `assistant-${Date.now()}`,
+      role: 'assistant',
+      content: response.ai_interpretation.trim(),
+    })
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '追问失败'
+  } finally {
+    chatLoading.value = false
   }
 }
 
@@ -384,6 +451,30 @@ async function cast() {
           </div>
         </div>
 
+        <div class="howtodo-chat-sheet">
+          <div class="howtodo-chat-list">
+            <div
+              v-for="turn in chatTurns"
+              :key="turn.id"
+              class="howtodo-chat-bubble"
+              :class="turn.role === 'user' ? 'howtodo-chat-bubble--user' : 'howtodo-chat-bubble--assistant'"
+            >
+              {{ turn.content }}
+            </div>
+          </div>
+          <div class="howtodo-chat-composer">
+            <textarea
+              v-model="chatInput"
+              class="text-area howtodo-chat-composer__input"
+              rows="3"
+              placeholder="继续问这卦怎么理解"
+            ></textarea>
+            <button class="primary-btn" type="button" :disabled="chatLoading || !chatInput.trim()" @click="sendChatFollowup">
+              {{ chatLoading ? '回答中...' : '发送' }}
+            </button>
+          </div>
+        </div>
+
       </div>
     </template>
   </section>
@@ -541,6 +632,52 @@ async function cast() {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.howtodo-chat-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.howtodo-chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.howtodo-chat-bubble {
+  max-width: min(92%, 760px);
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  line-height: 1.7;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.howtodo-chat-bubble--assistant {
+  align-self: flex-start;
+  background: color-mix(in srgb, var(--card-bg) 96%, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text-primary);
+}
+
+.howtodo-chat-bubble--user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--brand) 16%, var(--card-bg));
+  color: var(--text-primary);
+}
+
+.howtodo-chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.howtodo-chat-composer__input {
+  min-height: 92px;
 }
 
 .liuyao-result-meta {

@@ -113,6 +113,37 @@ class HowToDoTests(unittest.TestCase):
         self.assertTrue(result["ai_interpretation"])
         self.assertIn("问念", {item["label"] for item in result["cards"]})
 
+    def test_how_to_do_chat_uses_llm_when_available(self):
+        payload = {
+            "section": "chat",
+            "user_message": "那我接下来该怎么做？",
+            "cast_context": {
+                "summary": "本卦显示先稳住节奏，再决定要不要推进。",
+                "raw_result": {"hexagram_name": "复"},
+            },
+            "conversation_history": [
+                {"role": "user", "content": "测这个项目能不能推进"},
+                {"role": "assistant", "content": "先别急着推进，先看眼前条件。"},
+            ],
+            "use_ai": True,
+        }
+
+        with patch(
+            "app.services.how_to_do_service.generate_reply",
+            return_value={
+                "content": "先把节奏稳住，再补一个最关键的信息点，确认后再推进会更顺。",
+                "model": "mock-model",
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+                "latency_ms": 1,
+            },
+        ) as mocked_generate:
+            result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
+
+        self.assertEqual(result["section"], "chat")
+        self.assertTrue(mocked_generate.called)
+        self.assertEqual(result["model_used"], "mock-model")
+        self.assertIn("先把节奏稳住", result["ai_interpretation"])
+
 
 if __name__ == "__main__":
     unittest.main()
