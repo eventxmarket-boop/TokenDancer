@@ -10,6 +10,8 @@ from main import app
 from app.services.how_to_do_service import (
     ALL_GUA_CATALOG,
     _build_cast_result,
+    _build_divination_grounding,
+    _build_interpretation_protocol,
     _line_value_from_back_count,
     generate_how_to_do_runtime,
 )
@@ -85,6 +87,24 @@ class HowToDoTests(unittest.TestCase):
         self.assertTrue(body["cards"])
         self.assertEqual(body["cards"][0]["label"], "当前时间")
 
+    def test_interpretation_protocol_switches_focus_for_short_trade(self):
+        base_result = _build_cast_result(
+            question="清明前一天戊申日对做空有没有助力",
+            category="做空交易",
+            cast_mode="manual",
+            cast_seed="2026/04/04 08:00:00",
+            manual_lines=[7, 8, 8, 9, 7, 8],
+        )
+        protocol = _build_interpretation_protocol(
+            question="清明前一天戊申日对做空有没有助力",
+            category="做空交易",
+            grounding=_build_divination_grounding(base_result),
+        )
+
+        self.assertEqual(protocol["question_type"], "做空交易")
+        self.assertTrue(any("上涨是利还是害" in item for item in protocol["question_focus"]))
+        self.assertTrue(protocol["time_alignment"]["must_follow_cast_time"])
+
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
             "section": "cast",
@@ -114,7 +134,8 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("问念", {item["label"] for item in result["cards"]})
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("六爻解卦师", sent_messages[0]["content"])
-        self.assertIn("输出结构固定为四段", sent_messages[0]["content"])
+        self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
+        self.assertIn("interpretation_protocol", sent_messages[1]["content"])
 
     def test_how_to_do_chat_uses_llm_when_available(self):
         payload = {
@@ -148,7 +169,8 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("先把节奏稳住", result["ai_interpretation"])
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
-        self.assertIn("安一句心", sent_messages[0]["content"])
+        self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
+        self.assertIn("interpretation_protocol", sent_messages[1]["content"])
 
     def test_how_to_do_cast_removes_markdown_markers_from_llm_output(self):
         payload = {

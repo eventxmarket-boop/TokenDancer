@@ -312,6 +312,39 @@ GROUNDING_SNIPPETS = [
     "时间起卦适合快速问事，手动起卦适合更明确的起卦过程。",
 ]
 
+QUESTION_TYPE_RULES = [
+    {
+        "type": "做空交易",
+        "keywords": ["做空", "买跌", "空单", "下跌", "反弹", "止盈", "止损", "出空", "换月", "行情", "标的"],
+        "focus": ["先分清对用户而言上涨是利还是害", "重点看压制上涨与放大下跌的力量", "日辰月令对关键爻的助力要单独讲清"],
+    },
+    {
+        "type": "普通求财",
+        "keywords": ["财运", "求财", "赚钱", "利润", "转款", "到账", "收入", "回款"],
+        "focus": ["重点看财爻、世应与应期", "判断钱能否落实以及何时到位", "分清眼前阻力与最终结果"],
+    },
+    {
+        "type": "关系情感",
+        "keywords": ["感情", "复合", "暧昧", "对象", "伴侣", "前任", "关系", "婚姻"],
+        "focus": ["重点看世应、合冲与动爻态度", "判断关系是在靠近还是疏离", "结论要兼顾情绪安抚与边界提醒"],
+    },
+    {
+        "type": "工作事务",
+        "keywords": ["工作", "项目", "合作", "老板", "客户", "合同", "过户", "材料", "手续", "offer"],
+        "focus": ["重点看父母爻、官鬼爻与文书流程", "判断事情能不能推进与卡点在哪", "建议要落到下一步动作"],
+    },
+    {
+        "type": "催收纠纷",
+        "keywords": ["催债", "施压", "纠纷", "起诉", "报警", "家人", "威胁", "债务"],
+        "focus": ["重点看世应强弱与对方动作真假", "区分施压姿态和真实落地风险", "结论里要保留风险提醒"],
+    },
+    {
+        "type": "居住去留",
+        "keywords": ["住宿", "搬家", "续住", "租房", "居所", "去留"],
+        "focus": ["重点看世爻、财爻与变卦后势", "判断维持现状还是更换更稳", "避免只给空泛情绪建议"],
+    },
+]
+
 LINE_GUIDANCE = [
     "起点和底盘，先看稳不稳。",
     "基础承接位，先看配合。",
@@ -514,6 +547,68 @@ def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
             }
             for item in transformed_line_details
         ],
+    }
+
+
+def _infer_question_type(*texts: Any) -> dict[str, Any]:
+    haystack = " ".join(_normalize_text(text) for text in texts if _normalize_text(text))
+    for rule in QUESTION_TYPE_RULES:
+        if any(keyword in haystack for keyword in rule["keywords"]):
+            return {"type": rule["type"], "focus": list(rule["focus"])}
+    return {
+        "type": "通用问事",
+        "focus": ["先判断用户真正关心的结果是什么", "只展开最关键的3到4个卦象关系", "结论必须落到可执行建议"],
+    }
+
+
+def _build_interpretation_protocol(
+    question: str,
+    category: str,
+    grounding: dict[str, Any],
+    conversation_history: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    question_type = _infer_question_type(
+        question,
+        category,
+        *(item.get("content") for item in (conversation_history or [])),
+    )
+    time_context = grounding.get("time_context", {}) or {}
+    hexagram = grounding.get("hexagram", {}) or {}
+    return {
+        "question_type": question_type["type"],
+        "question_focus": question_type["focus"],
+        "time_alignment": {
+            "must_follow_cast_time": True,
+            "day_label": _normalize_text(time_context.get("day_label")),
+            "ganzhi_line": _normalize_text(time_context.get("ganzhi_line")),
+            "instruction": "先按起卦时间对应的日辰、月令、节气判断，不要自行改用别的日期。",
+        },
+        "analysis_steps": [
+            "先确认用户问的到底是哪一类事，以及对用户来说什么是利、什么是害。",
+            "只围绕本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空、神煞做判断。",
+            "单独讲清楚日辰/月令对关键爻的助力或牵制。",
+            "从盘里挑最关键的3到4组关系展开，不要把满盘信息平铺给用户。",
+            "最后必须落到操作建议和风险提醒。",
+        ],
+        "answer_shape": [
+            "核心结论",
+            "关键互动分析",
+            "实际意义 / 怎么应对",
+            "风险提醒 / 安一句心",
+        ],
+        "style_rules": [
+            "像真正解卦师，不像系统面板。",
+            "先安抚，再判断。",
+            "不要暴露内部推理、搜索、校准过程。",
+            "不要输出 markdown 标记、标题井号、代码块、表格。",
+        ],
+        "current_hexagram": {
+            "name": hexagram.get("name"),
+            "tag": hexagram.get("tag"),
+            "palace": hexagram.get("palace"),
+            "changing_lines": hexagram.get("changing_lines", []),
+            "transformed_hexagram": hexagram.get("transformed_hexagram"),
+        },
     }
 
 
@@ -1178,21 +1273,29 @@ def _build_songs_result() -> dict[str, Any]:
 
 
 async def _interpret_with_llm(question: str, base_result: dict[str, Any], db: Session | None) -> tuple[str, str]:
+    grounding = _build_divination_grounding(base_result)
+    protocol = _build_interpretation_protocol(
+        question=question,
+        category=_normalize_text((base_result.get("raw_result") or {}).get("category")),
+        grounding=grounding,
+    )
     system_prompt = (
         "你是 Tokendancer 的六爻解卦师。"
         "所有判断都必须只依据眼前这张卦盘，不许脱离卦象给通用建议，不许编造盘里没有的信息。"
         "解读时要从本卦、动爻、变卦、六神、六亲、世应、卦宫、六合六冲、旬空与神煞这些已提供的信息出发，抓最关键的关系来判断。"
         "语气要像真正解卦的人，沉稳、安抚、有人味，哪怕结果不理想，也先安人心，再落判断。"
         "不要输出 markdown，不要出现 **、#、表格代码块、系统解释或'作为AI'。"
-        "输出结构固定为四段：核心结论、卦象拆解、怎么应对、卦上提醒。"
+        "先按起卦时间对应的日辰、月令、节气来解，不要自己改日期。"
+        "输出结构固定为四段：核心结论、关键互动分析、实际意义、风险提醒。"
         "每段都用人话写，不要长篇铺陈，但要让人看得出判断确实从卦里来。"
     )
     user_prompt = json.dumps(
         {
             "question": question,
-            "base_result": _build_divination_grounding(base_result),
+            "base_result": grounding,
+            "interpretation_protocol": protocol,
             "grounding_snippets": GROUNDING_SNIPPETS,
-            "output_goal": "给出一版更像解卦师的首轮解读，安抚优先，但判断必须从卦象本身展开",
+            "output_goal": "给出一版更像解卦师的首轮解读，先识别问题类型，再结合日辰月令和关键爻关系展开，最后落到建议",
         },
         ensure_ascii=False,
         indent=2,
@@ -1213,6 +1316,31 @@ async def _chat_with_llm(
     conversation_history: list[dict[str, Any]],
     db: Session | None,
 ) -> tuple[str, str]:
+    raw_context = cast_context.get("raw_result") if isinstance(cast_context, dict) else {}
+    grounding = cast_context if "time_context" in cast_context and "hexagram" in cast_context else {
+        "question": _normalize_text(cast_context.get("question")) if isinstance(cast_context, dict) else "",
+        "summary": _normalize_text(cast_context.get("summary")) if isinstance(cast_context, dict) else "",
+        "hexagram": {
+            "name": _normalize_text(raw_context.get("hexagram_name")) if isinstance(raw_context, dict) else "",
+            "tag": _normalize_text(raw_context.get("hexagram_tag")) if isinstance(raw_context, dict) else "",
+            "palace": _normalize_text(raw_context.get("hexagram_palace")) if isinstance(raw_context, dict) else "",
+            "changing_lines": raw_context.get("changing_lines", []) if isinstance(raw_context, dict) else [],
+            "transformed_hexagram": raw_context.get("transformed_hexagram") if isinstance(raw_context, dict) else {},
+        },
+        "time_context": {
+            "day_label": _normalize_text(raw_context.get("day_label")) if isinstance(raw_context, dict) else "",
+            "ganzhi_line": _normalize_text(raw_context.get("ganzhi_line")) if isinstance(raw_context, dict) else "",
+            "shensha": raw_context.get("shensha", {}) if isinstance(raw_context, dict) else {},
+        },
+        "line_details": raw_context.get("line_details", []) if isinstance(raw_context, dict) else [],
+        "transformed_line_details": raw_context.get("transformed_line_details", []) if isinstance(raw_context, dict) else [],
+    }
+    protocol = _build_interpretation_protocol(
+        question=user_message,
+        category=_normalize_text(cast_context.get("category")) if isinstance(cast_context, dict) else "",
+        grounding=grounding,
+        conversation_history=conversation_history,
+    )
     system_prompt = (
         "你是 Tokendancer 的六爻续断解卦师。"
         "这段对话已经绑定到同一卦、同一件事，后续回答只允许围绕当前这卦和原问题延伸，不能被聊天带偏。"
@@ -1220,7 +1348,8 @@ async def _chat_with_llm(
         "回答必须以当前卦盘为根：本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空与神煞，择要而断。"
         "语气要像经验老到的解卦师，稳、软、安抚，不说系统话，不给泛泛心理建议。"
         "不要输出 markdown，不要出现 **、#、代码块、系统解释。"
-        "输出结构固定为四段：核心结论、卦上看、怎么应对、安一句心。"
+        "先按这一卦对应的起卦时间和盘面继续断，不要擅自改时间。"
+        "输出结构固定为四段：核心结论、关键互动分析、实际意义、风险提醒。"
     )
     trimmed_history = [
         {
@@ -1232,11 +1361,12 @@ async def _chat_with_llm(
     ]
     user_prompt = json.dumps(
         {
-            "cast_context": cast_context,
+            "cast_context": grounding,
+            "interpretation_protocol": protocol,
             "conversation_history": trimmed_history,
             "latest_user_message": user_message,
             "grounding_snippets": GROUNDING_SNIPPETS,
-            "output_goal": "基于同一卦继续追断，回答必须紧扣本卦，不被话题带偏",
+            "output_goal": "基于同一卦继续追断，先识别追问关注点，再只围绕本卦关键关系回答",
         },
         ensure_ascii=False,
         indent=2,

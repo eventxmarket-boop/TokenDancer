@@ -1,3 +1,8 @@
+## V1.4.114 - 2026-04-18
+
+- Added a structured divination interpretation protocol to `我该怎么做` so model prompts now classify the question type first, force cast-time alignment, and anchor answers around the most relevant hexagram relationships instead of generic free-form output.
+- Added internal focus routing for short trades, general money questions, relationship asks, work matters, disputes, and stay-or-leave questions so the same hexagram can be interpreted with the right emphasis.
+
 ## V1.4.113 - 2026-04-18
 
 - Tightened `我该怎么做` divination answers so first replies and follow-up chat now use a more grounded 解卦师 tone, lean more toward安抚, and stay scoped to the current hexagram instead of drifting into generic advice.
