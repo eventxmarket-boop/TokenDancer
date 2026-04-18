@@ -89,12 +89,15 @@ const transformedLineDetails = computed(() => {
 const castQuestionText = computed(() => result.value?.question?.trim() || question.value.trim() || '搜索')
 const castModeText = computed(() => {
   const mode = castResult.value?.cast_mode || activeCastMode.value
+  if (mode === 'online') return '在线起卦'
   if (mode === 'manual') return '硬币 / 太极丸起卦'
   if (mode === 'taiji') return '太极丸起卦'
   if (mode === 'character') return '汉字起卦'
   return '硬币起卦'
 })
 const usesManualInput = computed(() => activeCastMode.value === 'manual' || activeCastMode.value === 'online')
+const usesOnlineInput = computed(() => activeCastMode.value === 'online')
+const usesManualSelectInput = computed(() => activeCastMode.value === 'manual')
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const castTimeText = computed(() => castResult.value?.day_label || '—')
 const castShenshaText = computed(() => {
@@ -135,13 +138,26 @@ function resetCast() {
   showResultBoard.value = true
 }
 
+function randomLineOptionValue() {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return lineOptions[array[0] % lineOptions.length].value
+  }
+  return lineOptions[Math.floor(Math.random() * lineOptions.length)].value
+}
+
+function drawOnlineLine(index: number) {
+  manualLines.value[index] = randomLineOptionValue()
+}
+
 async function cast() {
   if (!question.value.trim() && !category.value.trim() && !usesManualInput.value) {
     errorMessage.value = '请先输入问念或分类。'
     return
   }
   if (usesManualInput.value && manualLines.value.some((item) => !item)) {
-    errorMessage.value = '请把 6 次手动输入补完整。'
+    errorMessage.value = usesOnlineInput.value ? '请先完成 6 次起卦。' : '请把 6 次手动输入补完整。'
     return
   }
   loading.value = true
@@ -157,6 +173,9 @@ async function cast() {
       manual_lines: usesManualInput.value ? manualLines.value.map((item) => Number(item)) : [],
       use_ai: true,
     })
+    if (activeCastMode.value === 'online') {
+      ;(response.raw_result as Record<string, any>).cast_mode = 'online'
+    }
     result.value = response
     window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
     castSeed.value = formatCastSeed()
@@ -218,7 +237,7 @@ async function cast() {
       </label>
     </div>
 
-    <div v-if="usesManualInput" class="manual-input-stack">
+    <div v-if="usesManualSelectInput" class="manual-input-stack">
       <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
         <span class="manual-input-item__label">{{ entry.label }}</span>
         <div class="manual-input-item__row">
@@ -234,8 +253,32 @@ async function cast() {
       </label>
     </div>
 
-    <p class="how-to-do-note" v-if="usesManualInput">
+    <div v-if="usesOnlineInput" class="manual-input-stack">
+      <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
+        <div class="manual-input-item__header">
+          <span class="manual-input-item__label">{{ entry.label }}</span>
+          <button
+            type="button"
+            class="secondary-btn manual-input-item__trigger"
+            @click="drawOnlineLine(lineLabels.indexOf(entry.label))"
+          >
+            开始起卦
+          </button>
+        </div>
+        <div class="manual-input-item__row manual-input-item__row--result">
+          <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
+          <span class="manual-input-item__bars">{{ entry.barText }}</span>
+          <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+        </div>
+      </label>
+    </div>
+
+    <p class="how-to-do-note" v-if="usesManualSelectInput">
       从下往上依次录入 6 次结果。最下面是初爻，最上面是上爻。
+    </p>
+
+    <p class="how-to-do-note" v-if="usesOnlineInput">
+      每一爻点一次“开始起卦”即可随机四选一。六次都完成后，再开始占卜。
     </p>
 
     <p v-else class="how-to-do-note">
@@ -379,14 +422,41 @@ async function cast() {
   color: var(--text-primary);
 }
 
+.manual-input-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .manual-input-item__row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
 }
 
+.manual-input-item__row--result {
+  justify-content: space-between;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+}
+
 .manual-input-item__row .field-input {
   margin: 0;
+}
+
+.manual-input-item__trigger {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.manual-input-item__option {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 0.92rem;
 }
 
 .manual-input-item__bars {
@@ -567,8 +637,17 @@ async function cast() {
     grid-template-columns: 1fr;
   }
 
+  .manual-input-item__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .manual-input-item__row {
     flex-wrap: wrap;
+  }
+
+  .manual-input-item__row--result {
+    align-items: flex-start;
   }
 
   .liuyao-result-frame {

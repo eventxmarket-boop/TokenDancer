@@ -1,3 +1,7 @@
+## V1.4.108 - 2026-04-18
+
+- Rebuilt `在线起卦` into a six-step random draw flow so each yao now has its own `开始起卦` trigger, uses true browser randomness to pick one of four line types, and waits for all six draws before casting.
+
 ## V1.4.107 - 2026-04-18
 
 - Added an `在线起卦` entry after `太极丸起卦`, reusing the existing manual-entry UI and manual cast flow without changing the underlying liu-yao runtime.
