@@ -9,25 +9,21 @@ const myEntries = [
     key: 'my-seeds' as const,
     to: '/my-seeds',
     title: '我创建的seed',
-    summary: '继续查看你亲手创建的人格。',
   },
   {
     key: 'favorites' as const,
     to: '/favorites',
     title: '收藏的seed',
-    summary: '回答你最常用的seed。',
   },
   {
     key: 'reply-assistant' as const,
-    to: '/reply-assistant',
+    to: '/archive/reply',
     title: '我该怎么回',
-    summary: '直接输入一句话，获取回复建议。',
   },
   {
     key: 'how-to-do' as const,
-    to: '/how-to-do',
+    to: '/archive/how-to-do',
     title: '我该怎么做',
-    summary: '继续查看你保存的卦象和判断。',
   },
 ]
 
@@ -53,7 +49,7 @@ function handleLogout() {
       <div v-if="!isLoggedIn" class="my-page__head my-page__head--compact">
         <p class="eyebrow">个人中心</p>
         <h1>{{ username }}</h1>
-        <p class="hero-text">登录后可以同步 Seed、收藏和 Mind 入口。</p>
+        <p class="hero-text">登录后可继续使用。</p>
 
         <div class="hero-actions hero-actions--center">
           <button class="primary-btn" type="button" @click="goLogin">登录</button>
@@ -65,7 +61,6 @@ function handleLogout() {
         <div class="my-page__head">
           <p class="eyebrow">个人中心</p>
           <h1>{{ username }}</h1>
-          <p class="hero-text">查看你创建过的 Seed、收藏和常用入口。</p>
         </div>
 
         <div class="my-entry-grid my-entry-grid--clover">
@@ -89,7 +84,6 @@ function handleLogout() {
                 }}
               </span>
               <h3>{{ entry.title }}</h3>
-              <p>{{ entry.summary }}</p>
             </article>
           </RouterLink>
         </div>
@@ -146,10 +140,6 @@ function handleLogout() {
 .my-entry-card h3 {
   font-size: 1.34rem;
   line-height: 1.2;
-}
-
-.my-entry-card p {
-  max-width: 12ch;
 }
 
 @media (max-width: 700px) {

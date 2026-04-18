@@ -1,3 +1,10 @@
+## V1.4.129 - 2026-04-19
+
+- Simplified the `个人` page into four equal rounded square cards with no extra explanatory copy, and redirected `我该怎么回` / `我该怎么做` to a shared archive window instead of their full working pages.
+- Added a shared `历史 / 收藏` archive route for `我该怎么回` and `我该怎么做`, so both modules can open the same compact history/favorites window while keeping their own records separate.
+- Moved `我该怎么做` history and favorites entry points beside `在线起卦`, and added a direct `收藏` action beside the result fold toggle for favoriting the current hexagram.
+- Reworked the `我该怎么回` hamburger menu into a smaller action sheet with `新对话`, `收藏对话`, `历史`, and `收藏`, then wired `历史 / 收藏` to the shared archive window.
+
 ## V1.4.128 - 2026-04-19
 
 - Reworked the `个人` page into four equal rounded square entry cards arranged in a clover-style 2x2 layout, replacing the old `最近会话` entry with `我该怎么做` and renaming the favorites card copy to `收藏的seed`.

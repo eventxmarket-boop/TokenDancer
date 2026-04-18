@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { requestReplyAssistant, type ReplyAssistantResponse } from '@/services/replyAssistantService'
 import type {
   TextMaterialDocument,
@@ -93,6 +94,9 @@ const rewriteButtons: Array<{ label: string; mode: RewriteMode }> = [
   { label: '更简短一点', mode: 'short' },
 ]
 
+const route = useRoute()
+const router = useRouter()
+
 function createEmptyMaterialState(): UniversalCreateWizardRawMaterials {
   return {
     chat_history_text: '',
@@ -150,7 +154,7 @@ const turns = ref<ThreadTurn[]>([
     content: '输入一句话，我直接给你可发的回复。',
   },
 ])
-const historyOpen = ref(false)
+const menuOpen = ref(false)
 const histories = ref<ReplyAssistantHistoryRecord[]>([])
 const activeHistoryId = ref('')
 const contextOpen = ref(false)
@@ -176,14 +180,10 @@ const attachmentSummary = computed(() => {
 const historyStorageKey = 'persona-reply-assistant-histories'
 const currentHistoryStorageKey = 'persona-reply-assistant-current-history'
 
-const historyItems = computed(() =>
-  [...histories.value].sort((left, right) => {
-    if (left.pinned !== right.pinned) {
-      return left.pinned ? -1 : 1
-    }
-    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-  }),
+const currentHistoryRecord = computed(
+  () => histories.value.find((item) => item.id === activeHistoryId.value) ?? null,
 )
+const currentHistoryIsFavorite = computed(() => Boolean(currentHistoryRecord.value?.pinned))
 
 const conversationLocked = computed(() => turns.value.some((turn) => turn.role === 'user'))
 
@@ -418,7 +418,7 @@ function makeHistoryTitle() {
 function startNewConversation() {
   activeHistoryId.value = ''
   saveCurrentHistoryId('')
-  historyOpen.value = false
+  menuOpen.value = false
   result.value = null
   error.value = ''
   loading.value = false
@@ -439,7 +439,7 @@ function startNewConversation() {
   ]
 }
 
-function openHistory(record: ReplyAssistantHistoryRecord) {
+function hydrateConversation(record: ReplyAssistantHistoryRecord) {
   activeHistoryId.value = record.id
   saveCurrentHistoryId(record.id)
   form.message = record.form.message
@@ -466,7 +466,6 @@ function openHistory(record: ReplyAssistantHistoryRecord) {
           content: '输入一句话，我直接给你可发的回复。',
         },
       ]
-  historyOpen.value = false
 }
 
 function togglePin(record: ReplyAssistantHistoryRecord) {
@@ -477,34 +476,34 @@ function togglePin(record: ReplyAssistantHistoryRecord) {
   }))
 }
 
-function renameHistory(record: ReplyAssistantHistoryRecord) {
-  const nextTitle = window.prompt('重命名对话', record.title)
-  if (nextTitle === null) {
+function toggleCurrentConversationFavorite() {
+  if (!activeHistoryId.value) {
+    persistConversation()
+  }
+  const record = histories.value.find((item) => item.id === activeHistoryId.value)
+  if (!record) {
     return
   }
-  const title = normalizeText(nextTitle) || record.title
-  const index = histories.value.findIndex((item) => item.id === record.id)
-  if (index < 0) {
-    return
-  }
-  histories.value.splice(index, 1, {
-    ...record,
-    title,
-    updatedAt: new Date().toISOString(),
-  })
-  saveHistories()
+  togglePin(record)
 }
 
-function deleteHistory(record: ReplyAssistantHistoryRecord) {
-  const confirmed = window.confirm('删除后无法找回，是否继续？')
-  if (!confirmed) {
-    return
+function goToArchive(tab: 'history' | 'favorites') {
+  menuOpen.value = false
+  void router.push({
+    path: '/archive/reply',
+    query: {
+      tab,
+    },
+  })
+}
+
+function loadConversationById(id: string) {
+  const record = histories.value.find((item) => item.id === id)
+  if (!record) {
+    return false
   }
-  histories.value = histories.value.filter((item) => item.id !== record.id)
-  if (activeHistoryId.value === record.id) {
-    startNewConversation()
-  }
-  saveHistories()
+  hydrateConversation(record)
+  return true
 }
 
 function buildCurrentContext() {
@@ -746,57 +745,47 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
   }
 }
 
-loadHistories()
-activeHistoryId.value = loadCurrentHistoryId()
-if (activeHistoryId.value) {
-  const current = histories.value.find((item) => item.id === activeHistoryId.value)
-  if (current) {
-    openHistory(current)
+onMounted(() => {
+  loadHistories()
+  const historyId = String(route.query.history || '').trim()
+  if (historyId && loadConversationById(historyId)) {
+    return
   }
-}
+
+  activeHistoryId.value = loadCurrentHistoryId()
+  if (activeHistoryId.value) {
+    const current = histories.value.find((item) => item.id === activeHistoryId.value)
+    if (current) {
+      hydrateConversation(current)
+    }
+  }
+})
 </script>
 
 <template>
   <section class="section-card reply-shell">
-    <button class="reply-history-toggle" type="button" aria-label="查看历史对话" @click="historyOpen = !historyOpen">
+    <button class="reply-history-toggle" type="button" aria-label="查看菜单" @click="menuOpen = !menuOpen">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
     <transition name="fade">
-      <aside v-if="historyOpen" class="reply-history-panel">
+      <aside v-if="menuOpen" class="reply-history-panel">
         <div class="reply-history-panel__head">
           <button class="ghost-button ghost-button--small" type="button" @click="startNewConversation">新对话</button>
-          <button class="ghost-button ghost-button--small" type="button" @click="historyOpen = false">关闭</button>
-        </div>
-        <div class="reply-history-list">
-          <article
-            v-for="item in historyItems"
-            :key="item.id"
-            class="reply-history-item"
-            :class="{ 'reply-history-item--active': item.id === activeHistoryId }"
-            @click="openHistory(item)"
+          <button
+            class="ghost-button ghost-button--small"
+            type="button"
+            :disabled="loading"
+            @click="toggleCurrentConversationFavorite"
           >
-            <div class="reply-history-item__main">
-              <div class="reply-history-item__title-row">
-                <h4>{{ item.title }}</h4>
-                <span v-if="item.pinned" class="reply-history-item__pin">置顶</span>
-              </div>
-              <p>{{ item.updatedAt.slice(0, 19).replace('T', ' ') }}</p>
-            </div>
-            <div class="reply-history-item__actions">
-              <button type="button" class="ghost-button ghost-button--small" @click.stop="togglePin(item)">
-                {{ item.pinned ? '取消置顶' : '置顶' }}
-              </button>
-              <button type="button" class="ghost-button ghost-button--small" @click.stop="renameHistory(item)">
-                重命名
-              </button>
-              <button type="button" class="ghost-button ghost-button--small" @click.stop="deleteHistory(item)">
-                删除
-              </button>
-            </div>
-          </article>
+            {{ currentHistoryIsFavorite ? '取消收藏' : '收藏对话' }}
+          </button>
+        </div>
+        <div class="reply-history-panel__links">
+          <button type="button" class="reply-history-link" @click="goToArchive('history')">历史</button>
+          <button type="button" class="reply-history-link" @click="goToArchive('favorites')">收藏</button>
         </div>
       </aside>
     </transition>
@@ -1076,71 +1065,33 @@ if (activeHistoryId.value) {
 
 .reply-history-panel__head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
-.reply-history-list {
-  display: grid;
-  gap: 0.6rem;
-  max-height: min(58vh, 520px);
-  overflow: auto;
-}
-
-.reply-history-item {
-  display: grid;
-  gap: 0.7rem;
-  padding: 0.75rem 0.8rem;
-  border: 1px solid rgba(127, 140, 172, 0.16);
-  border-radius: 18px;
-  background: rgba(248, 250, 252, 0.94);
-  text-align: left;
-}
-
-.reply-history-item--active {
-  border-color: rgba(96, 110, 220, 0.32);
-  background: rgba(242, 245, 255, 0.98);
-}
-
-.reply-history-item__main h4,
-.reply-history-item__main p {
-  margin: 0;
-}
-
-.reply-history-item__title-row {
+.reply-history-panel__links {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  justify-content: space-between;
 }
 
-.reply-history-item__main h4 {
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
-
-.reply-history-item__main p {
-  margin-top: 0.3rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.reply-history-item__pin {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0.14rem 0.5rem;
-  background: rgba(96, 110, 220, 0.12);
+.reply-history-link {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.94);
   color: var(--text);
-  font-size: 0.72rem;
   font-weight: 700;
 }
 
-.reply-history-item__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
+.reply-history-link:hover,
+.reply-history-link:focus-visible {
+  border-color: rgba(96, 110, 220, 0.32);
+  background: rgba(242, 245, 255, 0.98);
 }
 
 .reply-thread {

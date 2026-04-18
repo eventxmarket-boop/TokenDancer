@@ -8,6 +8,7 @@ import CreateResultPage from '@/views/CreateResultPage.vue'
 import ReplyAssistantLandingPage from '@/views/ReplyAssistantLandingPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
 import HowToDoPage from '@/views/HowToDoPage.vue'
+import ArchiveCenterPage from '@/views/ArchiveCenterPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
 import ChatPage from '@/views/ChatPage.vue'
 import AdminPage from '@/views/AdminPage.vue'
@@ -70,6 +71,12 @@ const router = createRouter({
       name: 'reply-assistant-workbench',
       component: ReplyAssistantPage,
       meta: { title: '我该怎么回' },
+    },
+    {
+      path: '/archive/:kind',
+      name: 'archive-center',
+      component: ArchiveCenterPage,
+      meta: { title: '历史/收藏' },
     },
     {
       path: '/how-to-do',

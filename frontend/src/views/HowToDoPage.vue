@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { requestHowToDo, type HowToDoChatMessage, type HowToDoResponse } from '@/services/howToDoService'
 import {
   listHowToDoHistoryRecords,
@@ -110,10 +111,11 @@ const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
 const chatInput = ref('')
 const chatTurns = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
-const historyOpen = ref(false)
 const historyRecords = ref<HowToDoHistoryRecord[]>([])
 const activeHistoryId = ref('')
 const castCategorySnapshot = ref('未分类')
+const route = useRoute()
+const router = useRouter()
 const lineOptions = [
   { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
   { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
@@ -223,7 +225,6 @@ function resetCast() {
   showResultBoard.value = true
   chatInput.value = ''
   chatTurns.value = []
-  historyOpen.value = false
   activeHistoryId.value = ''
   castCategorySnapshot.value = '未分类'
 }
@@ -305,7 +306,6 @@ function loadHistoryRecord(record: HowToDoHistoryRecord) {
   chatTurns.value = record.chatTurns.map((item) => ({ ...item }))
   chatInput.value = ''
   showResultBoard.value = true
-  historyOpen.value = false
   activeCastMode.value =
     record.result.raw_result?.cast_mode === 'online'
       ? 'online'
@@ -318,6 +318,15 @@ function toggleCurrentFavorite() {
   if (!activeHistoryId.value) return
   toggleFavoriteHowToDoHistoryRecord(activeHistoryId.value)
   refreshHistoryRecords()
+}
+
+function goToHowToDoArchive(tab: 'history' | 'favorites') {
+  void router.push({
+    path: '/archive/how-to-do',
+    query: {
+      tab,
+    },
+  })
 }
 
 async function cast() {
@@ -424,6 +433,14 @@ async function sendChatFollowup() {
 
 onMounted(() => {
   refreshHistoryRecords()
+  const historyId = String(route.query.history || '').trim()
+  if (!historyId) {
+    return
+  }
+  const record = historyRecords.value.find((item) => item.id === historyId)
+  if (record) {
+    loadHistoryRecord(record)
+  }
 })
 </script>
 
@@ -443,19 +460,16 @@ onMounted(() => {
       <button
         type="button"
         class="chip-btn"
-        :class="{ 'chip-btn--active': historyOpen }"
-        @click="historyOpen = !historyOpen"
+        @click="goToHowToDoArchive('history')"
       >
         历史
       </button>
       <button
         type="button"
         class="chip-btn"
-        :class="{ 'chip-btn--active': currentHistoryIsFavorite }"
-        :disabled="!activeHistoryId"
-        @click="toggleCurrentFavorite"
+        @click="goToHowToDoArchive('favorites')"
       >
-        {{ currentHistoryIsFavorite ? '已收藏' : '收藏' }}
+        收藏
       </button>
     </div>
     <p v-if="castModes.find((item) => item.key === activeCastMode)?.hint" class="how-to-do-note">
@@ -555,34 +569,6 @@ onMounted(() => {
 
     <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
 
-    <div v-if="historyOpen" class="liuyao-history-panel">
-      <div class="liuyao-history-panel__head">
-        <h3>历史卦象</h3>
-        <span class="status-pill">{{ historyRecords.length }} 条</span>
-      </div>
-      <div v-if="historyRecords.length" class="liuyao-history-list">
-        <button
-          v-for="item in historyRecords"
-          :key="item.id"
-          type="button"
-          class="liuyao-history-item"
-          :class="{ 'liuyao-history-item--active': item.id === activeHistoryId }"
-          @click="loadHistoryRecord(item)"
-        >
-          <div class="liuyao-history-item__title">
-            <strong>{{ item.title || '未命名卦象' }}</strong>
-            <span v-if="item.favorite" class="status-pill">收藏</span>
-          </div>
-          <p>{{ item.category }} · {{ item.castMode }}</p>
-          <p>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</p>
-        </button>
-      </div>
-      <div v-else class="empty-panel empty-panel--compact liuyao-history-empty">
-        <h3>还没有历史卦象。</h3>
-        <p class="empty-panel__copy">起一卦后，这里会保留卦象和对话记录。</p>
-      </div>
-    </div>
-
     <template v-if="result">
       <div class="liuyao-result-sheet">
         <div class="liuyao-result-meta">
@@ -611,6 +597,14 @@ onMounted(() => {
         <div class="liuyao-result-toolbar">
           <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
             {{ showResultBoard ? '收起' : '展开' }}
+          </button>
+          <button
+            type="button"
+            class="secondary-btn liuyao-expand-btn"
+            :disabled="!activeHistoryId"
+            @click="toggleCurrentFavorite"
+          >
+            {{ currentHistoryIsFavorite ? '取消收藏' : '收藏' }}
           </button>
         </div>
 

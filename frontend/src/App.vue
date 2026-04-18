@@ -49,7 +49,8 @@ const isMindMenuActive = computed(
   () =>
     route.path === '/reply-assistant' ||
     route.path === '/reply-assistant/workbench' ||
-    route.path.startsWith('/how-to-do'),
+    route.path.startsWith('/how-to-do') ||
+    route.path.startsWith('/archive/'),
 )
 
 const isSeedMenuActive = computed(
