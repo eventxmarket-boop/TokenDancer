@@ -1,3 +1,9 @@
+## V1.4.132 - 2026-04-19
+
+- Kept the `我该怎么做` cast selectors pinned directly above the bottom input composer so `起卦方式 / 分类 / 时间` now stay attached to the chat box instead of floating as a separate block.
+- Tightened the lower composer into a full chat-card surface so the input area reads more like a persistent dialogue window, closer to `我该怎么回`.
+- Kept the current cast flow, history, favorites, and result rendering intact while only changing the input-side UI framing.
+
 ## V1.4.131 - 2026-04-19
 
 - Reworked `我该怎么做` into a more `我该怎么回`-style chat shell by removing the top question input and keeping only one persistent bottom composer for continuing divination chat.

@@ -534,23 +534,6 @@ onMounted(() => {
       </aside>
     </transition>
 
-    <div class="howtodo-composer">
-      <div class="howtodo-composer__chips">
-        <button type="button" class="reply-chip reply-chip--picker" @click="openModePicker">
-          <span class="reply-chip__label">起卦方式</span>
-          <strong>{{ selectedModeLabel }}</strong>
-        </button>
-        <button type="button" class="reply-chip reply-chip--picker" @click="openCategoryPicker">
-          <span class="reply-chip__label">分类</span>
-          <strong>{{ selectedCategoryLabel }}</strong>
-        </button>
-        <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
-          <span class="reply-chip__label">时间</span>
-          <strong>{{ castSeed }}</strong>
-        </button>
-      </div>
-    </div>
-
     <transition name="fade">
       <aside v-if="modePickerOpen" class="howtodo-picker-sheet">
         <div class="howtodo-picker-sheet__head">
@@ -759,6 +742,20 @@ onMounted(() => {
     </template>
 
     <div class="howtodo-chat-sheet">
+      <div class="howtodo-chat-sheet__controls">
+        <button type="button" class="reply-chip reply-chip--picker" @click="openModePicker">
+          <span class="reply-chip__label">起卦方式</span>
+          <strong>{{ selectedModeLabel }}</strong>
+        </button>
+        <button type="button" class="reply-chip reply-chip--picker" @click="openCategoryPicker">
+          <span class="reply-chip__label">分类</span>
+          <strong>{{ selectedCategoryLabel }}</strong>
+        </button>
+        <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
+          <span class="reply-chip__label">时间</span>
+          <strong>{{ castSeed }}</strong>
+        </button>
+      </div>
       <div class="howtodo-chat-list">
         <div
           v-for="turn in chatTurns"
@@ -1258,8 +1255,18 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 0.95rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 24px;
+  background: rgba(252, 253, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(24, 32, 57, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.howtodo-chat-sheet__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 .howtodo-chat-list {
