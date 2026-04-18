@@ -123,7 +123,17 @@ class HowToDoTests(unittest.TestCase):
                 "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
                 "latency_ms": 1,
             },
-        ) as mocked_generate:
+        ) as mocked_generate, patch(
+            "app.services.how_to_do_service.research_how_to_do_question",
+            return_value={
+                "needs_research": True,
+                "research_kind": "calendar_time",
+                "facts_summary": ["2026年4月4日是清明前一天。"],
+                "sources_hint": ["万年历"],
+                "search_queries": ["2026 清明 前一天 日期"],
+                "evidence": [],
+            },
+        ):
             result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
 
         self.assertEqual(result["section"], "cast")
@@ -132,10 +142,12 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("本卦", result["summary"])
         self.assertTrue(result["ai_interpretation"])
         self.assertIn("问念", {item["label"] for item in result["cards"]})
+        self.assertIn("research", result["raw_result"])
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("六爻解卦师", sent_messages[0]["content"])
         self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
+        self.assertIn("research_context", sent_messages[1]["content"])
 
     def test_how_to_do_chat_uses_llm_when_available(self):
         payload = {
@@ -160,17 +172,29 @@ class HowToDoTests(unittest.TestCase):
                 "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
                 "latency_ms": 1,
             },
-        ) as mocked_generate:
+        ) as mocked_generate, patch(
+            "app.services.how_to_do_service.research_how_to_do_question",
+            return_value={
+                "needs_research": True,
+                "research_kind": "general",
+                "facts_summary": ["联网层补充了当前问题相关的日期与背景信息。"],
+                "sources_hint": ["官方资料"],
+                "search_queries": ["项目 推进 日期"],
+                "evidence": [],
+            },
+        ):
             result = asyncio.run(generate_how_to_do_runtime(payload, db=object()))
 
         self.assertEqual(result["section"], "chat")
         self.assertTrue(mocked_generate.called)
         self.assertEqual(result["model_used"], "mock-model")
         self.assertIn("先把节奏稳住", result["ai_interpretation"])
+        self.assertIn("latest_research", result["raw_result"])
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
         self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
+        self.assertIn("research_context", sent_messages[1]["content"])
 
     def test_how_to_do_cast_removes_markdown_markers_from_llm_output(self):
         payload = {

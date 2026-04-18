@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.services.llm_gateway import LLMGatewayError, generate_reply
+from app.services.how_to_do_research import research_how_to_do_question
 from app.services.text_sanitizer import strip_think_blocks
 
 
@@ -548,6 +549,40 @@ def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
             for item in transformed_line_details
         ],
     }
+
+
+def _format_how_to_do_research_context(research: dict[str, Any] | None) -> str:
+    if not isinstance(research, dict):
+        return ""
+    summary_lines = [
+        _normalize_text(line)
+        for line in (research.get("facts_summary") or [])
+        if _normalize_text(line)
+    ]
+    sources_hint = [
+        _normalize_text(line)
+        for line in (research.get("sources_hint") or [])
+        if _normalize_text(line)
+    ]
+    search_queries = [
+        _normalize_text(line)
+        for line in (research.get("search_queries") or [])
+        if _normalize_text(line)
+    ]
+    research_kind = _normalize_text(research.get("research_kind"))
+    parts: list[str] = []
+    if research_kind:
+        parts.append(f"联网研究类型：{research_kind}")
+    if search_queries:
+        parts.append("联网检索词：")
+        parts.extend(f"- {line}" for line in search_queries[:3])
+    if summary_lines:
+        parts.append("联网核实摘要：")
+        parts.extend(f"- {line}" for line in summary_lines[:4])
+    if sources_hint:
+        parts.append("联网参考来源：")
+        parts.extend(f"- {line}" for line in sources_hint[:4])
+    return "\n".join(parts).strip()
 
 
 def _infer_question_type(*texts: Any) -> dict[str, Any]:
@@ -1272,7 +1307,12 @@ def _build_songs_result() -> dict[str, Any]:
     }
 
 
-async def _interpret_with_llm(question: str, base_result: dict[str, Any], db: Session | None) -> tuple[str, str]:
+async def _interpret_with_llm(
+    question: str,
+    base_result: dict[str, Any],
+    db: Session | None,
+    research_context: str = "",
+) -> tuple[str, str]:
     grounding = _build_divination_grounding(base_result)
     protocol = _build_interpretation_protocol(
         question=question,
@@ -1294,6 +1334,7 @@ async def _interpret_with_llm(question: str, base_result: dict[str, Any], db: Se
             "question": question,
             "base_result": grounding,
             "interpretation_protocol": protocol,
+            "research_context": research_context,
             "grounding_snippets": GROUNDING_SNIPPETS,
             "output_goal": "给出一版更像解卦师的首轮解读，先识别问题类型，再结合日辰月令和关键爻关系展开，最后落到建议",
         },
@@ -1315,6 +1356,7 @@ async def _chat_with_llm(
     cast_context: dict[str, Any],
     conversation_history: list[dict[str, Any]],
     db: Session | None,
+    research_context: str = "",
 ) -> tuple[str, str]:
     raw_context = cast_context.get("raw_result") if isinstance(cast_context, dict) else {}
     grounding = cast_context if "time_context" in cast_context and "hexagram" in cast_context else {
@@ -1363,6 +1405,7 @@ async def _chat_with_llm(
         {
             "cast_context": grounding,
             "interpretation_protocol": protocol,
+            "research_context": research_context,
             "conversation_history": trimmed_history,
             "latest_user_message": user_message,
             "grounding_snippets": GROUNDING_SNIPPETS,
@@ -1421,6 +1464,20 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             raise ValueError("缺少卦象上下文")
         if not user_message:
             raise ValueError("请输入追问内容")
+        research_payload: dict[str, Any] = {}
+        research_context = ""
+        if use_ai:
+            try:
+                research_payload = await research_how_to_do_question(
+                    question=user_message,
+                    category=_normalize_text(cast_context.get("category")) if isinstance(cast_context, dict) else "",
+                    cast_context=cast_context if isinstance(cast_context, dict) else {},
+                    history=conversation_history if isinstance(conversation_history, list) else [],
+                )
+                research_context = _format_how_to_do_research_context(research_payload)
+            except Exception:
+                research_payload = {}
+                research_context = ""
         fallback = (
             "核心结论：这次追问仍然要回到本卦本身看，先别被新的情绪和说法带偏。\n\n"
             f"卦上看：{_normalize_text(cast_context.get('summary')) or '眼前局势仍以本卦主势为准。'}\n\n"
@@ -1431,13 +1488,22 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
         model_used = ""
         if use_ai and db is not None:
             try:
-                ai_text, model_used = await _chat_with_llm(user_message, cast_context, conversation_history, db)
+                ai_text, model_used = await _chat_with_llm(
+                    user_message,
+                    cast_context,
+                    conversation_history,
+                    db,
+                    research_context=research_context,
+                )
                 if ai_text:
                     ai_interpretation = _clean_divination_output(ai_text)
             except LLMGatewayError:
                 model_used = ""
             except Exception:
                 model_used = ""
+        response_raw_result = dict(cast_context) if isinstance(cast_context, dict) else {}
+        if research_payload:
+            response_raw_result["latest_research"] = research_payload
         return {
             "section": section,
             "method_label": SECTION_LABELS["chat"],
@@ -1446,7 +1512,7 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
             "cards": [],
             "ai_interpretation": ai_interpretation,
             "suggestions": [],
-            "raw_result": cast_context,
+            "raw_result": response_raw_result,
             "catalog": [],
             "model_used": model_used,
         }
@@ -1460,15 +1526,38 @@ async def generate_how_to_do_runtime(request: dict[str, Any], db: Session | None
 
     ai_interpretation = _fallback_interpretation(base_result)
     model_used = ""
+    research_payload: dict[str, Any] = {}
+    research_context = ""
+    if use_ai and question:
+        try:
+            research_payload = await research_how_to_do_question(
+                question=question,
+                category=category,
+                cast_context={"raw_result": base_result.get("raw_result", {})},
+                history=[],
+            )
+            research_context = _format_how_to_do_research_context(research_payload)
+        except Exception:
+            research_payload = {}
+            research_context = ""
     if use_ai and db is not None and section == "cast":
         try:
-            ai_text, model_used = await _interpret_with_llm(question, base_result, db)
+            ai_text, model_used = await _interpret_with_llm(
+                question,
+                base_result,
+                db,
+                research_context=research_context,
+            )
             if ai_text:
                 ai_interpretation = _clean_divination_output(ai_text)
         except LLMGatewayError:
             model_used = ""
         except Exception:
             model_used = ""
+    if research_payload:
+        raw_result = dict(base_result.get("raw_result", {}) or {})
+        raw_result["research"] = research_payload
+        base_result["raw_result"] = raw_result
 
     return {
         "section": section,

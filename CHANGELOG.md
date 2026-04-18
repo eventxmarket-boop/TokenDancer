@@ -1,3 +1,8 @@
+## V1.4.115 - 2026-04-18
+
+- Added a deep web-research layer to `我该怎么做` so cast answers and follow-up divination chat can now pull in external date, calendar, timing, and factual context before the model replies.
+- Kept the new networking layer isolated from the core hexagram runtime by introducing a dedicated `how_to_do_research` service and only passing summarized research context into prompts.
+
 ## V1.4.114 - 2026-04-18
 
 - Added a structured divination interpretation protocol to `我该怎么做` so model prompts now classify the question type first, force cast-time alignment, and anchor answers around the most relevant hexagram relationships instead of generic free-form output.
