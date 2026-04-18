@@ -1,3 +1,10 @@
+## V1.4.130 - 2026-04-19
+
+- Reworked `我该怎么做` into a reply-assistant-style chat shell with top-level picker chips for `起卦方式`, `分类`, and `时间`, while keeping the cast flow unchanged under the hood.
+- Added bottom-sheet style pickers for cast mode, grouped category selection, and editable cast time, so the mobile UI now feels closer to the `我该怎么回` dialogue layout.
+- Moved `我该怎么做` history and favorites into the shared archive window pattern and kept the left hamburger menu focused on `新对话`, `收藏对话`, `历史`, and `收藏`.
+- Preserved the existing cast results, follow-up chat, and favorite-hexagram behavior, but tightened the visible UI into a more compact chat-like composition.
+
 ## V1.4.129 - 2026-04-19
 
 - Simplified the `个人` page into four equal rounded square cards with no extra explanatory copy, and redirected `我该怎么回` / `我该怎么做` to a shared archive window instead of their full working pages.

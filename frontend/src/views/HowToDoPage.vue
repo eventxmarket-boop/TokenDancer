@@ -116,6 +116,10 @@ const activeHistoryId = ref('')
 const castCategorySnapshot = ref('未分类')
 const route = useRoute()
 const router = useRouter()
+const menuOpen = ref(false)
+const modePickerOpen = ref(false)
+const categoryPickerOpen = ref(false)
+const timePickerOpen = ref(false)
 const lineOptions = [
   { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
   { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
@@ -197,6 +201,15 @@ const currentHistoryRecord = computed(() =>
   historyRecords.value.find((item) => item.id === activeHistoryId.value) ?? null,
 )
 const currentHistoryIsFavorite = computed(() => Boolean(currentHistoryRecord.value?.favorite))
+const selectedCategoryGroupLabel = computed(
+  () => questionCategoryGroups.find((item) => item.key === categoryGroup.value)?.label || '',
+)
+const selectedCategoryLabel = computed(() => category.value || selectedCategoryGroupLabel.value || '选择分类')
+const selectedModeLabel = computed(() => {
+  const item = castModes.find((mode) => mode.key === activeCastMode.value)
+  return item?.label || '选择起卦方式'
+})
+const selectedModeHint = computed(() => castModes.find((item) => item.key === activeCastMode.value)?.hint || '')
 const manualLineEntries = computed(() =>
   [...manualLines.value]
     .map((value, index) => {
@@ -227,6 +240,8 @@ function resetCast() {
   chatTurns.value = []
   activeHistoryId.value = ''
   castCategorySnapshot.value = '未分类'
+  menuOpen.value = false
+  closePickers()
 }
 
 function handleCategoryGroupChange(value: string) {
@@ -235,9 +250,53 @@ function handleCategoryGroupChange(value: string) {
   category.value = items.length === 1 ? items[0] : ''
 }
 
-function onCategoryGroupChange(event: Event) {
-  const target = event.target as HTMLSelectElement | null
-  handleCategoryGroupChange(target?.value || '')
+function openModePicker() {
+  menuOpen.value = false
+  categoryPickerOpen.value = false
+  timePickerOpen.value = false
+  modePickerOpen.value = !modePickerOpen.value
+}
+
+function openCategoryPicker() {
+  menuOpen.value = false
+  modePickerOpen.value = false
+  timePickerOpen.value = false
+  if (!categoryGroup.value && questionCategoryGroups.length) {
+    handleCategoryGroupChange(questionCategoryGroups[0].key)
+  }
+  categoryPickerOpen.value = !categoryPickerOpen.value
+}
+
+function openTimePicker() {
+  menuOpen.value = false
+  modePickerOpen.value = false
+  categoryPickerOpen.value = false
+  timePickerOpen.value = !timePickerOpen.value
+}
+
+function closePickers() {
+  modePickerOpen.value = false
+  categoryPickerOpen.value = false
+  timePickerOpen.value = false
+}
+
+function selectCastMode(mode: CastModeKey) {
+  activeCastMode.value = mode
+  modePickerOpen.value = false
+}
+
+function selectCategoryGroupByKey(key: string) {
+  handleCategoryGroupChange(key)
+}
+
+function selectCategoryItemByValue(item: string) {
+  category.value = item
+  categoryPickerOpen.value = false
+}
+
+function confirmCastSeed() {
+  castSeed.value = castSeed.value.trim() || formatCastSeed()
+  timePickerOpen.value = false
 }
 
 function randomLineOptionValue() {
@@ -312,6 +371,7 @@ function loadHistoryRecord(record: HowToDoHistoryRecord) {
       : record.result.raw_result?.cast_mode === 'manual'
         ? 'manual'
         : 'coin'
+  menuOpen.value = false
 }
 
 function toggleCurrentFavorite() {
@@ -321,12 +381,18 @@ function toggleCurrentFavorite() {
 }
 
 function goToHowToDoArchive(tab: 'history' | 'favorites') {
+  menuOpen.value = false
   void router.push({
     path: '/archive/how-to-do',
     query: {
       tab,
     },
   })
+}
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+  closePickers()
 }
 
 async function cast() {
@@ -445,126 +511,192 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="summary-panel summary-panel--featured how-to-do-page">
-    <div class="how-to-do-toggle-row">
-      <button
-        v-for="mode in castModes"
-        :key="mode.key"
-        type="button"
-        class="chip-btn"
-        :class="{ 'chip-btn--active': activeCastMode === mode.key }"
-        @click="activeCastMode = mode.key"
-      >
-        {{ mode.label }}
-      </button>
-      <button
-        type="button"
-        class="chip-btn"
-        @click="goToHowToDoArchive('history')"
-      >
-        历史
-      </button>
-      <button
-        type="button"
-        class="chip-btn"
-        @click="goToHowToDoArchive('favorites')"
-      >
-        收藏
-      </button>
-    </div>
-    <p v-if="castModes.find((item) => item.key === activeCastMode)?.hint" class="how-to-do-note">
-      {{ castModes.find((item) => item.key === activeCastMode)?.hint }}
-    </p>
+  <section class="section-card reply-shell how-to-do-shell">
+    <button class="reply-history-toggle" type="button" aria-label="查看菜单" @click="toggleMenu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
 
-    <label class="field-label">
-      问念
-      <textarea
-        v-model="question"
-        class="text-area"
-        rows="4"
-        :placeholder="activeQuestionPrompt.placeholder"
-      ></textarea>
-    </label>
-    <p class="how-to-do-note">{{ activeQuestionPrompt.tip }}</p>
-
-    <div class="how-to-do-field-grid how-to-do-field-grid--category">
-      <label class="field-label">
-        分类大类
-        <select :value="categoryGroup" class="field-input" @change="onCategoryGroupChange">
-          <option value="" disabled>请选择大类</option>
-          <option v-for="group in questionCategoryGroups" :key="group.key" :value="group.key">{{ group.label }}</option>
-        </select>
-      </label>
-
-      <label class="field-label">
-        具体分类
-        <select v-model="category" class="field-input" :disabled="!categoryGroup">
-          <option value="" disabled>请选择具体分类</option>
-          <option v-for="item in selectedCategoryItems" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="how-to-do-field-grid">
-      <label class="field-label">
-        起卦时间
-        <input v-model="castSeed" type="text" class="field-input" />
-      </label>
-      <label class="field-label">
-        当前时间
-        <input :value="new Date().toLocaleString('zh-CN')" type="text" class="field-input" disabled />
-      </label>
-    </div>
-
-    <div v-if="usesManualSelectInput" class="manual-input-stack">
-      <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
-        <span class="manual-input-item__label">{{ entry.label }}</span>
-        <div class="manual-input-item__row">
-          <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
-            <option :value="0" disabled>请选择</option>
-            <option v-for="option in lineOptions" :key="option.value" :value="option.value">
-              {{ option.label }} {{ option.barText }}（{{ option.detail }}）
-            </option>
-          </select>
-          <span class="manual-input-item__bars">{{ entry.barText }}</span>
-          <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+    <transition name="fade">
+      <aside v-if="menuOpen" class="reply-history-panel how-to-do-menu">
+        <div class="reply-history-panel__head">
+          <button class="ghost-button ghost-button--small" type="button" @click="resetCast">新对话</button>
+          <button
+            class="ghost-button ghost-button--small"
+            type="button"
+            :disabled="!activeHistoryId"
+            @click="toggleCurrentFavorite"
+          >
+            {{ currentHistoryIsFavorite ? '取消收藏' : '收藏对话' }}
+          </button>
         </div>
-      </label>
-    </div>
+        <div class="reply-history-panel__links">
+          <button type="button" class="reply-history-link" @click="goToHowToDoArchive('history')">历史</button>
+          <button type="button" class="reply-history-link" @click="goToHowToDoArchive('favorites')">收藏</button>
+        </div>
+      </aside>
+    </transition>
 
-    <div v-if="usesOnlineInput" class="manual-input-stack">
-      <div class="online-cast-toolbar">
-        <button
-          type="button"
-          class="secondary-btn online-cast-toolbar__button"
-          :disabled="onlineDrawCount >= 6"
-          @click="drawNextOnlineLine"
-        >
-          {{ onlineDrawCount >= 6 ? '起卦完成' : '开始起卦' }}
+    <div class="howtodo-composer">
+      <div class="howtodo-composer__chips">
+        <button type="button" class="reply-chip reply-chip--picker" @click="openModePicker">
+          <span class="reply-chip__label">起卦方式</span>
+          <strong>{{ selectedModeLabel }}</strong>
         </button>
-        <span class="online-cast-toolbar__status">已起 {{ onlineDrawCount }}/6 爻</span>
+        <button type="button" class="reply-chip reply-chip--picker" @click="openCategoryPicker">
+          <span class="reply-chip__label">分类</span>
+          <strong>{{ selectedCategoryLabel }}</strong>
+        </button>
+        <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
+          <span class="reply-chip__label">时间</span>
+          <strong>{{ castSeed }}</strong>
+        </button>
       </div>
-      <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
-        <div class="manual-input-item__header">
-          <span class="manual-input-item__label">{{ entry.label }}</span>
-        </div>
-        <div class="manual-input-item__row manual-input-item__row--result">
-          <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
-          <span class="manual-input-item__bars">{{ entry.barText }}</span>
-          <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
-        </div>
+
+      <p v-if="selectedModeHint" class="how-to-do-note how-to-do-note--compact">{{ selectedModeHint }}</p>
+
+      <label class="reply-input howtodo-question">
+        <span class="reply-input__label">问念</span>
+        <textarea
+          v-model="question"
+          class="field-input reply-input__textarea"
+          rows="4"
+          :placeholder="activeQuestionPrompt.placeholder"
+        ></textarea>
       </label>
+      <p class="how-to-do-note">{{ activeQuestionPrompt.tip }}</p>
+
+      <div class="howtodo-composer__actions">
+        <button class="secondary-btn" type="button" @click="resetCast">新对话</button>
+        <button class="primary-btn" type="button" :disabled="loading" @click="cast">
+          {{ loading ? '排盘中...' : '开始占卜' }}
+        </button>
+      </div>
     </div>
 
-    <p class="how-to-do-note" v-if="usesOnlineInput">
-      请集中精力，默想所占之事，点击“开始起卦”后，可求得一爻，反复6次。
-    </p>
+    <transition name="fade">
+      <aside v-if="modePickerOpen" class="howtodo-picker-sheet">
+        <div class="howtodo-picker-sheet__head">
+          <h3>起卦方式</h3>
+          <button type="button" class="ghost-button ghost-button--small" @click="closePickers">关闭</button>
+        </div>
+        <div class="howtodo-picker-list">
+          <button
+            v-for="mode in castModes"
+            :key="mode.key"
+            type="button"
+            class="howtodo-picker-option"
+            :class="{ 'howtodo-picker-option--active': activeCastMode === mode.key }"
+            @click="selectCastMode(mode.key)"
+          >
+            <strong>{{ mode.label }}</strong>
+            <span v-if="mode.hint">{{ mode.hint }}</span>
+          </button>
+        </div>
+      </aside>
+    </transition>
 
-    <div class="how-to-do-actions how-to-do-actions--left">
-      <button class="secondary-btn" type="button" @click="resetCast">重置排盘信息</button>
-      <button class="primary-btn" type="button" :disabled="loading" @click="cast">
-        {{ loading ? '排盘中...' : '开始占卜' }}
-      </button>
+    <transition name="fade">
+      <aside v-if="categoryPickerOpen" class="howtodo-picker-sheet howtodo-picker-sheet--large">
+        <div class="howtodo-picker-sheet__head">
+          <h3>分类</h3>
+          <button type="button" class="ghost-button ghost-button--small" @click="closePickers">关闭</button>
+        </div>
+        <div class="howtodo-category-picker">
+          <div class="howtodo-category-groups">
+            <button
+              v-for="group in questionCategoryGroups"
+              :key="group.key"
+              type="button"
+              class="howtodo-category-group"
+              :class="{ 'howtodo-category-group--active': categoryGroup === group.key }"
+              @click="selectCategoryGroupByKey(group.key)"
+            >
+              {{ group.label }}
+            </button>
+          </div>
+          <div class="howtodo-category-items">
+            <button
+              v-for="item in selectedCategoryItems"
+              :key="item"
+              type="button"
+              class="howtodo-category-item"
+              :class="{ 'howtodo-category-item--active': category === item }"
+              @click="selectCategoryItemByValue(item)"
+            >
+              {{ item }}
+            </button>
+          </div>
+        </div>
+      </aside>
+    </transition>
+
+    <transition name="fade">
+      <aside v-if="timePickerOpen" class="howtodo-picker-sheet">
+        <div class="howtodo-picker-sheet__head">
+          <h3>时间</h3>
+          <button type="button" class="ghost-button ghost-button--small" @click="closePickers">关闭</button>
+        </div>
+        <div class="howtodo-time-picker">
+          <label class="field-label">
+            <span class="reply-input__label">起卦时间</span>
+            <input v-model="castSeed" type="text" class="field-input" />
+          </label>
+          <label class="field-label">
+            <span class="reply-input__label">当前时间</span>
+            <input :value="new Date().toLocaleString('zh-CN')" type="text" class="field-input" disabled />
+          </label>
+        </div>
+        <div class="howtodo-picker-sheet__actions">
+          <button type="button" class="primary-btn" @click="confirmCastSeed">确定</button>
+        </div>
+      </aside>
+    </transition>
+
+    <div class="howtodo-assembly">
+      <div v-if="usesManualSelectInput" class="manual-input-stack">
+        <label v-for="entry in manualLineEntries" :key="entry.key" class="field-label manual-input-item">
+          <span class="manual-input-item__label">{{ entry.label }}</span>
+          <div class="manual-input-item__row">
+            <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
+              <option :value="0" disabled>请选择</option>
+              <option v-for="option in lineOptions" :key="option.value" :value="option.value">
+                {{ option.label }} {{ option.barText }}（{{ option.detail }}）
+              </option>
+            </select>
+            <span class="manual-input-item__bars">{{ entry.barText }}</span>
+            <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+          </div>
+        </label>
+      </div>
+
+      <div v-if="usesOnlineInput" class="manual-input-stack">
+        <div class="online-cast-toolbar">
+          <button
+            type="button"
+            class="secondary-btn online-cast-toolbar__button"
+            :disabled="onlineDrawCount >= 6"
+            @click="drawNextOnlineLine"
+          >
+            {{ onlineDrawCount >= 6 ? '起卦完成' : '开始起卦' }}
+          </button>
+          <span class="online-cast-toolbar__status">已起 {{ onlineDrawCount }}/6 爻</span>
+        </div>
+        <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
+          <div class="manual-input-item__header">
+            <span class="manual-input-item__label">{{ entry.label }}</span>
+          </div>
+          <div class="manual-input-item__row manual-input-item__row--result">
+            <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
+            <span class="manual-input-item__bars">{{ entry.barText }}</span>
+            <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>
+          </div>
+        </label>
+        <p class="how-to-do-note">
+          请集中精力，默想所占之事，点击“开始起卦”后，可求得一爻，反复6次。
+        </p>
+      </div>
     </div>
 
     <p v-if="errorMessage" class="how-to-do-error">{{ errorMessage }}</p>
@@ -678,6 +810,266 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.reply-shell {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding-top: 3rem;
+  padding-bottom: 1rem;
+}
+
+.reply-history-toggle {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  z-index: 6;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.23rem;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(127, 140, 172, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(32, 40, 60, 0.08);
+}
+
+.reply-history-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: var(--text-primary, var(--text));
+}
+
+.reply-history-panel {
+  position: absolute;
+  top: 3.8rem;
+  left: 0.9rem;
+  z-index: 5;
+  width: min(340px, calc(100vw - 1.8rem));
+  padding: 0.9rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 50px rgba(24, 32, 57, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.reply-history-panel__head {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.reply-history-panel__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reply-history-link {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.94);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.reply-history-link:hover,
+.reply-history-link:focus-visible {
+  border-color: rgba(96, 110, 220, 0.32);
+  background: rgba(242, 245, 255, 0.98);
+}
+
+.howtodo-composer {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 24px;
+  background: rgba(252, 253, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(24, 32, 57, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.howtodo-composer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.reply-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  border: 1px solid rgba(127, 140, 172, 0.18);
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  background: #fff;
+  font-weight: 700;
+  color: var(--text-primary, var(--text));
+}
+
+.reply-chip--picker {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.reply-chip__label {
+  font-size: 0.72rem;
+  color: var(--text-secondary, var(--muted));
+  font-weight: 600;
+}
+
+.reply-chip strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.reply-input {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reply-input__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary, var(--muted));
+}
+
+.reply-input__textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.howtodo-composer__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.howtodo-assembly {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.howtodo-picker-sheet {
+  position: absolute;
+  top: 6rem;
+  left: 50%;
+  z-index: 8;
+  width: min(760px, calc(100vw - 1.8rem));
+  transform: translateX(-50%);
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 50px rgba(24, 32, 57, 0.16);
+}
+
+.howtodo-picker-sheet--large {
+  gap: 0.9rem;
+}
+
+.howtodo-picker-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.howtodo-picker-sheet__head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.howtodo-picker-sheet__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.howtodo-picker-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.howtodo-picker-option {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 18px;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  background: rgba(248, 250, 252, 0.94);
+  color: var(--text);
+  text-align: left;
+}
+
+.howtodo-picker-option strong {
+  font-size: 0.95rem;
+}
+
+.howtodo-picker-option span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.howtodo-picker-option--active {
+  border-color: rgba(96, 110, 220, 0.32);
+  background: rgba(242, 245, 255, 0.98);
+}
+
+.howtodo-category-picker {
+  display: grid;
+  grid-template-columns: minmax(128px, 0.9fr) minmax(0, 1.4fr);
+  gap: 0.85rem;
+}
+
+.howtodo-category-groups,
+.howtodo-category-items {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.howtodo-category-groups {
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.howtodo-category-group,
+.howtodo-category-item {
+  padding: 0.72rem 0.8rem;
+  border-radius: 16px;
+  border: 1px solid rgba(127, 140, 172, 0.16);
+  background: rgba(248, 250, 252, 0.94);
+  color: var(--text);
+  text-align: left;
+  font-weight: 700;
+}
+
+.howtodo-category-group--active,
+.howtodo-category-item--active {
+  border-color: rgba(96, 110, 220, 0.32);
+  background: rgba(242, 245, 255, 0.98);
+}
+
+.howtodo-time-picker {
+  display: grid;
+  gap: 0.8rem;
+}
+
 .how-to-do-page {
   display: flex;
   flex-direction: column;
@@ -708,12 +1100,6 @@ onMounted(() => {
 .text-area {
   resize: vertical;
   min-height: 120px;
-}
-
-.how-to-do-field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
 }
 
 .manual-input-stack {
@@ -793,13 +1179,6 @@ onMounted(() => {
   color: var(--text-primary);
 }
 
-.how-to-do-toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
 .how-to-do-note {
   margin: 0 0 0.9rem;
   font-size: 0.88rem;
@@ -807,16 +1186,8 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-.how-to-do-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
-.how-to-do-actions--left {
-  justify-content: flex-start;
+.how-to-do-note--compact {
+  margin-bottom: 0;
 }
 
 .how-to-do-error {
@@ -1075,16 +1446,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .how-to-do-field-grid {
-    grid-template-columns: 1fr;
-  }
-
   .manual-input-item__header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .online-cast-toolbar {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -1104,6 +1466,26 @@ onMounted(() => {
   .liuyao-result-columns {
     grid-template-columns: 1fr;
     padding: 0 0.85rem;
+  }
+
+  .reply-shell {
+    padding-top: 3.4rem;
+  }
+
+  .howtodo-category-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .howtodo-composer__actions {
+    align-items: stretch;
+  }
+
+  .howtodo-composer__chips {
+    gap: 0.45rem;
+  }
+
+  .reply-chip--picker {
+    flex: 1 1 100%;
   }
 }
 </style>
