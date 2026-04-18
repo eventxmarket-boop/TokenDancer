@@ -465,8 +465,15 @@ def _make_rng(*parts: Any) -> random.Random:
     return random.Random(_stable_seed(*parts))
 
 
+def _line_value_from_back_count(back_count: int) -> int:
+    mapping = {0: 6, 1: 7, 2: 8, 3: 9}
+    return mapping.get(back_count, 8)
+
+
 def _true_random_line_value() -> int:
-    return random.SystemRandom().choice([6, 7, 8, 9])
+    rng = random.SystemRandom()
+    back_count = sum(rng.randint(0, 1) for _ in range(3))
+    return _line_value_from_back_count(back_count)
 
 
 def _parse_cast_datetime(value: str) -> datetime:

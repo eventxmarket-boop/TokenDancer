@@ -141,9 +141,21 @@ function randomLineOptionValue() {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     const array = new Uint32Array(1)
     crypto.getRandomValues(array)
-    return lineOptions[array[0] % lineOptions.length].value
+    const raw = array[0]
+    const backCount = (raw & 1) + ((raw >> 1) & 1) + ((raw >> 2) & 1)
+    if (backCount === 0) return 6
+    if (backCount === 1) return 7
+    if (backCount === 2) return 8
+    return 9
   }
-  return lineOptions[Math.floor(Math.random() * lineOptions.length)].value
+  let backCount = 0
+  for (let index = 0; index < 3; index += 1) {
+    backCount += Math.random() < 0.5 ? 0 : 1
+  }
+  if (backCount === 0) return 6
+  if (backCount === 1) return 7
+  if (backCount === 2) return 8
+  return 9
 }
 
 function drawOnlineLine(index: number) {

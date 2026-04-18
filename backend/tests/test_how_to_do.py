@@ -7,10 +7,21 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from main import app
-from app.services.how_to_do_service import ALL_GUA_CATALOG, _build_cast_result, generate_how_to_do_runtime
+from app.services.how_to_do_service import (
+    ALL_GUA_CATALOG,
+    _build_cast_result,
+    _line_value_from_back_count,
+    generate_how_to_do_runtime,
+)
 
 
 class HowToDoTests(unittest.TestCase):
+    def test_three_coin_mapping_matches_traditional_line_values(self):
+        self.assertEqual(_line_value_from_back_count(0), 6)
+        self.assertEqual(_line_value_from_back_count(1), 7)
+        self.assertEqual(_line_value_from_back_count(2), 8)
+        self.assertEqual(_line_value_from_back_count(3), 9)
+
     def test_cast_relations_follow_hexagram_palace_rules(self):
         result = _build_cast_result(
             question="测试",

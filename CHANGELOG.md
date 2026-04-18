@@ -1,3 +1,7 @@
+## V1.4.111 - 2026-04-18
+
+- Changed `随机摇卦` and `在线起卦` from equal four-way random selection to the real three-coin probability mapping so line values now follow the traditional 0/1/2/3 背 -> 6/7/8/9 distribution.
+
 ## V1.4.110 - 2026-04-18
 
 - Removed the `太极丸起卦` mode so the liu-yao page now keeps only `随机摇卦`、`手动输入`、`在线起卦`, and cleared the remaining taiji-specific labels from the frontend and backend contract.
