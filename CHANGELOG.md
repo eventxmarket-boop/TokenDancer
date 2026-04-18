@@ -1,3 +1,8 @@
+## V1.4.128 - 2026-04-19
+
+- Reworked the `个人` page into four equal rounded square entry cards arranged in a clover-style 2x2 layout, replacing the old `最近会话` entry with `我该怎么做` and renaming the favorites card copy to `收藏的seed`.
+- Synced the top-left `SeedMind` logo background to the same accent-soft color used behind the numbered tags on the personal and favorites cards.
+
 ## V1.4.127 - 2026-04-19
 
 - Moved the `我该怎么做` `历史 / 收藏` controls up beside the cast-mode chips so they now match the same rounded spec and stay visible in a cleaner, more consistent position.
