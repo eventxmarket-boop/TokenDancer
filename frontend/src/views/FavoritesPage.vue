@@ -8,15 +8,22 @@ import {
   toggleFavoriteSlug,
 } from '@/services/favoriteService'
 import { authUser } from '@/stores/auth'
+import {
+  clearFavoriteHowToDoHistoryRecords,
+  listFavoriteHowToDoHistoryRecords,
+  type HowToDoHistoryRecord,
+} from '@/services/howToDoHistoryService'
 
 const loading = ref(true)
 const error = ref('')
 const personas = ref<Persona[]>([])
+const favoriteHexagrams = ref<HowToDoHistoryRecord[]>([])
 const favoriteScopeKey = computed(() => getFavoriteScopeKey(authUser.value?.id ?? null))
 const favoriteSlugs = ref<string[]>(getFavoriteSlugs(favoriteScopeKey.value))
 
 const refreshFavorites = () => {
   favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
+  favoriteHexagrams.value = listFavoriteHowToDoHistoryRecords()
 }
 
 const load = async () => {
@@ -48,6 +55,7 @@ const toggleFavorite = (slug: string) => {
 
 const clearFavorites = () => {
   clearFavoriteSlugs(favoriteScopeKey.value)
+  clearFavoriteHowToDoHistoryRecords()
   refreshFavorites()
 }
 
@@ -63,6 +71,8 @@ const groups = computed(() => {
 
   return Array.from(map.entries()).map(([group, items]) => ({ group, items }))
 })
+
+const hasAnyFavorites = computed(() => favoritePersonas.value.length > 0 || favoriteHexagrams.value.length > 0)
 
 onMounted(() => {
   void load()
@@ -99,13 +109,38 @@ watch(favoriteScopeKey, () => {
           <button class="primary-btn" type="button" @click="load">重试</button>
         </div>
 
-        <div v-else-if="!favoritePersonas.length" class="empty-panel empty-panel--compact">
+        <div v-else-if="!hasAnyFavorites" class="empty-panel empty-panel--compact">
           <h3>你还没有收藏过人格。</h3>
-          <p class="empty-panel__copy">去 Seed 页面点一下收藏，常用人格就会出现在这里。</p>
+          <p class="empty-panel__copy">去 Seed 或 Mind 里收藏常用对象，这里都会收进来。</p>
           <RouterLink class="primary-btn" to="/seed">去 Seed 选择人格</RouterLink>
         </div>
 
         <div v-else class="group-stack group-stack--favorites">
+          <article v-if="favoriteHexagrams.length" class="seed-group">
+            <div class="seed-group__head">
+              <h3>收藏卦象</h3>
+              <span class="status-pill">{{ favoriteHexagrams.length }} 条</span>
+            </div>
+
+            <div class="persona-grid">
+              <article v-for="item in favoriteHexagrams" :key="item.id" class="persona-card persona-card--featured">
+                <div class="persona-card__meta">
+                  <h4>{{ item.title || '未命名卦象' }}</h4>
+                  <p class="persona-intro">{{ item.category }} · {{ item.castMode }}</p>
+                </div>
+
+                <div class="tag-row">
+                  <span class="tag-chip">{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</span>
+                  <span class="tag-chip">{{ item.chatTurns.length }} 段对话</span>
+                </div>
+
+                <div class="persona-actions persona-actions--stack">
+                  <RouterLink class="text-link" to="/how-to-do">去查看卦象</RouterLink>
+                </div>
+              </article>
+            </div>
+          </article>
+
           <article v-for="group in groups" :key="group.group" class="seed-group">
             <div class="seed-group__head">
               <h3>{{ group.group }}</h3>

@@ -201,13 +201,27 @@ svg {
 .brand-mark {
   width: 52px;
   height: 52px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 18px;
-  background: linear-gradient(145deg, #ffcab6, #ff9f8a);
-  color: white;
-  font-weight: 800;
+  background: linear-gradient(145deg, #251447, #1f1340);
   box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.brand-mark__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
 }
 
 .eyebrow {
@@ -330,25 +344,31 @@ svg {
 .nav-link,
 .mobile-nav__item {
   min-height: var(--control-height);
-  padding: 10px 10px;
-  border-radius: 0;
+  padding: 10px 12px;
+  border-radius: 999px;
   color: var(--muted);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.62);
   border: 1px solid transparent;
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 .nav-link.router-link-active,
 .mobile-nav__item.router-link-active {
   color: var(--text);
-  border-bottom-color: currentColor;
+  border-color: rgba(234, 127, 102, 0.18);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .nav-link:hover,
-.mobile-nav__item:hover {
+.mobile-nav__item:hover,
+.nav-link:focus-visible,
+.mobile-nav__item:focus-visible {
   color: var(--text);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(234, 127, 102, 0.18);
+  outline: none;
 }
 
 .theme-toggle {
@@ -552,12 +572,13 @@ html[data-theme='night'] .theme-toggle {
 }
 
 html[data-theme='night'] .home-sticker {
-  background: rgba(31, 25, 39, 0.9);
+  background: rgba(24, 20, 32, 0.94);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+html[data-theme='night'] .home-sticker--create,
 html[data-theme='night'] .home-sticker--seed {
-  background: linear-gradient(180deg, rgba(37, 29, 48, 0.96), rgba(27, 21, 35, 0.96));
+  background: linear-gradient(180deg, rgba(31, 24, 43, 0.98), rgba(22, 18, 31, 0.98));
 }
 
 html[data-theme='night'] .home-sticker__tag,
@@ -573,7 +594,7 @@ html[data-theme='night'] .nav-dropdown__trigger,
 html[data-theme='night'] .nav-link,
 html[data-theme='night'] .mobile-nav__item {
   color: #f3e9e2;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.06);
 }
 

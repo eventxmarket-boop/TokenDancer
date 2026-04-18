@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { requestHowToDo, type HowToDoChatMessage, type HowToDoResponse } from '@/services/howToDoService'
+import {
+  listHowToDoHistoryRecords,
+  toggleFavoriteHowToDoHistoryRecord,
+  upsertHowToDoHistoryRecord,
+  type HowToDoHistoryRecord,
+} from '@/services/howToDoHistoryService'
 
 type CastModeKey = 'manual' | 'coin' | 'online'
 
 const castModes: Array<{ key: CastModeKey; label: string; hint: string }> = [
   { key: 'coin', label: '随机摇卦', hint: '平心静气后摇卦。' },
-  { key: 'manual', label: '手动输入', hint: '按 6 次依次录入。' },
-  { key: 'online', label: '在线起卦', hint: '按 6 次依次录入。' },
+  { key: 'manual', label: '手动输入', hint: '' },
+  { key: 'online', label: '在线起卦', hint: '' },
 ]
 
 const questionCategoryGroups = [
@@ -104,6 +110,10 @@ const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
 const chatInput = ref('')
 const chatTurns = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
+const historyOpen = ref(false)
+const historyRecords = ref<HowToDoHistoryRecord[]>([])
+const activeHistoryId = ref('')
+const castCategorySnapshot = ref('未分类')
 const lineOptions = [
   { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
   { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
@@ -123,6 +133,18 @@ function formatCastSeed(now = new Date()) {
 }
 
 castSeed.value = formatCastSeed()
+
+function createId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function findCategoryGroupKey(value: string) {
+  return questionCategoryGroups.find((group) => group.items.includes(value))?.key || ''
+}
+
+function refreshHistoryRecords() {
+  historyRecords.value = listHowToDoHistoryRecords()
+}
 
 const castResult = computed(() => result.value?.raw_result as Record<string, any> | undefined)
 const castLineDetails = computed(() => {
@@ -147,7 +169,7 @@ const usesManualInput = computed(() => activeCastMode.value === 'manual' || acti
 const usesOnlineInput = computed(() => activeCastMode.value === 'online')
 const usesManualSelectInput = computed(() => activeCastMode.value === 'manual')
 const onlineDrawCount = computed(() => manualLines.value.filter((item) => !!item).length)
-const castCategoryText = computed(() => category.value.trim() || '未分类')
+const castCategoryText = computed(() => castCategorySnapshot.value || '未分类')
 const selectedCategoryItems = computed(() => {
   return questionCategoryGroups.find((item) => item.key === categoryGroup.value)?.items ?? []
 })
@@ -169,6 +191,10 @@ const castShenshaText = computed(() => {
 })
 const castPanelTitle = computed(() => castResult.value?.panel_title || '卦象')
 const castPanelSubtitle = computed(() => castResult.value?.panel_subtitle || '')
+const currentHistoryRecord = computed(() =>
+  historyRecords.value.find((item) => item.id === activeHistoryId.value) ?? null,
+)
+const currentHistoryIsFavorite = computed(() => Boolean(currentHistoryRecord.value?.favorite))
 const manualLineEntries = computed(() =>
   [...manualLines.value]
     .map((value, index) => {
@@ -197,6 +223,9 @@ function resetCast() {
   showResultBoard.value = true
   chatInput.value = ''
   chatTurns.value = []
+  historyOpen.value = false
+  activeHistoryId.value = ''
+  castCategorySnapshot.value = '未分类'
 }
 
 function handleCategoryGroupChange(value: string) {
@@ -241,6 +270,56 @@ function drawNextOnlineLine() {
   drawOnlineLine(nextIndex)
 }
 
+function buildHistoryRecord(baseResult: HowToDoResponse, historyId = activeHistoryId.value || createId('howtodo-history')) {
+  const existing = historyRecords.value.find((item) => item.id === historyId)
+  const now = new Date().toISOString()
+  return {
+    id: historyId,
+    title: question.value.trim() || castQuestionText.value,
+    question: question.value.trim() || castQuestionText.value,
+    category: castCategorySnapshot.value || category.value.trim() || '未分类',
+    castMode: castModeText.value,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    favorite: existing?.favorite || false,
+    result: baseResult,
+    chatTurns: chatTurns.value.map((item) => ({ ...item })),
+  } satisfies HowToDoHistoryRecord
+}
+
+function syncActiveHistory() {
+  if (!result.value) return
+  const record = buildHistoryRecord(result.value)
+  activeHistoryId.value = record.id
+  upsertHowToDoHistoryRecord(record)
+  refreshHistoryRecords()
+}
+
+function loadHistoryRecord(record: HowToDoHistoryRecord) {
+  activeHistoryId.value = record.id
+  result.value = record.result
+  question.value = record.question
+  category.value = record.category === '未分类' ? '' : record.category
+  categoryGroup.value = findCategoryGroupKey(category.value)
+  castCategorySnapshot.value = record.category || '未分类'
+  chatTurns.value = record.chatTurns.map((item) => ({ ...item }))
+  chatInput.value = ''
+  showResultBoard.value = true
+  historyOpen.value = false
+  activeCastMode.value =
+    record.result.raw_result?.cast_mode === 'online'
+      ? 'online'
+      : record.result.raw_result?.cast_mode === 'manual'
+        ? 'manual'
+        : 'coin'
+}
+
+function toggleCurrentFavorite() {
+  if (!activeHistoryId.value) return
+  toggleFavoriteHowToDoHistoryRecord(activeHistoryId.value)
+  refreshHistoryRecords()
+}
+
 async function cast() {
   if (!question.value.trim() && !category.value.trim() && !usesManualInput.value) {
     errorMessage.value = '请先输入问念或分类。'
@@ -282,9 +361,12 @@ async function cast() {
         content: response.ai_interpretation.trim(),
       })
     }
+    castCategorySnapshot.value = category.value.trim() || '未分类'
     window.localStorage.setItem('liuyao-last-result', JSON.stringify(response))
     castSeed.value = formatCastSeed()
     showResultBoard.value = true
+    activeHistoryId.value = createId('howtodo-history')
+    syncActiveHistory()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '排盘失败'
   } finally {
@@ -332,6 +414,7 @@ async function sendChatFollowup() {
       role: 'assistant',
       content: response.ai_interpretation.trim(),
     })
+    syncActiveHistory()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '追问失败'
   } finally {
@@ -339,17 +422,12 @@ async function sendChatFollowup() {
   }
 }
 
+onMounted(() => {
+  refreshHistoryRecords()
+})
 </script>
 
 <template>
-  <section class="page-hero page-hero--single how-to-do-hero">
-    <div class="hero-copy">
-      <p class="eyebrow">心源六爻</p>
-      <h1>排盘</h1>
-      <p class="hero-text">问念或者分类，请至少输入一个。一卦一问，问念是一个卦象的重要组成部分！</p>
-    </div>
-  </section>
-
   <section class="summary-panel summary-panel--featured how-to-do-page">
     <div class="how-to-do-toggle-row">
       <button
@@ -363,7 +441,9 @@ async function sendChatFollowup() {
         {{ mode.label }}
       </button>
     </div>
-    <p class="how-to-do-note">{{ castModes.find((item) => item.key === activeCastMode)?.hint }}</p>
+    <p v-if="castModes.find((item) => item.key === activeCastMode)?.hint" class="how-to-do-note">
+      {{ castModes.find((item) => item.key === activeCastMode)?.hint }}
+    </p>
 
     <label class="field-label">
       问念
@@ -445,16 +525,8 @@ async function sendChatFollowup() {
       </label>
     </div>
 
-    <p class="how-to-do-note" v-if="usesManualSelectInput">
-      从下往上依次录入 6 次结果。最下面是初爻，最上面是上爻。
-    </p>
-
     <p class="how-to-do-note" v-if="usesOnlineInput">
-      只保留一个“开始起卦”。每点一次随机出一爻，从初爻开始连续起满 6 次，再开始占卜。
-    </p>
-
-    <p v-else class="how-to-do-note">
-      使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。
+      请集中精力，默想所占之事，点击“开始起卦”后，可求得一爻，反复6次。
     </p>
 
     <div class="how-to-do-actions how-to-do-actions--left">
@@ -491,9 +563,45 @@ async function sendChatFollowup() {
           </div>
         </div>
 
-        <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
-          {{ showResultBoard ? '收起' : '展开' }}
-        </button>
+        <div class="liuyao-result-toolbar">
+          <button type="button" class="secondary-btn liuyao-expand-btn" @click="showResultBoard = !showResultBoard">
+            {{ showResultBoard ? '收起' : '展开' }}
+          </button>
+          <button type="button" class="secondary-btn liuyao-expand-btn" @click="historyOpen = !historyOpen">
+            历史
+          </button>
+          <button type="button" class="secondary-btn liuyao-expand-btn" @click="toggleCurrentFavorite">
+            {{ currentHistoryIsFavorite ? '已收藏' : '收藏' }}
+          </button>
+        </div>
+
+        <div v-if="historyOpen" class="liuyao-history-panel">
+          <div class="liuyao-history-panel__head">
+            <h3>历史卦象</h3>
+            <span class="status-pill">{{ historyRecords.length }} 条</span>
+          </div>
+          <div v-if="historyRecords.length" class="liuyao-history-list">
+            <button
+              v-for="item in historyRecords"
+              :key="item.id"
+              type="button"
+              class="liuyao-history-item"
+              :class="{ 'liuyao-history-item--active': item.id === activeHistoryId }"
+              @click="loadHistoryRecord(item)"
+            >
+              <div class="liuyao-history-item__title">
+                <strong>{{ item.title || '未命名卦象' }}</strong>
+                <span v-if="item.favorite" class="status-pill">收藏</span>
+              </div>
+              <p>{{ item.category }} · {{ item.castMode }}</p>
+              <p>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</p>
+            </button>
+          </div>
+          <div v-else class="empty-panel empty-panel--compact liuyao-history-empty">
+            <h3>还没有历史卦象。</h3>
+            <p class="empty-panel__copy">起一卦后，这里会保留卦象和对话记录。</p>
+          </div>
+        </div>
 
         <div v-if="showResultBoard" class="liuyao-result-board">
           <p class="liuyao-result-board__ganzhi">{{ castResult?.ganzhi_line || castResult?.day_label || castTimeText }}</p>
@@ -716,6 +824,75 @@ async function sendChatFollowup() {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.liuyao-result-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.liuyao-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+}
+
+.liuyao-history-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.liuyao-history-panel__head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.liuyao-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.liuyao-history-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: color-mix(in srgb, var(--card-bg) 97%, transparent);
+  color: var(--text-primary);
+}
+
+.liuyao-history-item--active {
+  border-color: color-mix(in srgb, var(--brand) 34%, rgba(148, 163, 184, 0.16));
+  background: color-mix(in srgb, var(--brand) 10%, var(--card-bg));
+}
+
+.liuyao-history-item__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.liuyao-history-item p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.liuyao-history-empty {
+  min-height: 0;
 }
 
 .howtodo-chat-sheet {

@@ -1,3 +1,10 @@
+## V1.4.124 - 2026-04-18
+
+- Merged the top navigation into `Seed` + `Mind`, renamed the brand to `SeedMind`, and replaced the old text logo with the new uploaded mark while keeping the frontend subpath-safe under `/persona/`.
+- Simplified the `我该怎么做` entry UI by removing the extra hero block, trimming redundant cast instructions, freezing the displayed category after each cast, and adding local history + favorite controls for saved hexagrams and chat records.
+- Added local `我该怎么做` history visibility to both `收藏` and `个人` pages so favorite hexagrams can be revisited alongside existing persona favorites.
+- Tightened night-mode polish by making sticker-style cards darker and making top-right navigation pills round and visually consistent.
+
 ## V1.4.123 - 2026-04-18
 
 - Renamed the `健康事务` divination bucket to `健康和日常事务` in the frontend so the category better covers health, disputes, lost-item, and other everyday practical asks.

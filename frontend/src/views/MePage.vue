@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authUser, isLoggedIn, logout } from '@/stores/auth'
+import { listHowToDoHistoryRecords, type HowToDoHistoryRecord } from '@/services/howToDoHistoryService'
 
 const router = useRouter()
+const historyRecords = ref<HowToDoHistoryRecord[]>([])
 const myEntries = [
   {
     key: 'my-seeds' as const,
@@ -30,6 +32,10 @@ const myEntries = [
     summary: '继续上一次还没聊完的话题。',
   },
 ]
+
+onMounted(() => {
+  historyRecords.value = listHowToDoHistoryRecords().slice(0, 5)
+})
 
 const username = computed(() => authUser.value?.username || authUser.value?.email || '登录账号')
 
@@ -84,6 +90,24 @@ function handleLogout() {
           </RouterLink>
         </div>
 
+        <section class="summary-panel summary-panel--featured my-history-panel">
+          <div class="seed-group__head">
+            <h3>卦象历史</h3>
+            <RouterLink class="text-link" to="/how-to-do">去查看</RouterLink>
+          </div>
+          <div v-if="historyRecords.length" class="liuyao-history-list">
+            <article v-for="item in historyRecords" :key="item.id" class="liuyao-history-item">
+              <div class="liuyao-history-item__title">
+                <strong>{{ item.title || '未命名卦象' }}</strong>
+                <span v-if="item.favorite" class="status-pill">收藏</span>
+              </div>
+              <p>{{ item.category }} · {{ item.castMode }}</p>
+              <p>{{ new Date(item.updatedAt).toLocaleString('zh-CN') }}</p>
+            </article>
+          </div>
+          <p v-else class="empty-panel__copy">你还没有保存过卦象历史。</p>
+        </section>
+
         <div class="hero-actions hero-actions--center">
           <button class="secondary-btn" type="button" @click="handleLogout">退出登录</button>
         </div>
@@ -91,3 +115,37 @@ function handleLogout() {
     </div>
   </section>
 </template>
+
+<style scoped>
+.my-history-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.liuyao-history-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.liuyao-history-item {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: color-mix(in srgb, var(--card-bg) 95%, transparent);
+}
+
+.liuyao-history-item__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.liuyao-history-item p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+</style>

@@ -3,10 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
+const brandLogo = `${import.meta.env.BASE_URL}seedmind-logo.jpg`
 
 const mobileNavItems = [
   { to: '/', label: 'Seed' },
-  { to: '/reply-assistant', label: '我该怎么回' },
+  { to: '/reply-assistant', label: 'Mind' },
   { to: '/favorites', label: '收藏' },
   { to: '/me', label: '个人' },
 ]
@@ -30,12 +31,7 @@ const seedNavTarget = computed(() => {
   }
   return '/'
 })
-const replyNavLabel = computed(() => {
-  return '我该怎么回'
-})
-const howToDoNavLabel = computed(() => {
-  return '我该怎么做'
-})
+const mindNavLabel = computed(() => 'Mind')
 
 function applyTheme(mode: 'day' | 'night') {
   if (typeof document === 'undefined') {
@@ -49,11 +45,12 @@ function toggleTheme() {
   theme.value = theme.value === 'night' ? 'day' : 'night'
 }
 
-const isReplyMenuActive = computed(
-  () => route.path === '/reply-assistant' || route.path === '/reply-assistant/workbench',
+const isMindMenuActive = computed(
+  () =>
+    route.path === '/reply-assistant' ||
+    route.path === '/reply-assistant/workbench' ||
+    route.path.startsWith('/how-to-do'),
 )
-
-const isHowToDoMenuActive = computed(() => route.path.startsWith('/how-to-do'))
 
 const isSeedMenuActive = computed(
   () => route.path.startsWith('/create') || route.path === '/',
@@ -85,9 +82,11 @@ watch(
     <div class="ambient ambient-two"></div>
     <header class="topbar">
       <RouterLink class="brand-lockup brand-lockup--link" to="/" aria-label="返回首页">
-        <div class="brand-mark">T</div>
+        <div class="brand-mark">
+          <img :src="brandLogo" alt="SeedMind" class="brand-mark__image" />
+        </div>
         <div>
-          <p class="eyebrow">Tokendancer</p>
+          <p class="brand-name">SeedMind</p>
         </div>
       </RouterLink>
 
@@ -101,16 +100,10 @@ watch(
             </div>
           </div>
 
-          <div class="nav-group" :class="{ 'nav-group--active': isReplyMenuActive }">
-            <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">{{ replyNavLabel }}</RouterLink>
-            <div class="nav-dropdown" aria-label="我该怎么回 下拉菜单">
+          <div class="nav-group" :class="{ 'nav-group--active': isMindMenuActive }">
+            <RouterLink to="/reply-assistant" class="nav-dropdown__trigger">{{ mindNavLabel }}</RouterLink>
+            <div class="nav-dropdown" aria-label="Mind 下拉菜单">
               <RouterLink to="/reply-assistant/workbench" class="nav-dropdown__item">我该怎么回</RouterLink>
-            </div>
-          </div>
-
-          <div class="nav-group" :class="{ 'nav-group--active': isHowToDoMenuActive }">
-            <RouterLink to="/how-to-do" class="nav-dropdown__trigger">{{ howToDoNavLabel }}</RouterLink>
-            <div class="nav-dropdown" aria-label="我该怎么做 下拉菜单">
               <RouterLink to="/how-to-do" class="nav-dropdown__item">我该怎么做</RouterLink>
             </div>
           </div>

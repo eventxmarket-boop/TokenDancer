@@ -12,7 +12,7 @@ function activateSticker(sticker: 'reply' | 'how-to-do') {
   <section class="home-landing">
     <div class="home-landing__body">
       <div class="home-landing__copy">
-        <p class="hero-text">先从一句话开始，或者先想清楚要做什么。</p>
+        <p class="hero-text">先从一句话开始，或者先解决困惑。</p>
       </div>
 
       <div class="home-sticker-stack home-sticker-stack--compact">
