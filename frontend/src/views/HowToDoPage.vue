@@ -35,7 +35,7 @@ const questionCategoryGroups = [
   {
     key: 'relationship',
     label: '关系情感',
-    items: ['感情回应', '婚姻复合', '表白推进', '朋友关系'],
+    items: ['感情回应', '感情复合', '表白推进', '朋友关系'],
   },
   {
     key: 'family',

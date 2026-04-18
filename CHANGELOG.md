@@ -1,3 +1,8 @@
+## V1.4.126 - 2026-04-19
+
+- Tuned the `SeedMind` header logo again so the outer background now sits much closer to the homepage day-mode background, while the inner mark is retinted further toward the warm pink accent palette.
+- Renamed the `我该怎么做` relationship category label from `婚姻复合` to `感情复合` in the frontend and added backend compatibility so both the new and old values still route correctly.
+
 ## V1.4.125 - 2026-04-19
 
 - Retinted the new `SeedMind` header logo so its displayed palette now aligns with the site’s day-mode accent colors instead of keeping the original blue-purple artwork tones.
