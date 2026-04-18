@@ -98,6 +98,7 @@ const castModeText = computed(() => {
 const usesManualInput = computed(() => activeCastMode.value === 'manual' || activeCastMode.value === 'online')
 const usesOnlineInput = computed(() => activeCastMode.value === 'online')
 const usesManualSelectInput = computed(() => activeCastMode.value === 'manual')
+const onlineDrawCount = computed(() => manualLines.value.filter((item) => !!item).length)
 const castCategoryText = computed(() => category.value.trim() || '未分类')
 const castTimeText = computed(() => castResult.value?.day_label || '—')
 const castShenshaText = computed(() => {
@@ -149,6 +150,12 @@ function randomLineOptionValue() {
 
 function drawOnlineLine(index: number) {
   manualLines.value[index] = randomLineOptionValue()
+}
+
+function drawNextOnlineLine() {
+  const nextIndex = manualLines.value.findIndex((item) => !item)
+  if (nextIndex === -1) return
+  drawOnlineLine(nextIndex)
 }
 
 async function cast() {
@@ -254,16 +261,20 @@ async function cast() {
     </div>
 
     <div v-if="usesOnlineInput" class="manual-input-stack">
+      <div class="online-cast-toolbar">
+        <button
+          type="button"
+          class="secondary-btn online-cast-toolbar__button"
+          :disabled="onlineDrawCount >= 6"
+          @click="drawNextOnlineLine"
+        >
+          {{ onlineDrawCount >= 6 ? '起卦完成' : '开始起卦' }}
+        </button>
+        <span class="online-cast-toolbar__status">已起 {{ onlineDrawCount }}/6 爻</span>
+      </div>
       <label v-for="entry in manualLineEntries" :key="`online-${entry.key}`" class="field-label manual-input-item">
         <div class="manual-input-item__header">
           <span class="manual-input-item__label">{{ entry.label }}</span>
-          <button
-            type="button"
-            class="secondary-btn manual-input-item__trigger"
-            @click="drawOnlineLine(lineLabels.indexOf(entry.label))"
-          >
-            开始起卦
-          </button>
         </div>
         <div class="manual-input-item__row manual-input-item__row--result">
           <span class="manual-input-item__option">{{ entry.optionLabel }}</span>
@@ -278,7 +289,7 @@ async function cast() {
     </p>
 
     <p class="how-to-do-note" v-if="usesOnlineInput">
-      每一爻点一次“开始起卦”即可随机四选一。六次都完成后，再开始占卜。
+      只保留一个“开始起卦”。每点一次随机出一爻，从初爻开始连续起满 6 次，再开始占卜。
     </p>
 
     <p v-else class="how-to-do-note">
@@ -411,6 +422,24 @@ async function cast() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.online-cast-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.online-cast-toolbar__button {
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.online-cast-toolbar__status {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
 }
 
 .manual-input-item {
@@ -638,6 +667,11 @@ async function cast() {
   }
 
   .manual-input-item__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .online-cast-toolbar {
     align-items: flex-start;
     flex-direction: column;
   }

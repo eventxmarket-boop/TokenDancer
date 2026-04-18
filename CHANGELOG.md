@@ -1,3 +1,7 @@
+## V1.4.109 - 2026-04-18
+
+- Simplified `在线起卦` to a single true-random trigger so each click now emits the next yao in order until all six lines are complete, then the existing cast action can generate the hexagram.
+
 ## V1.4.108 - 2026-04-18
 
 - Rebuilt `在线起卦` into a six-step random draw flow so each yao now has its own `开始起卦` trigger, uses true browser randomness to pick one of four line types, and waits for all six draws before casting.
