@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 HowToDoSection = Literal["cast", "sundial", "catalog", "songs", "detail"]
-HowToDoCastMode = Literal["manual", "character", "coin", "taiji"]
+HowToDoCastMode = Literal["manual", "character", "coin"]
 
 
 class HowToDoRequest(BaseModel):

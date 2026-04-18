@@ -1,7 +1,7 @@
 const API_PREFIX = '/persona-api'
 
 export type HowToDoSection = 'cast' | 'sundial' | 'catalog' | 'songs' | 'detail'
-export type HowToDoCastMode = 'manual' | 'character' | 'coin' | 'taiji'
+export type HowToDoCastMode = 'manual' | 'character' | 'coin'
 
 export type HowToDoRequestPayload = {
   section: HowToDoSection

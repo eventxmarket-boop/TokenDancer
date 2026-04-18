@@ -2,12 +2,11 @@
 import { computed, ref } from 'vue'
 import { requestHowToDo, type HowToDoResponse } from '@/services/howToDoService'
 
-type CastModeKey = 'manual' | 'coin' | 'taiji' | 'online'
+type CastModeKey = 'manual' | 'coin' | 'online'
 
 const castModes: Array<{ key: CastModeKey; label: string; hint: string }> = [
   { key: 'coin', label: '随机摇卦', hint: '平心静气后摇卦。' },
   { key: 'manual', label: '手动输入', hint: '按 6 次依次录入。' },
-  { key: 'taiji', label: '太极丸起卦', hint: '按太极丸方式起局。' },
   { key: 'online', label: '在线起卦', hint: '按 6 次依次录入。' },
 ]
 
@@ -90,8 +89,7 @@ const castQuestionText = computed(() => result.value?.question?.trim() || questi
 const castModeText = computed(() => {
   const mode = castResult.value?.cast_mode || activeCastMode.value
   if (mode === 'online') return '在线起卦'
-  if (mode === 'manual') return '硬币 / 太极丸起卦'
-  if (mode === 'taiji') return '太极丸起卦'
+  if (mode === 'manual') return '手动输入'
   if (mode === 'character') return '汉字起卦'
   return '硬币起卦'
 })
@@ -293,7 +291,7 @@ async function cast() {
     </p>
 
     <p v-else class="how-to-do-note">
-      使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。太极丸与硬币卦同理。
+      使用三枚同面值的硬币，平心静气，集中注意想自己要问的事情，手摇后扔在桌面上，记录每次几个花，几个字，从下往上依次录入。硬币起卦即金钱卦，是传统也是最靠谱的六爻卦。
     </p>
 
     <div class="how-to-do-actions how-to-do-actions--left">

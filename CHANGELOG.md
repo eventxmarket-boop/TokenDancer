@@ -1,3 +1,7 @@
+## V1.4.110 - 2026-04-18
+
+- Removed the `太极丸起卦` mode so the liu-yao page now keeps only `随机摇卦`、`手动输入`、`在线起卦`, and cleared the remaining taiji-specific labels from the frontend and backend contract.
+
 ## V1.4.109 - 2026-04-18
 
 - Simplified `在线起卦` to a single true-random trigger so each click now emits the next yao in order until all six lines are complete, then the existing cast action can generate the hexagram.

@@ -25,7 +25,6 @@ CAST_MODE_LABELS = {
     "manual": "手动输入",
     "character": "汉字起卦",
     "coin": "硬币起卦",
-    "taiji": "太极丸起卦",
 }
 
 FIVE_ELEMENTS = ["木", "火", "土", "金", "水"]
@@ -799,8 +798,6 @@ def _build_lines(seed: str, mode: str, cast_mode: str, question: str, source_tex
         elif cast_mode == "character":
             base = sum(ord(ch) for ch in source_text or question or seed) + position * 17
             value = [6, 7, 8, 9][base % 4]
-        elif cast_mode == "taiji":
-            value = _true_random_line_value()
         else:
             value = _true_random_line_value()
         is_yang = value in {7, 9}
