@@ -53,10 +53,10 @@ const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
 const lineOptions = [
-  { value: 6, label: '6 老阴' },
-  { value: 7, label: '7 少阳' },
-  { value: 8, label: '8 少阴' },
-  { value: 9, label: '9 老阳' },
+  { value: 8, label: '少阴', detail: '2背1字', barText: '▅ ▅' },
+  { value: 7, label: '少阳', detail: '1背2字', barText: '▅▅▅' },
+  { value: 6, label: '老阴', detail: '0背3字', barText: '▅ ▅', changeMark: 'x' },
+  { value: 9, label: '老阳', detail: '3背0字', barText: '▅▅▅', changeMark: 'o' },
 ]
 const lineLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻']
 
@@ -108,14 +108,13 @@ const manualLineEntries = computed(() =>
   [...manualLines.value]
     .map((value, index) => {
       const option = lineOptions.find((item) => item.value === value)
-      const yinYang = value === 7 || value === 9 ? '阳' : value === 6 || value === 8 ? '阴' : ''
-      const barText = yinYang === '阳' ? '▅▅▅' : yinYang === '阴' ? '▅ ▅' : '—'
-      const changeMark = value === 9 ? 'o' : value === 6 ? 'x' : ''
+      const barText = option?.barText || '—'
+      const changeMark = option?.changeMark || ''
       return {
         key: `${index}-${value}`,
         label: lineLabels[index],
         value,
-        optionLabel: option?.label || '请选择',
+        optionLabel: option ? `${option.label}（${option.detail}）` : '请选择',
         barText,
         changeMark,
       }
@@ -220,7 +219,9 @@ async function cast() {
         <div class="manual-input-item__row">
           <select v-model="manualLines[lineLabels.indexOf(entry.label)]" class="field-input">
             <option :value="0" disabled>请选择</option>
-            <option v-for="option in lineOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            <option v-for="option in lineOptions" :key="option.value" :value="option.value">
+              {{ option.label }} {{ option.barText }}（{{ option.detail }}）
+            </option>
           </select>
           <span class="manual-input-item__bars">{{ entry.barText }}</span>
           <span v-if="entry.changeMark" class="is-change-mark">{{ entry.changeMark }}</span>

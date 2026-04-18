@@ -1,3 +1,7 @@
+## V1.4.106 - 2026-04-18
+
+- Updated the manual liu-yao input dropdown to use source-style 少阴 / 少阳 / 老阴 / 老阳 labels with背字说明 and removed the raw 6/7/8/9 option text.
+
 ## V1.4.105 - 2026-04-18
 
 - Added yao-line previews to manual liu-yao entry so each of the six manual selections now shows its bar shape and moving-line `o/x` marker while entering from bottom to top.
