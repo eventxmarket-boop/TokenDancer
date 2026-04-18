@@ -1,3 +1,9 @@
+## V1.4.131 - 2026-04-19
+
+- Reworked `我该怎么做` into a more `我该怎么回`-style chat shell by removing the top question input and keeping only one persistent bottom composer for continuing divination chat.
+- Removed the visible “先选大类后，这里会同步显示这一类更适合怎么问。” helper copy and tightened the page around control chips, the result window, and the single chat input.
+- Kept the existing cast-mode picker, grouped category picker, time picker, history, and favorites behavior intact while making the page feel less like a form and more like a conversation window.
+
 ## V1.4.130 - 2026-04-19
 
 - Reworked `我该怎么做` into a reply-assistant-style chat shell with top-level picker chips for `起卦方式`, `分类`, and `时间`, while keeping the cast flow unchanged under the hood.

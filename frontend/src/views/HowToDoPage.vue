@@ -109,7 +109,6 @@ const chatLoading = ref(false)
 const errorMessage = ref('')
 const result = ref<HowToDoResponse | null>(null)
 const showResultBoard = ref(true)
-const chatInput = ref('')
 const chatTurns = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([])
 const historyRecords = ref<HowToDoHistoryRecord[]>([])
 const activeHistoryId = ref('')
@@ -182,7 +181,6 @@ const selectedCategoryItems = computed(() => {
 const activeQuestionPrompt = computed(() => {
   return categoryGroupPrompts[categoryGroup.value] ?? {
     placeholder: '例如：直接问你最想知道的结果、时间点或方向',
-    tip: '先选大类后，这里会同步显示这一类更适合怎么问。',
   }
 })
 const castTimeText = computed(() => castResult.value?.day_label || '—')
@@ -209,7 +207,6 @@ const selectedModeLabel = computed(() => {
   const item = castModes.find((mode) => mode.key === activeCastMode.value)
   return item?.label || '选择起卦方式'
 })
-const selectedModeHint = computed(() => castModes.find((item) => item.key === activeCastMode.value)?.hint || '')
 const manualLineEntries = computed(() =>
   [...manualLines.value]
     .map((value, index) => {
@@ -236,7 +233,6 @@ function resetCast() {
   manualLines.value = [0, 0, 0, 0, 0, 0]
   result.value = null
   showResultBoard.value = true
-  chatInput.value = ''
   chatTurns.value = []
   activeHistoryId.value = ''
   castCategorySnapshot.value = '未分类'
@@ -363,7 +359,6 @@ function loadHistoryRecord(record: HowToDoHistoryRecord) {
   categoryGroup.value = findCategoryGroupKey(category.value)
   castCategorySnapshot.value = record.category || '未分类'
   chatTurns.value = record.chatTurns.map((item) => ({ ...item }))
-  chatInput.value = ''
   showResultBoard.value = true
   activeCastMode.value =
     record.result.raw_result?.cast_mode === 'online'
@@ -442,6 +437,7 @@ async function cast() {
     showResultBoard.value = true
     activeHistoryId.value = createId('howtodo-history')
     syncActiveHistory()
+    question.value = ''
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '排盘失败'
   } finally {
@@ -460,7 +456,7 @@ function buildCastContext() {
 }
 
 async function sendChatFollowup() {
-  const content = chatInput.value.trim()
+  const content = question.value.trim()
   if (!content || !result.value) return
   const userTurn = {
     id: `user-${Date.now()}`,
@@ -468,7 +464,6 @@ async function sendChatFollowup() {
     content,
   }
   chatTurns.value.push(userTurn)
-  chatInput.value = ''
   chatLoading.value = true
   errorMessage.value = ''
   try {
@@ -490,6 +485,7 @@ async function sendChatFollowup() {
       content: response.ai_interpretation.trim(),
     })
     syncActiveHistory()
+    question.value = ''
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '追问失败'
   } finally {
@@ -551,26 +547,6 @@ onMounted(() => {
         <button type="button" class="reply-chip reply-chip--picker" @click="openTimePicker">
           <span class="reply-chip__label">时间</span>
           <strong>{{ castSeed }}</strong>
-        </button>
-      </div>
-
-      <p v-if="selectedModeHint" class="how-to-do-note how-to-do-note--compact">{{ selectedModeHint }}</p>
-
-      <label class="reply-input howtodo-question">
-        <span class="reply-input__label">问念</span>
-        <textarea
-          v-model="question"
-          class="field-input reply-input__textarea"
-          rows="4"
-          :placeholder="activeQuestionPrompt.placeholder"
-        ></textarea>
-      </label>
-      <p class="how-to-do-note">{{ activeQuestionPrompt.tip }}</p>
-
-      <div class="howtodo-composer__actions">
-        <button class="secondary-btn" type="button" @click="resetCast">新对话</button>
-        <button class="primary-btn" type="button" :disabled="loading" @click="cast">
-          {{ loading ? '排盘中...' : '开始占卜' }}
         </button>
       </div>
     </div>
@@ -779,33 +755,40 @@ onMounted(() => {
             </div>
           </div>
         </div>
-
-        <div class="howtodo-chat-sheet">
-          <div class="howtodo-chat-list">
-            <div
-              v-for="turn in chatTurns"
-              :key="turn.id"
-              class="howtodo-chat-bubble"
-              :class="turn.role === 'user' ? 'howtodo-chat-bubble--user' : 'howtodo-chat-bubble--assistant'"
-            >
-              {{ turn.content }}
-            </div>
-          </div>
-          <div class="howtodo-chat-composer">
-            <textarea
-              v-model="chatInput"
-              class="text-area howtodo-chat-composer__input"
-              rows="3"
-              placeholder="继续问这卦怎么理解"
-            ></textarea>
-            <button class="primary-btn" type="button" :disabled="chatLoading || !chatInput.trim()" @click="sendChatFollowup">
-              {{ chatLoading ? '回答中...' : '发送' }}
-            </button>
-          </div>
-        </div>
-
       </div>
     </template>
+
+    <div class="howtodo-chat-sheet">
+      <div class="howtodo-chat-list">
+        <div
+          v-for="turn in chatTurns"
+          :key="turn.id"
+          class="howtodo-chat-bubble"
+          :class="turn.role === 'user' ? 'howtodo-chat-bubble--user' : 'howtodo-chat-bubble--assistant'"
+        >
+          {{ turn.content }}
+        </div>
+      </div>
+      <div class="howtodo-chat-composer">
+        <label class="reply-input">
+          <span class="reply-input__label">{{ result ? '继续问这卦' : '问念' }}</span>
+          <textarea
+            v-model="question"
+            class="field-input reply-input__textarea howtodo-chat-composer__input"
+            rows="3"
+            :placeholder="result ? '继续问这卦怎么理解' : activeQuestionPrompt.placeholder"
+          ></textarea>
+        </label>
+        <button
+          class="primary-btn"
+          type="button"
+          :disabled="chatLoading || loading || !question.trim()"
+          @click="result ? sendChatFollowup() : cast()"
+        >
+          {{ chatLoading ? '回答中...' : loading ? '排盘中...' : result ? '发送' : '开始占卜' }}
+        </button>
+      </div>
+    </div>
   </section>
 </template>
 
