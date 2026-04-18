@@ -19,6 +19,41 @@ from app.services.how_to_do_service import (
 
 
 class HowToDoTests(unittest.TestCase):
+    FRONTEND_CATEGORIES = [
+        "出行平安",
+        "能否出行",
+        "何时出行",
+        "行人归来",
+        "求财",
+        "求官",
+        "求职",
+        "工作推进",
+        "升迁调动",
+        "考试测验",
+        "学业文书",
+        "感情回应",
+        "婚姻复合",
+        "表白推进",
+        "朋友关系",
+        "家宅关系",
+        "父母长辈",
+        "子女教育",
+        "健康疾病",
+        "诉讼官非",
+        "失物寻人",
+        "合作合伙",
+        "交易签约",
+        "投资买卖",
+        "开店经营",
+        "搬家迁移",
+        "出国远行",
+        "生产怀孕",
+        "借贷还款",
+        "项目进度",
+        "面试入职",
+        "其他",
+    ]
+
     def test_three_coin_mapping_matches_traditional_line_values(self):
         self.assertEqual(_line_value_from_back_count(0), 6)
         self.assertEqual(_line_value_from_back_count(1), 7)
@@ -153,6 +188,27 @@ class HowToDoTests(unittest.TestCase):
         self.assertFalse(protocol["question_type_meta"]["matched"])
         self.assertEqual(protocol["question_type_meta"]["coverage"], "low")
         self.assertIn("重新建立判断标准", protocol["question_type_meta"]["instruction"])
+
+    def test_frontend_categories_are_covered_except_other(self):
+        for category in self.FRONTEND_CATEGORIES:
+            base_result = _build_cast_result(
+                question=f"测试{category}",
+                category=category,
+                cast_mode="manual",
+                cast_seed="2026/04/18 09:10:00",
+                manual_lines=[7, 8, 7, 8, 7, 8],
+            )
+            protocol = _build_interpretation_protocol(
+                question=f"测试{category}",
+                category=category,
+                grounding=_build_divination_grounding(base_result),
+            )
+            if category == "其他":
+                self.assertEqual(protocol["question_type"], "通用问事")
+                self.assertEqual(protocol["question_type_meta"]["coverage"], "low")
+            else:
+                self.assertNotEqual(protocol["question_type"], "通用问事", msg=f"{category} 未命中专门类型")
+                self.assertEqual(protocol["question_type_meta"]["coverage"], "high", msg=f"{category} 覆盖度不够")
 
     def test_compact_history_trims_assistant_repetition(self):
         history = [

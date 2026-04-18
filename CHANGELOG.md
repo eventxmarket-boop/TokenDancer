@@ -1,3 +1,8 @@
+## V1.4.119 - 2026-04-18
+
+- Completed backend routing coverage for the current `我该怎么做` frontend category set so all existing categories except `其他` now resolve to a dedicated divination interpretation bucket instead of falling back to the generic path.
+- Added regression coverage to guarantee the shipped category list stays mapped and usable before future changes are deployed.
+
 ## V1.4.118 - 2026-04-18
 
 - Upgraded `我该怎么做` around a deeper symbol / relation / state framework so model answers now analyze the hexagram as a structured system before mapping it onto the user’s question.
