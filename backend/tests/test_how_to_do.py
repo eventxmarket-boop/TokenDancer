@@ -150,6 +150,8 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("symbol_relation_state_layer", protocol["framework_layers"])
         self.assertIn("symbol_system", protocol)
         self.assertIn("state_evolution", protocol)
+        self.assertIn("answer_skeleton", protocol)
+        self.assertIn("closing_question_style", protocol["answer_skeleton"])
 
     def test_interpretation_protocol_adds_direction_contract_for_lost_item(self):
         base_result = _build_cast_result(
@@ -270,6 +272,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
         self.assertIn("符号层、关系层、状态层", sent_messages[0]["content"])
         self.assertIn("二选一、是非题", sent_messages[0]["content"])
+        self.assertIn("最后必须自然追问一句", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
 
@@ -320,6 +323,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
         self.assertIn("符号层、关系层、状态层", sent_messages[0]["content"])
         self.assertIn("继续、展开、细说", sent_messages[0]["content"])
+        self.assertIn("最后也要自然反问一句", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
 

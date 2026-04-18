@@ -10,44 +10,53 @@ const castModes: Array<{ key: CastModeKey; label: string; hint: string }> = [
   { key: 'online', label: '在线起卦', hint: '按 6 次依次录入。' },
 ]
 
-const questionCategories = [
-  '出行平安',
-  '能否出行',
-  '何时出行',
-  '行人归来',
-  '求财',
-  '求官',
-  '求职',
-  '工作推进',
-  '升迁调动',
-  '考试测验',
-  '学业文书',
-  '感情回应',
-  '婚姻复合',
-  '表白推进',
-  '朋友关系',
-  '家宅关系',
-  '父母长辈',
-  '子女教育',
-  '健康疾病',
-  '诉讼官非',
-  '失物寻人',
-  '合作合伙',
-  '交易签约',
-  '投资买卖',
-  '开店经营',
-  '搬家迁移',
-  '出国远行',
-  '生产怀孕',
-  '借贷还款',
-  '项目进度',
-  '面试入职',
-  '其他',
+const questionCategoryGroups = [
+  {
+    key: 'travel',
+    label: '出行流动',
+    items: ['出行平安', '能否出行', '何时出行', '行人归来', '出国远行'],
+  },
+  {
+    key: 'career',
+    label: '工作学业',
+    items: ['求官', '求职', '工作推进', '升迁调动', '项目进度', '面试入职', '考试测验', '学业文书'],
+  },
+  {
+    key: 'money',
+    label: '财运经营',
+    items: ['求财', '投资买卖', '开店经营', '借贷还款'],
+  },
+  {
+    key: 'relationship',
+    label: '关系情感',
+    items: ['感情回应', '婚姻复合', '表白推进', '朋友关系'],
+  },
+  {
+    key: 'family',
+    label: '家宅家庭',
+    items: ['家宅关系', '父母长辈', '子女教育', '搬家迁移'],
+  },
+  {
+    key: 'life',
+    label: '健康事务',
+    items: ['健康疾病', '生产怀孕', '诉讼官非', '失物寻人'],
+  },
+  {
+    key: 'trade',
+    label: '合作交易',
+    items: ['合作合伙', '交易签约'],
+  },
+  {
+    key: 'other',
+    label: '其他',
+    items: ['其他'],
+  },
 ]
 
 const activeCastMode = ref<CastModeKey>('coin')
 const question = ref('')
 const category = ref('')
+const categoryGroup = ref('')
 const castSeed = ref('')
 const manualLines = ref<number[]>([0, 0, 0, 0, 0, 0])
 const loading = ref(false)
@@ -101,6 +110,9 @@ const usesOnlineInput = computed(() => activeCastMode.value === 'online')
 const usesManualSelectInput = computed(() => activeCastMode.value === 'manual')
 const onlineDrawCount = computed(() => manualLines.value.filter((item) => !!item).length)
 const castCategoryText = computed(() => category.value.trim() || '未分类')
+const selectedCategoryItems = computed(() => {
+  return questionCategoryGroups.find((item) => item.key === categoryGroup.value)?.items ?? []
+})
 const castTimeText = computed(() => castResult.value?.day_label || '—')
 const castShenshaText = computed(() => {
   const shensha = (castResult.value?.shensha || {}) as Record<string, string>
@@ -134,12 +146,24 @@ const manualLineEntries = computed(() =>
 function resetCast() {
   question.value = ''
   category.value = ''
+  categoryGroup.value = ''
   castSeed.value = formatCastSeed()
   manualLines.value = [0, 0, 0, 0, 0, 0]
   result.value = null
   showResultBoard.value = true
   chatInput.value = ''
   chatTurns.value = []
+}
+
+function handleCategoryGroupChange(value: string) {
+  categoryGroup.value = value
+  const items = questionCategoryGroups.find((item) => item.key === value)?.items ?? []
+  category.value = items.length === 1 ? items[0] : ''
+}
+
+function onCategoryGroupChange(event: Event) {
+  const target = event.target as HTMLSelectElement | null
+  handleCategoryGroupChange(target?.value || '')
 }
 
 function randomLineOptionValue() {
@@ -302,13 +326,23 @@ async function sendChatFollowup() {
       <textarea v-model="question" class="text-area" rows="4" placeholder="请输入您的问题"></textarea>
     </label>
 
-    <label class="field-label">
-      分类
-      <select v-model="category" class="field-input">
-        <option value="" disabled>请选择分类</option>
-        <option v-for="item in questionCategories" :key="item" :value="item">{{ item }}</option>
-      </select>
-    </label>
+    <div class="how-to-do-field-grid how-to-do-field-grid--category">
+      <label class="field-label">
+        分类大类
+        <select :value="categoryGroup" class="field-input" @change="onCategoryGroupChange">
+          <option value="" disabled>请选择大类</option>
+          <option v-for="group in questionCategoryGroups" :key="group.key" :value="group.key">{{ group.label }}</option>
+        </select>
+      </label>
+
+      <label class="field-label">
+        具体分类
+        <select v-model="category" class="field-input" :disabled="!categoryGroup">
+          <option value="" disabled>请选择具体分类</option>
+          <option v-for="item in selectedCategoryItems" :key="item" :value="item">{{ item }}</option>
+        </select>
+      </label>
+    </div>
 
     <div class="how-to-do-field-grid">
       <label class="field-label">

@@ -1,3 +1,8 @@
+## V1.4.120 - 2026-04-18
+
+- Reworked `我该怎么做` category selection into a two-level frontend flow so users now choose a broad bucket first and then a specific category, making the divination entry less crowded on mobile and desktop.
+- Added fixed answer skeletons per divination bucket so replies now stay shorter, use a steadier术语风格, follow the same symbol / relation / state reasoning frame, and end with a natural follow-up question.
+
 ## V1.4.119 - 2026-04-18
 
 - Completed backend routing coverage for the current `我该怎么做` frontend category set so all existing categories except `其他` now resolve to a dedicated divination interpretation bucket instead of falling back to the generic path.

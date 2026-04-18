@@ -489,6 +489,137 @@ CATEGORY_ROUTE_RULES = {
     },
 }
 
+ANSWER_SKELETONS = {
+    "出行动向": {
+        "professional_terms": ["世应", "动爻", "驿马", "官鬼", "应期"],
+        "core_conclusion": "先直接说此行宜动、宜缓还是先不动，并点明是眼前有阻还是后面转顺。",
+        "interaction_focus": "重点讲世爻、父母爻、官鬼爻和动爻之间的牵动，必要时带一句驿马或合冲。",
+        "time_focus": "时间段要说成近、中、后三个层次，不要只甩一个模糊日子。",
+        "action_focus": "建议落到要不要出发、要不要改期、要不要先补条件。",
+        "closing_question_style": "最后反问用户：更想问成行时间，还是更想问这一路哪里最容易出岔子？",
+    },
+    "普通求财": {
+        "professional_terms": ["财爻", "世应", "月令", "旬空", "应期"],
+        "core_conclusion": "先直接说财能不能落袋，是眼前就见、要等一等，还是容易落空。",
+        "interaction_focus": "重点讲财爻、世爻、应爻和阻力位，不要把满盘六亲都铺开。",
+        "time_focus": "时间推演优先说应期、出空、合起、填实这类节点。",
+        "action_focus": "建议落到该催、该守、该缓还是该分批看。",
+        "closing_question_style": "最后反问用户：你更在意这笔钱能不能到，还是更在意它大概什么时候到？",
+    },
+    "做空交易": {
+        "professional_terms": ["财爻", "兄弟爻", "官鬼", "月令", "回头克"],
+        "core_conclusion": "先直接说空头更占优、偏震荡，还是反手风险更大。",
+        "interaction_focus": "重点讲财爻、兄弟爻、官鬼和动爻之间谁在压谁，不要按普通求财口径解释。",
+        "time_focus": "把换月、出空、节气或具体交易日说成明确窗口。",
+        "action_focus": "建议落到宜持有、宜减仓、宜止盈还是先观望。",
+        "closing_question_style": "最后反问用户：你下一步更想看具体时间窗口，还是更想看这单的风险边界？",
+    },
+    "投资经营": {
+        "professional_terms": ["财爻", "兄弟爻", "父母爻", "世爻", "应期"],
+        "core_conclusion": "先直接说这笔经营或投资更偏可做、可守，还是先别急着进。",
+        "interaction_focus": "重点讲财路、成本、阻力和后劲，不要只讲情绪判断。",
+        "time_focus": "说清楚当前窗口是试探期、承压期还是放量期。",
+        "action_focus": "建议落到先投多少、先试多久、哪里要设防守线。",
+        "closing_question_style": "最后反问用户：你更想继续看投入时机，还是想看这件事后面能不能放大？",
+    },
+    "职业仕途": {
+        "professional_terms": ["官鬼", "父母爻", "世爻", "应爻", "文书"],
+        "core_conclusion": "先直接说这件事有没有机会，是可争、可等，还是暂时卡住。",
+        "interaction_focus": "重点讲官鬼爻、父母爻、世应和流程位，不要空谈运气。",
+        "time_focus": "时间上优先说消息窗口、流程推进点和转机点。",
+        "action_focus": "建议落到该主动争取、补材料、等消息还是换方向。",
+        "closing_question_style": "最后反问用户：你更想看这次有没有结果，还是更想看卡点到底在谁身上？",
+    },
+    "工作事务": {
+        "professional_terms": ["父母爻", "官鬼", "世应", "动爻", "合冲"],
+        "core_conclusion": "先直接说这件事能不能推得动，是卡在流程、人，还是节奏。",
+        "interaction_focus": "重点讲父母爻、官鬼爻和世应关系，必要时点明谁是阻点。",
+        "time_focus": "时间上说清楚眼前卡点、下一窗口和拖久后的变化。",
+        "action_focus": "建议落到先催哪一步、先补什么、先跟谁对齐。",
+        "closing_question_style": "最后反问用户：你更想继续看推进时机，还是想看这件事最该先处理哪一个卡点？",
+    },
+    "学业考试": {
+        "professional_terms": ["父母爻", "官鬼", "子孙", "世爻", "应期"],
+        "core_conclusion": "先直接说这次更偏能过、悬着，还是要再补一口气。",
+        "interaction_focus": "重点讲父母爻、官鬼爻、子孙爻和世爻状态，不要满盘平均发力。",
+        "time_focus": "时间上优先说临考、发榜、结果兑现的节点。",
+        "action_focus": "建议落到该补哪块、稳心态还是改策略。",
+        "closing_question_style": "最后反问用户：你更想看最后结果，还是更想看接下来最该补哪一块？",
+    },
+    "关系情感": {
+        "professional_terms": ["世应", "合冲", "动爻", "月令", "应期"],
+        "core_conclusion": "先直接说关系是在靠近、僵着，还是在慢慢往外走。",
+        "interaction_focus": "重点讲世应、合冲和动爻态度，少讲空泛心灵鸡汤。",
+        "time_focus": "时间上说清楚近期态度变化和后面能不能回暖。",
+        "action_focus": "建议落到该推进、该缓一缓、该表态还是该收边界。",
+        "closing_question_style": "最后反问用户：你更想继续看对方现在的态度，还是更想看这段关系后面还有没有推进点？",
+    },
+    "家宅家庭": {
+        "professional_terms": ["父母爻", "世应", "家宅位", "动爻", "合冲"],
+        "core_conclusion": "先直接说这件事更偏宜守、宜动，还是先缓一缓。",
+        "interaction_focus": "重点讲父母爻、世应和家宅相关动位，把情绪和现实分开讲。",
+        "time_focus": "时间上说清楚眼前矛盾会不会放大，后面有没有转松。",
+        "action_focus": "建议落到先沟通、先观察，还是先换动作。",
+        "closing_question_style": "最后反问用户：你更想继续看家里这层关系，还是更想看现实环境这层变化？",
+    },
+    "居住去留": {
+        "professional_terms": ["世爻", "父母爻", "财爻", "变卦", "六冲"],
+        "core_conclusion": "先直接说更偏搬、更偏守，还是方向已定但时机未到。",
+        "interaction_focus": "重点讲世爻、父母爻、财爻和变卦后势，不要模棱两可。",
+        "time_focus": "时间上说清楚现在、再等一阵、真正适合动的时候分别是什么感觉。",
+        "action_focus": "建议落到先看房、先观察，还是先稳住别急动。",
+        "closing_question_style": "最后反问用户：你更想继续看搬的时机，还是更想看现在这个住处真正让你不舒服的点？",
+    },
+    "健康生育": {
+        "professional_terms": ["官鬼", "子孙", "父母爻", "世爻", "旺衰"],
+        "core_conclusion": "先直接说这事更偏急、偏缓，还是以调养观察为主。",
+        "interaction_focus": "重点讲官鬼、子孙、父母爻和世爻强弱，不渲染恐惧。",
+        "time_focus": "时间上说清楚是短期波动还是要看一个恢复周期。",
+        "action_focus": "建议落到休养、复查、调整节奏，并提醒以现实医疗判断为先。",
+        "closing_question_style": "最后反问用户：你更想继续看恢复节奏，还是更想看这件事眼下最该避开的风险点？",
+    },
+    "诉讼官非": {
+        "professional_terms": ["世应", "官鬼", "父母爻", "动爻", "攻守"],
+        "core_conclusion": "先直接说对方更像施压、真要落地，还是虚张声势中带一点风险。",
+        "interaction_focus": "重点讲世应强弱、官鬼爻和父母爻的攻守关系。",
+        "time_focus": "时间上说清楚近期会不会升级、什么时候容易见真章。",
+        "action_focus": "建议落到先留证据、先沟通、先守边界还是先做现实准备。",
+        "closing_question_style": "最后反问用户：你更想继续看对方会不会真的动作，还是更想看你这边该先怎么防？",
+    },
+    "失物方位": {
+        "professional_terms": ["用神", "世应", "动爻", "上下卦", "方位"],
+        "core_conclusion": "先直接说主方向，再补1到3个环境线索，比如高低、明暗、角落或柜边。",
+        "interaction_focus": "重点讲用神落位、世应和上下卦方位，不讲大而空的局势。",
+        "time_focus": "时间上只简单说眼下找得到、晚一点更显，还是已经被移动过。",
+        "action_focus": "建议落到先找哪个方向、先翻哪类位置、是不是要回想谁动过。",
+        "closing_question_style": "最后反问用户：你要不要把这个东西的大概形状和最后一次出现的位置再告诉我一下？",
+    },
+    "合作交易": {
+        "professional_terms": ["世应", "父母爻", "兄弟爻", "财爻", "兑现"],
+        "core_conclusion": "先直接说能不能成、能不能回，还是会拖、会变。",
+        "interaction_focus": "重点讲世应、财爻、父母爻和兄弟爻的牵制关系。",
+        "time_focus": "时间上说清楚是近期能落、要拖，还是会反复。",
+        "action_focus": "建议落到该谈条件、该催款、该留证还是该先观望。",
+        "closing_question_style": "最后反问用户：你更想继续看成不成，还是更想看后面最容易卡在哪个环节？",
+    },
+    "催收纠纷": {
+        "professional_terms": ["世应", "官鬼", "父母爻", "动爻", "虚实"],
+        "core_conclusion": "先直接说对方更偏施压还是真会落地动作。",
+        "interaction_focus": "重点讲世应强弱、官鬼动向和父母爻的现实落地能力。",
+        "time_focus": "时间上说清楚短期会不会升级，还是过阵子就缓。",
+        "action_focus": "建议落到先稳、先防、先留痕，不空谈。",
+        "closing_question_style": "最后反问用户：你更想继续看对方动作真假，还是更想看你这边该先怎么稳住？",
+    },
+    "通用问事": {
+        "professional_terms": ["动爻", "世应", "月令", "旬空", "变卦"],
+        "core_conclusion": "先直接说这件事眼下更偏顺、偏阻，还是先观望。",
+        "interaction_focus": "重点讲盘里最关键的两三组关系，不硬套旧模板。",
+        "time_focus": "时间上只讲最关键的变化窗口。",
+        "action_focus": "建议落到下一步最该做什么。",
+        "closing_question_style": "最后反问用户：你更想把这件事往结果上看，还是往时间点上看得更细一点？",
+    },
+}
+
 LINE_GUIDANCE = [
     "起点和底盘，先看稳不稳。",
     "基础承接位，先看配合。",
@@ -875,6 +1006,23 @@ def _build_state_evolution_summary(grounding: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_answer_skeleton(question_type: str) -> dict[str, Any]:
+    skeleton = ANSWER_SKELETONS.get(question_type) or ANSWER_SKELETONS["通用问事"]
+    return {
+        "tone": "专业、稳、有人味，术语要点到为止，不要像教科书。",
+        "length_rule": "首轮尽量控制在 220 到 360 字；追问补充尽量控制在 140 到 260 字。",
+        "section_contract": {
+            "核心结论": skeleton["core_conclusion"],
+            "关键互动分析": skeleton["interaction_focus"],
+            "时间推演": skeleton["time_focus"],
+            "实际意义": skeleton["action_focus"],
+        },
+        "professional_terms": skeleton["professional_terms"],
+        "closing_question_style": skeleton["closing_question_style"],
+        "instruction": "结尾必须自然反问一句，引导用户补最关键的下一条信息。",
+    }
+
+
 def _build_direction_reference(grounding: dict[str, Any]) -> dict[str, Any]:
     hexagram = grounding.get("hexagram", {}) or {}
     transformed = hexagram.get("transformed_hexagram") or {}
@@ -1085,6 +1233,7 @@ def _build_interpretation_protocol(
         "state_evolution": _build_state_evolution_summary(grounding),
         "direction_reference": _build_direction_reference(grounding),
         "answer_contract": _infer_answer_contract(question, question_type["type"], conversation_history),
+        "answer_skeleton": _build_answer_skeleton(question_type["type"]),
         "time_alignment": {
             "must_follow_cast_time": True,
             "day_label": _normalize_text(time_context.get("day_label")),
@@ -1112,6 +1261,8 @@ def _build_interpretation_protocol(
             "二选一问题要直接说倾向，不要模棱两可。",
             "失物方位问题要先说方向和环境，不要先讲大道理。",
             "用户追问继续时，只补新信息，不把前文完整重说。",
+            "术语要有，但别堆；每次抓 2 到 4 个最关键术语就够了。",
+            "单条回答不要过长，结尾要自然反问一句。",
             "不要暴露内部推理、搜索、校准过程。",
             "不要输出 markdown 标记、标题井号、代码块、表格。",
         ],
@@ -1812,6 +1963,9 @@ async def _interpret_with_llm(
         "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
         "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
         "每段都用人话写，不要长篇铺陈，但要让人看得出判断确实从卦里来。"
+        "回答要像同一个稳定的专业 skill：带一点六爻术语，但语气要拟人，不要生硬。"
+        "单条回答不要过长，首轮控制在中短篇幅。"
+        "最后必须自然追问一句，把用户引到最值得继续追断的下一点上。"
         "整篇避免重复，控制节奏，不要把同一层意思来回说。"
     )
     user_prompt = json.dumps(
@@ -1883,6 +2037,8 @@ async def _chat_with_llm(
         "如果用户问的是二选一、是非题，核心结论第一句就直接给明确倾向。"
         "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
         "默认保持简洁，续断优先短一些，除非用户明确要求展开很多。"
+        "回答要保留一点专业术语，但口气要像会看卦的人在当面说，不要像系统报告。"
+        "最后也要自然反问一句，把追问收回到最关键的下一点。"
     )
     trimmed_history = _compact_history_for_prompt(conversation_history)
     user_prompt = json.dumps(
