@@ -112,6 +112,9 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("relation_modeling", protocol)
         self.assertIn("core_conflict_extraction", protocol)
         self.assertIn("time_evolution", protocol)
+        self.assertIn("symbol_relation_state_layer", protocol["framework_layers"])
+        self.assertIn("symbol_system", protocol)
+        self.assertIn("state_evolution", protocol)
 
     def test_interpretation_protocol_adds_direction_contract_for_lost_item(self):
         base_result = _build_cast_result(
@@ -131,6 +134,25 @@ class HowToDoTests(unittest.TestCase):
         self.assertTrue(protocol["answer_contract"]["direction_first"])
         self.assertIn("direction_reference", protocol)
         self.assertIn("乾", protocol["direction_reference"]["bagua_direction_map"])
+
+    def test_interpretation_protocol_marks_generic_question_low_coverage(self):
+        base_result = _build_cast_result(
+            question="这件事背后的现实约束到底是什么",
+            category="其他",
+            cast_mode="manual",
+            cast_seed="2026/04/18 09:00:00",
+            manual_lines=[7, 8, 7, 8, 7, 8],
+        )
+        protocol = _build_interpretation_protocol(
+            question="这件事背后的现实约束到底是什么",
+            category="其他",
+            grounding=_build_divination_grounding(base_result),
+        )
+
+        self.assertEqual(protocol["question_type"], "通用问事")
+        self.assertFalse(protocol["question_type_meta"]["matched"])
+        self.assertEqual(protocol["question_type_meta"]["coverage"], "low")
+        self.assertIn("重新建立判断标准", protocol["question_type_meta"]["instruction"])
 
     def test_compact_history_trims_assistant_repetition(self):
         history = [
@@ -190,6 +212,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("先完成卦象本体层分析", sent_messages[0]["content"])
         self.assertIn("不要直接把卦等同于吉凶", sent_messages[0]["content"])
         self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
+        self.assertIn("符号层、关系层、状态层", sent_messages[0]["content"])
         self.assertIn("二选一、是非题", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
@@ -239,6 +262,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
         self.assertIn("续断时也要先完成卦象本体层分析", sent_messages[0]["content"])
         self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
+        self.assertIn("符号层、关系层、状态层", sent_messages[0]["content"])
         self.assertIn("继续、展开、细说", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])

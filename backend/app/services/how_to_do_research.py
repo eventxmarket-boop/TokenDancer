@@ -17,6 +17,7 @@ HowToDoResearchKind = Literal[
     "market_timing",
     "location_time",
     "factual_reference",
+    "adaptive_context",
     "general",
 ]
 
@@ -73,6 +74,17 @@ REFERENCE_KEYWORDS = (
     "万年历",
 )
 
+ADAPTIVE_KEYWORDS = (
+    "为什么",
+    "意味着",
+    "怎么看",
+    "怎么理解",
+    "怎么办",
+    "适不适合",
+    "有没有助力",
+    "会有什么影响",
+)
+
 SEARCH_RESULT_LIMIT = 5
 
 
@@ -95,6 +107,8 @@ def _infer_research_kind(question: str, history: list[dict[str, Any]] | None = N
         return "market_timing"
     if any(keyword in combined for keyword in REFERENCE_KEYWORDS):
         return "factual_reference"
+    if any(keyword in combined for keyword in ADAPTIVE_KEYWORDS):
+        return "adaptive_context"
     return "general"
 
 
@@ -144,6 +158,12 @@ def _build_queries(
             f"{base} 官网 原文",
             f"{base} 规则 资料",
             f"{base} 历法 说明",
+        ]
+    elif kind == "adaptive_context":
+        queries = [
+            f"{base} 背景 资料",
+            f"{base} 规则 说明",
+            f"{normalized_question} 现实背景",
         ]
     else:
         queries = [
@@ -232,6 +252,10 @@ def _summarize_results(results: list[dict[str, str]], kind: HowToDoResearchKind)
             "factual_reference": [
                 "先核实原始资料和规则出处，再把事实放回卦中解释。",
             ],
+            "adaptive_context": [
+                "如果问题没有现成模板，先补现实背景、对象规则和语境信息，再回到卦盘判断。",
+                "联网层优先帮助建立问题背景，不代替卦象本身的推演。",
+            ],
             "general": [
                 "联网层没有拿到足够事实时，先以卦盘为主，不伪装成已核实过。",
             ],
@@ -253,6 +277,7 @@ def _format_sources_hint(kind: HowToDoResearchKind, sources: list[str]) -> list[
         "market_timing": ["市场日历", "万年历", "节气历法资料"],
         "location_time": ["timeanddate", "时区资料", "万年历"],
         "factual_reference": ["官方资料", "规则出处", "原始页面"],
+        "adaptive_context": ["背景资料", "规则说明", "现实语境资料"],
         "general": ["官方资料", "日历 / 节气资料"],
     }
     return defaults.get(kind, defaults["general"])
@@ -269,6 +294,7 @@ async def research_how_to_do_question(
         return {
             "needs_research": False,
             "research_kind": "general",
+            "adaptive_reason": "",
             "facts_summary": [],
             "sources_hint": [],
             "search_queries": [],
@@ -295,9 +321,13 @@ async def research_how_to_do_question(
         evidence = []
 
     summary = _summarize_results(evidence, kind)
+    adaptive_reason = ""
+    if kind in {"adaptive_context", "general"}:
+        adaptive_reason = "当前问题未必能被固定模板完全覆盖，联网层用于补现实背景与解释语境。"
     return {
         "needs_research": True,
         "research_kind": kind,
+        "adaptive_reason": adaptive_reason,
         "facts_summary": summary["facts_summary"],
         "sources_hint": _format_sources_hint(kind, summary["sources_hint"]),
         "search_queries": queries,

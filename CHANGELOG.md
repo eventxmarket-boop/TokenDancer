@@ -1,3 +1,8 @@
+## V1.4.118 - 2026-04-18
+
+- Upgraded `我该怎么做` around a deeper symbol / relation / state framework so model answers now analyze the hexagram as a structured system before mapping it onto the user’s question.
+- Added low-coverage question detection and adaptive web-research escalation so when a user asks something outside the current built-in divination buckets, the runtime now falls back to hexagram-first reasoning plus联网背景补充 instead of forcing the wrong template.
+
 ## V1.4.117 - 2026-04-18
 
 - Tightened `我该怎么做` question routing with a dedicated lost-item / direction path so方位类问题 now carry trigram-direction grounding instead of falling back to generic divination talk.

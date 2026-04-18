@@ -654,6 +654,7 @@ def _build_relation_network_summary(grounding: dict[str, Any]) -> dict[str, Any]
         },
         "network_focus": [
             "先看动爻牵动哪些位置与六亲关系。",
+            "再看五行生克、合冲刑害如何在盘里串起来。",
             "再看世应是否形成主导互动。",
             "最后看变卦是否强化或反转当前主线。",
         ],
@@ -702,10 +703,48 @@ def _build_time_evolution_summary(grounding: dict[str, Any]) -> dict[str, Any]:
         },
         "phase_hints": [
             "先以起卦时点为零点，不要脱离这个时间坐标。",
+            "把月建、日辰、旬空当成外部状态参数，看它们怎么改写盘内力量。",
             "有动爻时要把变化趋势放进时间线里看。",
             "如果用户追问某天、某节气、某前后窗口，再把该时间点作为额外变量代入。",
         ],
         "changing_lines": changing_lines,
+    }
+
+
+def _build_symbol_system_summary(grounding: dict[str, Any]) -> dict[str, Any]:
+    hexagram = grounding.get("hexagram", {}) or {}
+    return {
+        "source_symbols": [
+            "本卦与变卦的爻象",
+            "六亲、世应、六神、地支",
+            "动爻与变爻信息",
+            "月建、日辰、旬空、神煞",
+        ],
+        "hexagram_identity": {
+            "name": _normalize_text(hexagram.get("name")),
+            "tag": _normalize_text(hexagram.get("tag")),
+            "palace": _normalize_text(hexagram.get("palace")),
+            "upper_trigram": _normalize_text(hexagram.get("upper_trigram")),
+            "lower_trigram": _normalize_text(hexagram.get("lower_trigram")),
+        },
+        "instruction": "先把盘面看成一套符号数据，不要一上来就直接映射到吉凶结论。",
+    }
+
+
+def _build_state_evolution_summary(grounding: dict[str, Any]) -> dict[str, Any]:
+    time_context = grounding.get("time_context", {}) or {}
+    return {
+        "external_state_inputs": [
+            _normalize_text(time_context.get("ganzhi_line")),
+            "月建 / 日辰 / 旬空",
+            "动爻、化进化退、回头生克",
+        ],
+        "state_engine_rules": [
+            "先区分静爻和动爻，动爻是变化源。",
+            "再看旺衰、旬空、月破是否让某些符号变强或暂时失效。",
+            "最后看动爻变爻之间是回头生、回头克，还是趋势延续。",
+        ],
+        "instruction": "把系统看成随时间变化的状态机，而不是静态截图。",
     }
 
 
@@ -813,6 +852,9 @@ def _format_how_to_do_research_context(research: dict[str, Any] | None) -> str:
     parts: list[str] = []
     if research_kind:
         parts.append(f"联网研究类型：{research_kind}")
+    adaptive_reason = _normalize_text(research.get("adaptive_reason"))
+    if adaptive_reason:
+        parts.append(f"联网补充原因：{adaptive_reason}")
     if search_queries:
         parts.append("联网检索词：")
         parts.extend(f"- {line}" for line in search_queries[:3])
@@ -829,10 +871,19 @@ def _infer_question_type(*texts: Any) -> dict[str, Any]:
     haystack = " ".join(_normalize_text(text) for text in texts if _normalize_text(text))
     for rule in QUESTION_TYPE_RULES:
         if any(keyword in haystack for keyword in rule["keywords"]):
-            return {"type": rule["type"], "focus": list(rule["focus"])}
+            return {
+                "type": rule["type"],
+                "focus": list(rule["focus"]),
+                "matched": True,
+                "matched_keywords": [keyword for keyword in rule["keywords"] if keyword in haystack][:5],
+                "coverage": "high",
+            }
     return {
         "type": "通用问事",
         "focus": ["先判断用户真正关心的结果是什么", "只展开最关键的3到4个卦象关系", "结论必须落到可执行建议"],
+        "matched": False,
+        "matched_keywords": [],
+        "coverage": "low",
     }
 
 
@@ -862,18 +913,31 @@ def _build_interpretation_protocol(
                 "先定义什么对用户是利，什么对用户是害。",
                 "最后才把卦势映射成结论、风险和建议。",
             ],
+            "symbol_relation_state_layer": [
+                "符号层：先识别本卦、变卦、六亲、世应、六神、地支这些基础符号。",
+                "关系层：再看生克、合冲、刑害怎么把关键爻连起来。",
+                "状态层：最后看月建、日辰、旬空、动变如何改写强弱和趋势。",
+            ],
         },
         "question_type": question_type["type"],
         "question_focus": question_type["focus"],
+        "question_type_meta": {
+            "matched": question_type.get("matched", False),
+            "coverage": question_type.get("coverage", "low"),
+            "matched_keywords": question_type.get("matched_keywords", []),
+            "instruction": "如果没命中现成问题类型，不要硬套旧模板，而要回到卦象结构本身重新建立判断标准。",
+        },
         "problem_definition": {
             "core_question": _normalize_text(question),
             "category": _normalize_text(category),
             "instruction": "先锁定用户真正想问的结果，再建立利弊判断标准。",
         },
+        "symbol_system": _build_symbol_system_summary(grounding),
         "symbol_parsing": _build_symbol_snapshot(grounding),
         "relation_modeling": _build_relation_network_summary(grounding),
         "core_conflict_extraction": _build_core_conflict_summary(grounding),
         "time_evolution": _build_time_evolution_summary(grounding),
+        "state_evolution": _build_state_evolution_summary(grounding),
         "direction_reference": _build_direction_reference(grounding),
         "answer_contract": _infer_answer_contract(question, question_type["type"], conversation_history),
         "time_alignment": {
@@ -885,6 +949,7 @@ def _build_interpretation_protocol(
         "analysis_steps": [
             "第一步先做卦象本体层分析：符号解析、关系建模、主线提取、时间推演。",
             "第二步再做问题映射层分析：识别问题类型，定义利弊标准，再映射结论。",
+            "如果问题类型命中不足，退回到符号层、关系层、状态层重新建模，再用联网事实补足现实背景。",
             "只围绕本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空、神煞做判断。",
             "从盘里挑最关键的3到4组关系展开，不要把满盘信息平铺给用户。",
             "最后必须落到操作建议、风险提醒和边界说明。",
@@ -1596,6 +1661,8 @@ async def _interpret_with_llm(
         "不要输出 markdown，不要出现 **、#、表格代码块、系统解释或'作为AI'。"
         "先按起卦时间对应的日辰、月令、节气来解，不要自己改日期。"
         "不要直接把卦等同于吉凶，要先理解卦本身的动力学机制，再解释它对用户问题意味着什么。"
+        "先按符号层、关系层、状态层去理解盘面：先识别符号，再看生克合冲，最后看月建日辰旬空和动变如何改写趋势。"
+        "如果问题没有明确命中已有模板，不要套错模板；要回到卦象结构本身重新建立这件事的利弊标准，并结合联网补充处理现实背景。"
         "如果用户问的是二选一、是非题，核心结论第一句就直接给明确倾向。"
         "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
         "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
@@ -1665,6 +1732,8 @@ async def _chat_with_llm(
         "语气要像经验老到的解卦师，稳、软、安抚，不说系统话，不给泛泛心理建议。"
         "不要输出 markdown，不要出现 **、#、代码块、系统解释。"
         "先按这一卦对应的起卦时间和盘面继续断，不要擅自改时间。"
+        "续断时也要先按符号层、关系层、状态层回到盘面本身，再回答用户新追问。"
+        "如果用户追问的是盘里原本没有现成模板的话题，就用卦象结构重新建模，再吸收联网补充，而不是乱套旧模板。"
         "如果用户只是说继续、展开、细说，默认只补上一轮没说透的关键点，不要把之前完整答案重讲一遍。"
         "如果用户问的是二选一、是非题，核心结论第一句就直接给明确倾向。"
         "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
