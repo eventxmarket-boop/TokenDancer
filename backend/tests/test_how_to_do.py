@@ -12,6 +12,7 @@ from app.services.how_to_do_service import (
     _build_cast_result,
     _build_divination_grounding,
     _build_interpretation_protocol,
+    _compact_history_for_prompt,
     _line_value_from_back_count,
     generate_how_to_do_runtime,
 )
@@ -112,6 +113,40 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("core_conflict_extraction", protocol)
         self.assertIn("time_evolution", protocol)
 
+    def test_interpretation_protocol_adds_direction_contract_for_lost_item(self):
+        base_result = _build_cast_result(
+            question="找东西，在什么方位",
+            category="失物寻人",
+            cast_mode="manual",
+            cast_seed="2026/04/18 05:43:12",
+            manual_lines=[7, 7, 7, 8, 8, 9],
+        )
+        protocol = _build_interpretation_protocol(
+            question="找东西，在什么方位",
+            category="失物寻人",
+            grounding=_build_divination_grounding(base_result),
+        )
+
+        self.assertEqual(protocol["question_type"], "失物方位")
+        self.assertTrue(protocol["answer_contract"]["direction_first"])
+        self.assertIn("direction_reference", protocol)
+        self.assertIn("乾", protocol["direction_reference"]["bagua_direction_map"])
+
+    def test_compact_history_trims_assistant_repetition(self):
+        history = [
+            {"role": "user", "content": "是否搬家，是续住还是搬家"},
+            {
+                "role": "assistant",
+                "content": "核心结论：更偏搬。\n\n关键互动分析：这里展开很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多很多。",
+            },
+        ]
+
+        compacted = _compact_history_for_prompt(history)
+
+        self.assertEqual(compacted[0]["content"], "是否搬家，是续住还是搬家")
+        self.assertIn("核心结论：更偏搬。", compacted[1]["content"])
+        self.assertLessEqual(len(compacted[1]["content"]), 220)
+
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
             "section": "cast",
@@ -155,6 +190,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("先完成卦象本体层分析", sent_messages[0]["content"])
         self.assertIn("不要直接把卦等同于吉凶", sent_messages[0]["content"])
         self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
+        self.assertIn("二选一、是非题", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
 
@@ -203,6 +239,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
         self.assertIn("续断时也要先完成卦象本体层分析", sent_messages[0]["content"])
         self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
+        self.assertIn("继续、展开、细说", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
 

@@ -1,3 +1,8 @@
+## V1.4.117 - 2026-04-18
+
+- Tightened `我该怎么做` question routing with a dedicated lost-item / direction path so方位类问题 now carry trigram-direction grounding instead of falling back to generic divination talk.
+- Added answer-contract guards for binary questions and follow-up continuation so the model now gives direct yes/no倾向 earlier, avoids repeating full prior answers on `继续`, and keeps responses shorter and more on-target.
+
 ## V1.4.116 - 2026-04-18
 
 - Rebuilt the `我该怎么做` interpretation protocol around a two-layer framework: first analyze the hexagram as a symbol system, then map its dynamics onto the user’s actual question.

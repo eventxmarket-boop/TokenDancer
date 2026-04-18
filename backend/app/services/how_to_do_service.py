@@ -221,6 +221,17 @@ HEXAGRAM_MEANINGS = {
     "中孚": "诚信内在，沟通更稳", "小过": "小事可成，不宜过大", "既济": "事情已成，注意后续", "未济": "未成之局，先别定论",
 }
 
+TRIGRAM_DIRECTION_HINTS = {
+    "乾": {"direction": "西北", "scene": "高处、金属边、柜顶、领导位、干燥明亮处"},
+    "兑": {"direction": "正西", "scene": "口部高度、桌面、抽屉、金属器具旁、聊天休息处"},
+    "离": {"direction": "正南", "scene": "灯下、电子设备旁、明亮处、充电区、热源附近"},
+    "震": {"direction": "正东", "scene": "门边、走道、木柜、包袋边、活动频繁处"},
+    "巽": {"direction": "东南", "scene": "角落、缝隙、书桌旁、木制家具边、风口附近"},
+    "坎": {"direction": "正北", "scene": "低处、水边、洗手台、饮水区、阴暗潮湿处"},
+    "艮": {"direction": "东北", "scene": "墙角、床边、柜角、堆放处、静止不动的角位"},
+    "坤": {"direction": "西南", "scene": "地面、收纳箱、布艺处、母亲位、成堆杂物旁"},
+}
+
 STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
 BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 
@@ -343,6 +354,11 @@ QUESTION_TYPE_RULES = [
         "type": "居住去留",
         "keywords": ["住宿", "搬家", "续住", "租房", "居所", "去留"],
         "focus": ["重点看世爻、财爻与变卦后势", "判断维持现状还是更换更稳", "避免只给空泛情绪建议"],
+    },
+    {
+        "type": "失物方位",
+        "keywords": ["失物", "找东西", "找物", "寻物", "寻人", "方位", "方向", "在哪", "哪里", "何处", "位置"],
+        "focus": ["重点看用神落位、世应、动爻和上下卦方位", "直接回答更偏哪个方向、哪类空间、是高是低、是明是暗", "不要讲空泛局势，先把位置线索说清楚"],
     },
 ]
 
@@ -496,7 +512,16 @@ def _clean_divination_output(text: str) -> str:
     cleaned = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", cleaned)
     cleaned = re.sub(r"(?m)^\s*\*\s+", "- ", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip()
+    paragraphs = [item.strip() for item in re.split(r"\n{2,}", cleaned) if item.strip()]
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for paragraph in paragraphs:
+        key = re.sub(r"\s+", "", paragraph)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(paragraph)
+    return "\n\n".join(deduped).strip()
 
 
 def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
@@ -514,6 +539,8 @@ def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
             "tag": raw.get("hexagram_tag"),
             "panel_title": raw.get("panel_title"),
             "panel_subtitle": raw.get("panel_subtitle"),
+            "upper_trigram": raw.get("upper_trigram"),
+            "lower_trigram": raw.get("lower_trigram"),
             "changing_lines": raw.get("changing_lines", []),
             "transformed_hexagram": raw.get("transformed_hexagram"),
         },
@@ -682,6 +709,88 @@ def _build_time_evolution_summary(grounding: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_direction_reference(grounding: dict[str, Any]) -> dict[str, Any]:
+    hexagram = grounding.get("hexagram", {}) or {}
+    transformed = hexagram.get("transformed_hexagram") or {}
+    upper = _normalize_text(hexagram.get("upper_trigram"))
+    lower = _normalize_text(hexagram.get("lower_trigram"))
+    transformed_upper = _normalize_text(transformed.get("upper_trigram"))
+    transformed_lower = _normalize_text(transformed.get("lower_trigram"))
+
+    current_bias = [
+        {
+            "trigram": name,
+            "direction": TRIGRAM_DIRECTION_HINTS.get(name, {}).get("direction", ""),
+            "scene": TRIGRAM_DIRECTION_HINTS.get(name, {}).get("scene", ""),
+        }
+        for name in [upper, lower]
+        if name
+    ]
+    transformed_bias = [
+        {
+            "trigram": name,
+            "direction": TRIGRAM_DIRECTION_HINTS.get(name, {}).get("direction", ""),
+            "scene": TRIGRAM_DIRECTION_HINTS.get(name, {}).get("scene", ""),
+        }
+        for name in [transformed_upper, transformed_lower]
+        if name
+    ]
+    return {
+        "bagua_direction_map": TRIGRAM_DIRECTION_HINTS,
+        "current_hexagram_bias": current_bias,
+        "transformed_hexagram_bias": transformed_bias,
+        "instruction": "如果用户问方位、位置、找东西或寻人，先直接给方向和环境线索，再解释依据。",
+    }
+
+
+def _infer_answer_contract(
+    question: str,
+    question_type: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized_question = _normalize_text(question)
+    recent_history = " ".join(_normalize_text(item.get("content")) for item in (conversation_history or [])[-4:])
+    combined = f"{normalized_question} {recent_history}".strip()
+    follow_up_expand = normalized_question in {"继续", "展开", "接着说", "详细说", "细说", "继续说"} or (
+        len(normalized_question) <= 8 and any(token in normalized_question for token in ["继续", "展开", "细说"])
+    )
+    binary_decision = any(
+        token in combined
+        for token in ["要不要", "该不该", "能不能", "会不会", "搬还是不搬", "续住还是搬家", "比较好还是", "到底要不要", "直接说"]
+    )
+    direction_first = question_type == "失物方位" or any(
+        token in combined for token in ["方位", "方向", "在哪里", "在哪", "何处", "位置", "找东西", "失物"]
+    )
+    return {
+        "follow_up_expand": follow_up_expand,
+        "binary_decision": binary_decision,
+        "direction_first": direction_first,
+        "response_rules": [
+            "默认只展开最关键的结论和依据，不重复前面已经说过的大段内容。",
+            "如果是二选一或是非题，核心结论第一句必须直接给明确倾向。",
+            "如果是失物方位题，核心结论第一句必须直接回答更偏哪个方向，再补1到3个环境线索。",
+            "如果用户只是说继续或展开，默认补上一轮没说透的部分，不重讲完整五段。",
+        ],
+        "length_rule": "首轮尽量控制在 260 到 420 字；追问补充尽量控制在 180 到 300 字。",
+    }
+
+
+def _compact_history_for_prompt(conversation_history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+    compacted: list[dict[str, str]] = []
+    for item in (conversation_history or [])[-6:]:
+        role = _normalize_text(item.get("role")) or "user"
+        content = _normalize_text(item.get("content"))
+        if not content:
+            continue
+        if role == "assistant":
+            paragraphs = [part.strip() for part in re.split(r"\n{2,}", content) if part.strip()]
+            content = " / ".join(paragraphs[:2])[:220]
+        else:
+            content = content[:180]
+        compacted.append({"role": role, "content": content})
+    return compacted
+
+
 def _format_how_to_do_research_context(research: dict[str, Any] | None) -> str:
     if not isinstance(research, dict):
         return ""
@@ -765,6 +874,8 @@ def _build_interpretation_protocol(
         "relation_modeling": _build_relation_network_summary(grounding),
         "core_conflict_extraction": _build_core_conflict_summary(grounding),
         "time_evolution": _build_time_evolution_summary(grounding),
+        "direction_reference": _build_direction_reference(grounding),
+        "answer_contract": _infer_answer_contract(question, question_type["type"], conversation_history),
         "time_alignment": {
             "must_follow_cast_time": True,
             "day_label": _normalize_text(time_context.get("day_label")),
@@ -788,6 +899,9 @@ def _build_interpretation_protocol(
         "style_rules": [
             "像真正解卦师，不像系统面板。",
             "先安抚，再判断。",
+            "二选一问题要直接说倾向，不要模棱两可。",
+            "失物方位问题要先说方向和环境，不要先讲大道理。",
+            "用户追问继续时，只补新信息，不把前文完整重说。",
             "不要暴露内部推理、搜索、校准过程。",
             "不要输出 markdown 标记、标题井号、代码块、表格。",
         ],
@@ -1482,8 +1596,11 @@ async def _interpret_with_llm(
         "不要输出 markdown，不要出现 **、#、表格代码块、系统解释或'作为AI'。"
         "先按起卦时间对应的日辰、月令、节气来解，不要自己改日期。"
         "不要直接把卦等同于吉凶，要先理解卦本身的动力学机制，再解释它对用户问题意味着什么。"
+        "如果用户问的是二选一、是非题，核心结论第一句就直接给明确倾向。"
+        "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
         "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
         "每段都用人话写，不要长篇铺陈，但要让人看得出判断确实从卦里来。"
+        "整篇避免重复，控制节奏，不要把同一层意思来回说。"
     )
     user_prompt = json.dumps(
         {
@@ -1548,16 +1665,12 @@ async def _chat_with_llm(
         "语气要像经验老到的解卦师，稳、软、安抚，不说系统话，不给泛泛心理建议。"
         "不要输出 markdown，不要出现 **、#、代码块、系统解释。"
         "先按这一卦对应的起卦时间和盘面继续断，不要擅自改时间。"
-        "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
+        "如果用户只是说继续、展开、细说，默认只补上一轮没说透的关键点，不要把之前完整答案重讲一遍。"
+        "如果用户问的是二选一、是非题，核心结论第一句就直接给明确倾向。"
+        "如果用户问的是找东西、失物、方位、位置，核心结论第一句就直接给方位判断，再补空间线索和依据。"
+        "默认保持简洁，续断优先短一些，除非用户明确要求展开很多。"
     )
-    trimmed_history = [
-        {
-            "role": _normalize_text(item.get("role")) or "user",
-            "content": _normalize_text(item.get("content")),
-        }
-        for item in (conversation_history or [])[-8:]
-        if _normalize_text(item.get("content"))
-    ]
+    trimmed_history = _compact_history_for_prompt(conversation_history)
     user_prompt = json.dumps(
         {
             "cast_context": grounding,
