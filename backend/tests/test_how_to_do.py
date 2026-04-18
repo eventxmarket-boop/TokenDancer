@@ -104,6 +104,13 @@ class HowToDoTests(unittest.TestCase):
         self.assertEqual(protocol["question_type"], "做空交易")
         self.assertTrue(any("上涨是利还是害" in item for item in protocol["question_focus"]))
         self.assertTrue(protocol["time_alignment"]["must_follow_cast_time"])
+        self.assertIn("符号解析", protocol["framework_name"])
+        self.assertIn("hexagram_native_layer", protocol["framework_layers"])
+        self.assertIn("question_mapping_layer", protocol["framework_layers"])
+        self.assertIn("symbol_parsing", protocol)
+        self.assertIn("relation_modeling", protocol)
+        self.assertIn("core_conflict_extraction", protocol)
+        self.assertIn("time_evolution", protocol)
 
     def test_how_to_do_cast_uses_llm_when_available(self):
         payload = {
@@ -145,6 +152,8 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("research", result["raw_result"])
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("六爻解卦师", sent_messages[0]["content"])
+        self.assertIn("先完成卦象本体层分析", sent_messages[0]["content"])
+        self.assertIn("不要直接把卦等同于吉凶", sent_messages[0]["content"])
         self.assertIn("先按起卦时间对应的日辰、月令、节气来解", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])
@@ -192,6 +201,7 @@ class HowToDoTests(unittest.TestCase):
         self.assertIn("latest_research", result["raw_result"])
         sent_messages = mocked_generate.call_args.args[0]
         self.assertIn("只允许围绕当前这卦", sent_messages[0]["content"])
+        self.assertIn("续断时也要先完成卦象本体层分析", sent_messages[0]["content"])
         self.assertIn("先按这一卦对应的起卦时间和盘面继续断", sent_messages[0]["content"])
         self.assertIn("interpretation_protocol", sent_messages[1]["content"])
         self.assertIn("research_context", sent_messages[1]["content"])

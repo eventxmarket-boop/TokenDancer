@@ -1,3 +1,8 @@
+## V1.4.116 - 2026-04-18
+
+- Rebuilt the `我该怎么做` interpretation protocol around a two-layer framework: first analyze the hexagram as a symbol system, then map its dynamics onto the user’s actual question.
+- Added structured protocol fields for symbol parsing, relation modeling, core-conflict extraction, and time evolution so model answers now follow a clearer analysis pipeline before giving conclusions.
+
 ## V1.4.115 - 2026-04-18
 
 - Added a deep web-research layer to `我该怎么做` so cast answers and follow-up divination chat can now pull in external date, calendar, timing, and factual context before the model replies.

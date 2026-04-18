@@ -551,6 +551,137 @@ def _build_divination_grounding(base_result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_symbol_snapshot(grounding: dict[str, Any]) -> dict[str, Any]:
+    line_details = grounding.get("line_details") or []
+    transformed_line_details = grounding.get("transformed_line_details") or []
+    key_lines: list[dict[str, Any]] = []
+    for item in line_details:
+        if item.get("change_mark") or item.get("shi_ying") or item.get("hidden_spirit"):
+            key_lines.append(
+                {
+                    "position": item.get("position"),
+                    "relation": item.get("relation"),
+                    "six_spirit": item.get("six_spirit"),
+                    "stem_branch": item.get("stem_branch"),
+                    "shi_ying": item.get("shi_ying"),
+                    "change_mark": item.get("change_mark"),
+                    "hidden_spirit": item.get("hidden_spirit"),
+                }
+            )
+    if not key_lines:
+        key_lines = [
+            {
+                "position": item.get("position"),
+                "relation": item.get("relation"),
+                "six_spirit": item.get("six_spirit"),
+                "stem_branch": item.get("stem_branch"),
+                "shi_ying": item.get("shi_ying"),
+                "change_mark": item.get("change_mark"),
+                "hidden_spirit": item.get("hidden_spirit"),
+            }
+            for item in line_details[:3]
+        ]
+    return {
+        "hexagram_name": _normalize_text((grounding.get("hexagram") or {}).get("name")),
+        "hexagram_tag": _normalize_text((grounding.get("hexagram") or {}).get("tag")),
+        "hexagram_palace": _normalize_text((grounding.get("hexagram") or {}).get("palace")),
+        "changing_lines": list((grounding.get("hexagram") or {}).get("changing_lines") or []),
+        "transformed_hexagram": (grounding.get("hexagram") or {}).get("transformed_hexagram") or {},
+        "key_lines": key_lines,
+        "transformed_key_lines": [
+            {
+                "position": item.get("position"),
+                "relation": item.get("relation"),
+                "six_spirit": item.get("six_spirit"),
+                "stem_branch": item.get("stem_branch"),
+                "shi_ying": item.get("shi_ying"),
+                "change_mark": item.get("change_mark"),
+            }
+            for item in transformed_line_details
+            if item.get("position") in {entry.get("position") for entry in key_lines}
+        ],
+    }
+
+
+def _build_relation_network_summary(grounding: dict[str, Any]) -> dict[str, Any]:
+    line_details = grounding.get("line_details") or []
+    moving_lines = [
+        item for item in line_details if _normalize_text(item.get("change_mark"))
+    ]
+    shi_line = next((item for item in line_details if _normalize_text(item.get("shi_ying")) == "世"), {})
+    ying_line = next((item for item in line_details if _normalize_text(item.get("shi_ying")) == "应"), {})
+    return {
+        "moving_line_count": len(moving_lines),
+        "moving_line_positions": [item.get("position") for item in moving_lines],
+        "shi_line": {
+            "position": shi_line.get("position"),
+            "relation": shi_line.get("relation"),
+            "stem_branch": shi_line.get("stem_branch"),
+            "six_spirit": shi_line.get("six_spirit"),
+        },
+        "ying_line": {
+            "position": ying_line.get("position"),
+            "relation": ying_line.get("relation"),
+            "stem_branch": ying_line.get("stem_branch"),
+            "six_spirit": ying_line.get("six_spirit"),
+        },
+        "network_focus": [
+            "先看动爻牵动哪些位置与六亲关系。",
+            "再看世应是否形成主导互动。",
+            "最后看变卦是否强化或反转当前主线。",
+        ],
+    }
+
+
+def _build_core_conflict_summary(grounding: dict[str, Any]) -> dict[str, Any]:
+    line_details = grounding.get("line_details") or []
+    moving_lines = [
+        {
+            "position": item.get("position"),
+            "relation": item.get("relation"),
+            "stem_branch": item.get("stem_branch"),
+            "six_spirit": item.get("six_spirit"),
+            "change_mark": item.get("change_mark"),
+            "shi_ying": item.get("shi_ying"),
+        }
+        for item in line_details
+        if _normalize_text(item.get("change_mark"))
+    ]
+    if not moving_lines:
+        moving_lines = [
+            {
+                "position": item.get("position"),
+                "relation": item.get("relation"),
+                "stem_branch": item.get("stem_branch"),
+                "six_spirit": item.get("six_spirit"),
+                "change_mark": item.get("change_mark"),
+                "shi_ying": item.get("shi_ying"),
+            }
+            for item in line_details[:2]
+        ]
+    return {
+        "dominant_conflicts": moving_lines,
+        "instruction": "先从动爻、世应、变卦里提取主导矛盾，不要把所有关系一股脑平铺出来。",
+    }
+
+
+def _build_time_evolution_summary(grounding: dict[str, Any]) -> dict[str, Any]:
+    time_context = grounding.get("time_context", {}) or {}
+    changing_lines = list((grounding.get("hexagram") or {}).get("changing_lines") or [])
+    return {
+        "cast_time": {
+            "day_label": _normalize_text(time_context.get("day_label")),
+            "ganzhi_line": _normalize_text(time_context.get("ganzhi_line")),
+        },
+        "phase_hints": [
+            "先以起卦时点为零点，不要脱离这个时间坐标。",
+            "有动爻时要把变化趋势放进时间线里看。",
+            "如果用户追问某天、某节气、某前后窗口，再把该时间点作为额外变量代入。",
+        ],
+        "changing_lines": changing_lines,
+    }
+
+
 def _format_how_to_do_research_context(research: dict[str, Any] | None) -> str:
     if not isinstance(research, dict):
         return ""
@@ -610,8 +741,30 @@ def _build_interpretation_protocol(
     time_context = grounding.get("time_context", {}) or {}
     hexagram = grounding.get("hexagram", {}) or {}
     return {
+        "framework_name": "符号解析 -> 关系建模 -> 主线提取 -> 时间推演 -> 问题映射 -> 决策输出",
+        "framework_layers": {
+            "hexagram_native_layer": [
+                "先把卦象当成符号系统处理，不先急着断吉凶。",
+                "先做符号解析、关系建模、主线提取和时间推演。",
+                "先理解卦本身怎么动，再映射到用户问题。",
+            ],
+            "question_mapping_layer": [
+                "识别用户问的到底是什么问题。",
+                "先定义什么对用户是利，什么对用户是害。",
+                "最后才把卦势映射成结论、风险和建议。",
+            ],
+        },
         "question_type": question_type["type"],
         "question_focus": question_type["focus"],
+        "problem_definition": {
+            "core_question": _normalize_text(question),
+            "category": _normalize_text(category),
+            "instruction": "先锁定用户真正想问的结果，再建立利弊判断标准。",
+        },
+        "symbol_parsing": _build_symbol_snapshot(grounding),
+        "relation_modeling": _build_relation_network_summary(grounding),
+        "core_conflict_extraction": _build_core_conflict_summary(grounding),
+        "time_evolution": _build_time_evolution_summary(grounding),
         "time_alignment": {
             "must_follow_cast_time": True,
             "day_label": _normalize_text(time_context.get("day_label")),
@@ -619,15 +772,16 @@ def _build_interpretation_protocol(
             "instruction": "先按起卦时间对应的日辰、月令、节气判断，不要自行改用别的日期。",
         },
         "analysis_steps": [
-            "先确认用户问的到底是哪一类事，以及对用户来说什么是利、什么是害。",
+            "第一步先做卦象本体层分析：符号解析、关系建模、主线提取、时间推演。",
+            "第二步再做问题映射层分析：识别问题类型，定义利弊标准，再映射结论。",
             "只围绕本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空、神煞做判断。",
-            "单独讲清楚日辰/月令对关键爻的助力或牵制。",
             "从盘里挑最关键的3到4组关系展开，不要把满盘信息平铺给用户。",
-            "最后必须落到操作建议和风险提醒。",
+            "最后必须落到操作建议、风险提醒和边界说明。",
         ],
         "answer_shape": [
             "核心结论",
             "关键互动分析",
+            "时间推演 / 阶段特征",
             "实际意义 / 怎么应对",
             "风险提醒 / 安一句心",
         ],
@@ -1322,11 +1476,13 @@ async def _interpret_with_llm(
     system_prompt = (
         "你是 Tokendancer 的六爻解卦师。"
         "所有判断都必须只依据眼前这张卦盘，不许脱离卦象给通用建议，不许编造盘里没有的信息。"
+        "解读时要先完成卦象本体层分析：符号解析、关系建模、主线提取、时间推演；再进入问题映射层：定义利弊标准、映射到用户问题、给出决策。"
         "解读时要从本卦、动爻、变卦、六神、六亲、世应、卦宫、六合六冲、旬空与神煞这些已提供的信息出发，抓最关键的关系来判断。"
         "语气要像真正解卦的人，沉稳、安抚、有人味，哪怕结果不理想，也先安人心，再落判断。"
         "不要输出 markdown，不要出现 **、#、表格代码块、系统解释或'作为AI'。"
         "先按起卦时间对应的日辰、月令、节气来解，不要自己改日期。"
-        "输出结构固定为四段：核心结论、关键互动分析、实际意义、风险提醒。"
+        "不要直接把卦等同于吉凶，要先理解卦本身的动力学机制，再解释它对用户问题意味着什么。"
+        "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
         "每段都用人话写，不要长篇铺陈，但要让人看得出判断确实从卦里来。"
     )
     user_prompt = json.dumps(
@@ -1387,11 +1543,12 @@ async def _chat_with_llm(
         "你是 Tokendancer 的六爻续断解卦师。"
         "这段对话已经绑定到同一卦、同一件事，后续回答只允许围绕当前这卦和原问题延伸，不能被聊天带偏。"
         "如果用户追问超出本卦可覆盖的范围，你要温和收回到本卦，只就这件事继续断，不把新话题当成新卦处理。"
+        "续断时也要先完成卦象本体层分析，再做问题映射，不要跳过结构分析直接给结论。"
         "回答必须以当前卦盘为根：本卦、动爻、变卦、六神、六亲、世应、六合六冲、旬空与神煞，择要而断。"
         "语气要像经验老到的解卦师，稳、软、安抚，不说系统话，不给泛泛心理建议。"
         "不要输出 markdown，不要出现 **、#、代码块、系统解释。"
         "先按这一卦对应的起卦时间和盘面继续断，不要擅自改时间。"
-        "输出结构固定为四段：核心结论、关键互动分析、实际意义、风险提醒。"
+        "输出结构固定为五段：核心结论、关键互动分析、时间推演、实际意义、风险提醒。"
     )
     trimmed_history = [
         {
