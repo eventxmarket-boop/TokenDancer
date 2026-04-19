@@ -1164,9 +1164,9 @@ onMounted(() => {
 
 .reply-composer {
   display: grid;
-  gap: 0.72rem;
+  gap: 0.62rem;
   flex: 0 0 auto;
-  padding: 0.9rem;
+  padding: 0.78rem;
   border: 1px solid rgba(127, 140, 172, 0.16);
   border-radius: 22px;
   background: rgba(252, 253, 255, 0.96);
@@ -1179,7 +1179,7 @@ onMounted(() => {
 .reply-composer__footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.45rem;
   align-items: center;
 }
 
@@ -1208,8 +1208,8 @@ onMounted(() => {
 
 .reply-select {
   display: grid;
-  gap: 0.35rem;
-  min-width: 152px;
+  gap: 0.3rem;
+  min-width: 140px;
   flex: 1 1 160px;
 }
 
@@ -1222,17 +1222,17 @@ onMounted(() => {
 
 .reply-lock-tip {
   margin: 0;
-  padding: 0.65rem 0.8rem;
+  padding: 0.58rem 0.76rem;
   border-radius: 16px;
   background: rgba(255, 159, 138, 0.12);
   border: 1px solid rgba(255, 159, 138, 0.18);
   color: var(--text);
   font-size: 0.85rem;
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .field-input--compact {
-  min-height: 42px;
+  min-height: 40px;
   font-size: 0.92rem;
 }
 
@@ -1242,10 +1242,10 @@ onMounted(() => {
 }
 
 .reply-input__textarea {
-  min-height: 98px;
-  resize: vertical;
+  min-height: 82px;
+  resize: none;
   font-size: 0.93rem;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .reply-composer__footer {
@@ -1258,8 +1258,8 @@ onMounted(() => {
 
 .reply-drawer {
   display: grid;
-  gap: 0.8rem;
-  padding: 0.85rem;
+  gap: 0.72rem;
+  padding: 0.78rem;
   border-radius: 20px;
   background: rgba(244, 246, 250, 0.94);
   border: 1px solid rgba(127, 140, 172, 0.14);
@@ -1267,13 +1267,15 @@ onMounted(() => {
 
 .reply-drawer__grid {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.7rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .reply-drawer__textarea {
-  min-height: 76px;
+  min-height: 64px;
   font-size: 0.94rem;
+  line-height: 1.45;
+  resize: none;
 }
 
 .reply-drawer--advanced .reply-drawer__grid {
@@ -1349,6 +1351,7 @@ onMounted(() => {
 
   .reply-composer {
     position: static;
+    padding: 0.72rem;
   }
 
   .reply-composer__attachments-row {

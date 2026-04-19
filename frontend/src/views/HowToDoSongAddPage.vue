@@ -87,10 +87,10 @@ onMounted(loadNotes)
 .field-label {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.38rem;
   font-size: 0.9rem;
   color: var(--text-secondary);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.7rem;
 }
 
 .field-input,
@@ -100,21 +100,22 @@ onMounted(loadNotes)
   border-radius: 16px;
   background: color-mix(in srgb, var(--card-bg) 92%, transparent);
   color: var(--text-primary);
-  padding: 0.8rem 0.95rem;
-  font-size: 0.96rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.94rem;
   outline: none;
 }
 
 .text-area {
-  resize: vertical;
-  min-height: 120px;
+  resize: none;
+  min-height: 76px;
+  line-height: 1.5;
 }
 
 .how-to-do-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
   flex-wrap: wrap;
 }
 

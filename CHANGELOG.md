@@ -1,3 +1,9 @@
+## V1.4.136 - 2026-04-19
+
+- Tightened every input-facing UI toward a mainstream AI-chat density by lowering shared control heights, trimming composer padding, and reducing the default visual heft of buttons, selects, and textareas.
+- Added textarea autosizing so long text wraps and expands naturally instead of starting with overly tall fixed boxes, while keeping the input shells compact on mobile and desktop.
+- Applied the same input-density cleanup to `我该怎么回`, `我该怎么做`, the create wizard, and the song-note input so the whole product feels more consistent at the point of typing.
+
 ## V1.4.135 - 2026-04-19
 
 - Added login-time cross-device hydration for persona data so Seed favorites, `我该怎么回` history, and `我该怎么做` history now sync from local cache into the signed-in account as soon as the user logs in or auth is restored.

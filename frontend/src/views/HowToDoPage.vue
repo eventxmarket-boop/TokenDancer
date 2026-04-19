@@ -892,8 +892,8 @@ onMounted(() => {
 
 .howtodo-composer {
   display: grid;
-  gap: 0.9rem;
-  padding: 0.95rem;
+  gap: 0.75rem;
+  padding: 0.82rem;
   border: 1px solid rgba(127, 140, 172, 0.16);
   border-radius: 24px;
   background: rgba(252, 253, 255, 0.96);
@@ -911,10 +911,10 @@ onMounted(() => {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0.16rem;
   border: 1px solid rgba(127, 140, 172, 0.18);
   border-radius: 999px;
-  padding: 0.5rem 0.85rem;
+  padding: 0.45rem 0.78rem;
   background: #fff;
   font-weight: 700;
   color: var(--text-primary, var(--text));
@@ -932,14 +932,14 @@ onMounted(() => {
 }
 
 .reply-chip strong {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 800;
   line-height: 1.25;
 }
 
 .reply-input {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.38rem;
 }
 
 .reply-input__label {
@@ -949,20 +949,20 @@ onMounted(() => {
 }
 
 .reply-input__textarea {
-  min-height: 104px;
-  resize: vertical;
+  min-height: 78px;
+  resize: none;
 }
 
 .howtodo-composer__actions {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
 }
 
 .howtodo-assembly {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.7rem;
 }
 
 .howtodo-picker-sheet {
@@ -974,7 +974,7 @@ onMounted(() => {
   transform: translateX(-50%);
   display: grid;
   gap: 0.8rem;
-  padding: 0.95rem;
+  padding: 0.84rem;
   border: 1px solid rgba(127, 140, 172, 0.16);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.98);
@@ -982,7 +982,7 @@ onMounted(() => {
 }
 
 .howtodo-picker-sheet--large {
-  gap: 0.9rem;
+  gap: 0.8rem;
 }
 
 .howtodo-picker-sheet__head {
@@ -994,7 +994,7 @@ onMounted(() => {
 
 .howtodo-picker-sheet__head h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .howtodo-picker-sheet__actions {
@@ -1004,13 +1004,13 @@ onMounted(() => {
 
 .howtodo-picker-list {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.52rem;
 }
 
 .howtodo-picker-option {
   display: grid;
-  gap: 0.25rem;
-  padding: 0.8rem 0.9rem;
+  gap: 0.2rem;
+  padding: 0.72rem 0.84rem;
   border-radius: 18px;
   border: 1px solid rgba(127, 140, 172, 0.16);
   background: rgba(248, 250, 252, 0.94);
@@ -1019,12 +1019,12 @@ onMounted(() => {
 }
 
 .howtodo-picker-option strong {
-  font-size: 0.95rem;
+  font-size: 0.93rem;
 }
 
 .howtodo-picker-option span {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .howtodo-picker-option--active {
@@ -1035,13 +1035,13 @@ onMounted(() => {
 .howtodo-category-picker {
   display: grid;
   grid-template-columns: minmax(128px, 0.9fr) minmax(0, 1.4fr);
-  gap: 0.85rem;
+  gap: 0.72rem;
 }
 
 .howtodo-category-groups,
 .howtodo-category-items {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.48rem;
 }
 
 .howtodo-category-groups {
@@ -1051,7 +1051,7 @@ onMounted(() => {
 
 .howtodo-category-group,
 .howtodo-category-item {
-  padding: 0.72rem 0.8rem;
+  padding: 0.64rem 0.76rem;
   border-radius: 16px;
   border: 1px solid rgba(127, 140, 172, 0.16);
   background: rgba(248, 250, 252, 0.94);
@@ -1068,7 +1068,7 @@ onMounted(() => {
 
 .howtodo-time-picker {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .how-to-do-page {
@@ -1080,10 +1080,10 @@ onMounted(() => {
 .field-label {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.38rem;
   font-size: 0.9rem;
   color: var(--text-secondary);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.7rem;
 }
 
 .field-input,
@@ -1093,28 +1093,28 @@ onMounted(() => {
   border-radius: 16px;
   background: color-mix(in srgb, var(--card-bg) 92%, transparent);
   color: var(--text-primary);
-  padding: 0.8rem 0.95rem;
-  font-size: 0.96rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.94rem;
   outline: none;
 }
 
 .text-area {
-  resize: vertical;
-  min-height: 120px;
+  resize: none;
+  min-height: 76px;
 }
 
 .manual-input-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.62rem;
 }
 
 .online-cast-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.25rem;
+  gap: 0.65rem;
+  margin-bottom: 0.15rem;
 }
 
 .online-cast-toolbar__button {
@@ -1124,7 +1124,7 @@ onMounted(() => {
 
 .online-cast-toolbar__status {
   color: var(--text-secondary);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .manual-input-item {
@@ -1146,12 +1146,12 @@ onMounted(() => {
 .manual-input-item__row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .manual-input-item__row--result {
   justify-content: space-between;
-  padding: 0.8rem 0.95rem;
+  padding: 0.68rem 0.82rem;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
   background: color-mix(in srgb, var(--card-bg) 92%, transparent);
@@ -1162,7 +1162,7 @@ onMounted(() => {
 }
 
 .manual-input-item__trigger {
-  padding: 0.45rem 0.8rem;
+  padding: 0.38rem 0.72rem;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -1170,20 +1170,20 @@ onMounted(() => {
 .manual-input-item__option {
   flex: 1;
   color: var(--text-primary);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .manual-input-item__bars {
   min-width: 3rem;
-  font-size: 1rem;
+  font-size: 0.96rem;
   letter-spacing: 0.08em;
   color: var(--text-primary);
 }
 
 .how-to-do-note {
   margin: 0 0 0.9rem;
-  font-size: 0.88rem;
-  line-height: 1.6;
+  font-size: 0.86rem;
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
@@ -1332,13 +1332,14 @@ onMounted(() => {
 .howtodo-chat-composer {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.62rem;
 }
 
 .howtodo-chat-composer__input {
-  min-height: 92px;
-  font-size: 0.93rem;
-  line-height: 1.6;
+  min-height: 78px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: none;
 }
 
 .liuyao-result-meta {

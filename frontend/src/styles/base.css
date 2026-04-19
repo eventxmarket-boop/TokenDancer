@@ -2,8 +2,8 @@
   color-scheme: light;
   --page-gutter: 16px;
   --page-gap: 18px;
-  --control-height: 46px;
-  --control-radius: 20px;
+  --control-height: 42px;
+  --control-radius: 18px;
   --font-sans:
     "Avenir Next",
     "PingFang SC",
@@ -884,13 +884,13 @@ html[data-theme='night'] .my-entry-card {
 .field-input {
   width: 100%;
   min-height: var(--control-height);
-  padding: 13px 14px;
+  padding: 10px 13px;
   border-radius: var(--control-radius);
   border: 1px solid rgba(184, 143, 118, 0.22);
   background: rgba(255, 255, 255, 0.9);
   color: var(--text);
   outline: none;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .field-input::placeholder,
@@ -905,8 +905,8 @@ html[data-theme='night'] .my-entry-card {
 }
 
 input[type='file'].field-input {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  padding-top: 9px;
+  padding-bottom: 9px;
   cursor: pointer;
 }
 
@@ -1091,7 +1091,9 @@ input[type='file'].field-input::-webkit-file-upload-button {
 .secondary-btn,
 .ghost-btn,
 .chip-btn {
-  padding: 12px 18px;
+  min-height: var(--control-height);
+  padding: 10px 16px;
+  line-height: 1.2;
 }
 
 .primary-btn {
@@ -1743,15 +1745,15 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
 
 .chat-composer textarea {
   width: 100%;
-  min-height: 120px;
-  padding: 16px;
-  resize: vertical;
+  min-height: 86px;
+  padding: 11px 13px;
+  resize: none;
   border-radius: 22px;
   border: 1px solid rgba(184, 143, 118, 0.22);
   background: rgba(255, 255, 255, 0.88);
   color: var(--text);
   outline: none;
-  line-height: 1.75;
+  line-height: 1.5;
 }
 
 .chat-composer textarea:focus {
@@ -2194,8 +2196,8 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
 }
 
 .wizard-textarea {
-  min-height: 120px;
-  resize: vertical;
+  min-height: 88px;
+  resize: none;
 }
 
 .wizard-review {
@@ -2939,13 +2941,13 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
   }
 
   .field-input {
-    min-height: 48px;
-    padding: 13px 14px;
+    min-height: 44px;
+    padding: 10px 12px;
     border-radius: 18px;
   }
 
   .wizard-textarea {
-    min-height: 104px;
+    min-height: 84px;
   }
 
   .tag-row,
@@ -3011,8 +3013,8 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
   }
 
   .chat-composer textarea {
-    min-height: 108px;
-    padding: 14px;
+    min-height: 84px;
+    padding: 11px 12px;
   }
 
   .chat-panel {
