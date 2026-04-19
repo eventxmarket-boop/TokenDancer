@@ -21,7 +21,7 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const catalog = ref<CreateCatalogResponse | null>(null)
-const expandedSection = ref<MainPathKey | null>('self')
+const expandedSection = ref<MainPathKey>('self')
 
 const mainPathSections: MainPathSection[] = [
   {
@@ -302,14 +302,12 @@ function canOpenWizard(item: CreateCatalogItem) {
   return Boolean(getWizardCreateTypeForItem(item))
 }
 
-function toggleSection(sectionKey: MainPathKey) {
-  expandedSection.value = expandedSection.value === sectionKey ? null : sectionKey
-}
+const activeSection = computed(() => {
+  return sectionViews.value.find((section) => section.key === expandedSection.value) || sectionViews.value[0] || null
+})
 
-function collapseSection(sectionKey: MainPathKey) {
-  if (expandedSection.value === sectionKey) {
-    expandedSection.value = null
-  }
+function selectSection(sectionKey: MainPathKey) {
+  expandedSection.value = sectionKey
 }
 
 function getDisplayLabel(value: string) {
@@ -402,97 +400,100 @@ onMounted(() => {
       <button class="primary-btn" type="button" @click="loadCatalog">重试</button>
     </div>
 
-    <div v-else class="create-accordion">
-      <article
-        v-for="section in sectionViews"
-        :key="section.key"
-        class="create-accordion__section"
-        :class="{ active: expandedSection === section.key }"
-      >
-        <button class="create-accordion__trigger" type="button" @click="toggleSection(section.key)">
+    <div v-else class="create-path-switcher">
+      <div class="create-path-tabs" role="tablist" aria-label="创建路径">
+        <button
+          v-for="section in sectionViews"
+          :key="section.key"
+          class="create-path-tab"
+          :class="{ active: expandedSection === section.key }"
+          type="button"
+          role="tab"
+          :aria-selected="expandedSection === section.key"
+          @click="selectSection(section.key)"
+        >
+          <span class="create-path-tab__title">{{ section.title }}</span>
+          <span class="create-path-tab__count">{{ section.itemCount }} 个入口</span>
+        </button>
+      </div>
+
+      <article v-if="activeSection" class="create-path-panel">
+        <div class="create-path-panel__head">
           <div>
             <p class="eyebrow">主路径</p>
-            <h3>{{ section.title }}</h3>
-            <p class="section-note">{{ section.description }}</p>
+            <h3>{{ activeSection.title }}</h3>
+            <p class="section-note">{{ activeSection.description }}</p>
           </div>
-          <span class="status-pill">{{ section.itemCount }} 个入口</span>
-        </button>
+        </div>
 
-        <transition name="accordion-slide">
-          <div v-if="expandedSection === section.key" class="create-accordion__panel">
-            <div class="create-accordion__panel-head">
-              <button class="secondary-btn" type="button" @click="collapseSection(section.key)">收起</button>
+        <div v-for="group in activeSection.groups" :key="group.group" class="create-subgroup">
+          <div v-if="activeSection.key !== 'self'" class="create-subgroup__head">
+            <div>
+              <p class="eyebrow">{{ group.label }}</p>
+              <h4>{{ group.label }}</h4>
             </div>
-            <div v-for="group in section.groups" :key="group.group" class="create-subgroup">
-              <div v-if="section.key !== 'self'" class="create-subgroup__head">
+            <span class="status-pill">{{ group.items.length }} 个入口</span>
+          </div>
+
+          <p v-if="activeSection.key !== 'self'" class="section-note">{{ group.description }}</p>
+
+          <div class="create-card-grid">
+            <article v-if="activeSection.key === 'self'" class="create-card create-card--compact create-card--single">
+              <div class="create-card__head">
                 <div>
-                  <p class="eyebrow">{{ group.label }}</p>
-                  <h4>{{ group.label }}</h4>
+                  <h4>开始创建</h4>
                 </div>
-                <span class="status-pill">{{ group.items.length }} 个入口</span>
               </div>
 
-              <p v-if="section.key !== 'self'" class="section-note">{{ group.description }}</p>
+              <p class="create-card__copy">从做事方式、表达习惯、思考路径和生活痕迹中，创建一个更完整的自己。</p>
 
-              <div class="create-card-grid">
-                <article v-if="section.key === 'self'" class="create-card create-card--compact create-card--single">
-                  <div class="create-card__head">
-                    <div>
-                      <h4>开始创建</h4>
-                    </div>
-                  </div>
+              <div class="tag-row">
+                <span v-for="mode in getSectionPrimaryItem(activeSection)?.input_modes || []" :key="mode" class="tag-chip">
+                  {{ getDisplayLabel(mode) }}
+                </span>
+              </div>
 
-                  <p class="create-card__copy">从做事方式、表达习惯、思考路径和生活痕迹中，创建一个更完整的自己。</p>
+              <div class="create-card__actions">
+                <button v-if="getSectionPrimaryItem(activeSection)" class="primary-btn" type="button" @click="startSectionCreation(activeSection)">
+                  开始创建
+                </button>
+              </div>
+            </article>
 
-                  <div class="tag-row">
-                    <span v-for="mode in getSectionPrimaryItem(section)?.input_modes || []" :key="mode" class="tag-chip">
-                      {{ getDisplayLabel(mode) }}
-                    </span>
-                  </div>
+            <article
+              v-for="item in activeSection.key === 'self' ? [] : group.items"
+              :key="item.slug"
+              class="create-card create-card--compact"
+            >
+              <div class="create-card__head">
+                <div>
+                  <p v-if="activeSection.key !== 'self'" class="persona-category">{{ group.label }}</p>
+                  <h4>{{ item.name }}</h4>
+                </div>
+              </div>
 
-                  <div class="create-card__actions">
-                    <button v-if="getSectionPrimaryItem(section)" class="primary-btn" type="button" @click="startSectionCreation(section)">
-                      开始创建
-                    </button>
-                  </div>
-                </article>
+              <p class="create-card__copy">{{ item.description }}</p>
 
-                <article
-                  v-for="item in section.key === 'self' ? [] : group.items"
-                  :key="item.slug"
-                  class="create-card create-card--compact"
+              <div class="tag-row">
+                <span v-for="tag in getCardTags(item)" :key="tag" class="tag-chip">
+                  {{ tag }}
+                </span>
+              </div>
+
+              <div class="create-card__actions">
+                <button
+                  v-if="canOpenWizard(item)"
+                  class="primary-btn"
+                  type="button"
+                  @click="startCreation(item)"
                 >
-                  <div class="create-card__head">
-                    <div>
-                      <p v-if="section.key !== 'self'" class="persona-category">{{ group.label }}</p>
-                      <h4>{{ item.name }}</h4>
-                    </div>
-                  </div>
-
-                  <p class="create-card__copy">{{ item.description }}</p>
-
-                  <div class="tag-row">
-                    <span v-for="tag in getCardTags(item)" :key="tag" class="tag-chip">
-                      {{ tag }}
-                    </span>
-                  </div>
-
-                  <div class="create-card__actions">
-                    <button
-                      v-if="canOpenWizard(item)"
-                      class="primary-btn"
-                      type="button"
-                      @click="startCreation(item)"
-                    >
-                      开始创建
-                    </button>
-                    <span v-else class="status-pill">更多方式</span>
-                  </div>
-                </article>
+                  开始创建
+                </button>
+                <span v-else class="status-pill">更多方式</span>
               </div>
-            </div>
+            </article>
           </div>
-        </transition>
+        </div>
       </article>
     </div>
   </section>

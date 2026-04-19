@@ -1,3 +1,9 @@
+## V1.4.140 - 2026-04-19
+
+- Reworked the `Create` landing page into a horizontal main-path switcher so the five primary routes now sit in a single row and only the selected path is shown at once.
+- Kept the existing create-path content intact while removing the old stacked accordion feel, making the page read more like a focused selector than a long scroll of sections.
+- Preserved the underlying create routing and catalog mapping so the UI change stays shallow and reversible.
+
 ## V1.4.139 - 2026-04-19
 
 - Integrated `ex-skill` into the intimate-relationship creation flow and renamed the user-facing intimate path from `关系经营 / 自我镜像` toward `前任` so the create catalog, wizard, and saved-persona summaries now use a more direct product label.
