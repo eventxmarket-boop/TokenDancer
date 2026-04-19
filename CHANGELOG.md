@@ -1,3 +1,8 @@
+## V1.4.137 - 2026-04-19
+
+- Removed the standalone `歌诀` page because it had no live route or navigation entry; the only remaining divination-facing content still lives inside `我该怎么做` and its related result/history flows.
+- Kept `我该怎么做` focused on its actual runtime surface: `起卦方式`, `分类`, `时间`, 起卦输入, 连续对话, 历史, 收藏, and hexagram detail viewing.
+
 ## V1.4.136 - 2026-04-19
 
 - Tightened every input-facing UI toward a mainstream AI-chat density by lowering shared control heights, trimming composer padding, and reducing the default visual heft of buttons, selects, and textareas.
