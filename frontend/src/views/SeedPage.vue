@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { loadSeedPersonas, type Persona } from '@/services/personaService'
-import { getFavoriteScopeKey, getFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
+import { getFavoriteScopeKey, getFavoriteSlugs, loadFavoriteSlugs, toggleFavoriteSlug } from '@/services/favoriteService'
 import { authUser } from '@/stores/auth'
 
 const loading = ref(true)
@@ -28,8 +28,8 @@ const displayLabelMap: Record<string, string> = {
   relationship_family: '家人陪伴',
 }
 
-const refreshFavorites = () => {
-  favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
+const refreshFavorites = async () => {
+  favoriteSlugs.value = await loadFavoriteSlugs(favoriteScopeKey.value)
 }
 
 const loadSeeds = async () => {
@@ -98,17 +98,18 @@ const toggleFeaturedPreview = async () => {
   }
 }
 
-const toggleFavorite = (slug: string) => {
-  toggleFavoriteSlug(slug, favoriteScopeKey.value)
-  refreshFavorites()
+const toggleFavorite = async (slug: string) => {
+  await toggleFavoriteSlug(slug, favoriteScopeKey.value)
+  void refreshFavorites()
 }
 
 onMounted(() => {
   void loadSeeds()
+  void refreshFavorites()
 })
 
 watch(favoriteScopeKey, () => {
-  refreshFavorites()
+  void refreshFavorites()
 })
 </script>
 

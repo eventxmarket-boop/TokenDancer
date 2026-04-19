@@ -5,12 +5,14 @@ import { getFavoriteScopeKey } from '@/services/favoriteService'
 import {
   clearFavoriteSlugs,
   getFavoriteSlugs,
+  loadFavoriteSlugs,
   toggleFavoriteSlug,
 } from '@/services/favoriteService'
 import { authUser } from '@/stores/auth'
 import {
   clearFavoriteHowToDoHistoryRecords,
   listFavoriteHowToDoHistoryRecords,
+  loadHowToDoHistoryRecords,
   type HowToDoHistoryRecord,
 } from '@/services/howToDoHistoryService'
 
@@ -21,8 +23,9 @@ const favoriteHexagrams = ref<HowToDoHistoryRecord[]>([])
 const favoriteScopeKey = computed(() => getFavoriteScopeKey(authUser.value?.id ?? null))
 const favoriteSlugs = ref<string[]>(getFavoriteSlugs(favoriteScopeKey.value))
 
-const refreshFavorites = () => {
-  favoriteSlugs.value = getFavoriteSlugs(favoriteScopeKey.value)
+const refreshFavorites = async () => {
+  favoriteSlugs.value = await loadFavoriteSlugs(favoriteScopeKey.value)
+  await loadHowToDoHistoryRecords()
   favoriteHexagrams.value = listFavoriteHowToDoHistoryRecords()
 }
 
@@ -32,7 +35,7 @@ const load = async () => {
 
   try {
     personas.value = await listPersonas()
-    refreshFavorites()
+    await refreshFavorites()
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : '加载收藏人格失败'
     error.value = message
@@ -48,15 +51,15 @@ const favoritePersonas = computed(() =>
   personas.value.filter((persona) => favoriteSet.value.has(persona.slug)),
 )
 
-const toggleFavorite = (slug: string) => {
-  toggleFavoriteSlug(slug, favoriteScopeKey.value)
-  refreshFavorites()
+const toggleFavorite = async (slug: string) => {
+  await toggleFavoriteSlug(slug, favoriteScopeKey.value)
+  void refreshFavorites()
 }
 
-const clearFavorites = () => {
-  clearFavoriteSlugs(favoriteScopeKey.value)
-  clearFavoriteHowToDoHistoryRecords()
-  refreshFavorites()
+const clearFavorites = async () => {
+  await clearFavoriteSlugs(favoriteScopeKey.value)
+  await clearFavoriteHowToDoHistoryRecords()
+  await refreshFavorites()
 }
 
 const groups = computed(() => {
@@ -79,7 +82,7 @@ onMounted(() => {
 })
 
 watch(favoriteScopeKey, () => {
-  refreshFavorites()
+  void refreshFavorites()
 })
 </script>
 

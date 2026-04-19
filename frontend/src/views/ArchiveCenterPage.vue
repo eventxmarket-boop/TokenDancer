@@ -3,35 +3,23 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   listHowToDoHistoryRecords,
+  loadHowToDoHistoryRecords,
   toggleFavoriteHowToDoHistoryRecord,
   type HowToDoHistoryRecord,
 } from '@/services/howToDoHistoryService'
+import {
+  listReplyAssistantHistoryRecords,
+  toggleReplyAssistantPinnedRecord,
+  loadReplyAssistantHistoryRecords as loadReplyAssistantArchiveRecords,
+  type ReplyAssistantHistoryRecord,
+} from '@/services/replyAssistantArchiveService'
 
 type ArchiveKind = 'reply' | 'how-to-do'
 type ArchiveTab = 'history' | 'favorites'
-
-type ReplyArchiveTurn = {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-type ReplyArchiveHistoryRecord = {
-  id: string
-  title: string
-  pinned: boolean
-  createdAt: string
-  updatedAt: string
-  turns: ReplyArchiveTurn[]
-  form?: {
-    target_person_type?: string
-    scene_type?: string
-    target_goal?: string
-  }
-}
+type ReplyArchiveHistoryRecord = ReplyAssistantHistoryRecord
 
 const route = useRoute()
 const router = useRouter()
-const historyStorageKey = 'persona-reply-assistant-histories'
 
 const replyTargetLabels: Record<string, string> = {
   crush: '暧昧对象',
@@ -71,53 +59,28 @@ const activeTab = ref<ArchiveTab>('history')
 const replyRecords = ref<ReplyArchiveHistoryRecord[]>([])
 const howToDoRecords = ref<HowToDoHistoryRecord[]>([])
 
-function canUseStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+async function loadReplyArchiveRecords() {
+  replyRecords.value = listReplyAssistantHistoryRecords()
+  replyRecords.value = await loadReplyAssistantArchiveRecords()
 }
 
-function parseReplyArchiveRecords(raw: string | null): ReplyArchiveHistoryRecord[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((item): item is ReplyArchiveHistoryRecord => {
-      return Boolean(item && typeof item === 'object' && 'id' in item && 'title' in item)
-    })
-  } catch {
-    return []
-  }
-}
-
-function loadReplyArchiveRecords() {
-  if (!canUseStorage()) {
-    replyRecords.value = []
-    return
-  }
-  const raw = window.localStorage.getItem(historyStorageKey)
-  replyRecords.value = parseReplyArchiveRecords(raw).sort((left, right) => {
-    if (left.pinned !== right.pinned) {
-      return left.pinned ? -1 : 1
-    }
-    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-  })
-}
-
-function loadHowToDoArchiveRecords() {
+async function loadHowToDoArchiveRecords() {
   howToDoRecords.value = listHowToDoHistoryRecords()
+  howToDoRecords.value = await loadHowToDoHistoryRecords()
 }
 
-function refreshRecords() {
+async function refreshRecords() {
   if (archiveKind.value === 'reply') {
-    loadReplyArchiveRecords()
+    await loadReplyArchiveRecords()
   } else {
-    loadHowToDoArchiveRecords()
+    await loadHowToDoArchiveRecords()
   }
 }
 
 const activeHistoryRecords = computed(() => {
   const source = archiveKind.value === 'reply' ? replyRecords.value : howToDoRecords.value
   if (activeTab.value === 'favorites') {
-    return source.filter((item) => Boolean((item as ReplyArchiveHistoryRecord).pinned ?? (item as HowToDoHistoryRecord).favorite))
+    return source.filter((item) => Boolean((item as ReplyAssistantHistoryRecord).pinned ?? (item as HowToDoHistoryRecord).favorite))
   }
   return source
 })
@@ -166,22 +129,15 @@ function openRecord(record: ReplyArchiveHistoryRecord | HowToDoHistoryRecord) {
 
 function toggleRecordFavorite(record: ReplyArchiveHistoryRecord | HowToDoHistoryRecord) {
   if (archiveKind.value === 'reply') {
-    const records = parseReplyArchiveRecords(window.localStorage.getItem(historyStorageKey))
-    const next = records.map((item) => {
-      if (item.id !== record.id) return item
-      return {
-        ...item,
-        pinned: !item.pinned,
-        updatedAt: new Date().toISOString(),
-      }
-    })
-    window.localStorage.setItem(historyStorageKey, JSON.stringify(next))
-    loadReplyArchiveRecords()
+    const toggled = toggleReplyAssistantPinnedRecord(record.id)
+    if (toggled) {
+      void loadReplyArchiveRecords()
+    }
     return
   }
 
   toggleFavoriteHowToDoHistoryRecord(record.id)
-  loadHowToDoArchiveRecords()
+  void loadHowToDoArchiveRecords()
 }
 
 function goBack() {
@@ -202,13 +158,13 @@ function setTab(tab: ArchiveTab) {
 onMounted(() => {
   const nextTab = route.query.tab === 'favorites' ? 'favorites' : 'history'
   activeTab.value = nextTab
-  refreshRecords()
+  void refreshRecords()
 })
 
 watch(
   () => route.params.kind,
   () => {
-    refreshRecords()
+    void refreshRecords()
   },
 )
 

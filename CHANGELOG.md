@@ -1,3 +1,8 @@
+## V1.4.135 - 2026-04-19
+
+- Added login-time cross-device hydration for persona data so Seed favorites, `我该怎么回` history, and `我该怎么做` history now sync from local cache into the signed-in account as soon as the user logs in or auth is restored.
+- Kept the existing local fallback behavior intact, but made the account-scoped remote archive the shared source of truth once a user session exists.
+
 ## V1.4.134 - 2026-04-19
 
 - Unified the reply-style chat pages into fixed-height H5-friendly shells so output and input now live inside an internal scroll area instead of making the whole page grow vertically.

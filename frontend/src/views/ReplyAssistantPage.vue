@@ -2,6 +2,14 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { requestReplyAssistant, type ReplyAssistantResponse } from '@/services/replyAssistantService'
+import {
+  loadReplyAssistantCurrentHistoryId,
+  loadReplyAssistantHistoryRecords,
+  listReplyAssistantHistoryRecords,
+  saveReplyAssistantCurrentHistoryId,
+  toggleReplyAssistantPinnedRecord,
+  upsertReplyAssistantHistoryRecord,
+} from '@/services/replyAssistantArchiveService'
 import type {
   TextMaterialDocument,
   UniversalCreateWizardRawMaterials,
@@ -178,9 +186,6 @@ const attachmentSummary = computed(() => {
   return parts.join(' · ')
 })
 
-const historyStorageKey = 'persona-reply-assistant-histories'
-const currentHistoryStorageKey = 'persona-reply-assistant-current-history'
-
 const currentHistoryRecord = computed(
   () => histories.value.find((item) => item.id === activeHistoryId.value) ?? null,
 )
@@ -306,59 +311,11 @@ function normalizeHistoryRecord(record: ReplyAssistantHistoryRecord): ReplyAssis
   }
 }
 
-function loadHistories() {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  try {
-    const raw = window.localStorage.getItem(historyStorageKey)
-    if (!raw) {
-      histories.value = []
-      return
-    }
-    const parsed = JSON.parse(raw) as ReplyAssistantHistoryRecord[]
-    histories.value = Array.isArray(parsed) ? parsed.map(normalizeHistoryRecord) : []
-  } catch {
-    histories.value = []
-  }
-}
-
-function saveHistories() {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.localStorage.setItem(historyStorageKey, JSON.stringify(histories.value.slice(0, 20)))
-}
-
-function saveCurrentHistoryId(value: string) {
-  if (typeof window === 'undefined') {
-    return
-  }
-  if (value) {
-    window.localStorage.setItem(currentHistoryStorageKey, value)
-  } else {
-    window.localStorage.removeItem(currentHistoryStorageKey)
-  }
-}
-
-function loadCurrentHistoryId() {
-  if (typeof window === 'undefined') {
-    return ''
-  }
-  return window.localStorage.getItem(currentHistoryStorageKey) || ''
-}
-
 function syncCurrentHistory(record: ReplyAssistantHistoryRecord) {
-  const index = histories.value.findIndex((item) => item.id === record.id)
-  if (index >= 0) {
-    histories.value.splice(index, 1, record)
-  } else {
-    histories.value.unshift(record)
-  }
-  saveHistories()
+  histories.value = [record, ...histories.value.filter((item) => item.id !== record.id)].slice(0, 20)
+  upsertReplyAssistantHistoryRecord(record)
   activeHistoryId.value = record.id
-  saveCurrentHistoryId(record.id)
+  saveReplyAssistantCurrentHistoryId(record.id)
 }
 
 function updateHistoryById(
@@ -371,7 +328,7 @@ function updateHistoryById(
   }
   const next = updater(normalizeHistoryRecord(histories.value[index]))
   histories.value.splice(index, 1, next)
-  saveHistories()
+  upsertReplyAssistantHistoryRecord(next)
   return next
 }
 
@@ -425,7 +382,7 @@ function makeHistoryTitle() {
 
 function startNewConversation() {
   activeHistoryId.value = ''
-  saveCurrentHistoryId('')
+  saveReplyAssistantCurrentHistoryId('')
   menuOpen.value = false
   result.value = null
   error.value = ''
@@ -450,7 +407,7 @@ function startNewConversation() {
 
 function hydrateConversation(record: ReplyAssistantHistoryRecord) {
   activeHistoryId.value = record.id
-  saveCurrentHistoryId(record.id)
+  saveReplyAssistantCurrentHistoryId(record.id)
   form.message = record.form.message
   form.target_person_type = record.form.target_person_type
   form.scene_type = record.form.scene_type
@@ -479,11 +436,14 @@ function hydrateConversation(record: ReplyAssistantHistoryRecord) {
 }
 
 function togglePin(record: ReplyAssistantHistoryRecord) {
-  updateHistoryById(record.id, (current) => ({
-    ...current,
-    pinned: !current.pinned,
-    updatedAt: new Date().toISOString(),
-  }))
+  const toggled = toggleReplyAssistantPinnedRecord(record.id)
+  if (toggled) {
+    updateHistoryById(record.id, (current) => ({
+      ...current,
+      pinned: toggled.pinned,
+      updatedAt: toggled.updatedAt,
+    }))
+  }
 }
 
 function toggleCurrentConversationFavorite() {
@@ -757,20 +717,23 @@ async function generateReply(rewriteMode: RewriteMode | 'default' = 'default') {
 }
 
 onMounted(() => {
-  loadHistories()
-  const historyId = String(route.query.history || '').trim()
-  if (historyId && loadConversationById(historyId)) {
-    return
-  }
-
-  activeHistoryId.value = loadCurrentHistoryId()
-  if (activeHistoryId.value) {
-    const current = histories.value.find((item) => item.id === activeHistoryId.value)
-    if (current) {
-      hydrateConversation(current)
+  void (async () => {
+    histories.value = listReplyAssistantHistoryRecords() as ReplyAssistantHistoryRecord[]
+    histories.value = (await loadReplyAssistantHistoryRecords()) as ReplyAssistantHistoryRecord[]
+    const historyId = String(route.query.history || '').trim()
+    if (historyId && loadConversationById(historyId)) {
+      return
     }
-  }
-  void scrollReplyThreadToBottom()
+
+    activeHistoryId.value = loadReplyAssistantCurrentHistoryId()
+    if (activeHistoryId.value) {
+      const current = histories.value.find((item) => item.id === activeHistoryId.value)
+      if (current) {
+        hydrateConversation(current)
+      }
+    }
+    void scrollReplyThreadToBottom()
+  })()
 })
 </script>
 

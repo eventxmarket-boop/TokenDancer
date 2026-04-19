@@ -15,7 +15,9 @@ import {
   type LoginPayload,
   type RegisterPayload,
 } from '@/services/authService'
-import { migrateFavoriteSlugs } from '@/services/favoriteService'
+import { getFavoriteScopeKey, loadFavoriteSlugs, migrateFavoriteSlugs } from '@/services/favoriteService'
+import { loadHowToDoHistoryRecords } from '@/services/howToDoHistoryService'
+import { loadReplyAssistantHistoryRecords } from '@/services/replyAssistantArchiveService'
 
 const authToken = ref(getAuthToken())
 const currentUser = ref<AuthUser | null>(getAuthUser())
@@ -31,7 +33,21 @@ function applyAuthSession(response: AuthTokenResponse) {
     token: response.access_token,
     user: response.user,
   })
-  void migrateFavoriteSlugs('guest', `user:${response.user.id}`)
+}
+
+async function syncPersistedPersonaData(userId: number) {
+  const scopeKey = getFavoriteScopeKey(userId)
+  migrateFavoriteSlugs('guest', scopeKey)
+
+  try {
+    await Promise.all([
+      loadFavoriteSlugs(scopeKey),
+      loadHowToDoHistoryRecords(),
+      loadReplyAssistantHistoryRecords(),
+    ])
+  } catch {
+    // keep login usable even if background sync fails
+  }
 }
 
 export const isLoggedIn = computed(() => Boolean(authToken.value && currentUser.value))
@@ -60,7 +76,7 @@ export async function ensureAuthReady(force = false) {
       const user = await loadCurrentUser()
       currentUser.value = user
       setStoredAuthState({ token: stored.token, user })
-      void migrateFavoriteSlugs('guest', `user:${user.id}`)
+      await syncPersistedPersonaData(user.id)
     } catch {
       authToken.value = ''
       currentUser.value = null
@@ -78,12 +94,14 @@ export async function ensureAuthReady(force = false) {
 export async function loginWithAuth(payload: LoginPayload) {
   const response = await loginRequest(payload)
   applyAuthSession(response)
+  await syncPersistedPersonaData(response.user.id)
   return response
 }
 
 export async function registerWithAuth(payload: RegisterPayload) {
   const response = await registerRequest(payload)
   applyAuthSession(response)
+  await syncPersistedPersonaData(response.user.id)
   return response
 }
 

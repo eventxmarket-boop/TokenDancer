@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { requestHowToDo, type HowToDoChatMessage, type HowToDoResponse } from '@/services/howToDoService'
 import {
-  listHowToDoHistoryRecords,
+  loadHowToDoHistoryRecords,
   toggleFavoriteHowToDoHistoryRecord,
   upsertHowToDoHistoryRecord,
   type HowToDoHistoryRecord,
@@ -148,8 +148,8 @@ function findCategoryGroupKey(value: string) {
   return questionCategoryGroups.find((group) => group.items.includes(value))?.key || ''
 }
 
-function refreshHistoryRecords() {
-  historyRecords.value = listHowToDoHistoryRecords()
+async function refreshHistoryRecords() {
+  historyRecords.value = await loadHowToDoHistoryRecords()
 }
 
 async function scrollHowToDoToBottom() {
@@ -356,7 +356,7 @@ function syncActiveHistory() {
   const record = buildHistoryRecord(result.value)
   activeHistoryId.value = record.id
   upsertHowToDoHistoryRecord(record)
-  refreshHistoryRecords()
+  void refreshHistoryRecords()
 }
 
 function loadHistoryRecord(record: HowToDoHistoryRecord) {
@@ -381,7 +381,7 @@ function loadHistoryRecord(record: HowToDoHistoryRecord) {
 function toggleCurrentFavorite() {
   if (!activeHistoryId.value) return
   toggleFavoriteHowToDoHistoryRecord(activeHistoryId.value)
-  refreshHistoryRecords()
+  void refreshHistoryRecords()
 }
 
 function goToHowToDoArchive(tab: 'history' | 'favorites') {
@@ -505,17 +505,19 @@ async function sendChatFollowup() {
 }
 
 onMounted(() => {
-  refreshHistoryRecords()
-  const historyId = String(route.query.history || '').trim()
-  if (!historyId) {
+  void (async () => {
+    await refreshHistoryRecords()
+    const historyId = String(route.query.history || '').trim()
+    if (!historyId) {
+      void scrollHowToDoToBottom()
+      return
+    }
+    const record = historyRecords.value.find((item) => item.id === historyId)
+    if (record) {
+      loadHistoryRecord(record)
+    }
     void scrollHowToDoToBottom()
-    return
-  }
-  const record = historyRecords.value.find((item) => item.id === historyId)
-  if (record) {
-    loadHistoryRecord(record)
-  }
-  void scrollHowToDoToBottom()
+  })()
 })
 </script>
 
