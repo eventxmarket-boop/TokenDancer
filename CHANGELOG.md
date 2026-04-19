@@ -1,3 +1,9 @@
+## V1.4.138 - 2026-04-19
+
+- Upgraded the `孙宇晨` seed persona to mirror the newer `sun-skill` cognitive framework: added the 14-model mental map, 19 decision heuristics, expression DNA, anti-patterns, honest boundaries, and the five-era evolution timeline.
+- Reworked the Sun persona pack to lean harder into crypto strategy, winner-take-all thinking, attention conversion, and hype-with-judgment expression instead of generic business-topic narration.
+- Refreshed the Sun persona examples, intro, and metadata so the seed now triggers more reliably on Sun-style perspective requests and produces more structured, higher-signal answers.
+
 ## V1.4.137 - 2026-04-19
 
 - Removed the standalone `歌诀` page because it had no live route or navigation entry; the only remaining divination-facing content still lives inside `我该怎么做` and its related result/history flows.
