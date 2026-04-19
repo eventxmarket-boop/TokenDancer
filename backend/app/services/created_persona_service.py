@@ -708,6 +708,32 @@ def _load_draft_payload(raw: str) -> CreateWizardDraft:
     return CreateWizardDraft.model_validate(payload)
 
 
+def _style_tags_for_draft(draft: CreateWizardDraft) -> list[str]:
+    style_profile = getattr(draft, "style_profile", None)
+    if style_profile is None:
+        return []
+
+    if isinstance(style_profile, dict):
+        style_payload = style_profile
+    elif hasattr(style_profile, "model_dump"):
+        style_payload = style_profile.model_dump()
+    else:
+        return []
+
+    selection = style_payload.get("selection") or {}
+    if not isinstance(selection, dict):
+        return []
+
+    tags: list[str] = []
+    mbti_type = _normalize_text(selection.get("mbti_type"))
+    zodiac_sign = _normalize_text(selection.get("zodiac_sign"))
+    if mbti_type:
+        tags.append(f"MBTI:{mbti_type}")
+    if zodiac_sign:
+        tags.append(f"星座:{zodiac_sign}")
+    return tags
+
+
 def _serialize_record(record: CreatedPersona) -> dict[str, Any]:
     draft = _load_draft_payload(record.draft_payload)
     material_summary = _material_summary_from_raw_materials(getattr(draft, "raw_materials", None))
@@ -909,6 +935,7 @@ def load_created_persona_summary(
     persona_profile = getattr(draft, "persona_profile", None)
     intimate_profile = getattr(draft, "relationship_profile", None)
     reunion_profile = getattr(draft, "reunion_persona_profile", None)
+    style_tags = _style_tags_for_draft(draft)
     if not relation_type and persona_profile is not None:
         if isinstance(persona_profile, dict):
             relation_type = _normalize_text(persona_profile.get("relationship_type"))
@@ -948,7 +975,7 @@ def load_created_persona_summary(
         "intro": intro or (profile[:80] if profile else record.summary),
         "profile": profile or draft.profile,
         "self_unified_layers": format_self_unified_layers(draft.model_dump()),
-        "tags": [tag for tag in [display_type, relation_type] if tag],
+        "tags": [tag for tag in [display_type, relation_type, *style_tags] if tag],
         "topics": [],
         "recommendedQuestions": [],
         "version": getattr(draft.meta, "version", ""),

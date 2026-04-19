@@ -37,6 +37,7 @@ from app.services.reply_assistant_service import (
     build_reply_assistant_profile,
     infer_reply_assistant_focus,
 )
+from app.services.style_profile_service import build_style_profile
 from app.services.self_unified_service import build_self_persona_draft
 
 
@@ -3279,6 +3280,15 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
     form_title = content_name or normalized_display_name or CREATE_TYPE_LABELS[normalized_create_type]
     generated_at = datetime.now(timezone.utc).isoformat()
     material_summary = _material_pool_text(content.get("raw_materials") or {})
+    style_profile = build_style_profile(
+        {
+            **form_data,
+            "style_mbti_type": _normalize_text(form_data.get("style_mbti_type") or payload.get("style_mbti_type")),
+            "style_zodiac_sign": _normalize_text(form_data.get("style_zodiac_sign") or payload.get("style_zodiac_sign")),
+        }
+    )
+    style_profile_selection = style_profile.get("selection") or {"mbti_type": "", "zodiac_sign": ""}
+    style_profile_payload = style_profile if any(_normalize_text(value) for value in style_profile_selection.values()) else None
 
     meta = CreateWizardDraftMeta(
         id=f"draft-{uuid4().hex[:8]}",
@@ -3340,6 +3350,8 @@ def build_persona_draft(payload: dict[str, Any]) -> dict[str, Any]:
         "understanding_weight": content.get("understanding_weight", 0.0),
         "maintenance_weight": content.get("maintenance_weight", 0.0),
         "message_push_weight": content.get("message_push_weight", 0.0),
+        "style_profile_selection": style_profile_selection,
+        "style_profile": style_profile_payload,
         "intimate_memory_base": content.get("intimate_memory_base"),
         "intimate_understanding": content.get("intimate_understanding"),
         "intimate_message_simulation": content.get("intimate_message_simulation"),

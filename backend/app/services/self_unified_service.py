@@ -765,6 +765,7 @@ def format_self_unified_layers(persona: dict[str, Any]) -> dict[str, Any]:
         return {}
     return {
         "create_mode": payload.get("create_mode") or "standard",
+        "style_profile": persona.get("style_profile") or {},
         "profile_analysis_report": payload.get("profile_analysis_report") or {},
         "profile_interview": payload.get("profile_interview") or {},
         "self_identity": payload.get("self_identity") or {},

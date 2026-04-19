@@ -2008,6 +2008,22 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
   gap: 10px;
 }
 
+.style-profile-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.style-profile-panel__head {
+  align-items: flex-start;
+}
+
+.style-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .create-path-switcher {
   display: grid;
   gap: 18px;
@@ -2802,6 +2818,10 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
   .wizard-form,
   .form-grid {
     gap: 12px;
+  }
+
+  .style-profile-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-grid {

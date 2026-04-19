@@ -1,3 +1,9 @@
+## V1.4.141 - 2026-04-19
+
+- Added an optional MBTI / zodiac style distillation layer to the creation flow so users can pick one, both, or neither without affecting the underlying create path.
+- Introduced a shared `style_profile` runtime that reads MBTI / zodiac traits, maps them into compact style dimensions, and keeps the result as a soft answer-gating layer instead of a direct stereotype prompt.
+- Threaded the distilled style profile into create drafts, persona prompts, self-unified layers, and saved seed summaries so the chosen气质 stays visible and reusable after creation.
+
 ## V1.4.140 - 2026-04-19
 
 - Reworked the `Create` landing page into a horizontal main-path switcher so the five primary routes now sit in a single row and only the selected path is shown at once.

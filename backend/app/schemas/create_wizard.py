@@ -24,6 +24,7 @@ from app.schemas.reunion_persona import (
     ReunionPersonaRetrievalPolicy,
     ReunionPersonaSafetyGuardrails,
 )
+from app.schemas.style_profile import StyleProfileDraft, StyleProfileSelection
 from app.schemas.self_persona_unified import SelfPersonaUnifiedDraft
 from app.schemas.self_unified import SelfProfileAnalysisReport, SelfProfileInterviewPack
 
@@ -103,6 +104,7 @@ class CreateWizardDraftRequest(BaseModel):
     reunion_guided_memory_answers: ReunionPersonaGuidedMemoryAnswers = Field(
         default_factory=ReunionPersonaGuidedMemoryAnswers
     )
+    style_profile_selection: StyleProfileSelection = Field(default_factory=StyleProfileSelection)
 
 
 class CreateWizardDraftMeta(BaseModel):
@@ -156,6 +158,8 @@ class CreateWizardDraft(BaseModel):
     understanding_weight: float = 0.0
     maintenance_weight: float = 0.0
     emotion_rules: dict[str, Any] | None = None
+    style_profile_selection: StyleProfileSelection = Field(default_factory=StyleProfileSelection)
+    style_profile: StyleProfileDraft | None = None
     self_persona_unified: SelfPersonaUnifiedDraft | None = None
     persona_profile: FamilyCompanionPersonaProfile | None = None
     memory_base: FamilyCompanionMemoryBase | None = None

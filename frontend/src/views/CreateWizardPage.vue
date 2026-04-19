@@ -150,6 +150,8 @@ const formState = reactive({
   target_person_type: 'crush',
   target_person_label: '暧昧 / crush',
   target_person_name: '',
+  style_mbti_type: '',
+  style_zodiac_sign: '',
   reply_mode: 'single_message',
   relationship_status: '',
   reply_goal: '',
@@ -245,6 +247,40 @@ const replyAssistantTargetTypeOptions = [
   ['client', '客户 / 对接方'],
   ['friend', '朋友'],
   ['family', '家人'],
+] as const
+
+const styleMbtiOptions = [
+  ['INTJ', 'INTJ · 策略型'],
+  ['INTP', 'INTP · 分析型'],
+  ['ENTJ', 'ENTJ · 统筹型'],
+  ['ENTP', 'ENTP · 辩证型'],
+  ['INFJ', 'INFJ · 洞察型'],
+  ['INFP', 'INFP · 共情型'],
+  ['ENFJ', 'ENFJ · 引导型'],
+  ['ENFP', 'ENFP · 灵动型'],
+  ['ISTJ', 'ISTJ · 稳定型'],
+  ['ISFJ', 'ISFJ · 守护型'],
+  ['ESTJ', 'ESTJ · 执行型'],
+  ['ESFJ', 'ESFJ · 关照型'],
+  ['ISTP', 'ISTP · 实用型'],
+  ['ISFP', 'ISFP · 温和型'],
+  ['ESTP', 'ESTP · 行动型'],
+  ['ESFP', 'ESFP · 外放型'],
+] as const
+
+const styleZodiacOptions = [
+  ['Aries', '白羊座'],
+  ['Taurus', '金牛座'],
+  ['Gemini', '双子座'],
+  ['Cancer', '巨蟹座'],
+  ['Leo', '狮子座'],
+  ['Virgo', '处女座'],
+  ['Libra', '天秤座'],
+  ['Scorpio', '天蝎座'],
+  ['Sagittarius', '射手座'],
+  ['Capricorn', '摩羯座'],
+  ['Aquarius', '水瓶座'],
+  ['Pisces', '双鱼座'],
 ] as const
 
 const inputModeBySourceRepo: Record<string, string> = {
@@ -1708,6 +1744,9 @@ function getFamilySubtypePreset(mode: string) {
 
 function clearFormState() {
   for (const key of Object.keys(formState) as Array<keyof typeof formState>) {
+    if (key === 'style_mbti_type' || key === 'style_zodiac_sign') {
+      continue
+    }
     formState[key] = ''
   }
 }
@@ -2576,6 +2615,40 @@ watch(
             <p class="section-note">
               {{ isSelfUnified ? '可以先选一个或多个输入方式。' : isFamilyCompanion ? (isReunionPersona ? '把记忆层和安全边界先写清楚。' : '先选妈妈、父母或其他家人，再统一填写下面的内容。') : '不同类型会显示不同的方式选择。' }}
             </p>
+          </div>
+
+          <div class="summary-panel summary-panel--compact style-profile-panel">
+            <div class="section-head style-profile-panel__head">
+              <div>
+                <p class="eyebrow">风格标签（可选）</p>
+                <h3>MBTI / 星座</h3>
+              </div>
+              <p class="section-note">可选其一、可同时选，也可以不选。</p>
+            </div>
+
+            <div class="style-profile-grid">
+              <label class="form-field">
+                <span>MBTI</span>
+                <select v-model="formState.style_mbti_type" class="field-input">
+                  <option value="">不选择</option>
+                  <option v-for="[value, label] in styleMbtiOptions" :key="value" :value="value">
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="form-field">
+                <span>星座</span>
+                <select v-model="formState.style_zodiac_sign" class="field-input">
+                  <option value="">不选择</option>
+                  <option v-for="[value, label] in styleZodiacOptions" :key="value" :value="value">
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            <p class="state-copy state-copy--muted">这里只做回答气质调音，不会影响你继续创建。</p>
           </div>
 
           <template v-if="isSelfUnified">

@@ -173,6 +173,32 @@ export type FamilyCompanionEmotionRules = {
   boundary_rules: string[]
 }
 
+export type StyleProfileSelection = {
+  mbti_type: string
+  zodiac_sign: string
+}
+
+export type StyleProfileDimensions = {
+  depth: string
+  humor: string
+  directness: string
+  warmth: string
+  pace: string
+  structure: string
+  boundary: string
+  decision_style: string
+}
+
+export type StyleProfileDraft = {
+  selection: StyleProfileSelection
+  summary: string
+  points: string[]
+  dimensions: StyleProfileDimensions
+  mbti_traits: string[]
+  zodiac_traits: string[]
+  conflict_notes: string[]
+}
+
 export type TextMaterialDocument = {
   filename: string
   content: string
@@ -562,6 +588,8 @@ export type CreateWizardDraft = {
   self_persona_unified?: SelfPersonaUnifiedDraft | null
   profile_analysis_report?: SelfProfileAnalysisReport | Record<string, unknown> | null
   profile_interview?: SelfProfileInterviewPack | Record<string, unknown> | null
+  style_profile_selection?: StyleProfileSelection | null
+  style_profile?: StyleProfileDraft | Record<string, unknown> | null
   persona_profile?: FamilyCompanionPersonaProfile | null
   memory_base?: FamilyCompanionMemoryBase | null
   reunion_persona_profile?: ReunionPersonaProfile | null

@@ -19,10 +19,14 @@ class CreateWizardTests(unittest.TestCase):
             "input_mode": "manual_profile",
             "input_modes": ["manual_profile", "chat_history", "documents", "memory_notes"],
             "schema_key": "self_unified",
+            "style_mbti_type": "INTJ",
+            "style_zodiac_sign": "Gemini",
             "form_data": {
                 "name": "我的人格",
                 "create_mode": "deep",
                 "input_modes": ["manual_profile", "chat_history", "documents", "memory_notes"],
+                "style_mbti_type": "INTJ",
+                "style_zodiac_sign": "Gemini",
                 "work_system_summary": "把做事方式整理成可以继续使用的人格骨架。",
                 "work_system_points": "先看目标\n再看路径\n再看边界",
                 "reply_persona_summary": "把回复方式整理成更像自己的表达。",
@@ -103,6 +107,11 @@ class CreateWizardTests(unittest.TestCase):
         self.assertIn("self_decision_rules", body["draft"]["self_persona_unified"])
         self.assertIn("self_knowledge_sources", body["draft"]["self_persona_unified"])
         self.assertIn("self_boundary_rules", body["draft"]["self_persona_unified"])
+        self.assertEqual(body["draft"]["style_profile_selection"]["mbti_type"], "INTJ")
+        self.assertEqual(body["draft"]["style_profile_selection"]["zodiac_sign"], "Gemini")
+        self.assertIsNotNone(body["draft"]["style_profile"])
+        self.assertEqual(body["draft"]["style_profile"]["selection"]["mbti_type"], "INTJ")
+        self.assertEqual(body["draft"]["style_profile"]["selection"]["zodiac_sign"], "Gemini")
         self.assertIn("profile_analysis_report", body["draft"])
         self.assertIn("profile_interview", body["draft"])
         self.assertTrue(body["draft"]["profile_analysis_report"]["report_summary"])
@@ -254,6 +263,8 @@ class CreateWizardTests(unittest.TestCase):
         self.assertEqual(body["draft"]["meta"]["display_name"], "资料人格")
         self.assertEqual(body["draft"]["meta"]["input_mode"], "documents")
         self.assertEqual(body["draft"]["meta"]["schema_key"], "source_anyone_from_sources")
+        self.assertEqual(body["draft"]["style_profile_selection"], {"mbti_type": "", "zodiac_sign": ""})
+        self.assertIsNone(body["draft"]["style_profile"])
         self.assertIn("资料人格", body["draft"]["profile"])
         self.assertTrue(body["draft"]["raw_materials"]["uploaded_image_documents"])
         self.assertTrue(body["draft"]["raw_materials"]["ocr_extracted_texts"])

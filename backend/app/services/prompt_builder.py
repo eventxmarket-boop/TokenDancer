@@ -75,6 +75,10 @@ def build_persona_system_prompt_with_context(
         f"人格标识：{meta.get('slug', '')}",
     ]
 
+    style_profile = persona.get("style_profile") or {}
+    if style_profile:
+        _append_layer_section(parts, "风格调音层（可选）", style_profile)
+
     self_unified = persona.get("self_persona_unified") or {}
     if self_unified:
         unified_prompt = format_self_unified_for_prompt(persona)

@@ -46,10 +46,14 @@ class MySeedsTests(unittest.TestCase):
             "input_mode": "manual_profile",
             "input_modes": ["manual_profile", "documents"],
             "schema_key": "self_unified",
+            "style_mbti_type": "INTJ",
+            "style_zodiac_sign": "Gemini",
             "form_data": {
                 "name": "我的人格",
                 "create_mode": "standard",
                 "input_modes": ["manual_profile", "documents"],
+                "style_mbti_type": "INTJ",
+                "style_zodiac_sign": "Gemini",
                 "work_system_summary": "先把重要的事情做好。",
                 "work_system_points": "先看目标\n再看路径",
                 "reply_persona_summary": "回答时更清楚一点。",
@@ -107,6 +111,8 @@ class MySeedsTests(unittest.TestCase):
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
                 self.assertEqual(persona["name"], saved["name"])
+                self.assertIn("MBTI:INTJ", persona["tags"])
+                self.assertIn("星座:Gemini", persona["tags"])
 
                 with patch("app.services.chat_service.generate_reply") as fake_reply:
                     fake_reply.return_value = {
@@ -744,7 +750,7 @@ class MySeedsTests(unittest.TestCase):
                 created_id = saved["id"]
                 self.assertIn("material_summary", saved)
                 self.assertTrue(saved["material_summary"])
-                self.assertEqual(saved["entry_label"], "关系经营")
+                self.assertEqual(saved["entry_label"], "前任")
                 self.assertIn(saved["analysis_focus"], {"understanding", "maintenance", "balanced", "message_push"})
                 self.assertGreaterEqual(saved["understanding_weight"], 0.0)
                 self.assertGreaterEqual(saved["maintenance_weight"], 0.0)
@@ -770,7 +776,7 @@ class MySeedsTests(unittest.TestCase):
                 self.assertEqual(persona_response.status_code, 200)
                 persona = persona_response.json()
                 self.assertEqual(persona["slug"], saved["slug"])
-                self.assertIn("关系经营", persona.get("category", ""))
+                self.assertIn("前任", persona.get("category", ""))
 
                 with patch("app.services.chat_service.generate_reply") as fake_reply:
                     fake_reply.return_value = {
