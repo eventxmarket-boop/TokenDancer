@@ -1,3 +1,9 @@
+## V1.4.139 - 2026-04-19
+
+- Integrated `ex-skill` into the intimate-relationship creation flow and renamed the user-facing intimate path from `关系经营 / 自我镜像` toward `前任` so the create catalog, wizard, and saved-persona summaries now use a more direct product label.
+- Kept the underlying mode keys and source routing intact for compatibility, while refreshing the visible labels, helper copy, and summary text to better reflect ex-partner memory modeling, relationship memory, and self-mirror review.
+- Updated the create catalog metadata and persona summaries so the new `前任` path remains a true create entry rather than a disconnected alias.
+
 ## V1.4.138 - 2026-04-19
 
 - Upgraded the `孙宇晨` seed persona to mirror the newer `sun-skill` cognitive framework: added the 14-model mental map, 19 decision heuristics, expression DNA, anti-patterns, honest boundaries, and the five-era evolution timeline.

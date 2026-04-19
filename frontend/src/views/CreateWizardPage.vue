@@ -181,15 +181,15 @@ const typeCards = [
   },
   {
     type: 'intimate_companion' as const,
-    title: '关系经营',
-    description: '先看清关系，再调整表达、改善相处、继续经营。',
-    hint: '从关系经营开始',
+    title: '前任',
+    description: '先看清前任关系，再调整表达、复盘过去、继续往前走。',
+    hint: '从前任开始',
   },
 ]
 
 const intimateModeCards = [
-  ['relationship_management', '关系经营'],
-  ['past_relation_mirror', '过去关系 / 自我镜像'],
+  ['relationship_management', '前任'],
+  ['past_relation_mirror', '前任 / 自我镜像'],
 ] as const
 
 const inputModeLabels: Record<CreateType, Record<string, string>> = {
@@ -214,9 +214,9 @@ const inputModeLabels: Record<CreateType, Record<string, string>> = {
     professor_b: '大学老师（模板 B）',
   },
   intimate_companion: {
-    relationship_management: '关系经营',
-    message_simulation: '关系经营',
-    past_relation_mirror: '过去关系 / 自我镜像',
+    relationship_management: '前任',
+    message_simulation: '前任',
+    past_relation_mirror: '前任 / 自我镜像',
   },
   reply_assistant: {
     single_message: '单条消息',
@@ -450,7 +450,7 @@ const relationshipFlowPages: FlowPage[] = [
 ]
 
 const intimateFlowPages: FlowPage[] = [
-  { key: 'relationship_type', title: '关系类型', description: '先定这段亲密关系的类型。', summary: '先写关系经营、消息模拟或过去关系。' },
+  { key: 'relationship_type', title: '关系类型', description: '先定这段亲密关系的类型。', summary: '先写前任、消息模拟或过去关系。' },
   { key: 'persona_name', title: '对方称呼', description: '先写你怎么称呼对方。', summary: '把对方名字或称呼写出来。' },
   { key: 'relationship_stage', title: '关系阶段', description: '先写你们现在处在什么阶段。', summary: '把暧昧期、关系中或磨合中写清楚。' },
   { key: 'speech_style', title: '说话风格', description: '先写对方平时怎么说话。', summary: '把典型说话方式写清楚。' },
@@ -1250,7 +1250,7 @@ const currentTypeLabel = computed(() => {
     return '重逢人格'
   }
   if (createType.value === 'intimate_companion') {
-    return '关系经营'
+    return '前任'
   }
   if (createType.value === 'reply_assistant') {
     return '我该怎么回'
@@ -1444,7 +1444,7 @@ function getDefaultDisplayNameForType(type: CreateType) {
     return '重逢人格'
   }
   if (type === 'intimate_companion') {
-    return '关系经营'
+    return '前任'
   }
   if (type === 'reply_assistant') {
     return '我该怎么回'
@@ -1588,9 +1588,9 @@ function getInputModeNote(type: CreateType, mode: string) {
       mode === 'message_simulation' ||
       mode === 'crush'
     ) {
-      return '适合先看清关系、调整表达、改善相处，并根据材料动态偏向理解、维护或发送前预演。'
+      return '适合先看清前任关系、调整表达、复盘相处，并根据材料动态偏向理解、维护或发送前预演。'
     }
-    if (mode === 'past_relation_mirror') return '适合回看过去关系和自我镜像。'
+    if (mode === 'past_relation_mirror') return '适合回看前任关系和自我镜像。'
   }
 
   if (type === 'family_companion') {
@@ -1625,14 +1625,14 @@ function getInputModeNote(type: CreateType, mode: string) {
 
 function getRelationshipLabel(mode: string) {
   const intimateLegacyLabel = {
-    relationship_understanding: '关系经营',
-    relationship_maintenance: '关系经营',
-    partner_maintenance: '关系经营',
-    message_simulation: '关系经营',
-    crush: '关系经营',
+    relationship_understanding: '前任',
+    relationship_maintenance: '前任',
+    partner_maintenance: '前任',
+    message_simulation: '前任',
+    crush: '前任',
   } as const
   return (
-    (mode === 'relationship_management' ? '关系经营' : '') ||
+    (mode === 'relationship_management' ? '前任' : '') ||
     inputModeLabels.reply_assistant[mode] ||
     inputModeLabels.relationship_persona[mode] ||
     inputModeLabels.intimate_companion[mode] ||
@@ -1806,8 +1806,8 @@ function resetFormForType(type: CreateType, displayName = '', mode = '') {
   }
 
   if (type === 'intimate_companion') {
-    formState.relationship_type = getRelationshipLabel(mode) || displayName || '关系经营'
-    formState.persona_name = displayName || getRelationshipLabel(mode) || '关系经营'
+    formState.relationship_type = getRelationshipLabel(mode) || displayName || '前任'
+    formState.persona_name = displayName || getRelationshipLabel(mode) || '前任'
     formState.relationship_stage = getRelationshipLabel(mode) || '关系阶段待补充'
     formState.speech_style = '自然、贴近、带一点熟悉感。'
     formState.response_temperature = '先接住情绪，再顺着回应。'
@@ -3414,7 +3414,7 @@ watch(
                 <button class="ghost-button ghost-button--small" type="button" :disabled="intimateFillPageIndex === intimateFlowPages.length - 1" @click="goIntimateFillPage(intimateFillPageIndex + 1)">下一步</button>
               </div>
               <div class="self-fill-page__content">
-                <label v-if="intimateFillCurrentPage.key === 'relationship_type'" class="form-field"><span>关系类型</span><input v-model="formState.relationship_type" class="field-input" type="text" placeholder="关系经营 / 消息模拟 / 过去关系 / 自我镜像" /></label>
+                <label v-if="intimateFillCurrentPage.key === 'relationship_type'" class="form-field"><span>关系类型</span><input v-model="formState.relationship_type" class="field-input" type="text" placeholder="前任 / 消息模拟 / 自我镜像" /></label>
                 <label v-else-if="intimateFillCurrentPage.key === 'persona_name'" class="form-field"><span>对方名称 / 称呼</span><input v-model="formState.persona_name" class="field-input" type="text" placeholder="例如：小林 / 阿泽 / 你喜欢的人" /></label>
                 <label v-else-if="intimateFillCurrentPage.key === 'relationship_stage'" class="form-field"><span>关系阶段</span><input v-model="formState.relationship_stage" class="field-input" type="text" placeholder="例如：暧昧期 / 关系中 / 磨合中" /></label>
                 <label v-else-if="intimateFillCurrentPage.key === 'speech_style'" class="form-field"><span>说话风格</span><textarea v-model="formState.speech_style" class="field-input wizard-textarea" rows="6"></textarea></label>

@@ -1,6 +1,6 @@
 {
-  "version": "V1.4.49a",
-  "updated_at": "2026-04-17",
+  "version": "V1.4.50",
+  "updated_at": "2026-04-19",
   "groups": [
     {
       "group": "self",
@@ -153,14 +153,14 @@
     },
     {
       "group": "relationship_intimate",
-      "label": "关系经营",
-      "description": "把关系经营和过去关系 / 自我镜像整理成两条主路径。",
-      "source_hint": "关系经营模板",
+      "label": "前任",
+      "description": "把前任关系和前任 / 自我镜像整理成两条主路径。",
+      "source_hint": "前任模板",
       "sort_order": 5,
       "items": [
         {
           "slug": "relationship_management",
-          "name": "关系经营",
+          "name": "前任",
           "group": "relationship_intimate",
           "create_type": "intimate_companion",
           "source_repo": "relationship-training-skill+xinyi+partner-skill+npy-skill",
@@ -177,7 +177,7 @@
             "https://github.com/NatalieCao323/partner-skill",
             "https://github.com/wwwttlll/npy-skill"
           ],
-          "description": "自动判断更偏理解、维护、发送前预演还是平衡，再给出关系分析和经营建议。",
+          "description": "自动判断更偏理解、维护、发送前预演还是平衡，再给出前任分析和经营建议。",
           "input_modes": ["chat_history", "documents", "memory_notes"],
           "stage": "entry_only",
           "entry_type": "create",
@@ -187,7 +187,7 @@
         },
         {
           "slug": "past_relation_mirror",
-          "name": "过去关系 / 自我镜像",
+          "name": "前任 / 自我镜像",
           "group": "relationship_intimate",
           "create_type": "intimate_companion",
           "source_repo": "ex-skill+first-love-skill+shuixian-skill",

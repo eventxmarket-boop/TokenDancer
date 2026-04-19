@@ -26,7 +26,7 @@ _PERSONA_TYPE_LABELS = {
     "self_persona": "我的人格",
     "source_persona": "资料",
     "relationship_persona": "关系",
-    "intimate_companion": "关系经营",
+    "intimate_companion": "前任",
     "reply_assistant": "我该怎么回",
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
@@ -40,12 +40,12 @@ _SELF_UNIFIED_ALIASES = {
 }
 
 _INTIMATE_MODE_LABELS = {
-    "relationship_management": "关系经营",
-    "relationship_understanding": "关系经营",
-    "relationship_maintenance": "关系经营",
-    "message_simulation": "关系经营",
-    "partner_maintenance": "关系经营",
-    "past_relation_mirror": "过去关系 / 自我镜像",
+    "relationship_management": "前任",
+    "relationship_understanding": "前任",
+    "relationship_maintenance": "前任",
+    "message_simulation": "前任",
+    "partner_maintenance": "前任",
+    "past_relation_mirror": "前任 / 自我镜像",
 }
 
 _REPLY_ASSISTANT_MODE_LABELS = {
@@ -406,7 +406,7 @@ def _entry_label_for_draft(draft: CreateWizardDraft) -> str:
     if create_type == "reply_assistant":
         return _REPLY_ASSISTANT_MODE_LABELS.get(input_mode, input_mode or "我该怎么回")
     if create_type == "intimate_companion":
-        return _INTIMATE_MODE_LABELS.get(input_mode, input_mode or "关系经营")
+        return _INTIMATE_MODE_LABELS.get(input_mode, input_mode or "前任")
     return _PERSONA_TYPE_LABELS.get(create_type, create_type)
 
 

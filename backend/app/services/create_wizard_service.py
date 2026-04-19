@@ -91,7 +91,7 @@ CREATE_TYPE_LABELS = {
     "relationship_persona": "关系人格",
     "family_companion": "家人陪伴",
     "reunion_persona": "重逢人格",
-    "intimate_companion": "关系经营",
+    "intimate_companion": "前任",
     "reply_assistant": "我该怎么回",
 }
 
@@ -143,7 +143,7 @@ CREATE_TYPE_CONFIG = {
             INTIMATE_SIMULATION_SOURCE_REPO,
             INTIMATE_PAST_RELATION_SOURCE_REPO,
         ],
-        "source_hint": "关系经营模板",
+        "source_hint": "前任模板",
     },
     "reply_assistant": {
         "group": "reply_assistant",
@@ -299,12 +299,12 @@ RELATIONSHIP_LABELS = {
     "first_love": "初恋",
     "self_mirror": "自我镜像伴侣",
     "relationship_interpreter": "关系理解辅助",
-    "relationship_management": "关系经营",
-    "relationship_understanding": "关系经营",
-    "relationship_maintenance": "关系经营",
-    "message_simulation": "关系经营",
-    "partner_maintenance": "关系经营",
-    "past_relation_mirror": "过去关系 / 自我镜像",
+    "relationship_management": "前任",
+    "relationship_understanding": "前任",
+    "relationship_maintenance": "前任",
+    "message_simulation": "前任",
+    "partner_maintenance": "前任",
+    "past_relation_mirror": "前任 / 自我镜像",
     "single_message": "单条消息",
     "material_distill": "材料蒸馏",
     "parents": "父母",
@@ -335,9 +335,9 @@ INPUT_MODE_LABELS = {
         "professor_b": "大学老师（模板 B）",
     },
     "intimate_companion": {
-        "relationship_management": "关系经营",
-        "message_simulation": "关系经营",
-        "past_relation_mirror": "过去关系 / 自我镜像",
+        "relationship_management": "前任",
+        "message_simulation": "前任",
+        "past_relation_mirror": "前任 / 自我镜像",
     },
     "reply_assistant": {
         "single_message": "单条消息",
@@ -2421,7 +2421,7 @@ def _build_intimate_companion_draft(
         _normalize_text(form_data.get("relationship_type"))
         or RELATIONSHIP_LABELS.get(mode, "")
         or _normalize_text(display_name)
-        or "关系经营"
+        or "前任"
     )
     name = _normalize_text(form_data.get("persona_name")) or _normalize_text(display_name) or relation_type
     relationship_stage = _normalize_text(form_data.get("relationship_stage")) or "关系阶段待补充"
@@ -2619,11 +2619,11 @@ def _build_intimate_companion_draft(
 
     if mode == "relationship_management":
         profile = (
-            f"关系经营定位：{relation_type}\n"
+            f"前任定位：{relation_type}\n"
             f"对象名称：{name}\n"
             f"关系阶段：{relationship_stage}\n"
             f"说话风格：{tone}\n"
-            f"用途：根据材料自动判断更偏理解、维护还是平衡，再给关系经营建议。"
+            f"用途：根据材料自动判断更偏理解、维护还是平衡，再给前任建议。"
         )
         mindset = _format_bullets(
             [
@@ -2753,11 +2753,11 @@ def _build_intimate_companion_draft(
             boundaries=_clean_lines(boundaries),
         )
         profile = (
-            f"关系经营定位：{relation_type}\n"
+            f"前任定位：{relation_type}\n"
             f"对象名称：{name}\n"
             f"关系阶段：{relationship_stage}\n"
             f"说话风格：{tone}\n"
-            f"用途：围绕关系经营、磨合和沟通修复整理人格。"
+            f"用途：围绕前任、磨合和沟通修复整理人格。"
         )
         mindset = _format_bullets(
             [
@@ -2861,7 +2861,7 @@ def _build_intimate_companion_draft(
             boundaries=_clean_lines(boundaries),
         )
         profile = (
-            f"过去关系 / 自我镜像定位：{relation_type}\n"
+            f"前任 / 自我镜像定位：{relation_type}\n"
             f"称呼：{name}\n"
             f"回忆方式：{persona_profile['remembrance_style']}\n"
             f"说话风格：{tone}\n"
@@ -2968,7 +2968,7 @@ def _build_intimate_companion_draft(
     )
 
     profile = (
-        f"关系经营定位：{relation_type}\n"
+        f"前任定位：{relation_type}\n"
         f"称呼：{name}\n"
         f"关系阶段：{relationship_stage}\n"
         f"说话风格：{tone}\n"
