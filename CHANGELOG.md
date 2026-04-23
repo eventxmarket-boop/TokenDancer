@@ -1,3 +1,8 @@
+## V1.4.221 - 2026-04-24
+
+- Added a top-level `image-2` navigation entry between Mind and Favorites so the internal Image Lab page is visible from the main header.
+- Kept the backend image-generation flow unchanged and only adjusted the frontend entry point placement.
+
 ## V1.4.220 - 2026-04-24
 
 - Added an internal Image Lab page for GPT Image testing with prompt, size, quality, and output format controls.

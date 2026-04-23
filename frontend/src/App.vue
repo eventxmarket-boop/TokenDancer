@@ -109,6 +109,7 @@ watch(
             </div>
           </div>
 
+          <RouterLink to="/image-lab" class="nav-link">image-2</RouterLink>
           <RouterLink to="/favorites" class="nav-link">收藏</RouterLink>
           <RouterLink to="/me" class="nav-link">个人</RouterLink>
         </nav>
