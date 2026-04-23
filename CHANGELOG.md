@@ -1,3 +1,8 @@
+## V1.4.222 - 2026-04-24
+
+- Added the `image-2` entry to the mobile bottom navigation so the Image Lab is visible on the `/persona/` homepage in mobile layout too.
+- Kept the desktop top navigation placement from the previous revision and did not change the generation flow itself.
+
 ## V1.4.221 - 2026-04-24
 
 - Added a top-level `image-2` navigation entry between Mind and Favorites so the internal Image Lab page is visible from the main header.

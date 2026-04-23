@@ -8,6 +8,7 @@ const brandLogo = `${import.meta.env.BASE_URL}seedmind-logo.jpg`
 const mobileNavItems = [
   { to: '/', label: 'Seed' },
   { to: '/reply-assistant', label: 'Mind' },
+  { to: '/image-lab', label: 'image-2' },
   { to: '/favorites', label: '收藏' },
   { to: '/me', label: '个人' },
 ]
