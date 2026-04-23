@@ -1,3 +1,393 @@
+## V1.4.220 - 2026-04-24
+
+- Added an internal Image Lab page for GPT Image testing with prompt, size, quality, and output format controls.
+- Wired a backend image-generation endpoint that reads `OPENAI_API_KEY` and `OPENAI_IMAGE_MODEL` from environment variables and returns base64 image data without persisting files.
+- Added whitelist validation, lightweight internal-user placeholder checks, and friendly error handling so failures do not expose stack traces to the browser.
+
+## V1.4.219 - 2026-04-22
+
+- Added CSV batch-profile support to the Montjuic autofill monitor so the 200-contact import file can be used directly instead of converting into JSON by hand.
+- Set the Montjuic CSV path to `montjuic_profiles_template.csv` by default and documented that CSV takes precedence over the JSON fallback.
+
+## V1.4.218 - 2026-04-22
+
+- Added a local `montjuic_profiles_template.csv` file at the repository root so batch-contact imports have a concrete path to start from.
+- Kept the Montjuic autofill monitor logic unchanged while providing a simple CSV skeleton for profile batches.
+
+## V1.4.217 - 2026-04-22
+
+- Tightened the Montjuic autofill monitor so it now matches the eight real contact fields by label rather than by page order, which makes surname, given name, email, phone, full address, document number, nationality, and birth date fill independently even when the page reorders them.
+- Added select-aware and date-aware field handling plus post-fill verification so the monitor can confirm that nationality and birth date were really filled instead of just assuming a click succeeded.
+
+## V1.4.216 - 2026-04-22
+
+- Added a separate Montjuic appointment watcher that can detect an `OPEN` Google Calendar booking page and batch-fill the contact form from saved templates without touching the existing Google and AgendaPro monitors.
+- Exposed a `npm run montjuic:monitor` entrypoint plus new `MONTJUIC_*` environment variables for the target URL, batch profiles, optional qclaw alert file, and optional submission control.
+
+## V1.4.215 - 2026-04-22
+
+- Set the AgendaPro alert file path in both `.env` and `.env.example` so `agendapro_monitor.js` now knows to write events to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/agendapro_alert.txt` for the new qclaw watcher.
+- Wrote a one-time synthetic AgendaPro `ERROR` alert into the watched file to verify the new push path end-to-end without using a real booking result.
+
+## V1.4.214 - 2026-04-22
+
+- Reset the AgendaPro local state baseline so the monitor no longer carries forward the previously misclassified `OPEN` snapshots for the three Fundación Ibn targets.
+
+## V1.4.213 - 2026-04-22
+
+- Tightened the AgendaPro date extractor so it no longer treats weekday navigation labels as appointment dates, which was causing false `OPEN` alerts on pages that still cannot actually be booked.
+
+## V1.4.212 - 2026-04-22
+
+- Reworked the AgendaPro double-`Agendar ahora` step so the monitor re-resolves the booking root after the first click, uses `noWaitAfter` on clicks, and falls back cleanly when the second click lands on a replaced frame or navigation-heavy page.
+
+## V1.4.211 - 2026-04-22
+
+- Switched the AgendaPro entry step to the real `Agendar servicio` button surfaced by the live page snapshot, keeping `Ver horario` only as a fallback before the existing `Agendar ahora` and availability expansion flow.
+
+## V1.4.210 - 2026-04-22
+
+- Shortened the AgendaPro click helper timeouts and added a quick existence check before each click so a missing `Ver horario` or booking action can fail fast instead of stalling the whole round.
+
+## V1.4.209 - 2026-04-22
+
+- Added lightweight flow-stage logs around `Ver horario`, `Agendar ahora`, and `Ver todas las fechas disponibles` so we can see exactly which step of the AgendaPro booking path is stalling or failing on the real pages.
+
+## V1.4.208 - 2026-04-22
+
+- Added an initial `Ver horario` click to the AgendaPro flow so the monitor can enter the booking area before attempting the double `Agendar ahora` path, while still avoiding `Ver sucursal`.
+
+## V1.4.207 - 2026-04-22
+
+- Added a frame-level snapshot to the AgendaPro `UNKNOWN` debug path so we can see which frame actually carries the booking text when the outer page does not expose any actionable date signals.
+
+## V1.4.206 - 2026-04-22
+
+- Added a compact AgendaPro button snapshot to the `UNKNOWN` debug path so we can see which actionable labels the booking area actually exposes when the flow still fails to classify.
+
+## V1.4.205 - 2026-04-22
+
+- Relaxed the AgendaPro click helpers so `Agendar ahora` and `Ver todas las fechas disponibles` are scrolled into view and clicked instead of being skipped immediately when they are not already visible in the first viewport.
+
+## V1.4.204 - 2026-04-22
+
+- Added a longer initial wait before searching for the AgendaPro booking flow and re-resolved the booking root after the click sequence so the monitor is less likely to inspect the page before the booking widget has finished rendering.
+
+## V1.4.203 - 2026-04-22
+
+- Added a narrow AgendaPro debug log that only prints when the page still ends up `UNKNOWN`, making it easier to see whether the booking frame or the extracted text is still missing the actual availability markers.
+
+## V1.4.202 - 2026-04-22
+
+- Fixed the AgendaPro probe's final text classification step so it now uses the booking-frame text variable consistently after the new signal-based extraction path.
+
+## V1.4.201 - 2026-04-22
+
+- Improved the AgendaPro booking-frame resolver so it scores candidate frames instead of stopping at the first match, which helps avoid picking outer wrapper frames that still contain navigation noise.
+- Restricted AgendaPro date detection to the booking frame's interactive elements and tightened the candidate filters so weekday nav labels and footer noise are much less likely to be treated as real appointment dates.
+
+## V1.4.200 - 2026-04-22
+
+- Restricted the AgendaPro monitor to the detected booking iframe so it no longer mixes in top-level navigation or footer text when extracting dates.
+- Tightened date detection so only real calendar dates count: numeric dates still work, and weekday names now only count when they stay attached to a day number on the same line.
+
+## V1.4.199 - 2026-04-22
+
+- Improved the AgendaPro classifier so it merges text from the page and every frame before deciding whether the booking flow is `OPEN`, `FULL`, or `UNKNOWN`.
+- Treated booking-flow markers such as `Agendar ahora`, `Ver todas las fechas disponibles`, and `No hay horas disponibles para esta selección` as full-page signals so iframe-based pages are less likely to fall through to `UNKNOWN`.
+
+## V1.4.198 - 2026-04-22
+
+- Fixed the AgendaPro probe so the `opened` flag is actually captured after the `Ver todas las fechas disponibles` click instead of being referenced before assignment.
+- Kept the three Fundación Ibn URLs and iframe-based booking flow intact while repairing the status classification bug that affected the first real probe run.
+
+## V1.4.197 - 2026-04-22
+
+- Gave the three AgendaPro Fundación Ibn targets unique display names so the AgendaPro monitor can keep separate state for each professional URL instead of rejecting duplicate names.
+- Kept the Google Calendar monitor and health daemon unchanged while fixing only the AgendaPro configuration layer needed for multi-target testing.
+
+## V1.4.196 - 2026-04-22
+
+- Tightened the AgendaPro post-click waits so the monitor waits for booking text to settle instead of relying on `domcontentloaded` after each `Agendar ahora` / `Ver todas las fechas disponibles` click.
+- Kept the iframe-based flow intact and avoided touching `Ver sucursal`, but made the expansion flow more tolerant of pages that re-render their content without a full navigation.
+
+## V1.4.195 - 2026-04-22
+
+- Upgraded the AgendaPro monitor to search the page frames for the real booking area first, so it can work inside the iframe that holds the reservation flow without touching `Ver sucursal`.
+- Kept the double `Agendar ahora` click path and `Ver todas las fechas disponibles` expansion path intact, but now they run in the detected booking frame when that frame exists.
+
+## V1.4.194 - 2026-04-22
+
+- Updated the AgendaPro monitor to follow the real booking flow more closely by clicking `Agendar ahora` twice with a refresh settle in between before it looks for `Ver todas las fechas disponibles`.
+- Kept the existing Google Calendar monitor and health daemon unchanged while tightening only the AgendaPro branch that needs the extra click path.
+
+## V1.4.193 - 2026-04-22
+
+- Populated the AgendaPro monitor with the three Fundación Ibn professional URLs that were supplied, keeping the Google Calendar monitor and health daemon untouched.
+- Kept all three AgendaPro targets under the same dedicated AgendaPro monitor branch so the new site can be exercised without changing the existing appointment pipelines.
+
+## V1.4.192 - 2026-04-22
+
+- Relaxed the new AgendaPro monitor so it tries `Ver todas las fechas disponibles` before deciding the page is truly full, which better matches pages that hide future dates behind an expansion link.
+- Allowed the AgendaPro monitor to run with one, two, or three configured targets so the first booking page can be added and tested independently before the other two are filled in.
+
+## V1.4.191 - 2026-04-22
+
+- Added a separate AgendaPro monitor for booking pages that expose the `Ver todas las fechas disponibles` flow, leaving the Google Calendar monitor and health daemon untouched.
+- The new monitor clicks the expansion link when present, extracts visible dates and times, and emits normalized `EVENT_JSON:` updates only when the open slot set changes.
+- Preloaded the Fundação Iban booking page as the first AgendaPro target in `.env.example` so the new monitor can be tried immediately without disturbing the existing appointment stack.
+
+## V1.4.190 - 2026-04-22
+
+- Reduced the health daemon cadence from 10 minutes to 60 seconds so a hung appointment producer is detected much sooner.
+- Clarified that the health alert reuses the same file-to-qclaw-to-Telegram path as normal monitor alerts unless an explicit webhook is configured.
+
+## V1.4.189 - 2026-04-22
+
+- Added a lightweight heartbeat file writer to `monitor.js` so the producer records a fresh liveness snapshot on startup and each polling round.
+- Added a separate resident health daemon that checks the heartbeat every 10 minutes and only writes an `ERROR` alert into `ALERT_FILE_PATH` when the heartbeat goes stale, keeping normal checks silent.
+- Added macOS launchd and shell wrapper templates for the health daemon plus a `npm run health:daemon` entrypoint so process-down alerts can run independently of the main appointment monitor.
+
+## V1.4.188 - 2026-04-22
+
+- Switched the resident monitor launcher to `node --input-type=module -e "await import('./monitor.js')"` because that entrypoint is the one that reliably starts Playwright in this environment.
+- Kept the restart loop and non-fatal file-write handling, so the resident process can recover if the child exits later.
+
+## V1.4.187 - 2026-04-22
+
+- Restored the Playwright-based appointment probe after the pure `fetch` path proved unable to authenticate to the slots RPC.
+- Kept the launch hardening and non-fatal alert-file handling from the recent stability work, so the monitor still fails softer than before while using the known-good data path.
+
+## V1.4.186 - 2026-04-22
+
+- Removed the Chromium dependency from the appointment monitor and switched the producer to a pure Node.js `fetch` flow.
+- The monitor now resolves the canonical appointment URL from the fetched HTML and queries the slots RPC directly, which avoids the macOS launchd/Chromium bootstrap crash path entirely.
+
+## V1.4.185 - 2026-04-22
+
+- Restored the monitor to a bash wrapper under launchd but now clear `XPC_SERVICE_NAME` before starting Node so Chromium can launch without the bootstrap rendezvous crash.
+- Kept the restart loop and non-fatal alert-file handling in place so a transient exit does not leave the producer offline.
+
+## V1.4.184 - 2026-04-22
+
+- Switched the macOS monitor LaunchAgent to execute `node monitor.js` directly instead of going through a shell wrapper.
+- This avoids the shell-layer environment mismatch that was tripping Chromium's bootstrap rendezvous on startup.
+
+## V1.4.183 - 2026-04-22
+
+- Fixed the macOS monitor wrapper so `set -e` no longer aborts the restart loop when `monitor.js` exits nonzero.
+- This lets the wrapper actually keep retrying instead of dying with the child process and is the main change that makes the monitor resident.
+
+## V1.4.182 - 2026-04-22
+
+- Made the monitor tolerate alert-file write failures at startup and during event emission instead of exiting the whole process.
+- This prevents a missing or temporarily inaccessible `ALERT_FILE_PATH` from killing the producer before it can continue monitoring Google Calendar.
+
+## V1.4.181 - 2026-04-22
+
+- Wrapped the macOS monitor launcher in a restart loop so a transient `monitor.js` exit does not leave the producer offline.
+- Added a top-level fatal error handler to `monitor.js` so startup failures are logged cleanly before the wrapper restarts the process.
+
+## V1.4.180 - 2026-04-22
+
+- Added a macOS launchd entrypoint for the appointment monitor so the producer can stay resident without depending on a live terminal session.
+- Added a small `run_monitor.sh` wrapper plus a `com.tokendancer.monitor.plist` template that keeps `monitor.js` alive and logs its output to `monitor_runtime.log`.
+
+## V1.4.179 - 2026-04-22
+
+- Rolled the monitor cadence back to the earlier peak/off-peak polling schedule so the runtime matches the pre-15-second behavior again.
+- Removed the per-round schedule-ID caching change so each polling round returns to resolving the canonical appointment page before probing slots.
+- Kept the canonical schedule-ID fix from the earlier RPC work, so the monitor still resolves the correct appointment page before calling the slots RPC.
+
+## V1.4.178 - 2026-04-22
+
+- Cached each target's canonical schedule ID and stopped reloading the Google appointment page on every polling round.
+- Kept the flat 15-second cadence, but removed the per-round navigation overhead that was stretching wall-clock detection well past a minute.
+
+## V1.4.177 - 2026-04-22
+
+- Changed the monitor cadence to a flat 15-second interval all day so there is no peak/off-peak drift while testing response latency.
+- Aligned `.env`, `.env.example`, and the README with the new constant polling cadence so the runtime and docs stay in sync.
+
+## V1.4.176 - 2026-04-22
+
+- Fixed schedule ID extraction so the monitor resolves the canonical appointment URL before calling the slots RPC.
+- Kept the full-range RPC snapshot approach intact, but removed the false all-target `ERROR` caused by reading the page URL too early.
+
+## V1.4.175 - 2026-04-22
+
+- Rebuilt the appointment monitor around a single full-range RPC snapshot per round, removing the segmented day-click fallback and all guess-based FULL/UNKNOWN logic.
+- Simplified the runtime and env surface so the producer now only keeps the full snapshot diff path needed for precise global monitoring.
+
+## V1.4.174 - 2026-04-22
+
+- Reduced the monitor's default concurrent scan rounds back to `1` so the browser stops getting overloaded and the monitor can finish rounds reliably again.
+- Updated the docs and env example to treat extra overlap as an optional tuning knob instead of the default operating mode.
+
+## V1.4.173 - 2026-04-22
+
+- Fixed the monitor startup order so `SCAN_TIMEZONE` is initialized before the date-segment window is built.
+- Kept the direct alert-file write path and the qclaw watcher event handling fix in place so the file handoff can actually run after startup.
+
+## V1.4.172 - 2026-04-22
+
+- Changed the appointment monitor to write the alert file directly instead of renaming a temporary file, so the file watcher sees a straightforward modify event.
+- Hardened the qclaw watchdog to react to created, moved, and modified file events instead of only `on_modified`, which makes the file-handoff path work again for atomic replacements.
+
+## V1.4.171 - 2026-04-22
+
+- Added a macOS launchd template plus a small launcher script so the qclaw alert watcher can run as a resident process instead of a cron job.
+- Documented the daemon-based replacement path alongside `npm run alert:daemon` so local file handoff can stay alive without agent re-entry delays.
+
+## V1.4.170 - 2026-04-22
+
+- Added a standalone alert daemon that watches `ALERT_FILE_PATH` continuously so qclaw can receive file-based events without cron drift or agent re-entry delays.
+- Exposed `npm run alert:daemon` as the resident file-watcher entrypoint and documented how to use it alongside the existing appointment monitor.
+
+## V1.4.169 - 2026-04-22
+
+- Added overlapping scan-round concurrency so the monitor can keep 3-4 rounds in flight and continue covering future segments while earlier rounds are still running.
+- Kept weekend-date skipping, RPC fast path, and fallback scan behavior intact, but now the scheduler can ramp up to a small concurrent pipeline instead of waiting for each round to finish before launching the next one.
+
+## V1.4.168 - 2026-04-22
+
+- Kept the monitor running every day while filtering weekend dates out of the monitored appointment-date list, so the runtime loop stays alive but Saturday and Sunday are never probed.
+- Preserved the RPC fast path, fallback scan, and file handoff behavior while separating runtime liveness from which appointment dates get scanned.
+
+## V1.4.167 - 2026-04-22
+
+- Relaxed the scan gate so the monitor now skips only Madrid-time weekends; weekdays remain active all day to avoid missing unexpected releases outside office hours.
+- Kept the RPC fast path, fallback scan, and file handoff behavior unchanged while removing the over-restrictive weekday-hours gate.
+
+## V1.4.166 - 2026-04-22
+
+- Added a Madrid-time scan gate so the monitor stays alive on weekends and off-hours but skips page probes outside work windows.
+- Kept the RPC fast path and fallback scan intact, while making the round scheduler honor `SCAN_TIMEZONE` for workday-only execution.
+
+## V1.4.165 - 2026-04-22
+
+- Narrowed the RPC fast path so it only short-circuits when it actually returns an `OPEN` slot list; ambiguous `FULL` / `UNKNOWN` RPC results now fall back to the slower but more reliable date-click scan.
+- Added an `RPC` trace log so it is easier to see whether a round used the fast path or dropped back to the fallback probe.
+
+## V1.4.164 - 2026-04-22
+
+- Switched the monitor's primary probe from day-by-day button clicking to the appointment page's direct `ListAvailableSlots` RPC, which returns the slot epochs for the monitored range much faster.
+- Kept the original date-click fallback in place for resilience, but now the fast path should cover the full range more accurately and with far less round time.
+- Added a dedicated `SLOT_TIMEZONE` setting so the RPC slot epochs render into stable human-readable appointment strings.
+
+## V1.4.163 - 2026-04-22
+
+- Reordered the segmented appointment scan so the rounds prioritize the 2-day windows closest to the current date in `MONITOR_TIMEZONE`, which reduces navigation churn on the pages that matter most right now.
+- Shortened the page post-load and day-selection waits so each probe round finishes faster while keeping the existing event contract and slot extraction logic intact.
+
+## V1.4.162 - 2026-04-22
+
+- Reused browser pages per target instead of creating and closing a new page on every probe, reducing the overhead of repeated page startup during monitoring.
+- Kept the segmented date scan and noise filtering intact so the faster monitor still produces the same event contract.
+
+## V1.4.161 - 2026-04-22
+
+- Made month navigation more tolerant of slow-loading pages by retrying when the displayed month text has not rendered yet instead of bailing out early.
+- Kept the segmented scan and noise filtering in place so the faster probe stays more reliable under concurrent page loads.
+
+## V1.4.160 - 2026-04-22
+
+- Filtered bare `02:00` style noise from slot extraction so the monitor keeps only likely appointment times instead of treating body text artifacts as real availability.
+- Kept the 2-day segmented scan and 15-second cadence so the monitor stays fast while producing cleaner slot lists.
+
+## V1.4.159 - 2026-04-22
+
+- Reworked the appointment probe to scan the monitored range in 2-day segments and rotate those segments each polling round so the monitor stays within the 15-second cadence.
+- Expanded the monitored date window to `2026-04-22` through `2026-06-15` and updated the docs and env defaults to match the new segmented scan strategy.
+
+## V1.4.158 - 2026-04-22
+
+- Hardened slot extraction so the appointment monitor now retries after a longer post-click wait and falls back to a broader DOM scan when visible buttons do not expose the newly added time slot.
+- Kept the existing target list, date window, and event contract unchanged while improving the chance of catching newly added appointments on an already open day.
+
+## V1.4.157 - 2026-04-22
+
+- Updated only the Mescladís test appointment target to the new Google Calendar link while leaving the five production links and all monitor behavior unchanged.
+
+## V1.4.156 - 2026-04-22
+
+- Seeded the qclaw alert file at monitor startup so the watched file exists immediately even before the first `OPEN` event arrives.
+- Kept the file watcher semantics unchanged by still writing real alert content only when an `OPEN` event is emitted.
+
+## V1.4.155 - 2026-04-22
+
+- Fixed the monitor target validation so the script accepts the current 1 test target plus 5 production targets instead of crashing on a 6-entry target list.
+- Kept the updated test-link and qclaw file-handoff configuration intact while making the local monitor startable again.
+
+## V1.4.154 - 2026-04-22
+
+- Set the local alert file path in the runtime environment so the monitor can actually write to the qclaw-watched file instead of leaving `ALERT_FILE_PATH` empty.
+- Kept the test target refresh and monitoring range intact while fixing the file handoff configuration that qclaw depends on.
+
+## V1.4.153 - 2026-04-22
+
+- Updated the test appointment monitor target to the new Google Calendar appointment link so the same probe flow now runs against the latest test page.
+- Kept the production appointment links, date window, and file handoff behavior unchanged while refreshing the test target in both runtime and example environment files.
+
+## V1.4.152 - 2026-04-22
+
+- Expanded the monitor scope to include the test appointment page alongside the five production appointment links so both paths use the same booking-flow probe.
+- Extended the monitored date window to cover `2026-04-23` through `2026-06-10`, keeping the test target and the real targets on the same inspection logic.
+- Kept local file handoff support in place so the appointment monitor writes a concise alert summary and the raw event JSON into a watched file whenever an `OPEN` event is emitted.
+
+## V1.4.151 - 2026-04-22
+
+- Added local file handoff support so the appointment monitor writes a concise alert summary and the raw event JSON into a watched file whenever an `OPEN` event is emitted.
+- Exposed `ALERT_FILE_PATH` alongside the existing webhook settings so qclaw can consume either a file trigger or an HTTP endpoint.
+
+## V1.4.150 - 2026-04-22
+
+- Upgraded the appointment probe to follow the real booking flow by checking monitored calendar days and then clicking into any open day to read its time buttons.
+- Added `MONITOR_DAYS` so the current 22-24 test window is explicit and configurable, and prefixed extracted slots with the day number for clearer change tracking.
+
+## V1.4.149 - 2026-04-22
+
+- Hardened the monitor deploy script so Linux browser dependencies are installed system-wide while Chromium itself is installed under the `ubuntu` user cache, matching the systemd service account.
+- Kept the monitor service active after deployment by aligning the install path with the runtime user and avoiding the root-cache mismatch.
+
+## V1.4.148 - 2026-04-22
+
+- Added an always-on systemd service for the appointment monitor so it can run 24/7 on the server with automatic restart.
+- Added optional qclaw webhook delivery for every emitted `EVENT_JSON` payload, controlled by `QCLAW_WEBHOOK_URL` and `QCLAW_WEBHOOK_SECRET`.
+- Added a dedicated deploy script for the monitor service and documented the server setup path in the README.
+
+## V1.4.147 - 2026-04-22
+
+- Made the peak/off-peak polling window timezone-aware by evaluating the hour in `MONITOR_TIMEZONE` instead of relying on the host system clock.
+- Defaulted the monitor timezone to `Asia/Shanghai` so the 08:00 to 21:00 rule stays aligned with the operator's local schedule.
+
+## V1.4.146 - 2026-04-22
+
+- Added time-of-day polling control to the appointment monitor so it now sleeps `30s` between rounds from 08:00 through 20:59 and `60s` otherwise.
+- Exposed the peak-window settings in `.env` and `.env.example` so the active polling window can be tuned without touching code.
+
+## V1.4.145 - 2026-04-22
+
+- Added the English `No availability during these days` appointment-page phrase to the monitor's `FULL` detection so the April 22-24 no-slot state is classified correctly.
+- Kept the same event contract and admin-only presentation while making the monitor match the live Google Calendar wording more accurately.
+
+## V1.4.144 - 2026-04-22
+
+- Populated the Mescladís appointment monitor with the five provided Google Calendar appointment links in both `.env.example` and the runtime `.env` so the script can run immediately.
+- Kept the admin-only presentation intact while updating the monitor's active target configuration for the server-side deployment.
+
+## V1.4.143 - 2026-04-22
+
+- Moved the appointment monitor into the admin surface by adding a backend-only monitor card to the `/admin` page and documenting the server-side script location and launch flow there.
+- Restricted the `/admin` route to authenticated admins so regular frontend users no longer see or enter the admin panel.
+- Kept the standalone Playwright monitor itself separate from the public UI while preserving the normalized `EVENT_JSON:` output contract.
+
+## V1.4.142 - 2026-04-22
+
+- Added a standalone Node.js + Playwright monitor for five Google Calendar appointment pages that emits normalized `EVENT_JSON:` lines only when status or open-slot changes occur.
+- Persisted the last observed state in `state.json`, separated ordinary check logs from event logs, and kept the monitor isolated from any direct notification delivery.
+- Documented the new monitor workflow in the root README and shipped a matching `.env.example` for the five target URLs plus polling controls.
+
 ## V1.4.141 - 2026-04-19
 
 - Added an optional MBTI / zodiac style distillation layer to the creation flow so users can pick one, both, or neither without affecting the underlying create path.

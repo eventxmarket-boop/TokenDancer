@@ -53,5 +53,8 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     LLM_MAX_TOKENS: int = 800
 
+    OPENAI_API_KEY: str = ""
+    OPENAI_IMAGE_MODEL: str = "gpt-image-2"
+
 
 settings = Settings()

@@ -11,6 +11,7 @@ from app.routers.chat import router as chat_router
 from app.routers.persona import router as persona_router
 from app.routers.how_to_do import router as how_to_do_router
 from app.routers.reply_assistant import router as reply_assistant_router
+from app.routers.image_lab import router as image_lab_router
 
 
 def create_app() -> FastAPI:
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(how_to_do_router)
     app.include_router(reply_assistant_router)
+    app.include_router(image_lab_router)
     return app
 
 

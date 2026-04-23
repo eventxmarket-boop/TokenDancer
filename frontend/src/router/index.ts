@@ -7,6 +7,7 @@ import CreateWizardPage from '@/views/CreateWizardPage.vue'
 import CreateResultPage from '@/views/CreateResultPage.vue'
 import ReplyAssistantLandingPage from '@/views/ReplyAssistantLandingPage.vue'
 import ReplyAssistantPage from '@/views/ReplyAssistantPage.vue'
+import ImageLab from '@/views/ImageLab.vue'
 import HowToDoPage from '@/views/HowToDoPage.vue'
 import ArchiveCenterPage from '@/views/ArchiveCenterPage.vue'
 import CharacterPage from '@/views/CharacterPage.vue'
@@ -17,7 +18,7 @@ import MySeedsPage from '@/views/MySeedsPage.vue'
 import MePage from '@/views/MePage.vue'
 import LoginPage from '@/views/LoginPage.vue'
 import RegisterPage from '@/views/RegisterPage.vue'
-import { ensureAuthReady, isLoggedIn } from '@/stores/auth'
+import { authUser, ensureAuthReady, isLoggedIn } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -73,6 +74,12 @@ const router = createRouter({
       meta: { title: '我该怎么回' },
     },
     {
+      path: '/image-lab',
+      name: 'image-lab',
+      component: ImageLab,
+      meta: { title: 'Image Lab', requiresAuth: true },
+    },
+    {
       path: '/archive/:kind',
       name: 'archive-center',
       component: ArchiveCenterPage,
@@ -113,7 +120,12 @@ const router = createRouter({
       meta: { title: '我创建的 Seed', requiresAuth: true },
     },
     { path: '/me', name: 'me', component: MePage, meta: { title: '个人中心' } },
-    { path: '/admin', name: 'admin', component: AdminPage, meta: { title: '后台设置' } },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminPage,
+      meta: { title: '后台设置', requiresAuth: true, requiresAdmin: true },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {
@@ -132,6 +144,11 @@ router.beforeEach(async (to) => {
         redirect: to.fullPath,
       },
     }
+  }
+
+  const requiresAdmin = to.matched.some((record) => Boolean(record.meta.requiresAdmin))
+  if (requiresAdmin && authUser.value?.role !== 'admin') {
+    return '/me'
   }
 
   if ((to.name === 'login' || to.name === 'register') && isLoggedIn.value) {

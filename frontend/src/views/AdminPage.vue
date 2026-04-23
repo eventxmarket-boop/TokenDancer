@@ -30,6 +30,13 @@ const corpusNotice = ref('')
 const corpusItems = ref<ReplyCorpus[]>([])
 const corpusEditingId = ref<number | null>(null)
 const corpusFileInputRef = ref<HTMLInputElement | null>(null)
+const monitorTargets = ref([
+  { name: 'Mescladís 1', url: '' },
+  { name: 'Mescladís 2', url: '' },
+  { name: 'Mescladís 3', url: '' },
+  { name: 'Mescladís 4', url: '' },
+  { name: 'Mescladís 5', url: '' },
+])
 
 const targetPersonOptions: Array<[string, string]> = [
   ['any', '通用'],
@@ -356,11 +363,60 @@ onMounted(() => {
     <article class="section-card">
       <div class="section-head">
         <div>
+          <p class="eyebrow">后台专用</p>
+          <h3>预约监控</h3>
+          <p class="section-note">仅管理员可见。脚本位于服务器根目录，普通前端不会展示这块内容。</p>
+        </div>
+      </div>
+
+      <div class="admin-grid">
+        <section class="mini-panel">
+          <p class="side-title">部署位置</p>
+          <div class="state-copy">
+            <p><strong>脚本：</strong><code>/opt/xuedingtoken_latest/monitor.js</code></p>
+            <p><strong>状态文件：</strong><code>/opt/xuedingtoken_latest/state.json</code></p>
+            <p><strong>环境文件：</strong><code>/opt/xuedingtoken_latest/.env</code></p>
+          </div>
+        </section>
+
+        <section class="mini-panel">
+          <p class="side-title">启动方式</p>
+          <div class="state-copy">
+            <p><code>cd /opt/xuedingtoken_latest</code></p>
+            <p><code>npm install</code></p>
+            <p><code>npm run install:chromium</code></p>
+            <p><code>npm run monitor</code></p>
+          </div>
+        </section>
+      </div>
+
+      <section class="mini-panel" style="margin-top: 16px;">
+        <p class="side-title">监控目标占位</p>
+        <div class="config-list">
+          <article v-for="target in monitorTargets" :key="target.name" class="config-card">
+            <div class="config-card__head">
+              <div>
+                <p class="spotlight-card__label">{{ target.name }}</p>
+                <h4>Google Calendar appointment schedule</h4>
+              </div>
+            </div>
+            <p class="state-copy">
+              {{ target.url || '请在服务器 .env 中填写对应的 TARGET_*_URL' }}
+            </p>
+          </article>
+        </div>
+      </section>
+    </article>
+
+    <article class="section-card">
+      <div class="section-head">
+        <div>
           <p class="eyebrow">后台设置</p>
           <h3>大模型配置</h3>
           <p class="section-note">这里先做一套最小可用配置，改完立刻影响聊天链路。</p>
         </div>
         <div class="hero-actions">
+          <RouterLink class="secondary-btn" to="/image-lab">Image Lab</RouterLink>
           <RouterLink class="secondary-btn" to="/me">返回我的</RouterLink>
           <button class="ghost-btn" type="button" @click="resetForm">新建配置</button>
         </div>

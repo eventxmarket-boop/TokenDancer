@@ -30,6 +30,7 @@ from app.routers.admin_audit import router as admin_audit_router
 from app.routers.subscriptions import router as subscriptions_router
 from app.routers.billing import router as billing_router
 from app.routers.reply_assistant import router as reply_assistant_router
+from app.routers.image_lab import router as image_lab_router
 from app.routers.saved_items import router as saved_items_router
 from app.routers.self_fill_assistant import router as self_fill_assistant_router
 from app.models import User, Product, Cart, CartItem, Order, OrderItem, RedeemCode, RedeemLog, APIKey, UsageRecord, BalanceLedger, CreatedPersona, ReplyCorpus, SavedItem  # noqa: F401
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(subscriptions_router)
     app.include_router(billing_router)
     app.include_router(reply_assistant_router)
+    app.include_router(image_lab_router)
     app.include_router(self_fill_assistant_router)
     app.include_router(saved_items_router)
 
