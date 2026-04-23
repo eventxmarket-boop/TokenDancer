@@ -1,3 +1,8 @@
+## V1.4.223 - 2026-04-24
+
+- Tightened the top navigation spacing and turned the mobile bottom nav into a five-slot layout so `image-2` stays visible on narrower screens instead of wrapping out of view.
+- Kept the `image-2` entry between Mind and Favorites in the desktop header and did not change the Image Lab flow itself.
+
 ## V1.4.222 - 2026-04-24
 
 - Added the `image-2` entry to the mobile bottom navigation so the Image Lab is visible on the `/persona/` homepage in mobile layout too.

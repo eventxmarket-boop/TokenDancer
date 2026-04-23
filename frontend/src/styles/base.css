@@ -261,29 +261,33 @@ svg {
 
 .desktop-nav {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nav-group {
   position: relative;
   padding-bottom: 12px;
   margin-bottom: -12px;
+  flex: 0 0 auto;
 }
 
 .nav-dropdown__trigger {
   display: inline-flex;
   align-items: center;
   min-height: var(--control-height);
-  padding: 10px 12px;
+  padding: 9px 11px;
   border-radius: 999px;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid transparent;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .nav-group--active .nav-dropdown__trigger,
@@ -350,14 +354,15 @@ svg {
 .nav-link,
 .mobile-nav__item {
   min-height: var(--control-height);
-  padding: 10px 12px;
+  padding: 9px 11px;
   border-radius: 999px;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid transparent;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+  flex: 0 0 auto;
 }
 
 .nav-link.router-link-active,
@@ -2897,7 +2902,7 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
     left: 12px;
     transform: none;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
     padding: 8px;
     border-radius: 22px;
@@ -2905,8 +2910,8 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
 
   .mobile-nav__item {
     min-height: 42px;
-    padding: 8px 6px;
-    font-size: 0.82rem;
+    padding: 8px 5px;
+    font-size: 0.76rem;
   }
 
   .field-hint {
@@ -3192,12 +3197,13 @@ html[data-theme='night'] .my-entry-link:focus-visible .my-entry-card {
     gap: 4px;
     padding: 8px 6px;
     border-radius: 20px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .mobile-nav__item {
     min-height: 40px;
     padding: 8px 4px;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
   }
 
   .topbar h1 {
