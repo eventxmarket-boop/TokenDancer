@@ -390,6 +390,16 @@ onMounted(() => {
             <p>这里只做内部测试，不落盘保存图片。</p>
           </div>
         </section>
+
+        <section class="mini-panel">
+          <p class="side-title">Plus Bridge（实验）</p>
+          <div class="state-copy">
+            <p>本机已登录 ChatGPT Plus 时，可用 Playwright 做本地桥接。</p>
+            <p><code>npm run plus:bridge -- --bootstrap</code></p>
+            <p><code>npm run plus:bridge -- --prompt "..." --upload-url /persona-api/image-lab/bridge/submit</code></p>
+            <p>桥接结果只做临时 handoff，不保存原始图片文件。</p>
+          </div>
+        </section>
       </div>
     </article>
 

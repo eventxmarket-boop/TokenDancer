@@ -4,11 +4,17 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 
-from app.schemas.image_lab import ImageGenerateRequest, ImageGenerateResponse
+from app.schemas.image_lab import (
+    ImageGenerateRequest,
+    ImageGenerateResponse,
+    PlusBridgeSubmitRequest,
+    PlusBridgeSubmitResponse,
+)
 from app.services.openai_image_service import (
     OpenAIImageServiceError,
     generate_image_base64,
 )
+from app.services.plus_bridge_service import get_latest_plus_bridge_result, store_plus_bridge_result
 
 logger = logging.getLogger(__name__)
 
@@ -82,3 +88,43 @@ async def generate_image(
             payload.output_format,
         )
         raise HTTPException(status_code=500, detail="图片生成失败，请稍后重试。")
+
+
+@router.post("/bridge/submit", response_model=PlusBridgeSubmitResponse)
+async def submit_plus_bridge_result(
+    payload: PlusBridgeSubmitRequest,
+    user_id: str = Depends(require_internal_user),
+):
+    record = store_plus_bridge_result(
+        {
+            "prompt": payload.prompt,
+            "size": payload.size,
+            "quality": payload.quality,
+            "output_format": payload.output_format,
+            "image_base64": payload.image_base64,
+            "mime_type": payload.mime_type,
+            "model": payload.model,
+            "source": payload.source,
+            "user_id": payload.user_id or user_id,
+        }
+    )
+
+    logger.info(
+        "image_lab_plus_bridge_submit user_id=%s prompt_len=%s size=%s quality=%s output_format=%s source=%s",
+        user_id,
+        len(payload.prompt),
+        payload.size,
+        payload.quality,
+        payload.output_format,
+        payload.source,
+    )
+
+    return PlusBridgeSubmitResponse(**record)
+
+
+@router.get("/bridge/latest", response_model=PlusBridgeSubmitResponse | None)
+async def read_latest_plus_bridge_result():
+    record = get_latest_plus_bridge_result()
+    if record is None:
+        return None
+    return PlusBridgeSubmitResponse(**record)

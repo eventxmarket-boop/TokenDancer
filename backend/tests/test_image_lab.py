@@ -102,6 +102,39 @@ class ImageLabTests(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json()["detail"], "图片生成失败，请稍后重试。")
 
+    def test_plus_bridge_submit_and_latest_round_trip(self):
+        with TestClient(app) as client:
+            submit = client.post(
+                "/persona-api/image-lab/bridge/submit",
+                json={
+                    "prompt": "a neon-lit robot reading a book",
+                    "size": "1024x1024",
+                    "quality": "medium",
+                    "output_format": "png",
+                    "image_base64": "QUJDRA==",
+                    "mime_type": "image/png",
+                    "model": "chatgpt-plus-bridge",
+                    "source": "chatgpt-plus",
+                    "user_id": "internal-test-user",
+                },
+                headers={"X-Internal-User": "internal-test-user"},
+            )
+
+            latest = client.get("/persona-api/image-lab/bridge/latest")
+
+        self.assertEqual(submit.status_code, 200)
+        submit_body = submit.json()
+        self.assertTrue(submit_body["accepted"])
+        self.assertEqual(submit_body["prompt"], "a neon-lit robot reading a book")
+        self.assertEqual(submit_body["image_base64"], "QUJDRA==")
+        self.assertEqual(submit_body["mime_type"], "image/png")
+        self.assertEqual(submit_body["model"], "chatgpt-plus-bridge")
+        self.assertEqual(submit_body["source"], "chatgpt-plus")
+        self.assertEqual(latest.status_code, 200)
+        latest_body = latest.json()
+        self.assertEqual(latest_body["prompt"], "a neon-lit robot reading a book")
+        self.assertEqual(latest_body["image_base64"], "QUJDRA==")
+
 
 if __name__ == "__main__":
     unittest.main()

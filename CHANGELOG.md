@@ -1,3 +1,14 @@
+## V1.4.226 - 2026-04-24
+
+- Added a visible `Plus Bridge（实验）` card in the admin Image-2 area so the local browser bridge can be discovered from the web UI instead of only from the README.
+- Kept the new local bridge workflow and the backend bridge receive/latest endpoints intact so the experimental Plus-only path stays separate from the official OpenAI API path.
+
+## V1.4.225 - 2026-04-24
+
+- Added an experimental local ChatGPT Plus bridge script (`plus_bridge.js`) that uses a persistent Playwright profile to submit prompts from a local machine, capture the rendered image artifact, and optionally upload the result to a server endpoint.
+- Added backend bridge receive/latest endpoints under `/persona-api/image-lab/bridge/*` so the local bridge can hand results back to the server without storing image files long-term.
+- Documented the bridge workflow in `.env.example`, `package.json`, and `README.md` so internal users can bootstrap a Plus-only automation path while keeping the official OpenAI API route intact.
+
 ## V1.4.223 - 2026-04-24
 
 - Tightened the top navigation spacing and turned the mobile bottom nav into a five-slot layout so `image-2` stays visible on narrower screens instead of wrapping out of view.

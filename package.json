@@ -1,0 +1,22 @@
+{
+  "name": "mescladis-appointment-monitor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node monitor.js",
+    "monitor": "node monitor.js",
+    "plus:bridge": "node plus_bridge.js",
+    "health:daemon": "node monitor_health_daemon.js",
+    "agendapro:monitor": "AGENDAPRO_ALERT_FILE_PATH=/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/agendapro_alert.txt node agendapro_monitor.js",
+    "montjuic:monitor": "MONTJUIC_ALERT_FILE_PATH=/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/montjuic_alert.txt node montjuic_monitor.js",
+    "alert:daemon": "node calendar_alert_daemon.js",
+    "install:chromium": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}
