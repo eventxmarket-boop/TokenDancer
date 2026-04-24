@@ -1343,6 +1343,10 @@
 
 ## V1.0.3 - 2026-04-15
 
+# V1.4.224
+- Added an explicit Image-2 entry inside the admin page so internal users can reach Image Lab without opening `/persona-api/` directly.
+- Documented the Image Lab page and API endpoint in the admin workspace entry.
+
 - Updated the backend deployment script to restart the actual server unit `tokendancer-backend.service`.
 
 ## V1.0.2 - 2026-04-15

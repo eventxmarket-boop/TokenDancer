@@ -363,6 +363,39 @@ onMounted(() => {
     <article class="section-card">
       <div class="section-head">
         <div>
+          <p class="eyebrow">内部科研</p>
+          <h3>Image-2</h3>
+          <p class="section-note">直接从 admin 进入，不需要打开 `/persona-api/` 根地址。</p>
+        </div>
+        <div class="hero-actions">
+          <RouterLink class="secondary-btn" to="/image-lab">打开 Image Lab</RouterLink>
+        </div>
+      </div>
+
+      <div class="admin-grid">
+        <section class="mini-panel">
+          <p class="side-title">接口入口</p>
+          <div class="state-copy">
+            <p><strong>页面：</strong><RouterLink to="/image-lab">/image-lab</RouterLink></p>
+            <p><strong>接口：</strong><code>/persona-api/image-lab/generate</code></p>
+            <p><strong>模型：</strong>gpt-image-2</p>
+          </div>
+        </section>
+
+        <section class="mini-panel">
+          <p class="side-title">接入方式</p>
+          <div class="state-copy">
+            <p>前端直接走同域 `/persona-api` 前缀。</p>
+            <p>后端从环境变量读取 OpenAI Key。</p>
+            <p>这里只做内部测试，不落盘保存图片。</p>
+          </div>
+        </section>
+      </div>
+    </article>
+
+    <article class="section-card">
+      <div class="section-head">
+        <div>
           <p class="eyebrow">后台专用</p>
           <h3>预约监控</h3>
           <p class="section-note">仅管理员可见。脚本位于服务器根目录，普通前端不会展示这块内容。</p>
