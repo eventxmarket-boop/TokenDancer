@@ -46,10 +46,15 @@ npm run plus:bridge -- --prompt "a studio portrait of a robot reading a book"
 Useful flags:
 
 - `--bootstrap` opens a persistent browser so you can log in once.
+- `--transport cdp --cdp-launch` opens a CDP-controlled Chrome/Chromium session.
+- `--transport cdp --cdp-endpoint http://127.0.0.1:9222` attaches to an already-running CDP browser.
+- `--cdp-user-data-dir` keeps the CDP profile separate from the persistent Playwright bridge profile.
 - `--upload-url` posts the generated base64 payload to a server endpoint after capture.
 - `--headless false` keeps the browser visible while debugging.
 
 The bridge writes the rendered image artifact to `.plus_bridge_output/` and prints the same JSON payload to stdout. If you point `--upload-url` at a server endpoint, the bridge will also POST the payload there as a handoff step.
+
+The CDP mode is the closest browser-level bridge for internal automation trials: a local agent such as OpenClaw can drive the browser session, while your site keeps the prompt, result upload, and display flow under your control.
 
 ## Appointment Monitor
 

@@ -1,3 +1,9 @@
+## V1.4.227 - 2026-04-24
+
+- Added a Chrome CDP bridge mode to `plus_bridge.js` so the experimental local ChatGPT Plus flow can attach to or launch a browser through remote debugging instead of only using the persistent Playwright profile path.
+- Exposed CDP bridge flags and scripts in `package.json`, `.env.example`, README, and the admin Image-2 panel so internal users can try a browser-level automation bridge that local agents can drive.
+- Kept the official OpenAI API image path unchanged and continued treating the Plus bridge as a separate experimental route.
+
 ## V1.4.226 - 2026-04-24
 
 - Added a visible `Plus Bridge（实验）` card in the admin Image-2 area so the local browser bridge can be discovered from the web UI instead of only from the README.

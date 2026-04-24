@@ -104,19 +104,21 @@ async def submit_plus_bridge_result(
             "image_base64": payload.image_base64,
             "mime_type": payload.mime_type,
             "model": payload.model,
+            "transport": payload.transport,
             "source": payload.source,
             "user_id": payload.user_id or user_id,
         }
     )
 
     logger.info(
-        "image_lab_plus_bridge_submit user_id=%s prompt_len=%s size=%s quality=%s output_format=%s source=%s",
+        "image_lab_plus_bridge_submit user_id=%s prompt_len=%s size=%s quality=%s output_format=%s source=%s transport=%s",
         user_id,
         len(payload.prompt),
         payload.size,
         payload.quality,
         payload.output_format,
         payload.source,
+        payload.transport,
     )
 
     return PlusBridgeSubmitResponse(**record)

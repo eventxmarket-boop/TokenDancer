@@ -114,6 +114,7 @@ class ImageLabTests(unittest.TestCase):
                     "image_base64": "QUJDRA==",
                     "mime_type": "image/png",
                     "model": "chatgpt-plus-bridge",
+                    "transport": "cdp",
                     "source": "chatgpt-plus",
                     "user_id": "internal-test-user",
                 },
@@ -129,11 +130,13 @@ class ImageLabTests(unittest.TestCase):
         self.assertEqual(submit_body["image_base64"], "QUJDRA==")
         self.assertEqual(submit_body["mime_type"], "image/png")
         self.assertEqual(submit_body["model"], "chatgpt-plus-bridge")
+        self.assertEqual(submit_body["transport"], "cdp")
         self.assertEqual(submit_body["source"], "chatgpt-plus")
         self.assertEqual(latest.status_code, 200)
         latest_body = latest.json()
         self.assertEqual(latest_body["prompt"], "a neon-lit robot reading a book")
         self.assertEqual(latest_body["image_base64"], "QUJDRA==")
+        self.assertEqual(latest_body["transport"], "cdp")
 
 
 if __name__ == "__main__":

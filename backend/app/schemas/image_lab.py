@@ -34,6 +34,7 @@ class PlusBridgeSubmitRequest(BaseModel):
     image_base64: str = Field(min_length=1)
     mime_type: str = "image/png"
     model: str = "chatgpt-plus-bridge"
+    transport: str = "persistent"
     source: str = "chatgpt-plus"
     user_id: Optional[str] = None
 
@@ -48,5 +49,6 @@ class PlusBridgeSubmitResponse(BaseModel):
     image_base64: str
     mime_type: str
     model: str
+    transport: str = "persistent"
     source: str
     user_id: Optional[str] = None

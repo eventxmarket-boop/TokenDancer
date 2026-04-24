@@ -394,9 +394,12 @@ onMounted(() => {
         <section class="mini-panel">
           <p class="side-title">Plus Bridge（实验）</p>
           <div class="state-copy">
-            <p>本机已登录 ChatGPT Plus 时，可用 Playwright 做本地桥接。</p>
+            <p>本机已登录 ChatGPT Plus 时，可用 Playwright 或 CDP 做本地桥接。</p>
             <p><code>npm run plus:bridge -- --bootstrap</code></p>
+            <p><code>npm run plus:bridge:cdp -- --bootstrap</code></p>
             <p><code>npm run plus:bridge -- --prompt "..." --upload-url /persona-api/image-lab/bridge/submit</code></p>
+            <p><code>npm run plus:bridge:cdp -- --prompt "..." --upload-url /persona-api/image-lab/bridge/submit</code></p>
+            <p><code>npm run plus:bridge:cdp -- --cdp-endpoint http://127.0.0.1:9222 --prompt "..."</code></p>
             <p>桥接结果只做临时 handoff，不保存原始图片文件。</p>
           </div>
         </section>

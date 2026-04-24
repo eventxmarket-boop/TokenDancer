@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -22,6 +23,20 @@ const OUTPUT_DIR = path.resolve(
 );
 const UPLOAD_URL = args.uploadUrl || process.env.PLUS_BRIDGE_UPLOAD_URL || '';
 const HEADLESS = parseBoolean(args.headless ?? process.env.PLUS_BRIDGE_HEADLESS, false);
+const TRANSPORT = String(args.transport || process.env.PLUS_BRIDGE_TRANSPORT || 'persistent')
+  .trim()
+  .toLowerCase();
+const CDP_ENDPOINT = String(args.cdpEndpoint || process.env.PLUS_BRIDGE_CDP_ENDPOINT || '')
+  .trim();
+const CDP_USER_DATA_DIR = path.resolve(
+  __dirname,
+  args.cdpUserDataDir || process.env.PLUS_BRIDGE_CDP_USER_DATA_DIR || '.plus_bridge_cdp_profile',
+);
+const CDP_LAUNCH = parseBoolean(args.cdpLaunch ?? process.env.PLUS_BRIDGE_CDP_LAUNCH, true);
+const CDP_PORT = parseInteger(args.cdpPort ?? process.env.PLUS_BRIDGE_CDP_PORT, 9222);
+const BROWSER_EXECUTABLE = String(
+  args.browserExecutable || process.env.PLUS_BRIDGE_BROWSER_EXECUTABLE || chromium.executablePath(),
+).trim();
 const WAIT_MS = parseInteger(args.waitMs ?? process.env.PLUS_BRIDGE_WAIT_MS, 300000);
 const SCREENSHOT_TIMEOUT_MS = parseInteger(
   args.screenshotTimeoutMs ?? process.env.PLUS_BRIDGE_SCREENSHOT_TIMEOUT_MS,
@@ -30,6 +45,7 @@ const SCREENSHOT_TIMEOUT_MS = parseInteger(
 
 const PROMPT = args.prompt || readPromptFile(args.promptFile || process.env.PLUS_BRIDGE_PROMPT_FILE);
 const MODE = args.bootstrap ? 'bootstrap' : PROMPT ? 'generate' : 'help';
+const RUNTIME_MODE = TRANSPORT === 'cdp' ? 'cdp' : 'persistent';
 
 if (args.help || MODE === 'help') {
   printHelp();
@@ -38,11 +54,16 @@ if (args.help || MODE === 'help') {
 
 await fs.promises.mkdir(OUTPUT_DIR, { recursive: true }).catch(() => {});
 
-const browserContext = await chromium.launchPersistentContext(USER_DATA_DIR, {
+const browserSession = await createBrowserSession({
+  transport: RUNTIME_MODE,
   headless: HEADLESS,
-  viewport: { width: 1440, height: 1280 },
+  userDataDir: TRANSPORT === 'cdp' ? CDP_USER_DATA_DIR : USER_DATA_DIR,
+  cdpEndpoint: CDP_ENDPOINT,
+  cdpLaunch: CDP_LAUNCH,
+  cdpPort: CDP_PORT,
+  browserExecutable: BROWSER_EXECUTABLE,
 });
-
+const browserContext = browserSession.context;
 const page = browserContext.pages()[0] || (await browserContext.newPage());
 
 try {
@@ -67,6 +88,7 @@ try {
     prompt: PROMPT,
     prompt_length: PROMPT.trim().length,
     model: 'chatgpt-plus-bridge',
+    transport: RUNTIME_MODE,
     size: args.size || 'unknown',
     quality: args.quality || 'unknown',
     output_format: args.outputFormat || 'png',
@@ -113,7 +135,7 @@ try {
   console.error(`[PLUS-BRIDGE] ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 } finally {
-  await browserContext.close().catch(() => {});
+  await browserSession.cleanup().catch(() => {});
 }
 
 function printHelp() {
@@ -121,6 +143,8 @@ function printHelp() {
     'Usage:',
     '  node plus_bridge.js --prompt "a cat in a paper crown" [--upload-url http://127.0.0.1:8011/persona-api/image-lab/bridge/submit]',
     '  node plus_bridge.js --bootstrap',
+    '  node plus_bridge.js --transport cdp --cdp-launch --prompt "a cat in a paper crown"',
+    '  node plus_bridge.js --transport cdp --cdp-endpoint http://127.0.0.1:9222 --prompt "a cat in a paper crown"',
     '',
     'Flags:',
     '  --prompt <text>                生成提示词',
@@ -130,6 +154,12 @@ function printHelp() {
     '  --user-data-dir <path>         Chromium 持久化用户目录',
     '  --output-dir <path>            输出 JSON 所在目录',
     '  --headless true|false          是否无头，默认 false',
+    '  --transport persistent|cdp     浏览器桥接模式，默认 persistent',
+    '  --cdp-endpoint <url>           连接已有 Chrome CDP 端点',
+    '  --cdp-launch true|false        是否自动启动 CDP Chrome，默认 true',
+    '  --cdp-user-data-dir <path>     CDP 模式专用用户目录',
+    '  --cdp-port <number>            自动启动时的调试端口',
+    '  --browser-executable <path>     Chrome / Chromium 可执行文件',
     '  --wait-ms <number>             等待登录/输入框的总时长',
     '  --screenshot-timeout-ms <num>   等待图片出现的时长',
     '  --bootstrap                    仅打开浏览器并等待手工登录',
@@ -140,6 +170,12 @@ function printHelp() {
     '  PLUS_BRIDGE_OUTPUT_DIR',
     '  PLUS_BRIDGE_UPLOAD_URL',
     '  PLUS_BRIDGE_HEADLESS',
+    '  PLUS_BRIDGE_TRANSPORT',
+    '  PLUS_BRIDGE_CDP_ENDPOINT',
+    '  PLUS_BRIDGE_CDP_USER_DATA_DIR',
+    '  PLUS_BRIDGE_CDP_LAUNCH',
+    '  PLUS_BRIDGE_CDP_PORT',
+    '  PLUS_BRIDGE_BROWSER_EXECUTABLE',
     '  PLUS_BRIDGE_WAIT_MS',
     '  PLUS_BRIDGE_SCREENSHOT_TIMEOUT_MS',
     '  PLUS_BRIDGE_PROMPT_FILE',
@@ -192,6 +228,143 @@ function parseBoolean(value, fallback) {
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function createBrowserSession({
+  transport,
+  headless,
+  userDataDir,
+  cdpEndpoint,
+  cdpLaunch,
+  cdpPort,
+  browserExecutable,
+}) {
+  if (transport === 'cdp') {
+    if (cdpEndpoint) {
+      const browser = await chromium.connectOverCDP(cdpEndpoint);
+      const context = browser.contexts()[0] || (await browser.newContext());
+      return {
+        browser,
+        context,
+        cleanup: async () => {},
+      };
+    }
+
+    if (!cdpLaunch) {
+      throw new Error('CDP 模式需要 --cdp-endpoint 或 --cdp-launch');
+    }
+
+    return launchCdpBrowser({
+      browserExecutable,
+      headless,
+      userDataDir,
+      cdpPort,
+    });
+  }
+
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    headless,
+    viewport: { width: 1440, height: 1280 },
+  });
+
+  return {
+    browser: context.browser(),
+    context,
+    cleanup: async () => {
+      await context.close().catch(() => {});
+    },
+  };
+}
+
+async function launchCdpBrowser({ browserExecutable, headless, userDataDir, cdpPort }) {
+  const executable = resolveBrowserExecutable(browserExecutable);
+  if (!executable) {
+    throw new Error('未找到 Chrome / Chromium 可执行文件，无法启动 CDP 模式。');
+  }
+
+  await fs.promises.mkdir(userDataDir, { recursive: true }).catch(() => {});
+
+  const child = spawn(
+    executable,
+    [
+      `--remote-debugging-port=${cdpPort}`,
+      `--user-data-dir=${userDataDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-dev-shm-usage',
+      ...(headless ? ['--headless=new'] : []),
+    ],
+    {
+      detached: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+
+  child.stdout.on('data', (chunk) => {
+    process.stdout.write(`[PLUS-BRIDGE/CDP] ${chunk.toString()}`);
+  });
+  child.stderr.on('data', (chunk) => {
+    process.stderr.write(`[PLUS-BRIDGE/CDP] ${chunk.toString()}`);
+  });
+
+  await waitForCdpEndpoint(cdpPort, WAIT_MS);
+
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
+  const context = browser.contexts()[0] || (await browser.newContext());
+
+  return {
+    browser,
+    context,
+    cleanup: async () => {
+      await context.close().catch(() => {});
+      if (!child.killed) {
+        child.kill('SIGTERM');
+      }
+    },
+  };
+}
+
+function resolveBrowserExecutable(explicitExecutable) {
+  const trimmed = String(explicitExecutable || '').trim();
+  if (trimmed) {
+    return trimmed;
+  }
+
+  const candidates = [
+    chromium.executablePath(),
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ];
+
+  return candidates.find((candidate) => candidate && fs.existsSync(candidate)) || '';
+}
+
+async function waitForCdpEndpoint(port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  const endpoint = `http://127.0.0.1:${port}/json/version`;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(endpoint);
+      if (response.ok) {
+        const body = await response.json().catch(() => null);
+        if (body && typeof body.webSocketDebuggerUrl === 'string') {
+          return body;
+        }
+      }
+    } catch {
+      // keep polling
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  throw new Error(`CDP 端点在 ${timeoutMs}ms 内未就绪：${endpoint}`);
 }
 
 function loadEnvFile(envPath) {

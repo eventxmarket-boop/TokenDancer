@@ -10,6 +10,7 @@
     "start": "node monitor.js",
     "monitor": "node monitor.js",
     "plus:bridge": "node plus_bridge.js",
+    "plus:bridge:cdp": "node plus_bridge.js --transport cdp --cdp-launch",
     "health:daemon": "node monitor_health_daemon.js",
     "agendapro:monitor": "AGENDAPRO_ALERT_FILE_PATH=/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/agendapro_alert.txt node agendapro_monitor.js",
     "montjuic:monitor": "MONTJUIC_ALERT_FILE_PATH=/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/montjuic_alert.txt node montjuic_monitor.js",
