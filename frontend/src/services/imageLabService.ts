@@ -18,6 +18,43 @@ export type ImageLabGenerateResponse = {
   output_format: string
 }
 
+export type PlusBridgeEvent = {
+  accepted: boolean
+  received_at: string
+  stage: string
+  message: string
+  mode: string
+  transport: string
+  prompt_length: number
+  size: string
+  quality: string
+  output_format: string
+  success?: boolean | null
+  error?: string | null
+  user_id?: string | null
+}
+
+export type PlusBridgeStatus = {
+  updated_at?: string | null
+  mode: string
+  transport: string
+  stage: string
+  message: string
+  prompt: string
+  prompt_length: number
+  size: string
+  quality: string
+  output_format: string
+  model: string
+  page_url: string
+  image_base64: string
+  mime_type: string
+  success?: boolean | null
+  error?: string | null
+  user_id?: string | null
+  events: Array<Record<string, unknown>>
+}
+
 async function readErrorMessage(response: Response): Promise<string> {
   const text = await response.text()
   try {
@@ -54,4 +91,18 @@ export async function generateImageLabImage(
   })
 
   return readJson<ImageLabGenerateResponse>(response)
+}
+
+export async function getPlusBridgeStatus(): Promise<PlusBridgeStatus | null> {
+  const response = await fetch(`${API_PREFIX}/image-lab/bridge/status`, {
+    headers: authHeaders(),
+  })
+  return readJson<PlusBridgeStatus | null>(response)
+}
+
+export async function getLatestPlusBridgeResult(): Promise<PlusBridgeStatus | null> {
+  const response = await fetch(`${API_PREFIX}/image-lab/bridge/latest`, {
+    headers: authHeaders(),
+  })
+  return readJson<PlusBridgeStatus | null>(response)
 }

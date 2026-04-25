@@ -1,3 +1,8 @@
+## V1.4.231 - 2026-04-25
+
+- Restored the missing bridge-status export wiring for the admin panel so the qclaw test template can consume `/persona-api/image-lab/bridge/status/` without breaking the frontend build.
+- Kept the new read-only qclaw probe and slash-aliased status route in place so testers can read bridge state without touching repository code.
+
 ## V1.4.230 - 2026-04-25
 
 - Added a read-only qclaw bridge-status probe so external automation can consume `/persona-api/image-lab/bridge/status` without modifying repository code or generated assets.

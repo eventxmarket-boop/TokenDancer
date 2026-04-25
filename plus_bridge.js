@@ -22,6 +22,7 @@ const OUTPUT_DIR = path.resolve(
   args.outputDir || process.env.PLUS_BRIDGE_OUTPUT_DIR || '.plus_bridge_output',
 );
 const UPLOAD_URL = args.uploadUrl || process.env.PLUS_BRIDGE_UPLOAD_URL || '';
+const STATUS_URL = args.statusUrl || process.env.PLUS_BRIDGE_STATUS_URL || '';
 const HEADLESS = parseBoolean(args.headless ?? process.env.PLUS_BRIDGE_HEADLESS, false);
 const TRANSPORT = String(args.transport || process.env.PLUS_BRIDGE_TRANSPORT || 'persistent')
   .trim()
@@ -68,21 +69,78 @@ const page = browserContext.pages()[0] || (await browserContext.newPage());
 
 try {
   await page.goto(CHAT_URL, { waitUntil: 'domcontentloaded' });
+  await emitBridgeEvent('page_opened', '浏览器已打开聊天页面', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+  });
 
   if (MODE === 'bootstrap') {
     console.log(`[PLUS-BRIDGE] Browser opened at ${CHAT_URL}`);
     console.log('[PLUS-BRIDGE] 请先在浏览器里完成 ChatGPT 登录。登录后回到终端按回车结束本次 bootstrap。');
+    await emitBridgeEvent('bootstrap_waiting', '等待手工登录 ChatGPT', {
+      mode: MODE,
+      transport: RUNTIME_MODE,
+      pageUrl: page.url(),
+    });
     await waitForEnter();
+    await emitBridgeEvent('bootstrap_done', '手工登录窗口结束', {
+      mode: MODE,
+      transport: RUNTIME_MODE,
+      pageUrl: page.url(),
+      success: true,
+    });
     await writeExitNotice({ mode: 'bootstrap' });
     process.exit(0);
   }
 
   const composer = await waitForComposer(page, WAIT_MS);
+  await emitBridgeEvent('composer_ready', '输入框已就绪', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+  });
   const beforeImageCount = await page.locator('main img, article img, img').count().catch(() => 0);
+  await emitBridgeEvent('prompt_sending', '开始发送提示词', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+  });
   await sendPrompt(page, composer, PROMPT);
+  await emitBridgeEvent('prompt_sent', '提示词已发送，等待结果', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+  });
 
+  await emitBridgeEvent('result_waiting', '等待图片结果', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+  });
   const imageCandidate = await waitForAssistantImage(page, beforeImageCount, SCREENSHOT_TIMEOUT_MS);
+  await emitBridgeEvent('result_found', '已检测到图片结果', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+  });
   const imageCapture = await captureImageArtifact(page, imageCandidate);
+  await emitBridgeEvent('result_captured', '图片已捕获', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+    mimeType: imageCapture.mimeType,
+  });
 
   const result = {
     prompt: PROMPT,
@@ -106,6 +164,16 @@ try {
   );
   await fs.promises.writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 
+  await emitBridgeEvent('result_ready', '结果已生成', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: page.url(),
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+    mimeType: imageCapture.mimeType,
+    success: true,
+  });
+
   if (UPLOAD_URL) {
     try {
       const uploadResponse = await fetch(UPLOAD_URL, {
@@ -122,17 +190,44 @@ try {
         );
       } else {
         console.log(`[PLUS-BRIDGE] uploaded to ${UPLOAD_URL}`);
+        await emitBridgeEvent('result_uploaded', '结果已上传到服务器', {
+          mode: MODE,
+          transport: RUNTIME_MODE,
+          pageUrl: page.url(),
+          prompt: PROMPT,
+          promptLength: PROMPT.trim().length,
+          mimeType: imageCapture.mimeType,
+          success: true,
+        });
       }
     } catch (error) {
       console.log(
         `[PLUS-BRIDGE] upload error | ${error instanceof Error ? error.message : String(error)}`,
       );
+      await emitBridgeEvent('upload_failed', '结果上传失败', {
+        mode: MODE,
+        transport: RUNTIME_MODE,
+        pageUrl: page.url(),
+        prompt: PROMPT,
+        promptLength: PROMPT.trim().length,
+        error: error instanceof Error ? error.message : String(error),
+        success: false,
+      });
     }
   }
 
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {
   console.error(`[PLUS-BRIDGE] ${error instanceof Error ? error.message : String(error)}`);
+  await emitBridgeEvent('failed', '桥接执行失败', {
+    mode: MODE,
+    transport: RUNTIME_MODE,
+    pageUrl: '',
+    prompt: PROMPT,
+    promptLength: PROMPT.trim().length,
+    error: error instanceof Error ? error.message : String(error),
+    success: false,
+  }).catch(() => {});
   process.exitCode = 1;
 } finally {
   await browserSession.cleanup().catch(() => {});
@@ -150,6 +245,7 @@ function printHelp() {
     '  --prompt <text>                生成提示词',
     '  --prompt-file <path>           从文件读取提示词',
     '  --upload-url <url>             生成后把结果上传到服务器',
+    '  --status-url <url>             发送阶段状态到服务器',
     '  --chat-url <url>               ChatGPT 入口地址，默认 https://chatgpt.com/',
     '  --user-data-dir <path>         Chromium 持久化用户目录',
     '  --output-dir <path>            输出 JSON 所在目录',
@@ -169,6 +265,7 @@ function printHelp() {
     '  PLUS_BRIDGE_USER_DATA_DIR',
     '  PLUS_BRIDGE_OUTPUT_DIR',
     '  PLUS_BRIDGE_UPLOAD_URL',
+    '  PLUS_BRIDGE_STATUS_URL',
     '  PLUS_BRIDGE_HEADLESS',
     '  PLUS_BRIDGE_TRANSPORT',
     '  PLUS_BRIDGE_CDP_ENDPOINT',
@@ -416,6 +513,52 @@ async function waitForEnter() {
   await new Promise((resolve) => {
     process.stdin.once('data', () => resolve(null));
   });
+}
+
+async function emitBridgeEvent(stage, message, extra = {}) {
+  if (!STATUS_URL) {
+    return null;
+  }
+
+  const payload = {
+    stage,
+    message,
+    mode: extra.mode || MODE,
+    transport: extra.transport || RUNTIME_MODE,
+    prompt: extra.prompt || PROMPT,
+    prompt_length: extra.promptLength ?? extra.prompt_length ?? PROMPT.trim().length,
+    size: extra.size || args.size || 'unknown',
+    quality: extra.quality || args.quality || 'unknown',
+    output_format: extra.outputFormat || extra.output_format || args.outputFormat || 'png',
+    success: extra.success,
+    error: extra.error,
+    page_url: extra.pageUrl || extra.page_url || '',
+    mime_type: extra.mimeType || extra.mime_type || '',
+    user_id: extra.userId || extra.user_id || '',
+  };
+
+  try {
+    const response = await fetch(STATUS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.log(
+        `[PLUS-BRIDGE] status upload failed | status=${response.status} | ${detail.trim() || 'no response body'}`,
+      );
+    }
+  } catch (error) {
+    console.log(
+      `[PLUS-BRIDGE] status upload error | ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  return payload;
 }
 
 async function waitForComposer(page, timeoutMs) {
