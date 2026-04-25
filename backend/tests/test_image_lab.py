@@ -138,6 +138,47 @@ class ImageLabTests(unittest.TestCase):
         self.assertEqual(latest_body["image_base64"], "QUJDRA==")
         self.assertEqual(latest_body["transport"], "cdp")
 
+    def test_plus_bridge_event_and_status_round_trip(self):
+        with TestClient(app) as client:
+            event = client.post(
+                "/persona-api/image-lab/bridge/event",
+                json={
+                    "stage": "composer_ready",
+                    "message": "输入框已就绪",
+                    "mode": "generate",
+                    "transport": "cdp",
+                    "prompt": "a neon-lit robot reading a book",
+                    "prompt_length": 31,
+                    "size": "1024x1024",
+                    "quality": "medium",
+                    "output_format": "png",
+                    "success": True,
+                    "user_id": "internal-test-user",
+                },
+                headers={"X-Internal-User": "internal-test-user"},
+            )
+
+            status = client.get("/persona-api/image-lab/bridge/status")
+
+        self.assertEqual(event.status_code, 200)
+        event_body = event.json()
+        self.assertTrue(event_body["accepted"])
+        self.assertEqual(event_body["stage"], "composer_ready")
+        self.assertEqual(event_body["transport"], "cdp")
+        self.assertEqual(event_body["mode"], "generate")
+        self.assertEqual(status.status_code, 200)
+        status_body = status.json()
+        self.assertEqual(status_body["stage"], "composer_ready")
+        self.assertEqual(status_body["transport"], "cdp")
+        self.assertTrue(status_body["events"])
+        self.assertEqual(status_body["events"][-1]["stage"], "composer_ready")
+
+    def test_plus_bridge_status_trailing_slash_alias(self):
+        with TestClient(app) as client:
+            status = client.get("/persona-api/image-lab/bridge/status/")
+
+        self.assertEqual(status.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()

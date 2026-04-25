@@ -1,3 +1,21 @@
+## V1.4.230 - 2026-04-25
+
+- Added a read-only qclaw bridge-status probe so external automation can consume `/persona-api/image-lab/bridge/status` without modifying repository code or generated assets.
+- Exposed the probe through a package script and admin panel copy so testers have a concrete command path for status-only validation.
+- Documented the qclaw test-only flow in the README while keeping the Plus bridge and OpenAI image path unchanged.
+
+## V1.4.229 - 2026-04-24
+
+- Added a standalone public-page watcher for `https://mescladis.org/cita-previa-regularizacion-extraordinaria/` so the repository can baseline the announcement page and emit a notification whenever its visible content changes.
+- Added `publicpage:monitor` and `publicpage:daemon` package scripts plus matching `.env` keys so the new watcher can write to its own alert file without affecting the existing appointment monitors.
+- Documented the new public-page workflow in the README while leaving the Google Calendar, AgendaPro, Montjuic, and health-monitoring paths unchanged.
+
+## V1.4.228 - 2026-04-24
+
+- Added a sixth Mescladís Google Calendar appointment target so the monitor can watch the newly provided `YQ9pon1Ji49RQQNR8` link alongside the existing test page and five production pages.
+- Relaxed the Google monitor target validation from an exact six-entry check to a minimum-six-entry check so the added Mescladís target does not break the existing appointment pipeline.
+- Updated the README and environment templates to reflect the expanded six-target Mescladís monitor set.
+
 ## V1.4.227 - 2026-04-24
 
 - Added a Chrome CDP bridge mode to `plus_bridge.js` so the experimental local ChatGPT Plus flow can attach to or launch a browser through remote debugging instead of only using the persistent Playwright profile path.

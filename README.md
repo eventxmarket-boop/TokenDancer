@@ -49,6 +49,7 @@ Useful flags:
 - `--transport cdp --cdp-launch` opens a CDP-controlled Chrome/Chromium session.
 - `--transport cdp --cdp-endpoint http://127.0.0.1:9222` attaches to an already-running CDP browser.
 - `--cdp-user-data-dir` keeps the CDP profile separate from the persistent Playwright bridge profile.
+- `--status-url` posts stage-by-stage bridge events for a simple visual dashboard or qclaw consumer.
 - `--upload-url` posts the generated base64 payload to a server endpoint after capture.
 - `--headless false` keeps the browser visible while debugging.
 
@@ -56,9 +57,17 @@ The bridge writes the rendered image artifact to `.plus_bridge_output/` and prin
 
 The CDP mode is the closest browser-level bridge for internal automation trials: a local agent such as OpenClaw can drive the browser session, while your site keeps the prompt, result upload, and display flow under your control.
 
+For qclaw-side read-only testing, use the status probe:
+
+```bash
+python3 backend/scripts/qclaw_image_bridge_status_probe.py --url /persona-api/image-lab/bridge/status
+```
+
+That probe only reads bridge status and prints a summary. It does not edit code, data, or generated assets.
+
 ## Appointment Monitor
 
-The repository also includes a standalone Node.js + Playwright monitor that polls the test appointment page plus five Google Calendar appointment schedule pages and emits normalized events only when the full RPC slot snapshot changes.
+The repository also includes a standalone Node.js + Playwright monitor that polls the test appointment page plus six Google Calendar appointment schedule pages and emits normalized events only when the full RPC slot snapshot changes.
 
 Setup:
 
@@ -68,7 +77,7 @@ npm run install:chromium
 cp .env.example .env
 ```
 
-Edit the test target plus the five `TARGET_*_URL` values in `.env`, then start the monitor:
+Edit the test target plus the six `TARGET_*_URL` values in `.env`, then start the monitor:
 
 ```bash
 npm run monitor
@@ -141,13 +150,26 @@ File handoff for qclaw:
 Monitoring window:
 
 - The current date range is `2026-04-22` through `2026-06-15`
-- The test page and the five real links use the same full-range RPC snapshot flow
+- The test page and the six real links use the same full-range RPC snapshot flow
 - The producer no longer uses the old segmented fallback scan or per-day page clicking
 - If the RPC returns slots, the target is `OPEN`; if it returns no slots, the target is `FULL`; if RPC fails, the target is `ERROR`
 
 ## Montjuic Autofill Monitor
 
 For Google Calendar appointment pages that move from slot detection into a contact-information form, there is a separate Montjuic watcher that can keep polling, detect an `OPEN` state, and then batch-fill the booking form with saved contact templates.
+
+## Public Page Watcher
+
+For simple announcement or bulletin pages, there is a separate page watcher that records a baseline snapshot and emits a notification whenever the page content changes.
+
+Setup:
+
+```bash
+npm run publicpage:monitor
+npm run publicpage:daemon
+```
+
+The page watcher compares a normalized title + visible-text snapshot and writes a change event to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/public_page_alert.txt`. The resident daemon can forward every update from that file as a notification.
 
 Setup:
 

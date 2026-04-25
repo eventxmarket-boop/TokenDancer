@@ -7,14 +7,22 @@ from fastapi.concurrency import run_in_threadpool
 from app.schemas.image_lab import (
     ImageGenerateRequest,
     ImageGenerateResponse,
+    PlusBridgeEventRequest,
+    PlusBridgeEventResponse,
     PlusBridgeSubmitRequest,
     PlusBridgeSubmitResponse,
+    PlusBridgeStatusResponse,
 )
 from app.services.openai_image_service import (
     OpenAIImageServiceError,
     generate_image_base64,
 )
-from app.services.plus_bridge_service import get_latest_plus_bridge_result, store_plus_bridge_result
+from app.services.plus_bridge_service import (
+    get_latest_plus_bridge_result,
+    get_plus_bridge_status,
+    store_plus_bridge_event,
+    store_plus_bridge_result,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +138,47 @@ async def read_latest_plus_bridge_result():
     if record is None:
         return None
     return PlusBridgeSubmitResponse(**record)
+
+
+@router.post("/bridge/event", response_model=PlusBridgeEventResponse)
+async def submit_plus_bridge_event(
+    payload: PlusBridgeEventRequest,
+    user_id: str = Depends(require_internal_user),
+):
+    record = store_plus_bridge_event(
+        {
+            "stage": payload.stage,
+            "message": payload.message,
+            "mode": payload.mode,
+            "transport": payload.transport,
+            "prompt": payload.prompt,
+            "prompt_length": payload.prompt_length,
+            "size": payload.size,
+            "quality": payload.quality,
+            "output_format": payload.output_format,
+            "success": payload.success,
+            "error": payload.error,
+            "user_id": payload.user_id or user_id,
+        }
+    )
+
+    logger.info(
+        "image_lab_plus_bridge_event user_id=%s stage=%s mode=%s transport=%s prompt_len=%s success=%s",
+        user_id,
+        payload.stage,
+        payload.mode,
+        payload.transport,
+        payload.prompt_length,
+        payload.success,
+    )
+
+    return PlusBridgeEventResponse(**record)
+
+
+@router.get("/bridge/status", response_model=PlusBridgeStatusResponse | None)
+@router.get("/bridge/status/", response_model=PlusBridgeStatusResponse | None)
+async def read_plus_bridge_status():
+    record = get_plus_bridge_status()
+    if record is None:
+        return None
+    return PlusBridgeStatusResponse(**record)

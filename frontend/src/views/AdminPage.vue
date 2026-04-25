@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   deleteReplyCorpus,
   activateLlmConfig,
@@ -14,6 +14,11 @@ import {
   type ReplyCorpus,
   type ReplyCorpusPayload,
 } from '@/services/adminService'
+import {
+  getLatestPlusBridgeResult,
+  getPlusBridgeStatus,
+  type PlusBridgeStatus,
+} from '@/services/imageLabService'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -30,6 +35,11 @@ const corpusNotice = ref('')
 const corpusItems = ref<ReplyCorpus[]>([])
 const corpusEditingId = ref<number | null>(null)
 const corpusFileInputRef = ref<HTMLInputElement | null>(null)
+const bridgeLoading = ref(true)
+const bridgeError = ref('')
+const bridgeStatus = ref<PlusBridgeStatus | null>(null)
+const bridgeLatest = ref<PlusBridgeStatus | null>(null)
+const bridgePollingHandle = ref<number | null>(null)
 const monitorTargets = ref([
   { name: 'Mescladís 1', url: '' },
   { name: 'Mescladís 2', url: '' },
@@ -169,6 +179,23 @@ const loadReplyCorpusDashboard = async () => {
     applyToCorpusForm(null)
   } finally {
     corpusLoading.value = false
+  }
+}
+
+const loadBridgeDashboard = async () => {
+  bridgeLoading.value = true
+  bridgeError.value = ''
+
+  try {
+    const [status, latest] = await Promise.all([getPlusBridgeStatus(), getLatestPlusBridgeResult()])
+    bridgeStatus.value = status
+    bridgeLatest.value = latest || status
+  } catch (cause) {
+    bridgeError.value = cause instanceof Error ? cause.message : '加载桥接状态失败'
+    bridgeStatus.value = null
+    bridgeLatest.value = null
+  } finally {
+    bridgeLoading.value = false
   }
 }
 
@@ -355,6 +382,16 @@ const removeCorpus = async (id: number) => {
 onMounted(() => {
   void loadDashboard()
   void loadReplyCorpusDashboard()
+  void loadBridgeDashboard()
+  bridgePollingHandle.value = window.setInterval(() => {
+    void loadBridgeDashboard()
+  }, 8000)
+})
+
+onBeforeUnmount(() => {
+  if (bridgePollingHandle.value !== null) {
+    window.clearInterval(bridgePollingHandle.value)
+  }
 })
 </script>
 
@@ -400,7 +437,62 @@ onMounted(() => {
             <p><code>npm run plus:bridge -- --prompt "..." --upload-url /persona-api/image-lab/bridge/submit</code></p>
             <p><code>npm run plus:bridge:cdp -- --prompt "..." --upload-url /persona-api/image-lab/bridge/submit</code></p>
             <p><code>npm run plus:bridge:cdp -- --cdp-endpoint http://127.0.0.1:9222 --prompt "..."</code></p>
+            <p><code>npm run qclaw:image-bridge:status</code></p>
+            <p><code>python3 backend/scripts/qclaw_image_bridge_status_probe.py --url /persona-api/image-lab/bridge/status</code></p>
             <p>桥接结果只做临时 handoff，不保存原始图片文件。</p>
+            <p>qclaw 只做测试，不修改代码。</p>
+          </div>
+        </section>
+
+        <section class="mini-panel">
+          <p class="side-title">桥接状态面板</p>
+          <div v-if="bridgeLoading" class="state-copy">
+            <p>正在拉取桥接状态…</p>
+          </div>
+          <div v-else-if="bridgeError" class="state-copy">
+            <p class="error-text">{{ bridgeError }}</p>
+          </div>
+          <div v-else class="bridge-state">
+            <div class="bridge-kv">
+              <span>模式</span>
+              <strong>{{ bridgeStatus?.transport || bridgeLatest?.transport || 'persistent' }}</strong>
+            </div>
+            <div class="bridge-kv">
+              <span>阶段</span>
+              <strong>{{ bridgeStatus?.stage || bridgeLatest?.stage || 'idle' }}</strong>
+            </div>
+            <div class="bridge-kv">
+              <span>消息</span>
+              <strong>{{ bridgeStatus?.message || bridgeLatest?.message || '暂无' }}</strong>
+            </div>
+            <div class="bridge-kv">
+              <span>结果</span>
+              <strong>{{ bridgeLatest?.success === false ? '失败' : bridgeLatest?.image_base64 ? '已返回图片' : '待生成' }}</strong>
+            </div>
+            <div class="bridge-kv">
+              <span>耗时 / 提示词</span>
+              <strong>{{ bridgeLatest?.prompt_length || bridgeStatus?.prompt_length || 0 }} chars</strong>
+            </div>
+            <div class="bridge-actions">
+              <RouterLink class="secondary-btn" to="/image-lab">打开 Image Lab</RouterLink>
+            </div>
+            <div v-if="bridgeStatus?.events?.length" class="bridge-events">
+              <p class="bridge-events__title">最近事件</p>
+              <ul>
+                <li v-for="(event, index) in bridgeStatus.events.slice(-6).reverse()" :key="`${event.received_at || index}-${event.stage}`">
+                  <strong>{{ event.stage }}</strong>
+                  <span>{{ event.message || '无消息' }}</span>
+                </li>
+              </ul>
+            </div>
+            <div v-if="bridgeLatest?.image_base64" class="bridge-preview">
+              <img :src="`data:${bridgeLatest.mime_type || 'image/png'};base64,${bridgeLatest.image_base64}`" alt="bridge preview" />
+            </div>
+            <div class="bridge-commands">
+              <p><code>npm run plus:bridge:cdp -- --bootstrap</code></p>
+              <p><code>npm run plus:bridge:cdp -- --status-url /persona-api/image-lab/bridge/event --upload-url /persona-api/image-lab/bridge/submit --prompt "..."</code></p>
+              <p><code>qclaw</code> 可直接调这个命令作为本地执行器。</p>
+            </div>
           </div>
         </section>
       </div>
@@ -737,3 +829,102 @@ onMounted(() => {
     </article>
   </section>
 </template>
+
+<style scoped>
+.bridge-state {
+  display: grid;
+  gap: 10px;
+}
+
+.bridge-kv {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-solid);
+}
+
+.bridge-kv span {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.bridge-kv strong {
+  text-align: right;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.bridge-actions {
+  margin-top: 2px;
+}
+
+.bridge-events {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-solid);
+}
+
+.bridge-events__title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.bridge-events ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.bridge-events li {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.bridge-events li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.bridge-events strong {
+  font-size: 0.9rem;
+}
+
+.bridge-events span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.bridge-preview {
+  margin-top: 4px;
+}
+
+.bridge-preview img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+}
+
+.bridge-commands {
+  display: grid;
+  gap: 6px;
+}
+
+.error-text {
+  color: #c85d4c;
+  line-height: 1.6;
+}
+</style>
