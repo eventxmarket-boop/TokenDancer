@@ -1,0 +1,16 @@
+{
+  "process": "montjuic_monitor.js",
+  "pid": 94164,
+  "startedAt": "2026-04-28T18:04:21.355Z",
+  "writtenAt": "2026-04-28T19:10:19.578Z",
+  "phase": "round_end",
+  "roundId": "2.126",
+  "pollIntervalMs": 60000,
+  "pageTimeoutMs": 45000,
+  "monitorTimezone": "Europe/Madrid",
+  "slotTimezone": "Europe/Madrid",
+  "monitorStartDate": "2026-04-22",
+  "monitorEndDate": "2026-06-15",
+  "targetName": "Mescladís 5",
+  "profileCount": 225
+}

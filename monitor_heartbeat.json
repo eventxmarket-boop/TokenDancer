@@ -1,0 +1,21 @@
+{
+  "process": "monitor.js",
+  "pid": 31258,
+  "startedAt": "2026-04-26T17:24:09.082Z",
+  "writtenAt": "2026-04-26T21:43:49.085Z",
+  "phase": "round_end",
+  "roundId": 490,
+  "laneId": 2,
+  "laneName": "lane-2",
+  "laneOffsetMs": 10000,
+  "laneIntervalMs": 30000,
+  "laneTargetCount": 7,
+  "nextPollIntervalMs": 30000,
+  "pollIntervalMs": 30000,
+  "peakPollIntervalMs": 30000,
+  "monitorTimezone": "Asia/Shanghai",
+  "slotTimezone": "Europe/Madrid",
+  "monitorStartDate": "2026-04-22",
+  "monitorEndDate": "2026-06-15",
+  "targetCount": 7
+}

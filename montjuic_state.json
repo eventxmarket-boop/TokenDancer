@@ -1,0 +1,23 @@
+{
+  "targets": {
+    "Mescladís 1": {
+      "autofill": {
+        "lastAutofillSignature": "OPEN::2026-04-30 12:30 PM",
+        "lastAutofillAt": "2026-04-29T19:46:16.087Z",
+        "lastAutofillMode": "transition",
+        "nextProfileIndex": 1,
+        "lastConsumedSignalSignature": "OPEN::2026-04-30 12:30 PM",
+        "lastConsumedSignalAt": "2026-04-30T00:00:00.000Z"
+      },
+      "current": {
+        "status": "OPEN",
+        "slots": [
+          "2026-04-30 01:30 PM"
+        ],
+        "updatedAt": "2026-04-29T19:50:12.974Z",
+        "roundId": "2.8",
+        "errorCount": 0
+      }
+    }
+  }
+}

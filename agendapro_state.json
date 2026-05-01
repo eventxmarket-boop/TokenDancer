@@ -1,0 +1,33 @@
+{
+  "targets": {
+    "Fundación Ibn 810124": {
+      "current": {
+        "status": "OPEN",
+        "dates": [
+          "10 de junio"
+        ],
+        "times": [],
+        "updatedAt": "2026-04-24T09:49:06.196Z",
+        "roundId": 158
+      }
+    },
+    "Fundación Ibn 810123": {
+      "current": {
+        "status": "ERROR",
+        "dates": [],
+        "times": [],
+        "updatedAt": "2026-04-24T09:49:52.157Z",
+        "roundId": 158
+      }
+    },
+    "Fundación Ibn 810122": {
+      "current": {
+        "status": "FULL",
+        "dates": [],
+        "times": [],
+        "updatedAt": "2026-04-24T09:46:41.034Z",
+        "roundId": 157
+      }
+    }
+  }
+}

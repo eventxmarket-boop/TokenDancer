@@ -68,6 +68,8 @@ That probe only reads bridge status and prints a summary. It does not edit code,
 ## Appointment Monitor
 
 The repository also includes a standalone Node.js + Playwright monitor that polls the test appointment page plus six Google Calendar appointment schedule pages and emits normalized events only when the full RPC slot snapshot changes.
+The main appointment watcher now runs in three staggered lanes that each scan the full Mescladís target set, so scan cadence stays dense without making one long round block the others.
+The Mescladís autofill chains can be installed as independent 1-7 systemd instances with `bash deploy/install_z_chain_instances.sh`, so each target can keep its own bridge, executor, state, and signal files.
 
 Setup:
 
@@ -85,6 +87,8 @@ npm run monitor
 
 Event lines are printed with the `EVENT_JSON:` prefix so OpenClaw can consume them directly.
 
+All of the monitor scripts now support direct Telegram delivery when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set.
+
 If you want the monitor to push events directly to qclaw, set:
 
 - `TARGET_TEST_URL` for the test appointment page
@@ -95,6 +99,13 @@ If you want the monitor to push events directly to qclaw, set:
 - `ALERT_FILE_PATH` if qclaw is watching a local file instead of a webhook
 - `MONITOR_START_DATE` and `MONITOR_END_DATE` to set the monitored date range, defaulting to `2026-04-22` through `2026-06-15`
 - `MONITOR_HEARTBEAT_FILE_PATH` to store the producer heartbeat JSON for health checks, defaulting to `monitor_heartbeat.json`
+
+If you deploy the monitor on a server and want it to notify Telegram directly, set:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+When those two values are present, the monitor posts event messages straight to the Telegram Bot API. You can leave `ALERT_FILE_PATH` blank on the server if you do not want the local qclaw file handoff.
 
 If you want the monitor to self-report when it has hung or stopped updating, run the separate health daemon on the same machine:
 
@@ -157,10 +168,12 @@ Monitoring window:
 ## Montjuic Autofill Monitor
 
 For Google Calendar appointment pages that move from slot detection into a contact-information form, there is a separate Montjuic watcher that can keep polling, detect an `OPEN` state, and then batch-fill the booking form with saved contact templates.
+It can also send direct Telegram alerts when the shared Telegram bot variables are present.
 
 ## Public Page Watcher
 
 For simple announcement or bulletin pages, there is a separate page watcher that records a baseline snapshot and emits a notification whenever the page content changes.
+It also supports direct Telegram delivery with the shared Telegram bot variables.
 
 Setup:
 
@@ -170,6 +183,100 @@ npm run publicpage:daemon
 ```
 
 The page watcher compares a normalized title + visible-text snapshot and writes a change event to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/public_page_alert.txt`. The resident daemon can forward every update from that file as a notification.
+
+## Mescladís Home Button Watcher
+
+For the Mescladís home page, there is a separate button watcher that tracks the visible `Nuevas citas` control on `https://mescladis.org/`.
+It records a baseline of the visible button text and destination URL, then emits an update whenever that button changes or disappears.
+
+Setup:
+
+```bash
+npm run mescladis:home-button:monitor
+```
+
+The watcher writes button-change events to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/mescladis_home_button_alert.txt` when `MESC_HOME_BUTTON_ALERT_FILE_PATH` is set.
+It uses the same shared Telegram bot variables as the other monitors, but keeps its own state file and alert path so it stays isolated from the announcement-page watcher.
+
+## Mescladís Blog Watcher
+
+For the Mescladís blog page, there is a separate watcher that records a cleaned snapshot of the visible blog text and emits an update whenever that text changes.
+It stays isolated from the announcement-page watcher so the blog can move independently without invalidating the announcement baseline.
+
+Setup:
+
+```bash
+npm run mescladis:blog:monitor
+```
+
+The watcher writes content-change events to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/mescladis_blog_alert.txt` when `MESC_BLOG_ALERT_FILE_PATH` is set.
+It keeps its own state file and alert path so it can be deployed and reset independently.
+
+Suggested configuration:
+
+- `MESC_BLOG_TARGET_NAME`
+- `MESC_BLOG_TARGET_URL`
+- `MESC_BLOG_POLL_INTERVAL_MS`
+- `MESC_BLOG_LANE_INTERVAL_MS`
+- `MESC_BLOG_LANE_START_OFFSETS_MS`
+- `MESC_BLOG_PAGE_TIMEOUT_MS`
+- `MESC_BLOG_PAGE_STABILIZE_MS`
+- `MESC_BLOG_HEADLESS`
+- `MESC_BLOG_ALERT_FILE_PATH`
+- `MESC_BLOG_STATE_FILE`
+
+## Form Page Watcher
+
+For Google Forms-style pages where you want to be notified whenever the visible content changes from the current baseline, there is a separate form-page watcher.
+It uses the same normalized title + visible-text snapshot pattern as the public-page watcher, but keeps its own state file and alert path so it stays isolated from the other monitors.
+
+Setup:
+
+```bash
+npm run formpage:monitor
+```
+
+The watcher records a baseline snapshot and writes change events to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/form_page_alert.txt` when `FORM_PAGE_ALERT_FILE_PATH` is set.
+It also supports direct Telegram delivery through the shared `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` variables.
+By default it watches both the short public form URL and the resolved Google Forms page as separate targets, so either URL changing will trigger its own update event and an extra notification if both move.
+
+Suggested configuration:
+
+- `FORM_PAGE_TARGET_NAME`
+- `FORM_PAGE_TARGET_URL`
+- `FORM_PAGE_TARGET_NAME_ALT`
+- `FORM_PAGE_TARGET_URL_ALT`
+- `FORM_PAGE_TARGETS_JSON`
+- `FORM_PAGE_POLL_INTERVAL_MS`
+- `FORM_PAGE_PAGE_TIMEOUT_MS`
+- `FORM_PAGE_PAGE_STABILIZE_MS`
+- `FORM_PAGE_ALERT_FILE_PATH`
+- `FORM_PAGE_STATE_FILE`
+- `FORM_PAGE_HEADLESS`
+
+## Microsoft Bookings Watcher
+
+For Microsoft Bookings pages, the repository provides a separate watcher that snapshots the page title, visible text, and accessible iframe text, then extracts booking-date candidates to watch for newly released earlier availability.
+It notifies whenever the page content changes or when a closer available date appears.
+
+Setup:
+
+```bash
+npm run microsoftbookings:monitor
+```
+
+The watcher can write change events to `/Users/chanzi/.qclaw/workspace-agent-be2ecf0c/microsoft_bookings_alert.txt` when `MICROSOFT_BOOKINGS_ALERT_FILE_PATH` is set, and it also supports direct Telegram delivery through the shared bot-token variables.
+
+Suggested configuration:
+
+- `MICROSOFT_BOOKINGS_TARGET_NAME`
+- `MICROSOFT_BOOKINGS_TARGET_URL`
+- `MICROSOFT_BOOKINGS_POLL_INTERVAL_MS`
+- `MICROSOFT_BOOKINGS_PAGE_TIMEOUT_MS`
+- `MICROSOFT_BOOKINGS_PAGE_STABILIZE_MS`
+- `MICROSOFT_BOOKINGS_ALERT_FILE_PATH`
+- `MICROSOFT_BOOKINGS_STATE_FILE`
+- `MICROSOFT_BOOKINGS_HEADLESS`
 
 Setup:
 
@@ -199,6 +306,23 @@ The Montjuic monitor:
 - supports batch profiles, so you can queue several contact templates and let the script fill them one after another
 - reads batch profiles from CSV first when `MONTJUIC_PROFILES_CSV_PATH` points to a file, then falls back to `MONTJUIC_PROFILES_JSON`
 - keeps the current Google Calendar monitor, AgendaPro monitor, and health daemon untouched
+
+### Z Chain Autofill
+
+`z_chain_monitor.js` is a separate autofill worker for booking pages that open a form after slot selection and then need confirmation-page text verification.
+
+- It uses its own `Z_CHAIN_*` environment variables, state file, heartbeat file, and alert file, so it stays isolated from the main monitor and from Montjuic.
+- The bridge side (`zchain:monitor`) now only emits the open-slot signal into the shared alert file, while the executor side (`zchain:executor`) consumes that signal and performs the fill.
+- The executor can click a candidate slot, fill the contact form by label, and optionally submit the booking when `Z_CHAIN_AUTO_SUBMIT=true`.
+- It can also capture confirmation-page text after submission when `Z_CHAIN_CONFIRMATION_ALERT_ENABLED=true`.
+- It reads batch contact rows from `Z_CHAIN_PROFILES_CSV_PATH` first, then falls back to `Z_CHAIN_PROFILES_JSON`.
+- It defaults to `Z_CHAIN_AUTOFILL_TRIGGER_MODE=any_open_snapshot`, which means the bridge emits once for each new open-slot snapshot instead of waiting for a specific state transition.
+
+Run it with:
+
+```bash
+npm run zchain:monitor
+```
 
 ## AgendaPro Monitor
 

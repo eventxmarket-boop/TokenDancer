@@ -1,0 +1,15 @@
+[Unit]
+Description=Mescladis Appointment Monitor
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/xuedingtoken_latest
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/home/ubuntu/.cache/ms-playwright
+ExecStart=/usr/bin/node /opt/xuedingtoken_latest/monitor.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

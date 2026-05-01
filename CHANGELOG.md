@@ -1,3 +1,394 @@
+## V1.4.317
+- Added the same writable alert-file fallback to the Google Form watcher so the short-link probe can no longer crash on the server when its configured alert path points at a local macOS directory.
+- Bumped the form-page state version so the watcher reseeds after this deployment instead of carrying a stale baseline through the new write-path behavior.
+
+## V1.4.316
+- Stopped the Mescladís public-page watcher from persisting probe failures into its baseline, so a timeout or browser abort no longer turns into a fake page-update alert on the next successful poll.
+- Kept the alert-file fallback from the previous fix, but now the watcher only advances state on successful page snapshots and ignores transient fetch errors instead of comparing them as content changes.
+
+## V1.4.315
+- Added a writable alert-file fallback to the Mescladís public-page watcher so a server deployment can no longer crash just because the configured alert path points at a local macOS directory.
+- Kept the canonical page hashing logic unchanged, but now the watcher writes alerts to the configured path when possible and falls back to a repo-local file instead of exiting on ENOENT.
+
+## V1.4.314
+- Downgraded the Google Forms short-link watcher to an alias/redirect check so it no longer emits page-updated alerts every poll when the short URL resolves to the stable docs.google.com form page.
+- Kept the final Google Form page watcher active as the content-change source, so real form content changes still notify while the short-link watcher now only records alias drift.
+
+## V1.4.313
+- Stopped the Google Form watcher from hashing the resolved URL along with the visible content, so short-link redirect noise no longer shows up as a fresh page update every poll.
+- Added a form-page state version marker so old hashes are reseeded after this normalization change instead of triggering one more false alert on deploy.
+
+## V1.4.312
+- Broadened the Mescladís main-monitor burst suppression so a shared error wave across multiple targets is treated as one global incident instead of leaking separate ERROR alerts for each target signature.
+- Kept the per-target confirmation and cooldown logic in place, but now any target-level ERROR inside an active burst incident is suppressed regardless of whether the individual error string is identical to the first one.
+
+## V1.4.311
+- Added a per-target error notification cooldown to the main Mescladís monitor so a flapping target can no longer re-alert immediately after a brief recovery and re-failure cycle.
+- Kept the existing consecutive-failure confirmation threshold, but now the monitor remembers the last error notification window in state and suppresses repeated Telegram alerts until the cooldown expires.
+
+## V1.4.310
+- Added a dedicated Mescladís blog watcher for `https://mescladis.org/blog/` so the blog content can be monitored independently from the announcement page and homepage button watchers.
+- Gave the blog watcher its own environment keys, alert file, state file, service template, and package script so it can baseline the visible blog text and notify when that text changes without sharing state with the rest of the Mescladís links.
+
+## V1.4.309
+- Added a dedicated Mescladís home-page button watcher for `https://mescladis.org/` so the visible `Nuevas citas` control can be tracked independently from the announcement-page watcher.
+- Gave that button watcher its own environment keys, state file, alert file, and systemd service template so it can baseline the root page and alert when the button text or destination changes without sharing state with the other public-page monitors.
+
+## V1.4.308
+- Switched the Mescladís public-page monitor example configuration to the canonical `https://mescladis.org/nueva-cita-previa-regularizacion/` URL so future deployments do not keep pointing at the legacy alias.
+- Kept the public-page cleanup and state-versioning logic in place, so the watcher still normalizes the page snapshot and reseeds cleanly after any URL/shape change.
+
+## V1.4.307
+- Added four more Mescladís monitoring targets (8 through 11) to the main appointment monitor so the new links are included in the same probe-and-alert pipeline as the existing seven targets.
+- Updated both the runtime `.env` and `.env.example` target lists so the new URLs are available to local runs and future deployments without changing the monitor code again.
+
+## V1.4.306
+- Added a public-page state schema version so the Mescladís announcement monitor will reseed its baseline after a snapshot-format change instead of treating the upgraded hash as a real content update.
+- Kept the main/article cleanup from the previous version, but now old `public_page_state.json` entries are treated as stale and replaced on the next run, preventing another false "page updated" alert after deploy.
+
+## V1.4.305
+- Narrowed the public-page monitor to hash a cleaned main/article content snapshot instead of the full body text, so the Mescladís announcement page no longer trips on cookie banners, nav chrome, or footer noise.
+- Kept the canonical URL normalization in place, but now the comparison ignores the common cookie dialog and site shell fragments that were causing false "page updated" notifications even when the announcement content stayed the same.
+
+## V1.4.304
+- Normalized repeated transient probe failures into a small set of shared signatures such as network disconnect, socket disconnect, fetch failure, timeout, and interrupted navigation, so a single brief outage is no longer amplified into dozens of separate ERROR events across lanes and targets.
+- Kept the existing error-confirmation threshold and state locks, but made burst suppression actually work across the Mescladís targets by collapsing per-URL noise into shared incident categories.
+
+## V1.4.303
+- Added a direct visible-element slot click path so the Montjuic / Z-chain executor no longer depends only on text-locator matching when the rendered booking button is present but nested or shaped differently in the DOM.
+- Kept the exact-slot and nearby-hour candidate search in place, but made the final click path scan visible clickable elements by normalized text and aria/title content before falling back to the older locator-based search.
+
+## V1.4.302
+- Extended the nearby-hour slot fallback to include compact button-label variants like `1:30pm` and `1:30PM`, not just spaced forms, so the executor can match the actual Google Calendar slot buttons rendered without a space.
+- Kept the exact-slot search first and the nearby-hour fallback second, so the executor still prefers the bridge-provided time before trying adjacent-hour rescue matches.
+
+## V1.4.301
+- Added a nearby-hour fallback to the slot matcher so the executor can still match the rendered button when the bridge payload and the visible booking page differ by one hour, which was causing repeated `slot miss` failures on Mescladís pages.
+- Kept the exact slot search and the post-date-click wait intact, so the executor now tries the precise slot first and only falls back to adjacent-hour variants if the exact match is missing.
+
+## V1.4.300
+- Fixed the Montjuic / Z-chain slot candidate builder so the broader date-and-time labels now construct their month strings before using them, preventing the executor from crashing while generating exact slot matches.
+- Kept the widened slot candidate set and short post-date polling window, so the executor can now use the richer labels instead of failing on undefined month variables.
+
+## V1.4.299
+- Fixed a slot-candidate regression in the Montjuic / Z-chain executor where the expanded date-and-time button labels referenced `monthDay` before it was defined, which caused the execution path to crash while trying to match the rendered slot control.
+- Kept the widened slot matcher and post-date-click wait in place so the executor can now actually use the broader candidate set instead of failing on the first generated label.
+
+## V1.4.298
+- Broadened the slot matcher for Montjuic and the Z-chain executor so it can recognize the full appointment button labels that include both the date and time, instead of only searching for the bare time text and missing rendered slot controls.
+- Added a short post-date-click polling window so the executor waits for the slot controls to appear before attempting the exact slot click, reducing false `slot miss` failures on pages that render the time buttons a moment later.
+
+## V1.4.297
+- Added Chinese submit-button matching so the Z-chain executor can recognize bottom-right controls labeled `取消 / 预定`, `预定`, and `预订` instead of missing the final submit action on localized booking pages.
+- Kept the redirected booking-page guard and commit-navigation path intact so the executor still stays on the already-open page before filling.
+
+## V1.4.296
+- Stopped the Z-chain executor from reloading an already redirected Google booking page just because the current URL no longer matches the short-link target, which was wasting the manual fill window on Mescladís 1 and other appointment pages.
+- Kept the `commit` navigation cap and booking-page URL guard in place so the executor can stay on an already-open booking page and go straight into date/slot selection instead of restarting the page load path.
+
+## V1.4.295
+- Switched the Mescladís/Z-chain page navigation step to `waitUntil: 'commit'` with a shorter cap so the bridge and executor stop burning the full DOMContentLoaded timeout before they can reach schedule lookup.
+- Kept the signal-driven execution path intact, but made the first navigation step fail much faster on slow Google appointment pages.
+
+## V1.4.294
+- Added an installer that can generate independent Mescladís z-chain systemd instances from target 1 through 7 so each target gets its own bridge, executor, env file, state, heartbeat, and signal path.
+- Added a package script for installing the per-target z-chain instances in one shot.
+- Kept the existing Mescladís 4 and test chains intact while filling the missing per-target deployment slots.
+
+## V1.4.293
+- Removed the execution-side timezone guess from the Z-chain autofill path so the executor always uses the configured slot timezone instead of reinterpreting the page text.
+- Replaced the broad slot fallback search with a strict signal-slot click path that only tries candidates derived from the bridge payload, so the executor stops wandering through generic slot hunting.
+- Kept the bridge/executor split intact while making the execution side fail fast if the signal slot is not actually rendered.
+
+## V1.4.289
+- Hardened the Z-chain error state so a single probe failure is treated as transient and only a second consecutive failure is emitted as `ERROR`, with the bridge tracking an `errorCount` in snapshot state to avoid flooding Telegram on short-lived navigation/network blips.
+- Added month-alignment before the Z-chain date click path so the executor now pages forward or backward to the slot's month before selecting the day, instead of misfiring on the currently visible calendar month and missing the slot.
+- Expanded the post-submit confirmation detector to recognize the booking success copy that includes `已确认预订`, `邮件已发送至`, and `请取消预约`, so the executor can treat the final confirmation page as success instead of leaving the booking result ambiguous.
+- Removed the post-submit confirmation wait from the Z-chain autofill path so the executor now treats the submit click as the terminal action instead of spending extra time trying to infer a confirmation page.
+- Broadened the submit-button matcher to include the common submit labels and added a force-click fallback so the executor can get through a plain submit step without waiting on a second click or confirmation text.
+
+## V1.4.288
+- Tightened the Z-chain date/time click path so it now prefers visible button/link matches and falls back to force-clicking the first visible appointment-time control instead of missing an already-rendered slot.
+- Applied the same visible-match helper to the booking-date click path so date selection and slot selection use the same stricter click logic.
+
+## V1.4.287
+- Added a time-button fallback to the Z-chain executor so, after exact slot text matching fails, it can still click the first visible appointment-time control instead of stopping at slot miss.
+- Kept the timezone conversion and retry-safe consumption reset, but gave the executor a second path for pages that render the correct day while changing the displayed time text.
+
+## V1.4.286
+- Made the Z-chain slot matcher timezone-aware so the executor converts the signal slots from the source slot timezone into the booking page's displayed timezone before it looks for clickable time buttons.
+- Kept the retry-safe consumed-signal reset from the previous patch, so a slot miss can be re-queued instead of being burned as already processed.
+
+## V1.4.285
+- Changed the Z-chain consumer so a failed slot-click attempt no longer burns the same OPEN snapshot as consumed.
+- If the executor hits a slot miss, it now clears the autofill signature and can re-queue the same open snapshot instead of silently skipping retries.
+- Kept the date-first click path and timezone detection in place while making the execution path retry-safe for a live open slot.
+
+## V1.4.284
+- Added page-timezone detection to the Montjuic/Z-chain autofill so the executor now converts the signal slots into the timezone actually rendered by the booking page before matching buttons.
+- Kept the slot-timezone browser context, but now the click path can follow a Singapore-rendered page when the site exposes `GMT+08:00` in the visible text instead of failing the slot lookup against Madrid-formatted candidates.
+
+## V1.4.283
+- Fixed the Z-chain test executor browser-context call so it now awaits the Playwright context before creating the page, which removed the `getBrowserContext(...).newPage is not a function` crash.
+- Kept the slot-timezone browser context so the executor still renders in the same timezone as the slot candidates after the crash fix.
+
+## V1.4.282
+- Forced the Montjuic/Z-chain browser context to use the slot timezone so the executor now renders the appointment page in the same timezone as the slot candidates instead of the server default.
+- Kept the date-first execution path, but removed the timezone mismatch that was causing the executor to see a clickable day while failing to match the corresponding time slot.
+
+## V1.4.281
+- Routed the Mescladís Test executor onto the dedicated test env file as well so both test bridge and test executor stop inheriting the shared repo .env identity.
+- Kept the main Mescladís 4 chain on its own service path while fully isolating the test executor from the 4-chain runtime.
+
+## V1.4.280
+- Split the Mescladís Test Z-chain service onto its own dedicated environment file so systemd no longer inherits the shared repo .env values that were forcing the test runtime back onto Mescladís 4.
+- Kept the independent bridge/executor split intact while making the test unit source only the test-specific chain identity and CSV queue.
+
+## V1.4.279
+- Quoted the Z-chain systemd environment values so Mescladís Test can carry its full target name and URL through systemd without space-splitting the env assignment.
+- Kept the dedicated Mescladís Test bridge/executor units and CSV queue split intact while fixing the service-layer env parsing that was still leaking the 4-chain identity into the test runtime.
+
+## V1.4.278
+- Fixed the Z-chain wrapper executable bit so the bridge service can actually start under systemd on Ubuntu instead of failing with 203/EXEC.
+- Kept the dedicated Mescladís Test service split in place, with its own CSV queue and its own systemd units.
+
+## V1.4.277
+- Added dedicated Z-chain systemd units and a dedicated CSV queue for Mescladís Test so the test target now has a fully independent bridge and executor pair instead of sharing the Mescladís 4 service path or its profile queue.
+- Kept the existing wrapper-based Z-chain architecture intact while making both the main chain and the test chain explicit in their own service definitions and profile sources.
+
+## V1.4.276 - 2026-04-29
+
+- Replaced the hardcoded `/Users/chanzi/.qclaw/...` runtime defaults in the Z-chain wrappers and executor bootstrap with `$HOME/.qclaw/...` so the same bridge/executor architecture can run on Ubuntu servers without ENOENT failures.
+- Kept the instance-scoped bridge/executor file separation, but now each chain derives its alert, state, and heartbeat paths from the current machine's home directory instead of a Mac-only path.
+- Preserved the date-first click path and prewarmed execution page so the faster fill flow remains intact after the runtime-path fix.
+
+## V1.4.275 - 2026-04-29
+
+- Aligned the Z-chain launch entrypoints with the wrapper-based architecture so the monitor service now starts through `deploy/run_z_chain.sh` instead of bypassing the instance-scoped bootstrap path.
+- Switched the npm `zchain:monitor` and `zchain:executor` scripts to the wrapper launchers so local runs and service runs follow the same isolated bridge/executor setup.
+- Kept the independent bridge/executor file namespaces intact so per-target chains continue to derive their own alert, state, and heartbeat files from `Z_CHAIN_INSTANCE_ID`.
+
+## V1.4.274 - 2026-04-29
+
+- Added instance-scoped defaults to the Z-chain wrappers so independent monitor/executor pairs can derive their own alert, state, and heartbeat files from `Z_CHAIN_INSTANCE_ID` instead of colliding on one shared runtime path.
+- Prewarmed the isolated Montjuic/Z-chain executor page so the consumer keeps a live browser page on the target URL and reuses it when a signal arrives instead of cold-starting a new page for every slot attempt.
+- Added a date-first click pass ahead of slot clicking so the executor can open the correct calendar day from the signal before it searches for the time slot text.
+
+## V1.4.273 - 2026-04-29
+
+- Added a date-first click pass to the isolated Z-chain autofill so the executor now tries the calendar day from the signal before searching for the time slot text.
+- Kept the direct slot click path as the first attempt, but now the executor can open the right day first when the page hides times until a date is selected.
+- Logged whether the date click landed, so we can separate a missing date step from a missing time step on the next live run.
+
+## V1.4.272 - 2026-04-29
+
+- Split the Z-chain runtime files so the bridge and executor no longer share the same state or heartbeat paths.
+- Routed the bridge through `z_chain_monitor.js` as a signal emitter and the new executor through `z_chain_executor.js` as the only autofill consumer.
+- Kept the shared alert file as the handoff, but made the bridge and executor use distinct state and heartbeat files so they cannot overwrite each other.
+
+## V1.4.271 - 2026-04-29
+
+- Split the Z-chain into a bridge and a dedicated executor so the monitor can emit open-slot signals without also trying to fill the form in the same process.
+- Added a consumer mode that watches the shared alert file, consumes only fresh OPEN signals, and runs the autofill/submission flow independently from the probe loop.
+- Disabled Telegram noise on the bridge side so the signal file becomes the handoff point and the executor owns the booking attempt.
+
+## V1.4.270 - 2026-04-29
+
+- Forced the Z-chain wrapper onto a single lane starting at offset `0` so the autofill worker stops competing with the multi-lane production monitor and reacts to an open slot as fast as possible.
+- Set the Z-chain lane interval to the chain poll interval, with a fast fallback, so the dedicated worker can keep rechecking without waiting for the shared 0/10/20 lane schedule.
+
+## V1.4.269 - 2026-04-29
+
+- Added a dedicated birth-date rescue pass to the Montjuic/Z-chain autofill so the booking flow no longer stalls when the eighth field is rendered differently from the other contact fields.
+- Kept the earlier modal settle and ordered fallback, but now the date field gets its own label, placeholder, and last-visible-input search before the chain gives up.
+
+## V1.4.268 - 2026-04-29
+
+- Added a short post-modal settle before the Montjuic/Z-chain autofill starts so the contact sheet has time to finish rendering before the field pass runs.
+- Lowered the positional fallback threshold so the ordered input pass can still fill the eight contact fields when the modal exposes only a small subset of labels up front.
+
+## V1.4.267 - 2026-04-29
+
+- Made the Montjuic/Z-chain autofill reload its profile queue before each autofill run so a newly provided profile can be consumed immediately without waiting for a restart.
+- Replaced the queue head with the new `Fuentes / Hina` profile so the next open slot uses the new data instead of the prior placeholder entry.
+
+## V1.4.266 - 2026-04-29
+
+- Made the Montjuic/Z-chain autofill cursor advance through the profile queue so each open slot can consume the next profile automatically instead of requiring manual profile selection.
+- Kept the exact-field, auto-submit, and confirmation-only behavior intact so the flow still runs end-to-end once a slot is available.
+
+## V1.4.265 - 2026-04-29
+
+- Suppressed the normal Montjuic/Z-chain status alerts while the auto-submit flow is running, so the chain only pushes the final confirmation signal instead of emitting repeated OPEN/FULL churn for the same slot.
+- Kept the confirmation alert path enabled, which means the booking result can still be reported without flooding Telegram with the same slot's intermediate status flips.
+
+## V1.4.264 - 2026-04-29
+
+- Excluded the hidden reCAPTCHA textarea from the positional Montjuic/Z-chain autofill fallback so the final birth-date field is no longer shifted onto the captcha element.
+- Kept the label-based matching and the ordered fallback together, which should now fill the eight visible fields in the expected Google Bookings order.
+
+## V1.4.263 - 2026-04-29
+
+- Added a positional fallback for the Montjuic/Z-chain autofill flow so the page can still be filled when the Google Bookings labels are not bound to their inputs in a way Playwright can resolve.
+- Extended the text matchers for the first-name, last-name, phone, email, and address fields so both the English Google Bookings labels and the Spanish labels are handled in the same chain.
+
+## V1.4.262 - 2026-04-29
+
+- Added the missing `settleAfterAction` helper back into the Montjuic/Z-chain autofill path so the post-click waits used by the slot-to-form flow no longer crash the chain.
+- Kept the absolute-path fix and the longer post-navigation slot render wait from the previous patch.
+
+## V1.4.261 - 2026-04-29
+
+- Fixed the Montjuic/Z-chain state and heartbeat path resolution so absolute paths like `/tmp/...` are no longer rewritten under the repository root, which had been breaking autofill state writes.
+- Increased the post-navigation wait before slot clicking so the live Google Bookings modal has time to render the `3:20pm`/`3:30pm` slot before the autofill chain tries to click it.
+
+## V1.4.260 - 2026-04-29
+
+- Stopped normalizing the Montjuic/Z-chain birth date before fill so the form receives the user-provided date format exactly as entered, which matches the working `29/10/1988` path on this booking page.
+- Added the Google Bookings `Book` button to the submit matcher so the autofill chain can actually trigger the final booking step instead of stopping at the modal.
+
+## V1.4.259 - 2026-04-29
+
+- Expanded the Montjuic/Z-chain slot click matching so compact time labels like `3:30pm` are now recognized alongside the spaced variants.
+- Kept the exact-field autofill path in place and only widened the slot-candidate generation, which should help the auto-fill step actually enter the open slot before populating the eight labels.
+
+## V1.4.258 - 2026-04-29
+
+- Tightened the Montjuic/Z-chain field matcher to the exact eight user-provided labels, including the full Spanish address label and the document-number label variants, so the autofill path is less likely to spill into nearby fields.
+- Kept the isolated Z chain behavior intact while making the form-root discovery prefer the exact label set the user provided.
+
+## V1.4.257 - 2026-04-29
+
+- Added a separate autofill trigger mode for the isolated Z chain so it can fill once for each new open-slot snapshot instead of relying only on a status transition from the existing snapshot state.
+- Kept the Montjuic default behavior intact for the existing chain while wiring the Z chain to the new `any_open_snapshot` mode by default, which avoids missing the first usable slot after a release.
+
+## V1.4.256 - 2026-04-29
+
+- Added an isolated `z_chain_monitor.js` wrapper so the booking-fill workflow can run under its own `Z_CHAIN_*` environment without colliding with the existing Montjuic or appointment watchers.
+- Extended the Montjuic autofill path to capture confirmation-page text after submission when confirmation capture is enabled, while keeping that behavior off by default for the existing chain.
+- Added a separate `zchain:monitor` entrypoint, `z_chain_profiles_template.csv`, and matching `Z_CHAIN_*` example configuration so the new chain can be deployed independently and tested later with a real profile set.
+
+## V1.4.255 - 2026-04-28
+
+- Stopped the main Mescladís monitor from promoting confirmed probe failures into the durable snapshot, so a transient ERROR no longer reappears later as a noisy ERROR -> FULL recovery alert.
+- Kept the existing consecutive-failure confirmation for real errors, but only preserve the separate error incident record instead of overwriting the stable appointment snapshot.
+
+## V1.4.254 - 2026-04-28
+
+- Added a 30-second in-loop heartbeat pulse and unique temp-file writes so the main monitor no longer loses heartbeat updates when concurrent lanes collide on the same temp path.
+- Switched each target probe to its own short-lived browser page so one lane can no longer accidentally reuse another lane's page context and trigger spurious navigation and heartbeat stalls.
+- Made the health daemon require two consecutive corrupt heartbeat reads before alerting, which filters single transient parse failures without hiding a real monitor hang.
+
+## V1.4.253 - 2026-04-28
+
+- Deferred Mescladís error alerts until the same target fails multiple consecutive probes, so brief navigation or network glitches no longer fire immediate ERROR notifications.
+- Kept confirmed errors visible after repeated failures while preserving the existing OPEN and FULL transition behavior.
+
+## V1.4.252 - 2026-04-28
+
+- Normalized the public-page watcher target URL before probing so tracking parameters like `fbclid` no longer create false page-change alerts.
+- Added the resolved canonical URL to the public-page event payload so updates are reported against the stable page address instead of the transient tracked link.
+
+## V1.4.251 - 2026-04-28
+
+- Reduced the health daemon default polling interval to 60 seconds so fresh deployments now check the monitor heartbeat once per minute instead of falling back to the older 10-minute default.
+- Kept the stale threshold and startup grace unchanged so the health watcher still avoids noisy startup alerts while remaining responsive on long-running hangs.
+
+## V1.4.250 - 2026-04-28
+
+- Added a per-target state lock in the main Mescladís monitor so the three staggered lanes can no longer race each other while comparing, updating, and sending the same target snapshot.
+- Made the notification handoff wait for the Qclaw, Telegram, and alert-file branches to settle together, which reduces the chance of a slots reduction being overwritten by a later lane before it is delivered.
+
+## V1.4.249 - 2026-04-28
+
+- Restored the Telegram direct-push credentials in the main monitor environment so Mescladís slot-change alerts can reach Telegram again.
+- Kept the staggered Mescladís lane scheduler and RPC snapshot flow unchanged; only the notification credentials were restored.
+
+## V1.4.248 - 2026-04-27
+
+- Added a seventh Mescladís appointment target so the main monitor now covers the newly provided Google Calendar schedule link alongside the existing six targets.
+- Kept the staggered lane scheduling and RPC snapshot flow unchanged so the new target inherits the same polling and alert behavior as the rest of the Mescladís set.
+
+## V1.4.247 - 2026-04-27
+
+- Separated transient Mescladís probe failures from the stable state snapshot so an error no longer overwrites the last known good status and later recovery scans are not misreported as page changes.
+- Kept the lane scheduler and RPC snapshot flow intact while deduplicating repeated error alerts until a real non-error snapshot arrives again.
+
+## V1.4.246 - 2026-04-27
+
+- Reworked the Microsoft Bookings watcher to validate availability by clicking candidate dates and checking the resulting availability text or visible time-slot grid, which suppresses month-switch jitter and page-text false positives.
+- Kept the multi-month scan and stability gate in place so the watcher still requires a repeated match before promoting a changed date set into a real alert.
+
+## V1.4.245 - 2026-04-27
+
+- Added a stability gate to the Microsoft Bookings watcher so a date-list change must repeat before it is promoted from pending to a real notification, which suppresses one-off month flip and layout jitter false positives.
+- Kept the month-flipping scan and date-diff-only behavior intact while making the Bookings monitor wait for two matching reads before alerting on an increase or decrease.
+
+## V1.4.244 - 2026-04-27
+
+- Reused the staggered lane scheduler across the remaining page watchers so the public page, Google Forms, Microsoft Bookings, AgendaPro, and Montjuic monitors now follow the same multi-lane polling cadence as the main Mescladís monitor.
+- Kept the health daemon separate while preserving each watcher’s own diff rules, so only the scan cadence changed and the alert criteria stayed specific to each page type.
+
+## V1.4.243 - 2026-04-27
+
+- Extended the Microsoft Bookings watcher to keep flipping months while collecting dates, so the monitor can continue across April, May, and June instead of stopping on the default month view.
+- Kept the date-diff-only notification rule in place so the watcher still ignores copy/layout noise and only alerts when the extracted booking-date set actually changes.
+
+## V1.4.242 - 2026-04-27
+
+- Narrowed the Microsoft Bookings watcher so it only sends notifications when the extracted booking-date set changes, which suppresses noisy page-copy updates while keeping earlier/later availability changes visible.
+- Kept the standalone Microsoft Bookings service isolated from the other monitors and preserved direct Telegram delivery plus the optional alert-file handoff.
+
+## V1.4.241 - 2026-04-27
+
+- Added a standalone Microsoft Bookings watcher for the provided bookings.cloud.microsoft page, with content snapshots, accessible iframe text capture, and extracted booking-date candidates so earlier availability can trigger a notification.
+- Added a `microsoftbookings:monitor` entrypoint plus matching `MICROSOFT_BOOKINGS_*` environment variables so the new watcher stays isolated from the existing Google Calendar, AgendaPro, Montjuic, public-page, and form-page monitors while still supporting direct Telegram delivery and an optional alert-file handoff.
+
+## V1.4.240 - 2026-04-27
+
+- Extended the Google Forms watcher to track both the short public form URL and the resolved closed-form page as separate targets, so changes on either URL can trigger their own update notifications.
+- Added optional multi-target configuration via `FORM_PAGE_TARGET_URL_ALT` and `FORM_PAGE_TARGETS_JSON` while keeping direct Telegram delivery and the optional alert-file handoff isolated from the existing monitors.
+
+## V1.4.239 - 2026-04-27
+
+- Added a standalone form-page watcher for the provided Google Forms closed page so the repository can baseline the page title and visible text, then notify whenever the content changes.
+- Added a `formpage:monitor` entrypoint plus matching `FORM_PAGE_*` environment variables so the new watcher stays isolated from the existing Google Calendar, AgendaPro, Montjuic, and public-page monitors while still supporting direct Telegram delivery and an optional alert-file handoff.
+
+## V1.4.238 - 2026-04-27
+
+- Serialized the Mescladís target probes so concurrent lanes no longer race the same Google Calendar appointment page and trigger spurious `page.goto` / `page.evaluate` interruptions.
+- Kept the three-lane staggered cadence and direct Telegram delivery intact while reducing the overnight error bursts caused by lane overlap on shared target pages.
+
+## V1.4.237 - 2026-04-27
+
+- Added direct Telegram Bot API delivery to the AgendaPro, Montjuic, public-page, and health monitor flows so the server can notify without depending on the local qclaw file handoff.
+- Kept the existing file-based and webhook-based paths available for local setups while documenting the shared `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` server configuration path.
+
+## V1.4.236 - 2026-04-27
+
+- Added direct Telegram Bot API notification support to the main Mescladís monitor so a server deployment can post alerts without depending on the local qclaw file handoff.
+- Documented the new `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` server configuration path while keeping the existing qclaw webhook and alert-file flow available for local setups.
+
+## V1.4.235 - 2026-04-27
+
+- Switched the Mescladís lane scheduler from target sharding to full-set replication so all three staggered lanes scan the complete appointment target list while starting at different offsets.
+- Kept the 0s / 10s / 20s lane offsets and updated the docs and env templates so the monitor now behaves as a dense, overlapping multi-lane poller instead of splitting the targets across lanes.
+
+## V1.4.234 - 2026-04-27
+
+- Reworked the Mescladís appointment monitor into three staggered polling lanes with 30-second lane intervals and 0s / 10s / 30s startup offsets so the watcher keeps higher scan density without waiting for one long monolithic round to finish.
+- Updated the runtime `.env`, `.env.example`, and README to reflect the new lane-based poll schedule while preserving the existing single-event dedupe behavior.
+
+## V1.4.233 - 2026-04-27
+
+- Switched the Mescladís Google monitor from relative post-round sleeping to wall-clock aligned polling so the next scan snaps to the configured interval grid instead of drifting after each run.
+- Kept the single-round, non-overlapping execution model in place while exposing the actual next aligned tick in the runtime logs for easier delay diagnosis.
+
+## V1.4.232 - 2026-04-27
+
+- Reduced the Mescladís Google monitor polling interval to 15 seconds across both the normal and peak windows so the appointment watcher can detect changes faster under the current operating setup.
+- Synchronized the runtime `.env` and `.env.example` polling values so the local and sample configurations no longer drift.
+
 ## V1.4.231 - 2026-04-25
 
 - Restored the missing bridge-status export wiring for the admin panel so the qclaw test template can consume `/persona-api/image-lab/bridge/status/` without breaking the frontend build.

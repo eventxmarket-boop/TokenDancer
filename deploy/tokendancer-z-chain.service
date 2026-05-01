@@ -1,0 +1,20 @@
+[Unit]
+Description=Tokendancer Z Chain Autofill Monitor
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/xuedingtoken_latest
+EnvironmentFile=/opt/xuedingtoken_latest/.env
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/home/ubuntu/.cache/ms-playwright
+Environment="Z_CHAIN_INSTANCE_ID=mescladis-4"
+Environment="Z_CHAIN_TARGET_NAME=Mescladís 4"
+Environment="Z_CHAIN_TARGET_URL=https://calendar.app.google/Zi9mWo5eq6cxzvyb7"
+Environment="Z_CHAIN_PROFILES_CSV_PATH=/opt/xuedingtoken_latest/z_chain_profiles_template.csv"
+ExecStart=/opt/xuedingtoken_latest/deploy/run_z_chain.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

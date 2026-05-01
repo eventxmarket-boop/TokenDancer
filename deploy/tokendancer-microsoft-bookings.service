@@ -1,0 +1,16 @@
+[Unit]
+Description=Tokendancer Microsoft Bookings Monitor
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/xuedingtoken_latest
+EnvironmentFile=/opt/xuedingtoken_latest/.env
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/home/ubuntu/.cache/ms-playwright
+ExecStart=/usr/bin/node /opt/xuedingtoken_latest/microsoft_bookings_monitor.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

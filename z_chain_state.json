@@ -1,0 +1,17 @@
+{
+  "targets": {
+    "Mescladís 5": {
+      "autofill": {
+        "lastAutofillSignature": "OPEN::2026-04-29 03:20 PM",
+        "lastAutofillAt": "2026-04-28T18:15:04.882Z",
+        "lastAutofillMode": "any_open_snapshot"
+      },
+      "current": {
+        "status": "ERROR",
+        "slots": [],
+        "updatedAt": "2026-04-28T19:10:19.545Z",
+        "roundId": "2.126"
+      }
+    }
+  }
+}

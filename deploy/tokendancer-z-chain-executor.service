@@ -1,0 +1,16 @@
+[Unit]
+Description=Tokendancer Z Chain Executor
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/xuedingtoken_latest
+EnvironmentFile=/opt/xuedingtoken_latest/.env
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/home/ubuntu/.cache/ms-playwright
+ExecStart=/opt/xuedingtoken_latest/deploy/run_z_chain_executor.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

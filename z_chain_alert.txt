@@ -1,0 +1,8 @@
+target=montjuic
+status=UNKNOWN
+reason=startup
+changedAt=2026-04-28T18:45:00.596Z
+slots=
+url=local-file-handoff
+
+{"target":"montjuic","url":"local-file-handoff","prevStatus":null,"currStatus":"UNKNOWN","prevSlots":[],"currSlots":[],"changedAt":"2026-04-28T18:45:00.596Z","reason":"startup"}
